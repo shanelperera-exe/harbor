@@ -1,0 +1,20 @@
+# ---- .NET / C# / ASP.NET ----
+bin/
+obj/
+*.user
+*.suo
+.vs/
+appsettings.Development.json
+
+# ---- React / Node ----
+node_modules/
+dist/
+build/
+.env
+.env.local
+
+# ---- OS / Editor junk ----
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

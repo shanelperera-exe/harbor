@@ -1,0 +1,6 @@
+@Harbor.Project_HostAddress = http://localhost:5079
+
+GET {{Harbor.Project_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

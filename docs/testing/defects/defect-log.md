@@ -1,31 +1,19 @@
 # Defect Log
 
-## Overview
-This document is a professional consolidated defect log for the Harbor project.
+This log tracks the defects identified during the QA testing cycles.
 
-*Note: Jira remains the primary operational defect tracker. This document serves as a high-level summary and formal report for case study evaluation. No fabricated defects are listed here.*
+## Open Defects
 
-## Defect Severity Classifications
-- **Critical:** System crash, data loss, or primary function completely broken with no workaround.
-- **High:** Major functionality broken, difficult workaround.
-- **Medium:** Minor functionality broken, easy workaround.
-- **Low:** Cosmetic issue, typo, minor UI misalignment.
+| Bug ID | User Story | Severity | Summary | Status | Date Reported | Assigned To |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **DEF-US1-001** | US1 | High | Missing MySQL Database Connectivity Implementation | Open | 2026-08-24 | Dev Team |
 
-## Defect Status Lifecycle
-- Open
-- In Progress
-- Resolved
-- Ready for Retest
-- Closed
-- Reopened
-- Rejected
+### DEF-US1-001 Details
+**Steps to Reproduce:**
+1. Open the backend configuration file (`src/backend/Harbor.ApiGateway/appsettings.json`).
+2. Observe the lack of a `"ConnectionStrings"` block.
+3. Open `src/backend/Harbor.ApiGateway/Program.cs`.
+4. Observe the lack of ADO.NET MySQL dependency injection or connection logic.
 
----
-
-## Logged Defects
-
-*(Table will be populated as real defects are identified during test execution)*
-
-| Defect ID | Jira Issue | Related User Story | Title | Description | Severity | Priority | Environment | Steps to Reproduce | Expected Result | Actual Result | Evidence | Developer/Owner | Status | Retest Result | Resolution |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| `[TBC]` | `[TBC]` | `[TBC]` | `[TBC]` | `[TBC]` | `[TBC]` | `[TBC]` | `[TBC]` | `[TBC]` | `[TBC]` | `[TBC]` | `[TBC]` | `[TBC]` | `[TBC]` | `[TBC]` | `[TBC]` |
+**Expected Result:** A MySQL connection string should be present, and ADO.NET connectivity should be established to satisfy US1 criteria.
+**Actual Result:** No connection string or ADO.NET logic has been implemented in the codebase.

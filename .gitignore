@@ -1,0 +1,39 @@
+# .NET Core
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+appsettings.Development.json
+appsettings.Production.json
+appsettings.*.json
+!appsettings.json
+
+# Node/React
+node_modules/
+dist/
+build/
+.env
+.env.*
+!.env.example
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Docker
+.docker/
+docker-compose.override.yml
+
+# Test output
+TestResults/
+coverage/
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+.history

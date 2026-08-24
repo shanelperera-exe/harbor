@@ -1,0 +1,6 @@
+@Harbor.Authentication_HostAddress = http://localhost:5196
+
+GET {{Harbor.Authentication_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

@@ -1,0 +1,46 @@
+name: CD Pipeline
+
+on:
+  push:
+    branches: [ "main", "develop" ]
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    
+    # Dynamically select the GitHub Environment based on the branch
+    environment: 
+      name: ${{ github.ref == 'refs/heads/main' && 'Production' || 'Staging' }}
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+
+    - name: Build and Publish
+      run: dotnet publish --configuration Release --output ./publish
+
+    - name: Generate .env file for deployment
+      run: |
+        echo "MYSQL_SERVER=${{ vars.MYSQL_SERVER }}" >> ./publish/.env
+        echo "MYSQL_PORT=${{ vars.MYSQL_PORT }}" >> ./publish/.env
+        echo "MYSQL_DATABASE=${{ vars.MYSQL_DATABASE }}" >> ./publish/.env
+        echo "MYSQL_USER=${{ vars.MYSQL_USER }}" >> ./publish/.env
+        echo "MYSQL_PASSWORD=${{ secrets.MYSQL_PASSWORD }}" >> ./publish/.env
+        echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> ./publish/.env
+        echo "JWT_ISSUER=${{ vars.JWT_ISSUER }}" >> ./publish/.env
+        echo "JWT_AUDIENCE=${{ vars.JWT_AUDIENCE }}" >> ./publish/.env
+        echo "KAFKA_BOOTSTRAP_SERVERS=${{ vars.KAFKA_BOOTSTRAP_SERVERS }}" >> ./publish/.env
+        echo "KAFKA_DEPLOYMENT_TOPIC=${{ vars.KAFKA_DEPLOYMENT_TOPIC }}" >> ./publish/.env
+        echo "API_GATEWAY_URL=${{ vars.API_GATEWAY_URL }}" >> ./publish/.env
+
+    - name: Deploy to Server
+      run: |
+        echo "Deploying to ${{ github.ref == 'refs/heads/main' && 'Production' || 'Staging' }}..."
+        # Add your specific deployment commands here
+        # E.g., copying ./publish to your server via SCP, or pushing a Docker container

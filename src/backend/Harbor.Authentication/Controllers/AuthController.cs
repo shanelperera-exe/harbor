@@ -27,5 +27,18 @@ namespace Harbor.Authentication.Controllers
 
             return CreatedAtAction(nameof(Register), data);
         }
+
+        [HttpPost("login")]
+        public async Task<IActionResult> Login([FromBody] LoginRequest request)
+        {
+            var (success, error, data) = await _authService.LoginAsync(request);
+
+            if (!success)
+            {
+                return Unauthorized(new { message = error });
+            }
+
+            return Ok(data);
+        }
     }
 }

@@ -1,1 +1,46 @@
+name: CI Pipeline
 
+on:
+  push:
+    branches: [ "main", "master", "develop" ]
+  pull_request:
+    branches: [ "main", "master", "develop" ]
+
+jobs:
+  build-and-test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    # Dynamically use the appropriate environment for tests (e.g., a dummy/test GitHub environment)
+    environment: Development
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Generate .env file
+      run: |
+        echo "MYSQL_SERVER=${{ vars.MYSQL_SERVER }}" >> .env
+        echo "MYSQL_PORT=${{ vars.MYSQL_PORT }}" >> .env
+        echo "MYSQL_DATABASE=${{ vars.MYSQL_DATABASE }}" >> .env
+        echo "MYSQL_USER=${{ vars.MYSQL_USER }}" >> .env
+        echo "MYSQL_PASSWORD=${{ secrets.MYSQL_PASSWORD }}" >> .env
+        echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
+        echo "JWT_ISSUER=${{ vars.JWT_ISSUER }}" >> .env
+        echo "JWT_AUDIENCE=${{ vars.JWT_AUDIENCE }}" >> .env
+        echo "KAFKA_BOOTSTRAP_SERVERS=${{ vars.KAFKA_BOOTSTRAP_SERVERS }}" >> .env
+        echo "KAFKA_DEPLOYMENT_TOPIC=${{ vars.KAFKA_DEPLOYMENT_TOPIC }}" >> .env
+        echo "API_GATEWAY_URL=${{ vars.API_GATEWAY_URL }}" >> .env
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Build
+      run: dotnet build --no-restore
+
+    - name: Test
+      run: dotnet test --no-build --verbosity normal

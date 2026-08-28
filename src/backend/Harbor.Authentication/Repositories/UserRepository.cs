@@ -42,6 +42,34 @@ namespace Harbor.Authentication.Repositories
             return null;
         }
 
+        public async Task<User?> GetByUsernameAsync(string username)
+        {
+            using var connection = _dbFactory.CreateConnection();
+            await connection.OpenAsync();
+
+            using var command = connection.CreateCommand();
+            command.CommandText =
+                "SELECT \"Id\", \"Username\", \"Email\", \"PasswordHash\", \"Role\", \"CreatedAt\" " +
+                "FROM \"Users\" WHERE \"Username\" = @username LIMIT 1";
+            command.Parameters.AddWithValue("username", username);
+
+            using var reader = await command.ExecuteReaderAsync();
+            if (await reader.ReadAsync())
+            {
+                return new User
+                {
+                    Id = reader.GetInt32(0),
+                    Username = reader.GetString(1),
+                    Email = reader.GetString(2),
+                    PasswordHash = reader.GetString(3),
+                    Role = reader.GetString(4),
+                    CreatedAt = reader.GetDateTime(5)
+                };
+            }
+
+            return null;
+        }
+
         public async Task<int> CreateUserAsync(User user)
         {
             using var connection = _dbFactory.CreateConnection();

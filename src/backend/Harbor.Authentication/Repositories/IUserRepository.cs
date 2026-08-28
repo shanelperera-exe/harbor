@@ -6,5 +6,6 @@ namespace Harbor.Authentication.Repositories
     {
         Task<User?> GetByUsernameOrEmailAsync(string username, string email);
         Task<int> CreateUserAsync(User user);
+        Task<User?> GetByUsernameAsync(string username);
     }
 }

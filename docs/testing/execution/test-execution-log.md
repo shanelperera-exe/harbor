@@ -1,14 +1,12 @@
 # Test Execution Log
 
-This log records the execution results for the Harbor project testing cycles.
+## Overview
+This document serves as the version-controlled project record and summary of test executions for Harbor.
 
-## Sprint 1 - US1 (Application Foundation)
-**Date:** 2026-08-24
-**Environment:** Local Development
+*Note: Detailed operational execution is maintained and tracked directly in Jira. This log is a formal, consolidated snapshot of execution events for project reporting.*
 
-| Test ID | User Story | Module | Test Scenario | Status | Actual Result | Related Bug ID |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **TC-US1-001** | US1 | Frontend | Verify React frontend starts successfully. | **PASS** | The React development server started successfully. The browser opened to `http://localhost:5173` and displayed the Vite/React page with no console errors. | N/A |
-| **TC-US1-002** | US1 | Backend | Verify ASP.NET Web API backend starts successfully. | **PASS** | The `dotnet run` command executed successfully. The terminal logged 'Now listening on: http://localhost:5053' without configuration errors. | N/A |
-| **TC-US1-003** | US1 | Database | Verify backend can establish MySQL connectivity using ADO.NET/direct SQL. | **FAIL** | Reviewed backend configuration files (`appsettings.json` and `Program.cs`). The MySQL connection string and ADO.NET connectivity logic have not been implemented by the development team. | DEF-US1-001 |
-| **TC-US1-004** | US1 | API | Verify Swagger UI is accessible and displays available endpoints. | **PASS** | Navigated to `http://localhost:5053/swagger`. The Swagger UI loaded successfully and displayed the OpenAPI schema. | N/A |
+## Execution Record
+
+| Execution ID | Date | Tester | Jira Story | Test Case ID | Branch | Environment | Build/Version | Result | Defect ID | Evidence | Retest Status |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `[TO BE COMPLETED]` | `[TO BE COMPLETED]` | `[TO BE COMPLETED]` | `[TO BE COMPLETED]` | `[TO BE COMPLETED]` | `[TO BE COMPLETED]` | `[TO BE COMPLETED]` | `[TO BE COMPLETED]` | `[TO BE COMPLETED]` | `[TO BE COMPLETED]` | `[TO BE COMPLETED]` | `[TO BE COMPLETED]` |

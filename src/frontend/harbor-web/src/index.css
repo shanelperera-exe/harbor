@@ -1,8 +1,77 @@
 @import "tailwindcss";
 
+@theme {
+  --font-sans: "PP Neue Montreal", sans-serif;
+}
+
+@font-face {
+  font-family: 'PP Neue Montreal';
+  src: url('/fonts/ppneuemontreal-book.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'PP Neue Montreal';
+  src: url('/fonts/ppneuemontreal-medium.otf') format('opentype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'PP Neue Montreal';
+  src: url('/fonts/ppneuemontreal-bold.otf') format('opentype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'PP Neue Montreal';
+  src: url('/fonts/ppneuemontreal-bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Roobert fonts */
+@font-face {
+  font-family: 'Roobert';
+  src: url('/fonts/roobert-light.otf') format('opentype');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Roobert';
+  src: url('/fonts/roobert-regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Roobert';
+  src: url('/fonts/roobert-medium.otf') format('opentype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Roobert';
+  src: url('/fonts/roobert-bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* Custom theme properties or overrides can go here */
 :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: "PP Neue Montreal", sans-serif;
   line-height: 1.5;
   font-weight: 400;
 
@@ -16,4 +85,19 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.animate-blink {
+  animation: blink 0.8s step-end infinite;
+}
+
+.font-roobert span {
+  font-variant-numeric: tabular-nums;
+  display: inline-block;
+  min-height: 1.2em;
 }

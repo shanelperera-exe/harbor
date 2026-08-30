@@ -34,6 +34,13 @@ namespace Harbor.Authentication.Services
                 return (false, "Email address is not valid.", null);
             }
 
+
+            var allowedRoles = new[] { Models.Roles.Developer, Models.Roles.Viewer };
+            if (!allowedRoles.Contains(request.Role))
+            {
+                return (false, "Role must be either Developer or Viewer.", null);
+            }
+
             var existing = await _userRepository.GetByUsernameOrEmailAsync(request.Username, request.Email);
             if (existing != null)
             {
@@ -42,12 +49,12 @@ namespace Harbor.Authentication.Services
 
             var passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
 
-            var newUser = new User
+            var newUser = new Models.User
             {
                 Username = request.Username,
                 Email = request.Email,
                 PasswordHash = passwordHash,
-                Role = "Developer"
+                Role = request.Role
             };
 
             var newId = await _userRepository.CreateUserAsync(newUser);

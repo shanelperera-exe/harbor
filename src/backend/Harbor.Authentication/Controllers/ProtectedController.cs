@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Harbor.Authentication.Models;
 
 namespace Harbor.Authentication.Controllers
 {
@@ -13,6 +14,22 @@ namespace Harbor.Authentication.Controllers
         {
             var username = User.Identity?.Name;
             return Ok(new { message = $"Hello {username}, you are authenticated." });
+        }
+
+        // Only Admins can reach this
+        [HttpGet("admin-only")]
+        [Authorize(Roles = Roles.Admin)]
+        public IActionResult AdminOnly()
+        {
+            return Ok(new { message = "Welcome, Admin. You can manage the platform." });
+        }
+
+        // Admins and Developers can reach this, Viewers cannot
+        [HttpGet("developer-area")]
+        [Authorize(Roles = $"{Roles.Admin},{Roles.Developer}")]
+        public IActionResult DeveloperArea()
+        {
+            return Ok(new { message = "Welcome, Developer. You can trigger operations here." });
         }
     }
 }

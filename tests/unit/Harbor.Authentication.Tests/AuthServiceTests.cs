@@ -211,5 +211,61 @@ namespace Harbor.Authentication.Tests
             Assert.False(success);
             Assert.Equal("Username and password are required.", error);
         }
+
+        [Fact]
+        public void GenerateToken_IncludesRoleClaim()
+        {
+            var jwtService = new JwtService(GetTestConfiguration());
+            var user = new User { Id = 1, Username = "puna", Role = "Admin" };
+
+            var (token, _) = jwtService.GenerateToken(user);
+
+            var handler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
+            var jwt = handler.ReadJwtToken(token);
+
+            Assert.Contains(jwt.Claims, c => c.Type == System.Security.Claims.ClaimTypes.Role && c.Value == "Admin");
+        }
+
+        [Fact]
+        public async Task RegisterAsync_ViewerRole_ReturnsSuccessWithViewerRole()
+        {
+            var request = new RegisterRequest
+            {
+                Username = "vicky",
+                Email = "vicky@gmail.com",
+                Password = "12345678",
+                Role = "Viewer"
+            };
+
+            _userRepositoryMock
+                .Setup(r => r.GetByUsernameOrEmailAsync(request.Username, request.Email))
+                .ReturnsAsync((User?)null);
+
+            _userRepositoryMock
+                .Setup(r => r.CreateUserAsync(It.IsAny<User>()))
+                .ReturnsAsync(2);
+
+            var (success, error, data) = await _authService.RegisterAsync(request);
+
+            Assert.True(success);
+            Assert.Equal("Viewer", data!.Role);
+        }
+
+        [Fact]
+        public async Task RegisterAsync_AdminRole_IsRejected()
+        {
+            var request = new RegisterRequest
+            {
+                Username = "hacker",
+                Email = "hacker@gmail.com",
+                Password = "12345678",
+                Role = "Admin"
+            };
+
+            var (success, error, data) = await _authService.RegisterAsync(request);
+
+            Assert.False(success);
+            Assert.Equal("Role must be either Developer or Viewer.", error);
+        }
     }
 }

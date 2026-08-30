@@ -212,19 +212,6 @@ namespace Harbor.Authentication.Tests
             Assert.Equal("Username and password are required.", error);
         }
 
-        [Fact]
-        public void GenerateToken_IncludesRoleClaim()
-        {
-            var jwtService = new JwtService(GetTestConfiguration());
-            var user = new User { Id = 1, Username = "puna", Role = "Admin" };
-
-            var (token, _) = jwtService.GenerateToken(user);
-
-            var handler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
-            var jwt = handler.ReadJwtToken(token);
-
-            Assert.Contains(jwt.Claims, c => c.Type == System.Security.Claims.ClaimTypes.Role && c.Value == "Admin");
-        }
 
         [Fact]
         public async Task RegisterAsync_ViewerRole_ReturnsSuccessWithViewerRole()

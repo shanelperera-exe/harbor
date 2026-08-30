@@ -254,5 +254,11 @@ namespace Harbor.Authentication.Tests
             Assert.False(success);
             Assert.Equal("Role must be either Developer or Viewer.", error);
         }
+
+        private Microsoft.Extensions.Configuration.IConfiguration GetTestConfiguration()
+        {
+            Environment.SetEnvironmentVariable("JWT_SECRET", "super_secret_test_key_123456789012345");
+            return new Microsoft.Extensions.Configuration.ConfigurationBuilder().Build();
+        }
     }
 }

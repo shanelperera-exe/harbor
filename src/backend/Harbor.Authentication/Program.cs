@@ -84,7 +84,8 @@ builder.Services.AddScoped<Harbor.Authentication.Services.IJwtService, Harbor.Au
 
 var app = builder.Build();
 
-
+// Run automated database migrations on startup
+Harbor.Authentication.Data.DatabaseInitializer.Initialize(app.Configuration);
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -99,5 +100,19 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+app.MapGet("/api/test-db", (Harbor.Authentication.Data.DbConnectionFactory dbFactory) =>
+{
+    try
+    {
+        using var connection = dbFactory.CreateConnection();
+        connection.Open();
+        return Results.Ok(new { message = "Database connection successful!" });
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem($"Database connection failed: {ex.Message}");
+    }
+});
 
 app.Run();

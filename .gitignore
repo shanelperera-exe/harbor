@@ -31,6 +31,10 @@ docker-compose.override.yml
 # Test output
 TestResults/
 coverage/
+apache-jmeter-*/
+jmeter.log
+*.jtl
+html-report/
 
 # OS Files
 .DS_Store

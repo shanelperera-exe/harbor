@@ -1,9 +1,46 @@
 import { useState } from 'react';
 import { Mail, Key, Eye, EyeOff, User } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+
+const authApiBase = import.meta.env.VITE_AUTH_API_URL || 'http://localhost:5196/api';
 
 export default function CreateAccount() {
+  const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [role, setRole] = useState('Developer');
+  const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError('');
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch(`${authApiBase}/auth/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, email, password, role }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(data?.message || 'Account creation failed.');
+      }
+
+      navigate('/login');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to create account.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
 
   return (
     <div className="w-full h-full flex items-center justify-center">
@@ -12,11 +49,10 @@ export default function CreateAccount() {
           <h1 className="text-3xl lg:text-4xl font-medium tracking-tight text-white mb-8 text-center">
             Create an account
           </h1>
-          
+
           <div>
             <div className="my-6 space-y-4">
               <div className="grid gap-3 grid-cols-1 sm:grid-cols-2">
-                {/* GitHub */}
                 <button
                   type="button"
                   className="group flex items-center justify-center space-x-2 h-11 px-4 bg-transparent border border-white/40 hover:bg-white text-[#e3e3e3] hover:text-black focus:outline-none focus:ring-2 focus:ring-[#e3e3e3] focus:ring-offset-2 focus:ring-offset-[#090909] rounded-none transition-colors duration-200"
@@ -26,8 +62,7 @@ export default function CreateAccount() {
                   </svg>
                   <span className="text-[15px] font-medium">GitHub</span>
                 </button>
-                
-                {/* Google */}
+
                 <button
                   type="button"
                   className="group flex items-center justify-center space-x-2 h-11 px-4 bg-transparent border border-white/40 hover:bg-white text-[#e3e3e3] hover:text-black focus:outline-none focus:ring-2 focus:ring-[#e3e3e3] focus:ring-offset-2 focus:ring-offset-[#090909] rounded-none transition-colors duration-200"
@@ -42,55 +77,67 @@ export default function CreateAccount() {
                 </button>
               </div>
             </div>
-            
+
             <div className="flex items-center justify-center my-8">
               <div className="h-[1px] w-full bg-[#333]"></div>
               <span className="px-4 text-sm text-[#8f8f8f] uppercase tracking-wider">or</span>
               <div className="h-[1px] w-full bg-[#333]"></div>
             </div>
-            
-            <form className="mb-8 flex flex-col space-y-5">
+
+            <form className="mb-8 flex flex-col space-y-5" onSubmit={handleSubmit}>
               <div className="flex flex-col space-y-2">
                 <label className="text-[15px] font-medium text-white">Username</label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <User className="h-5 w-5 text-[#8f8f8f]" />
                   </div>
-                  <input 
-                    type="text" 
-                    className="h-12 w-full bg-transparent border border-[#6b6b6b] text-[#f0f0f0] pl-10 pr-3 focus:outline-none focus:border-[#f0f0f0] focus:ring-1 focus:ring-[#f0f0f0] transition-colors placeholder:text-[#8f8f8f]" 
+                  <input
+                    type="text"
+                    value={username}
+                    onChange={(event) => setUsername(event.target.value)}
+                    className="h-12 w-full bg-transparent border border-[#6b6b6b] text-[#f0f0f0] pl-10 pr-3 focus:outline-none focus:border-[#f0f0f0] focus:ring-1 focus:ring-[#f0f0f0] transition-colors placeholder:text-[#8f8f8f]"
                     placeholder="johndoe"
+                    autoComplete="username"
+                    required
                   />
                 </div>
               </div>
-              
+
               <div className="flex flex-col space-y-2">
                 <label className="text-[15px] font-medium text-white">Email</label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <Mail className="h-5 w-5 text-[#8f8f8f]" />
                   </div>
-                  <input 
-                    type="email" 
-                    className="h-12 w-full bg-transparent border border-[#6b6b6b] text-[#f0f0f0] pl-10 pr-3 focus:outline-none focus:border-[#f0f0f0] focus:ring-1 focus:ring-[#f0f0f0] transition-colors placeholder:text-[#8f8f8f]" 
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                    className="h-12 w-full bg-transparent border border-[#6b6b6b] text-[#f0f0f0] pl-10 pr-3 focus:outline-none focus:border-[#f0f0f0] focus:ring-1 focus:ring-[#f0f0f0] transition-colors placeholder:text-[#8f8f8f]"
                     placeholder="your@email.com"
+                    autoComplete="email"
+                    required
                   />
                 </div>
               </div>
-              
+
               <div className="flex flex-col space-y-2">
                 <label className="text-[15px] font-medium text-white">Password</label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <Key className="h-5 w-5 text-[#8f8f8f]" />
                   </div>
-                  <input 
-                    type={showPassword ? "text" : "password"} 
-                    className="h-12 w-full bg-transparent border border-[#6b6b6b] text-[#f0f0f0] pl-10 pr-10 focus:outline-none focus:border-[#f0f0f0] focus:ring-1 focus:ring-[#f0f0f0] transition-colors placeholder:text-[#8f8f8f]" 
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    className="h-12 w-full bg-transparent border border-[#6b6b6b] text-[#f0f0f0] pl-10 pr-10 focus:outline-none focus:border-[#f0f0f0] focus:ring-1 focus:ring-[#f0f0f0] transition-colors placeholder:text-[#8f8f8f]"
                     placeholder="correct horse battery staple"
+                    autoComplete="new-password"
+                    required
                   />
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute inset-y-0 right-0 pr-3 flex items-center text-[#8f8f8f] hover:text-white transition-colors"
                   >
@@ -98,26 +145,44 @@ export default function CreateAccount() {
                   </button>
                 </div>
               </div>
-              
+
+              <div className="flex flex-col space-y-2">
+                <label className="text-[15px] font-medium text-white">Role</label>
+                <select
+                  value={role}
+                  onChange={(event) => setRole(event.target.value)}
+                  className="h-12 w-full bg-transparent border border-[#6b6b6b] text-[#f0f0f0] px-3 focus:outline-none focus:border-[#f0f0f0] focus:ring-1 focus:ring-[#f0f0f0] transition-colors"
+                >
+                  <option value="Developer" className="bg-[#090909]">Developer</option>
+                  <option value="Viewer" className="bg-[#090909]">Viewer</option>
+                </select>
+              </div>
+
+              {error && (
+                <div className="rounded border border-red-500/60 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+                  {error}
+                </div>
+              )}
+
               <div className="text-sm text-[#8f8f8f] pt-2">
                 By signing up you agree to our <a href="#" className="text-[#2563eb] hover:underline">terms of service</a> and <a href="#" className="text-[#2563eb] hover:underline">privacy policy.</a>
               </div>
-              
-              <button 
-                type="submit" 
-                className="group relative h-12 w-full bg-white text-black font-medium text-[16px] hover:text-white transition-colors duration-300 overflow-hidden flex items-center justify-center mt-4"
+
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="group relative h-12 w-full bg-white text-black font-medium text-[16px] hover:text-white transition-colors duration-300 overflow-hidden flex items-center justify-center mt-4 disabled:cursor-not-allowed disabled:opacity-70"
               >
                 <div className="absolute inset-0 w-full h-full bg-[#2563eb] origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-out z-[0]"></div>
-                <span className="relative z-[1]">Create Account</span>
+                <span className="relative z-[1]">{isSubmitting ? 'Creating account...' : 'Create Account'}</span>
               </button>
             </form>
-            
+
             <div className="text-[15px] text-[#8f8f8f] flex flex-col space-y-2 mb-6">
               <div>
                 Already have an account? <Link to="/login" className="text-white hover:text-[#2563eb] transition-colors font-medium">Sign in</Link>
               </div>
             </div>
-            
           </div>
         </div>
       </div>

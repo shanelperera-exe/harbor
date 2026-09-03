@@ -34,7 +34,7 @@ coverage/
 apache-jmeter-*/
 jmeter.log
 *.jtl
-html-report/
+*-report/
 
 # OS Files
 .DS_Store

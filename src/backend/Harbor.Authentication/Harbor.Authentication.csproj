@@ -16,7 +16,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\shared\Harbor.Common\Harbor.Common.csproj" />
     <ProjectReference Include="..\..\shared\Harbor.Contracts\Harbor.Contracts.csproj" />
   </ItemGroup>
 

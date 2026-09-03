@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Harbor.Authentication.DTOs;
 using Harbor.Authentication.Services;
+using Harbor.Authentication.Responses;
 
 namespace Harbor.Authentication.Controllers
 {
@@ -22,10 +23,10 @@ namespace Harbor.Authentication.Controllers
 
             if (!success)
             {
-                return BadRequest(new { message = error });
+                return Problem(detail: error, statusCode: StatusCodes.Status400BadRequest, title: "Bad Request");
             }
 
-            return CreatedAtAction(nameof(Register), data);
+            return StatusCode(201, new ApiResponse<RegisterResponse> { Data = data });
         }
 
         [HttpPost("login")]
@@ -35,10 +36,10 @@ namespace Harbor.Authentication.Controllers
 
             if (!success)
             {
-                return Unauthorized(new { message = error });
+                return Problem(detail: error, statusCode: StatusCodes.Status401Unauthorized, title: "Unauthorized");
             }
 
-            return Ok(data);
+            return Ok(new ApiResponse<LoginResponse> { Data = data });
         }
     }
 }

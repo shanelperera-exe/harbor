@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Harbor.ApiGateway.Data;
+using Harbor.ApiGateway.DTOs;
+using Harbor.ApiGateway.Responses;
 
 namespace Harbor.ApiGateway.Controllers
 {
@@ -24,7 +26,7 @@ namespace Harbor.ApiGateway.Controllers
             command.CommandText = "SELECT 1";
             var result = command.ExecuteScalar();
 
-            return Ok(new { status = "connected", result });
+            return Ok(new ApiResponse<HealthResponse> { Data = new HealthResponse { Status = "connected", Result = result } });
         }
     }
 }

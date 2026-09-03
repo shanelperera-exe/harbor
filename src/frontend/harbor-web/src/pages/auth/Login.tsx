@@ -29,11 +29,11 @@ export default function Login() {
       const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        throw new Error(data?.message || 'Login failed. Please try again.');
+        throw new Error(data?.detail || data?.message || 'Login failed. Please try again.');
       }
 
-      localStorage.setItem('harbor_token', data.token);
-      localStorage.setItem('harbor_user', JSON.stringify({ username: data.username, role: data.role }));
+      localStorage.setItem('harbor_token', data.data.token);
+      localStorage.setItem('harbor_user', JSON.stringify({ username: data.data.username, role: data.data.role }));
       navigate('/');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to sign in.');

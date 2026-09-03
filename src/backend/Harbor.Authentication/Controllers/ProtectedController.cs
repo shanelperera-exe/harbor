@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Harbor.Authentication.Models;
+using Harbor.Authentication.DTOs;
+using Harbor.Authentication.Responses;
 
 namespace Harbor.Authentication.Controllers
 {
@@ -13,7 +15,7 @@ namespace Harbor.Authentication.Controllers
         public IActionResult Ping()
         {
             var username = User.Identity?.Name;
-            return Ok(new { message = $"Hello {username}, you are authenticated." });
+            return Ok(new ApiResponse<MessageResponse> { Data = new MessageResponse { Message = $"Hello {username}, you are authenticated." } });
         }
 
         // Only Admins can reach this
@@ -21,7 +23,7 @@ namespace Harbor.Authentication.Controllers
         [Authorize(Roles = Roles.Admin)]
         public IActionResult AdminOnly()
         {
-            return Ok(new { message = "Welcome, Admin. You can manage the platform." });
+            return Ok(new ApiResponse<MessageResponse> { Data = new MessageResponse { Message = "Welcome, Admin. You can manage the platform." } });
         }
 
         // Admins and Developers can reach this, Viewers cannot
@@ -29,7 +31,7 @@ namespace Harbor.Authentication.Controllers
         [Authorize(Roles = $"{Roles.Admin},{Roles.Developer}")]
         public IActionResult DeveloperArea()
         {
-            return Ok(new { message = "Welcome, Developer. You can trigger operations here." });
+            return Ok(new ApiResponse<MessageResponse> { Data = new MessageResponse { Message = "Welcome, Developer. You can trigger operations here." } });
         }
     }
 }

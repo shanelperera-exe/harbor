@@ -31,7 +31,7 @@ export default function CreateAccount() {
       const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        throw new Error(data?.message || 'Account creation failed.');
+        throw new Error(data?.detail || data?.message || 'Account creation failed.');
       }
 
       navigate('/login');

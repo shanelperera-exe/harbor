@@ -1,8 +1,11 @@
 CREATE TABLE IF NOT EXISTS "Users" (
-    "Id" SERIAL PRIMARY KEY,
-    "Username" VARCHAR(255) NOT NULL UNIQUE,
-    "Email" VARCHAR(255) NOT NULL UNIQUE,
-    "PasswordHash" VARCHAR(255) NOT NULL,
-    "Role" VARCHAR(50) NOT NULL,
-    "CreatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    "Id"                      SERIAL PRIMARY KEY,
+    "Username"                VARCHAR(255) NOT NULL UNIQUE,
+    "Email"                   VARCHAR(255) NOT NULL UNIQUE,
+    "PasswordHash"            VARCHAR(255) NOT NULL,
+    "Role"                    VARCHAR(50)  NOT NULL,
+    "AvatarSvg"               TEXT         NULL,
+    "PasswordResetToken"      VARCHAR(255) NULL,
+    "PasswordResetTokenExpiry" TIMESTAMP   NULL,
+    "CreatedAt"               TIMESTAMP    DEFAULT CURRENT_TIMESTAMP
 );

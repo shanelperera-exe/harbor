@@ -2,8 +2,7 @@ using DotNetEnv;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
-
-
+using Dapper;
 Env.TraversePath().Load();
 
 var builder = WebApplication.CreateBuilder(args);
@@ -78,11 +77,44 @@ builder.Services.AddSingleton<Harbor.Authentication.Data.DbConnectionFactory>();
 builder.Services.AddScoped<Harbor.Authentication.Repositories.IUserRepository, Harbor.Authentication.Repositories.UserRepository>();
 builder.Services.AddScoped<Harbor.Authentication.Services.IAuthService, Harbor.Authentication.Services.AuthService>();
 builder.Services.AddScoped<Harbor.Authentication.Services.IJwtService, Harbor.Authentication.Services.JwtService>();
+builder.Services.AddScoped<Harbor.Authentication.Services.IEmailService, Harbor.Authentication.Services.EmailService>();
 
 var app = builder.Build();
 
 // Run automated database migrations on startup
 Harbor.Authentication.Data.DatabaseInitializer.Initialize(app.Configuration);
+
+using (var scope = app.Services.CreateScope())
+{
+    var userRepository = scope.ServiceProvider.GetRequiredService<Harbor.Authentication.Repositories.IUserRepository>();
+    var adminEmail = Environment.GetEnvironmentVariable("ADMIN_EMAIL") ?? "admin@harbor.local";
+    var adminPassword = Environment.GetEnvironmentVariable("ADMIN_PASSWORD") ?? "Admin123!";
+    var adminUsername = adminEmail.Split('@')[0];
+
+    var existingAdmin = await userRepository.GetByUsernameOrEmailAsync(adminUsername, adminEmail);
+    if (existingAdmin == null)
+    {
+        var passwordHash = BCrypt.Net.BCrypt.HashPassword(adminPassword);
+        var adminUser = new Harbor.Authentication.Models.User
+        {
+            Username = adminUsername,
+            Email = adminEmail,
+            PasswordHash = passwordHash,
+            Role = Harbor.Authentication.Models.Roles.Admin,
+            AvatarSvg = ""
+        };
+        await userRepository.CreateUserAsync(adminUser);
+        Console.WriteLine($"Successfully seeded initial Admin account for {adminEmail}");
+    }
+    else if (existingAdmin.Role != Harbor.Authentication.Models.Roles.Admin)
+    {
+        // Force the admin user to have the Admin role if they were created previously
+        using var connection = scope.ServiceProvider.GetRequiredService<Harbor.Authentication.Data.DbConnectionFactory>().CreateConnection();
+        await Dapper.SqlMapper.ExecuteAsync(connection, "UPDATE \"Users\" SET \"Role\" = @Role WHERE \"Id\" = @Id", new { Role = Harbor.Authentication.Models.Roles.Admin, Id = existingAdmin.Id });
+        Console.WriteLine($"Updated existing user '{adminEmail}' to have the Admin role.");
+    }
+}
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();

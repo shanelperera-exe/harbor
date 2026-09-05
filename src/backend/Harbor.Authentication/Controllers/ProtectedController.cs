@@ -26,12 +26,12 @@ namespace Harbor.Authentication.Controllers
             return Ok(new ApiResponse<MessageResponse> { Data = new MessageResponse { Message = "Welcome, Admin. You can manage the platform." } });
         }
 
-        // Admins and Developers can reach this, Viewers cannot
+        // Admins and Users can reach this
         [HttpGet("developer-area")]
-        [Authorize(Roles = $"{Roles.Admin},{Roles.Developer}")]
+        [Authorize(Roles = $"{Roles.Admin},{Roles.User}")]
         public IActionResult DeveloperArea()
         {
-            return Ok(new ApiResponse<MessageResponse> { Data = new MessageResponse { Message = "Welcome, Developer. You can trigger operations here." } });
+            return Ok(new ApiResponse<MessageResponse> { Data = new MessageResponse { Message = "Welcome, User. You can trigger operations here." } });
         }
     }
 }

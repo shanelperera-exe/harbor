@@ -41,5 +41,31 @@ namespace Harbor.Authentication.Controllers
 
             return Ok(new ApiResponse<LoginResponse> { Data = data });
         }
+
+        [HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
+        {
+            var (success, error) = await _authService.ForgotPasswordAsync(request);
+
+            if (!success)
+            {
+                return Problem(detail: error, statusCode: StatusCodes.Status400BadRequest, title: "Bad Request");
+            }
+
+            return Ok(new { Message = "If an account exists, a password reset link has been sent." });
+        }
+
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
+        {
+            var (success, error) = await _authService.ResetPasswordAsync(request);
+
+            if (!success)
+            {
+                return Problem(detail: error, statusCode: StatusCodes.Status400BadRequest, title: "Bad Request");
+            }
+
+            return Ok(new { Message = "Password has been successfully reset." });
+        }
     }
 }

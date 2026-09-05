@@ -1,0 +1,16 @@
+{
+  "name": "harbor-frontend-workspace",
+  "private": true,
+  "workspaces": [
+    "harbor-web",
+    "harbor-admin"
+  ],
+  "scripts": {
+    "dev": "npx concurrently \"npm run dev -w harbor-web\" \"npm run dev --prefix harbor-admin -- --port 5174\"",
+    "build": "npm run build --workspaces",
+    "test": "npm run test --workspaces"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

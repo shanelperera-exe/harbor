@@ -8,7 +8,7 @@ export default function PasswordReset() {
   const [errors, setErrors] = useState<{email?: string, general?: string}>({});
   const [successMessage] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) =INTENTIONAL_QA_SYNTAX_ERROR> {
     e.preventDefault();
 
     const newErrors: {email?: string, general?: string} = {};

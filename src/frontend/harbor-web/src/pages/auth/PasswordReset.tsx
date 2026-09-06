@@ -3,12 +3,30 @@ import { Mail, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function PasswordReset() {
+  const [email, setEmail] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<{email?: string, general?: string}>({});
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    const newErrors: {email?: string, general?: string} = {};
+    if (!email.trim()) {
+      newErrors.email = 'Email is required';
+    } else {
+      const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/;
+      if (!emailRegex.test(email)) {
+        newErrors.email = 'Please enter a valid email address.';
+      }
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    setErrors({});
     setIsSubmitted(true);
   };
 
@@ -26,7 +44,7 @@ export default function PasswordReset() {
                 Enter your email address and we'll send you a password reset link.
               </p>
               
-              <form onSubmit={handleSubmit} className="mb-8 flex flex-col space-y-5">
+              <form onSubmit={handleSubmit} className="mb-8 flex flex-col space-y-5" noValidate>
                 <div className="flex flex-col space-y-2">
                   <label className="text-[15px] font-medium text-black dark:text-white transition-colors duration-300">Email</label>
                   <div className="relative">
@@ -35,11 +53,13 @@ export default function PasswordReset() {
                     </div>
                     <input 
                       type="email" 
-                      required
-                      className="h-10 w-full bg-transparent border border-black dark:border-[#6b6b6b] text-black dark:text-[#f0f0f0] pl-10 pr-3 focus:outline-none focus:border-black dark:focus:border-[#f0f0f0] focus:ring-1 focus:ring-black dark:focus:ring-[#f0f0f0] transition-colors placeholder:text-gray-400 dark:placeholder:text-[#8f8f8f]" 
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className={`h-10 w-full bg-transparent border ${errors.email ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-black dark:border-[#6b6b6b] focus:border-black dark:focus:border-[#f0f0f0] focus:ring-black dark:focus:ring-[#f0f0f0]'} text-black dark:text-[#f0f0f0] pl-10 pr-3 focus:outline-none focus:ring-1 transition-colors placeholder:text-gray-400 dark:placeholder:text-[#8f8f8f]`}
                       placeholder="your@email.com"
                     />
                   </div>
+                  {errors.email && <p className="text-red-500 dark:text-red-400 text-[13px]">{errors.email}</p>}
                 </div>
                 
                 <button 
@@ -63,10 +83,10 @@ export default function PasswordReset() {
               <p className="text-[17px] text-black dark:text-[#f0f0f0] transition-colors duration-300">
                 Follow the link in the email to reset your password.
               </p>
-              {error && (
+              {errors.general && (
                 <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400 transition-colors duration-300 mt-2">
                   <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                  <p>{error}</p>
+                  <p>{errors.general}</p>
                 </div>
               )}
               {successMessage && (

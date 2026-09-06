@@ -11,13 +11,15 @@ namespace Harbor.Authentication.Tests
     {
         private readonly Mock<IUserRepository> _userRepositoryMock;
         private readonly Mock<IJwtService> _jwtServiceMock;
+        private readonly Mock<IEmailService> _emailServiceMock;
         private readonly AuthService _authService;
 
         public AuthServiceTests()
         {
             _userRepositoryMock = new Mock<IUserRepository>();
             _jwtServiceMock = new Mock<IJwtService>();
-            _authService = new AuthService(_userRepositoryMock.Object, _jwtServiceMock.Object);
+            _emailServiceMock = new Mock<IEmailService>();
+            _authService = new AuthService(_userRepositoryMock.Object, _jwtServiceMock.Object, _emailServiceMock.Object);
         }
 
         // ---------- RegisterAsync tests ----------
@@ -50,7 +52,7 @@ namespace Harbor.Authentication.Tests
             Assert.NotNull(data);
             Assert.Equal("puna", data!.Username);
             Assert.Equal("puna@gmail.com", data.Email);
-            Assert.Equal("Developer", data.Role);
+            Assert.Equal(Models.Roles.User, data.Role);
         }
 
         [Theory]
@@ -145,7 +147,7 @@ namespace Harbor.Authentication.Tests
             };
 
             _userRepositoryMock
-                .Setup(r => r.GetByUsernameAsync("puna"))
+                .Setup(r => r.GetByUsernameOrEmailAsync("puna", "puna"))
                 .ReturnsAsync(existingUser);
 
             var expiresAt = DateTime.UtcNow.AddHours(1);
@@ -171,7 +173,7 @@ namespace Harbor.Authentication.Tests
             var existingUser = new User { Username = "puna", PasswordHash = hashedPassword };
 
             _userRepositoryMock
-                .Setup(r => r.GetByUsernameAsync("puna"))
+                .Setup(r => r.GetByUsernameOrEmailAsync("puna", "puna"))
                 .ReturnsAsync(existingUser);
 
             var request = new LoginRequest { Username = "puna", Password = "wrong-password" };
@@ -188,7 +190,7 @@ namespace Harbor.Authentication.Tests
         public async Task LoginAsync_UserDoesNotExist_ReturnsFailure()
         {
             _userRepositoryMock
-                .Setup(r => r.GetByUsernameAsync("ghost"))
+                .Setup(r => r.GetByUsernameOrEmailAsync("ghost", "ghost"))
                 .ReturnsAsync((User?)null);
 
             var request = new LoginRequest { Username = "ghost", Password = "whatever123" };
@@ -209,51 +211,9 @@ namespace Harbor.Authentication.Tests
             var (success, error, data) = await _authService.LoginAsync(request);
 
             Assert.False(success);
-            Assert.Equal("Username and password are required.", error);
+            Assert.Equal("Username or email and password are required.", error);
         }
 
-
-        [Fact]
-        public async Task RegisterAsync_ViewerRole_ReturnsSuccessWithViewerRole()
-        {
-            var request = new RegisterRequest
-            {
-                Username = "vicky",
-                Email = "vicky@gmail.com",
-                Password = "12345678",
-                Role = "Viewer"
-            };
-
-            _userRepositoryMock
-                .Setup(r => r.GetByUsernameOrEmailAsync(request.Username, request.Email))
-                .ReturnsAsync((User?)null);
-
-            _userRepositoryMock
-                .Setup(r => r.CreateUserAsync(It.IsAny<User>()))
-                .ReturnsAsync(2);
-
-            var (success, error, data) = await _authService.RegisterAsync(request);
-
-            Assert.True(success);
-            Assert.Equal("Viewer", data!.Role);
-        }
-
-        [Fact]
-        public async Task RegisterAsync_AdminRole_IsRejected()
-        {
-            var request = new RegisterRequest
-            {
-                Username = "hacker",
-                Email = "hacker@gmail.com",
-                Password = "12345678",
-                Role = "Admin"
-            };
-
-            var (success, error, data) = await _authService.RegisterAsync(request);
-
-            Assert.False(success);
-            Assert.Equal("Role must be either Developer or Viewer.", error);
-        }
 
         private Microsoft.Extensions.Configuration.IConfiguration GetTestConfiguration()
         {

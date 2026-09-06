@@ -10,12 +10,28 @@ export default function CreateAccount() {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [errors, setErrors] = useState<{username?: string, email?: string, password?: string, general?: string}>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError('');
+
+    const newErrors: {username?: string, email?: string, password?: string, general?: string} = {};
+    if (!username.trim()) newErrors.username = 'Username is required';
+    if (!email.trim()) newErrors.email = 'Email is required';
+    if (!password.trim()) newErrors.password = 'Password is required';
+
+    const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/;
+    if (email.trim() && !emailRegex.test(email)) {
+      newErrors.email = 'Please enter a valid email address.';
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    setErrors({});
     setIsSubmitting(true);
 
     try {
@@ -63,7 +79,7 @@ export default function CreateAccount() {
 
       navigate('/dashboard');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to create account.');
+      setErrors({ general: err instanceof Error ? err.message : 'Unable to create account.' });
     } finally {
       setIsSubmitting(false);
     }
@@ -119,7 +135,7 @@ export default function CreateAccount() {
               <div className="h-[1px] w-full bg-black dark:bg-[#333] transition-colors duration-300"></div>
             </div>
 
-            <form className="mb-8 flex flex-col space-y-5" onSubmit={handleSubmit}>
+            <form className="mb-8 flex flex-col space-y-5" onSubmit={handleSubmit} noValidate>
               <div className="flex flex-col space-y-2">
                 <label className="text-[15px] font-medium text-black dark:text-white transition-colors duration-300">Username</label>
                 <div className="relative">
@@ -130,12 +146,13 @@ export default function CreateAccount() {
                     type="text"
                     value={username}
                     onChange={(event) => setUsername(event.target.value)}
-                    className="h-10 w-full bg-transparent border border-black dark:border-[#6b6b6b] text-black dark:text-[#f0f0f0] pl-10 pr-3 focus:outline-none focus:border-black dark:focus:border-[#f0f0f0] focus:ring-1 focus:ring-black dark:focus:ring-[#f0f0f0] transition-colors placeholder:text-gray-400 dark:placeholder:text-[#8f8f8f]"
+                    className={`h-10 w-full bg-transparent border ${errors.username ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-black dark:border-[#6b6b6b] focus:border-black dark:focus:border-[#f0f0f0] focus:ring-black dark:focus:ring-[#f0f0f0]'} text-black dark:text-[#f0f0f0] pl-10 pr-3 focus:outline-none focus:ring-1 transition-colors placeholder:text-gray-400 dark:placeholder:text-[#8f8f8f]`}
                     placeholder="your_username"
                     autoComplete="username"
-                    required
+                    data-testid="username-input"
                   />
                 </div>
+                {errors.username && <p className="text-red-500 dark:text-red-400 text-[13px]">{errors.username}</p>}
               </div>
 
               <div className="flex flex-col space-y-2">
@@ -148,12 +165,13 @@ export default function CreateAccount() {
                     type="email"
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
-                    className="h-10 w-full bg-transparent border border-black dark:border-[#6b6b6b] text-black dark:text-[#f0f0f0] pl-10 pr-3 focus:outline-none focus:border-black dark:focus:border-[#f0f0f0] focus:ring-1 focus:ring-black dark:focus:ring-[#f0f0f0] transition-colors placeholder:text-gray-400 dark:placeholder:text-[#8f8f8f]"
+                    className={`h-10 w-full bg-transparent border ${errors.email ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-black dark:border-[#6b6b6b] focus:border-black dark:focus:border-[#f0f0f0] focus:ring-black dark:focus:ring-[#f0f0f0]'} text-black dark:text-[#f0f0f0] pl-10 pr-3 focus:outline-none focus:ring-1 transition-colors placeholder:text-gray-400 dark:placeholder:text-[#8f8f8f]`}
                     placeholder="your@email.com"
                     autoComplete="email"
-                    required
+                    data-testid="email-input"
                   />
                 </div>
+                {errors.email && <p className="text-red-500 dark:text-red-400 text-[13px]">{errors.email}</p>}
               </div>
 
               <div className="flex flex-col space-y-2">
@@ -166,10 +184,10 @@ export default function CreateAccount() {
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
-                    className="h-10 w-full bg-transparent border border-black dark:border-[#6b6b6b] text-black dark:text-[#f0f0f0] pl-10 pr-10 focus:outline-none focus:border-black dark:focus:border-[#f0f0f0] focus:ring-1 focus:ring-black dark:focus:ring-[#f0f0f0] transition-colors placeholder:text-gray-400 dark:placeholder:text-[#8f8f8f]"
+                    className={`h-10 w-full bg-transparent border ${errors.password ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-black dark:border-[#6b6b6b] focus:border-black dark:focus:border-[#f0f0f0] focus:ring-black dark:focus:ring-[#f0f0f0]'} text-black dark:text-[#f0f0f0] pl-10 pr-10 focus:outline-none focus:ring-1 transition-colors placeholder:text-gray-400 dark:placeholder:text-[#8f8f8f]`}
                     placeholder="correct horse battery staple"
                     autoComplete="new-password"
-                    required
+                    data-testid="password-input"
                   />
                   <button
                     type="button"
@@ -214,14 +232,15 @@ export default function CreateAccount() {
                     </div>
                   </div>
                 )}
+                {errors.password && <p className="text-red-500 dark:text-red-400 text-[13px] mt-1">{errors.password}</p>}
               </div>
 
 
 
-              {error && (
-                <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400 transition-colors duration-300 mt-2">
+              {errors.general && (
+                <div data-testid="error-message" className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400 transition-colors duration-300 mt-2">
                   <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                  <p>{error}</p>
+                  <p>{errors.general}</p>
                 </div>
               )}
 
@@ -232,6 +251,7 @@ export default function CreateAccount() {
               <button
                 type="submit"
                 disabled={isSubmitting}
+                data-testid="create-account-button"
                 className="group relative h-10 w-full bg-black dark:bg-white text-white dark:text-black font-medium text-[16px] hover:text-white transition-colors duration-300 overflow-hidden flex items-center justify-center mt-4 disabled:cursor-not-allowed disabled:opacity-70"
               >
                 <div className="absolute inset-0 w-full h-full bg-[#2563eb] origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-out z-[0]"></div>

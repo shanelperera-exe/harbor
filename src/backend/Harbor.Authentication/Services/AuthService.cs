@@ -43,7 +43,8 @@ namespace Harbor.Authentication.Services
                 return (false, "Password must be at least 8 characters.", null);
             }
 
-            if (!request.Email.Contains('@'))
+            var emailAttribute = new System.ComponentModel.DataAnnotations.EmailAddressAttribute();
+            if (!emailAttribute.IsValid(request.Email))
             {
                 return (false, "Email address is not valid.", null);
             }

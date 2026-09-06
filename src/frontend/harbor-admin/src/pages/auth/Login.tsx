@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Key, Eye, EyeOff, User, AlertCircle } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 
-const authApiBase = import.meta.env.VITE_AUTH_API_URL || 'http://localhost:5196/api';
+const authApiBase = import.meta.env.VITE_AUTH_API_URL || 'http://localhost:5053/api/auth';
 
 export default function Login() {
   const navigate = useNavigate();

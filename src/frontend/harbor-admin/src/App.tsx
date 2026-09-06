@@ -1,6 +1,5 @@
 import './App.css';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import Home from './pages/home/Home';
 import CreateAccount from './pages/auth/CreateAccount';
 import Login from './pages/auth/Login';
 import PasswordReset from './pages/auth/PasswordReset';

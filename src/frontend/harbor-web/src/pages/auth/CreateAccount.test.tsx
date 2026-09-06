@@ -5,7 +5,7 @@ import CreateAccount from './CreateAccount';
 
 describe('CreateAccount Component', () => {
   beforeEach(() => {
-    global.fetch = vi.fn();
+    globalThis.fetch = vi.fn();
   });
 
   it('renders create account form correctly', () => {
@@ -37,7 +37,7 @@ describe('CreateAccount Component', () => {
   });
 
   it('displays error on failed registration', async () => {
-    (global.fetch as any).mockResolvedValueOnce({
+    (globalThis.fetch as any).mockResolvedValueOnce({
       ok: false,
       json: () => Promise.resolve({ detail: 'User already exists' }),
     });

@@ -6,7 +6,7 @@ import Login from './Login';
 describe('Login Component', () => {
   beforeEach(() => {
     // Reset fetch mock before each test
-    global.fetch = vi.fn();
+    globalThis.fetch = vi.fn();
   });
 
   it('renders login form correctly', () => {
@@ -23,7 +23,7 @@ describe('Login Component', () => {
 
   it('displays error on failed login', async () => {
     // Mock fetch to return a 401 response
-    (global.fetch as any).mockResolvedValueOnce({
+    (globalThis.fetch as any).mockResolvedValueOnce({
       ok: false,
       json: () => Promise.resolve({ detail: 'Invalid credentials' }),
     });
@@ -44,7 +44,7 @@ describe('Login Component', () => {
   });
 
   it('redirects on successful login', async () => {
-    (global.fetch as any).mockResolvedValueOnce({
+    (globalThis.fetch as any).mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve({ data: { token: 'fake-token' } }),
     });

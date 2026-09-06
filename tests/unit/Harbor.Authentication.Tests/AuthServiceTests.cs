@@ -47,7 +47,8 @@ namespace Harbor.Authentication.Tests
             var (success, error, data) = await _authService.RegisterAsync(request);
 
             // Assert
-            Assert.True(success);
+            // INTENTIONAL QA BREAK: Asserting False instead of True so test fails
+            Assert.False(success);
             Assert.Null(error);
             Assert.NotNull(data);
             Assert.Equal("puna", data!.Username);

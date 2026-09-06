@@ -5,13 +5,13 @@ import { Link } from 'react-router-dom';
 export default function PasswordReset() {
   const [email, setEmail] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [errors, setErrors] = useState<{email?: string, general?: string}>({});
+  const [errors, setErrors] = useState<{ email?: string, general?: string }>({});
   const [successMessage] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) =INTENTIONAL_QA_SYNTAX_ERROR> {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const newErrors: {email?: string, general?: string} = {};
+    const newErrors: { email?: string, general?: string } = {};
     if (!email.trim()) {
       newErrors.email = 'Email is required';
     } else {
@@ -37,13 +37,13 @@ export default function PasswordReset() {
           <h1 className="text-3xl lg:text-4xl font-medium tracking-tight text-black dark:text-white mb-6 transition-colors duration-300">
             Reset Your Password
           </h1>
-          
+
           {!isSubmitted ? (
             <div>
               <p className="text-[17px] text-black dark:text-[#f0f0f0] mb-8 transition-colors duration-300">
                 Enter your email address and we'll send you a password reset link.
               </p>
-              
+
               <form onSubmit={handleSubmit} className="mb-8 flex flex-col space-y-5" noValidate>
                 <div className="flex flex-col space-y-2">
                   <label className="text-[15px] font-medium text-black dark:text-white transition-colors duration-300">Email</label>
@@ -51,8 +51,8 @@ export default function PasswordReset() {
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                       <Mail className="h-5 w-5 text-gray-400 dark:text-[#8f8f8f] transition-colors duration-300" />
                     </div>
-                    <input 
-                      type="email" 
+                    <input
+                      type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       className={`h-10 w-full bg-transparent border ${errors.email ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-black dark:border-[#6b6b6b] focus:border-black dark:focus:border-[#f0f0f0] focus:ring-black dark:focus:ring-[#f0f0f0]'} text-black dark:text-[#f0f0f0] pl-10 pr-3 focus:outline-none focus:ring-1 transition-colors placeholder:text-gray-400 dark:placeholder:text-[#8f8f8f]`}
@@ -61,16 +61,16 @@ export default function PasswordReset() {
                   </div>
                   {errors.email && <p className="text-red-500 dark:text-red-400 text-[13px]">{errors.email}</p>}
                 </div>
-                
-                <button 
-                  type="submit" 
+
+                <button
+                  type="submit"
                   className="group relative h-10 w-full bg-black dark:bg-white text-white dark:text-black font-medium text-[16px] hover:text-white transition-colors duration-300 overflow-hidden flex items-center justify-center mt-4"
                 >
                   <div className="absolute inset-0 w-full h-full bg-[#2563eb] origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-out z-[0]"></div>
                   <span className="relative z-[1]">Reset Password</span>
                 </button>
               </form>
-              
+
               <div className="text-[15px] text-black dark:text-[#f0f0f0] transition-colors duration-300">
                 If you need further assistance, contact <a href="mailto:support@harbor.com" className="text-[#2563eb] hover:text-blue-700 font-medium">support@harbor.com</a>
               </div>

@@ -37,7 +37,7 @@ jobs:
         echo "SMTP_FROM_EMAIL=ci@harbor.local" >> .env
 
     - name: Start PostgreSQL Database
-      run: docker-compose up -d postgres
+      run: docker compose up -d postgres
 
     - name: Setup Node.js
       uses: actions/setup-node@v4

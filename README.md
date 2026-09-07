@@ -19,8 +19,21 @@ This README covers the Developer-side setup and usage for the parts of Harbor bu
 harbor/
 ├── src/
 │   ├── backend/
-│   │   ├── Harbor.ApiGateway        # entry point, PostgreSQL health check
-│   │   ├── Harbor.Authentication    # register, login, JWT, RBAC
+│   │   ├── Harbor.ApiGateway
+│   │   │   ├── Controllers
+│   │   │   ├── Data
+│   │   │   ├── DTOs
+│   │   │   └── Responses
+│   │   ├── Harbor.Authentication
+│   │   │   ├── Controllers
+│   │   │   ├── Data
+│   │   │   ├── DTOs
+│   │   │   ├── EmailTemplates
+│   │   │   ├── Models
+│   │   │   ├── Repositories
+│   │   │   ├── Responses
+│   │   │   ├── Scripts
+│   │   │   └── Services
 │   │   ├── Harbor.Project
 │   │   ├── Harbor.Environment
 │   │   ├── Harbor.Deployment

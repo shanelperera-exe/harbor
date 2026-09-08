@@ -1,1 +1,81 @@
+name: CI Pipeline
 
+on:
+  push:
+    branches: [ "main", "master", "develop" ]
+  pull_request:
+    branches: [ "main", "master", "develop" ]
+
+jobs:
+  build-and-test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    environment: Development
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Generate Test .env file
+      run: |
+        echo "POSTGRES_SERVER=localhost" >> .env
+        echo "POSTGRES_PORT=5432" >> .env
+        echo "POSTGRES_DATABASE=harbor_db" >> .env
+        echo "POSTGRES_USER=harboruser" >> .env
+        echo "POSTGRES_PASSWORD=harborpass" >> .env
+        echo "JWT_SECRET=super_secret_jwt_key_that_is_at_least_32_bytes_long_for_testing" >> .env
+        echo "JWT_ISSUER=HarborAuth" >> .env
+        echo "JWT_AUDIENCE=HarborClients" >> .env
+        echo "ADMIN_EMAIL=admin@harbor.local" >> .env
+        echo "ADMIN_PASSWORD=Admin123!" >> .env
+        echo "API_GATEWAY_URL=http://localhost:5053" >> .env
+        echo "SMTP_HOST=localhost" >> .env
+        echo "SMTP_PORT=25" >> .env
+        echo "SMTP_USERNAME=test" >> .env
+        echo "SMTP_PASSWORD=test" >> .env
+        echo "SMTP_FROM_NAME=Harbor CI" >> .env
+        echo "SMTP_FROM_EMAIL=ci@harbor.local" >> .env
+
+    - name: Start PostgreSQL Database
+      run: docker compose up -d postgres
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install Frontend Dependencies
+      working-directory: ./src/frontend
+      run: npm install
+
+    - name: Build Frontend
+      working-directory: ./src/frontend
+      run: npm run build
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 10.0.x
+
+    - name: Restore Backend Dependencies
+      run: dotnet restore
+
+    - name: Build Backend
+      run: dotnet build --no-restore
+
+    - name: Start Harbor Backend Services (Background)
+      run: |
+        dotnet run --project src/backend/Harbor.Authentication &
+        dotnet run --project src/backend/Harbor.ApiGateway &
+        # Give backends a few seconds to initialize and run DB migrations
+        sleep 10
+
+    - name: Start Frontend Server (Background)
+      working-directory: ./src/frontend
+      run: |
+        npm run dev -- --port 5173 &
+        # Give frontend a few seconds to serve
+        sleep 5
+
+    - name: Run Unit and E2E Tests
+      run: dotnet test --no-build --verbosity normal

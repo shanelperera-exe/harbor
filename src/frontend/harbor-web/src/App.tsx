@@ -8,6 +8,8 @@ import MainLayout from './components/layout/MainLayout';
 import DashboardLayout from './components/layout/DashboardLayout';
 import Dashboard from './pages/dashboard/Dashboard';
 import CreateService from './pages/dashboard/CreateService';
+import Projects from './pages/projects/Projects';
+import CreateProject from './pages/projects/CreateProject';
 
 function App() {
   return (
@@ -21,6 +23,10 @@ function App() {
       <Route path="/dashboard" element={<DashboardLayout />}>
         <Route index element={<Dashboard />} />
         <Route path="new" element={<CreateService />} />
+      </Route>
+      <Route path="/projects" element={<DashboardLayout />}>
+        <Route index element={<Projects />} />
+        <Route path="new" element={<CreateProject />} />
       </Route>
     </Routes>
   );

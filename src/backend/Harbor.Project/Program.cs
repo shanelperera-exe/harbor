@@ -106,3 +106,8 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+/// <summary>
+/// Exposes the top-level Program for WebApplicationFactory-based integration tests.
+/// </summary>
+public partial class Program { }

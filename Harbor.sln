@@ -33,6 +33,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "unit", "unit", "{D3EC7B60-0
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Harbor.Authentication.Tests", "tests\unit\Harbor.Authentication.Tests\Harbor.Authentication.Tests.csproj", "{76F6675B-21AF-459C-AAFB-DA9EE9788D11}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Harbor.Project.Tests", "tests\unit\Harbor.Project.Tests\Harbor.Project.Tests.csproj", "{4C684650-FE41-4895-8910-FC7DA292544D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -82,6 +84,10 @@ Global
 		{76F6675B-21AF-459C-AAFB-DA9EE9788D11}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{76F6675B-21AF-459C-AAFB-DA9EE9788D11}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{76F6675B-21AF-459C-AAFB-DA9EE9788D11}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4C684650-FE41-4895-8910-FC7DA292544D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4C684650-FE41-4895-8910-FC7DA292544D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4C684650-FE41-4895-8910-FC7DA292544D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4C684650-FE41-4895-8910-FC7DA292544D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{9DD63D8E-0083-44E6-BCB4-93E67D072967} = {35CCCC78-1653-450E-B3A0-B177CDEBF44E}
@@ -97,5 +103,6 @@ Global
 		{14304D9E-ADB9-4DF4-91D7-58B1F4AD98A1} = {1F19229A-71B5-48FC-AE83-65E124349ECB}
 		{D3EC7B60-0B9F-4AE9-8C8A-A9FCF0805F9D} = {1F19229A-71B5-48FC-AE83-65E124349ECB}
 		{76F6675B-21AF-459C-AAFB-DA9EE9788D11} = {D3EC7B60-0B9F-4AE9-8C8A-A9FCF0805F9D}
+		{4C684650-FE41-4895-8910-FC7DA292544D} = {D3EC7B60-0B9F-4AE9-8C8A-A9FCF0805F9D}
 	EndGlobalSection
 EndGlobal

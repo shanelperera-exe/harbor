@@ -234,5 +234,195 @@ namespace Harbor.Project.Tests
             Assert.NotNull(result);
             Assert.Empty(result);
         }
+
+                // ---------- UpdateAsync: Scenario 1 - Update project (valid data) ----------
+
+        [Fact]
+        public async Task UpdateAsync_ValidData_ReturnsSuccessWithUpdatedProject()
+        {
+            // Arrange
+            var existing = new ProjectEntity { Id = 1, Name = "old-name", OwnerId = 5, CreatedAt = DateTime.UtcNow };
+            var request = new UpdateProjectRequest { Name = "new-name", Description = "updated desc" };
+
+            _projectRepositoryMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(existing);
+            _projectRepositoryMock.Setup(r => r.NameExistsForOwnerAsync("new-name", 5)).ReturnsAsync(false);
+            _projectRepositoryMock.Setup(r => r.UpdateAsync(It.IsAny<ProjectEntity>())).ReturnsAsync(true);
+            _projectRepositoryMock.Setup(r => r.GetByIdAsync(1))
+                .ReturnsAsync(existing)
+                .ReturnsAsync(new ProjectEntity { Id = 1, Name = "new-name", Description = "updated desc", OwnerId = 5, UpdatedAt = DateTime.UtcNow });
+
+            // Act
+            var (success, error, forbidden, data) = await _projectService.UpdateAsync(1, request, userId: 5, isAdmin: false);
+
+            // Assert
+            Assert.True(success);
+            Assert.Null(error);
+            Assert.False(forbidden);
+            Assert.Equal("new-name", data!.Name);
+        }
+
+        [Fact]
+        public async Task UpdateAsync_ProjectNotFound_ReturnsFailureNotForbidden()
+        {
+            // Arrange
+            _projectRepositoryMock.Setup(r => r.GetByIdAsync(99)).ReturnsAsync((ProjectEntity?)null);
+            var request = new UpdateProjectRequest { Name = "any-name" };
+
+            // Act
+            var (success, error, forbidden, data) = await _projectService.UpdateAsync(99, request, userId: 1, isAdmin: false);
+
+            // Assert
+            Assert.False(success);
+            Assert.Equal("Project not found.", error);
+            Assert.False(forbidden);
+            Assert.Null(data);
+        }
+
+        // ---------- UpdateAsync: Scenario 3 - Unauthorized update ----------
+
+        [Fact]
+        public async Task UpdateAsync_NonOwnerNonAdmin_ReturnsForbidden()
+        {
+            // Arrange
+            var existing = new ProjectEntity { Id = 1, Name = "someone-elses", OwnerId = 5, CreatedAt = DateTime.UtcNow };
+            _projectRepositoryMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(existing);
+            var request = new UpdateProjectRequest { Name = "hijacked-name" };
+
+            // Act
+            var (success, error, forbidden, data) = await _projectService.UpdateAsync(1, request, userId: 7, isAdmin: false);
+
+            // Assert
+            Assert.False(success);
+            Assert.True(forbidden);
+            Assert.Equal("You do not have permission to update this project.", error);
+            Assert.Null(data);
+            _projectRepositoryMock.Verify(r => r.UpdateAsync(It.IsAny<ProjectEntity>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task UpdateAsync_AdminNonOwner_IsAllowed()
+        {
+            // Arrange
+            var existing = new ProjectEntity { Id = 1, Name = "someone-elses", OwnerId = 5, CreatedAt = DateTime.UtcNow };
+            _projectRepositoryMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(existing);
+            _projectRepositoryMock.Setup(r => r.NameExistsForOwnerAsync(It.IsAny<string>(), 5)).ReturnsAsync(false);
+            _projectRepositoryMock.Setup(r => r.UpdateAsync(It.IsAny<ProjectEntity>())).ReturnsAsync(true);
+            var request = new UpdateProjectRequest { Name = "admin-edited-name" };
+
+            // Act
+            var (success, error, forbidden, data) = await _projectService.UpdateAsync(1, request, userId: 999, isAdmin: true);
+
+            // Assert
+            Assert.True(success);
+            Assert.False(forbidden);
+        }
+
+        [Fact]
+        public async Task UpdateAsync_ArchivedProject_ReturnsValidationError()
+        {
+            // Arrange
+            var existing = new ProjectEntity { Id = 1, Name = "old", OwnerId = 5, IsArchived = true };
+            _projectRepositoryMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(existing);
+            var request = new UpdateProjectRequest { Name = "new-name" };
+
+            // Act
+            var (success, error, forbidden, data) = await _projectService.UpdateAsync(1, request, userId: 5, isAdmin: false);
+
+            // Assert
+            Assert.False(success);
+            Assert.False(forbidden);
+            Assert.Equal("Archived projects cannot be updated.", error);
+        }
+
+        [Theory]
+        [InlineData(null)]
+        [InlineData("")]
+        [InlineData("ab")]
+        public async Task UpdateAsync_InvalidName_ReturnsValidationError(string? name)
+        {
+            // Arrange
+            var existing = new ProjectEntity { Id = 1, Name = "old", OwnerId = 5 };
+            _projectRepositoryMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(existing);
+            var request = new UpdateProjectRequest { Name = name! };
+
+            // Act
+            var (success, error, forbidden, data) = await _projectService.UpdateAsync(1, request, userId: 5, isAdmin: false);
+
+            // Assert
+            Assert.False(success);
+            Assert.False(forbidden);
+            _projectRepositoryMock.Verify(r => r.UpdateAsync(It.IsAny<ProjectEntity>()), Times.Never);
+        }
+
+        // ---------- ArchiveAsync: Scenario 2 - Archive project ----------
+
+        [Fact]
+        public async Task ArchiveAsync_Owner_ArchivesSuccessfully()
+        {
+            // Arrange
+            var existing = new ProjectEntity { Id = 1, Name = "to-archive", OwnerId = 5, IsArchived = false };
+            _projectRepositoryMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(existing);
+            _projectRepositoryMock.Setup(r => r.ArchiveAsync(1, It.IsAny<DateTime>())).ReturnsAsync(true);
+
+            // Act
+            var (success, error, forbidden) = await _projectService.ArchiveAsync(1, userId: 5, isAdmin: false);
+
+            // Assert
+            Assert.True(success);
+            Assert.Null(error);
+            Assert.False(forbidden);
+            _projectRepositoryMock.Verify(r => r.ArchiveAsync(1, It.IsAny<DateTime>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task ArchiveAsync_AlreadyArchived_ReturnsValidationError()
+        {
+            // Arrange
+            var existing = new ProjectEntity { Id = 1, Name = "already-archived", OwnerId = 5, IsArchived = true };
+            _projectRepositoryMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(existing);
+
+            // Act
+            var (success, error, forbidden) = await _projectService.ArchiveAsync(1, userId: 5, isAdmin: false);
+
+            // Assert
+            Assert.False(success);
+            Assert.False(forbidden);
+            Assert.Equal("Project is already archived.", error);
+            _projectRepositoryMock.Verify(r => r.ArchiveAsync(It.IsAny<int>(), It.IsAny<DateTime>()), Times.Never);
+        }
+
+        // ---------- ArchiveAsync: Scenario 3 - Unauthorized archive ----------
+
+        [Fact]
+        public async Task ArchiveAsync_NonOwnerNonAdmin_ReturnsForbidden()
+        {
+            // Arrange
+            var existing = new ProjectEntity { Id = 1, Name = "not-yours", OwnerId = 5, IsArchived = false };
+            _projectRepositoryMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(existing);
+
+            // Act
+            var (success, error, forbidden) = await _projectService.ArchiveAsync(1, userId: 7, isAdmin: false);
+
+            // Assert
+            Assert.False(success);
+            Assert.True(forbidden);
+            Assert.Equal("You do not have permission to archive this project.", error);
+            _projectRepositoryMock.Verify(r => r.ArchiveAsync(It.IsAny<int>(), It.IsAny<DateTime>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task ArchiveAsync_ProjectNotFound_ReturnsFailureNotForbidden()
+        {
+            // Arrange
+            _projectRepositoryMock.Setup(r => r.GetByIdAsync(99)).ReturnsAsync((ProjectEntity?)null);
+
+            // Act
+            var (success, error, forbidden) = await _projectService.ArchiveAsync(99, userId: 1, isAdmin: false);
+
+            // Assert
+            Assert.False(success);
+            Assert.False(forbidden);
+            Assert.Equal("Project not found.", error);
+        }
     }
 }

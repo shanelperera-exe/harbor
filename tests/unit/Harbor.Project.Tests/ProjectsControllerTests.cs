@@ -155,5 +155,129 @@ namespace Harbor.Project.Tests
             Assert.Single(body.Data!);
             _projectServiceMock.Verify(s => s.GetAccessibleProjectsAsync(1, true), Times.Once);
         }
+
+                // ---------- Update ----------
+
+        [Fact]
+        public async Task Update_NoUserIdClaim_ReturnsUnauthorized()
+        {
+            SetUser(userId: null);
+            var request = new UpdateProjectRequest { Name = "new-name" };
+
+            var result = await _controller.Update(1, request);
+
+            Assert.IsType<UnauthorizedResult>(result);
+            _projectServiceMock.Verify(
+                s => s.UpdateAsync(It.IsAny<int>(), It.IsAny<UpdateProjectRequest>(), It.IsAny<int>(), It.IsAny<bool>()),
+                Times.Never);
+        }
+
+        [Fact]
+        public async Task Update_ValidRequest_Returns200WithProject()
+        {
+            SetUser(userId: 5);
+            var request = new UpdateProjectRequest { Name = "renamed" };
+            var expected = new ProjectResponse { Id = 1, Name = "renamed", OwnerId = 5 };
+
+            _projectServiceMock
+                .Setup(s => s.UpdateAsync(1, request, 5, false))
+                .ReturnsAsync((true, (string?)null, false, expected));
+
+            var result = await _controller.Update(1, request);
+
+            var okResult = Assert.IsType<OkObjectResult>(result);
+            var body = Assert.IsType<ApiResponse<ProjectResponse>>(okResult.Value);
+            Assert.Equal("renamed", body.Data!.Name);
+        }
+
+        [Fact]
+        public async Task Update_Forbidden_Returns403()
+        {
+            SetUser(userId: 7);
+            var request = new UpdateProjectRequest { Name = "hijacked" };
+
+            _projectServiceMock
+                .Setup(s => s.UpdateAsync(1, request, 7, false))
+                .ReturnsAsync((false, "You do not have permission to update this project.", true, (ProjectResponse?)null));
+
+            var result = await _controller.Update(1, request);
+
+            var objectResult = Assert.IsType<ObjectResult>(result);
+            Assert.Equal(403, objectResult.StatusCode);
+        }
+
+        [Fact]
+        public async Task Update_InvalidRequest_Returns400()
+        {
+            SetUser(userId: 5);
+            var request = new UpdateProjectRequest { Name = "" };
+
+            _projectServiceMock
+                .Setup(s => s.UpdateAsync(1, request, 5, false))
+                .ReturnsAsync((false, "Project name is required.", false, (ProjectResponse?)null));
+
+            var result = await _controller.Update(1, request);
+
+            var objectResult = Assert.IsType<ObjectResult>(result);
+            Assert.Equal(400, objectResult.StatusCode);
+        }
+
+        // ---------- Archive ----------
+
+        [Fact]
+        public async Task Archive_NoUserIdClaim_ReturnsUnauthorized()
+        {
+            SetUser(userId: null);
+
+            var result = await _controller.Archive(1);
+
+            Assert.IsType<UnauthorizedResult>(result);
+            _projectServiceMock.Verify(
+                s => s.ArchiveAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task Archive_ValidRequest_Returns200()
+        {
+            SetUser(userId: 5);
+
+            _projectServiceMock
+                .Setup(s => s.ArchiveAsync(1, 5, false))
+                .ReturnsAsync((true, (string?)null, false));
+
+            var result = await _controller.Archive(1);
+
+            Assert.IsType<OkObjectResult>(result);
+        }
+
+        [Fact]
+        public async Task Archive_Forbidden_Returns403()
+        {
+            SetUser(userId: 7);
+
+            _projectServiceMock
+                .Setup(s => s.ArchiveAsync(1, 7, false))
+                .ReturnsAsync((false, "You do not have permission to archive this project.", true));
+
+            var result = await _controller.Archive(1);
+
+            var objectResult = Assert.IsType<ObjectResult>(result);
+            Assert.Equal(403, objectResult.StatusCode);
+        }
+
+        [Fact]
+        public async Task Archive_AlreadyArchived_Returns400()
+        {
+            SetUser(userId: 5);
+
+            _projectServiceMock
+                .Setup(s => s.ArchiveAsync(1, 5, false))
+                .ReturnsAsync((false, "Project is already archived.", false));
+
+            var result = await _controller.Archive(1);
+
+            var objectResult = Assert.IsType<ObjectResult>(result);
+            Assert.Equal(400, objectResult.StatusCode);
+        }
     }
 }

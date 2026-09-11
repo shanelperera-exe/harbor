@@ -170,5 +170,176 @@ namespace Harbor.Project.IntegrationTests
             // Assert
             Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
         }
+
+                // ---------- Scenario 1: Update project ----------
+
+        [Fact]
+        public async Task Update_ValidRequest_PersistsChanges()
+        {
+            // Arrange
+            var client = CreateAuthenticatedClient(userId: 5001);
+            var createResponse = await client.PostAsJsonAsync("/api/projects", new CreateProjectRequest
+            {
+                Name = UniqueName("update-me")
+            });
+            var created = await createResponse.Content.ReadFromJsonAsync<ApiResponse<ProjectResponse>>();
+            var newName = UniqueName("updated-name");
+
+            // Act
+            var response = await client.PutAsJsonAsync($"/api/projects/{created!.Data!.Id}", new UpdateProjectRequest
+            {
+                Name = newName,
+                Description = "Updated via integration test"
+            });
+
+            // Assert: the HTTP response itself
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            var updated = await response.Content.ReadFromJsonAsync<ApiResponse<ProjectResponse>>();
+            Assert.Equal(newName, updated!.Data!.Name);
+
+            // Assert: it was actually persisted, not just echoed back
+            var listResponse = await client.GetAsync("/api/projects");
+            var list = await listResponse.Content.ReadFromJsonAsync<ApiResponse<List<ProjectResponse>>>();
+            Assert.Contains(list!.Data!, p => p.Name == newName);
+        }
+
+        // ---------- Scenario 2: Archive project ----------
+
+        [Fact]
+        public async Task Archive_ValidRequest_HidesProjectFromActiveList()
+        {
+            // Arrange
+            var client = CreateAuthenticatedClient(userId: 6001);
+            var name = UniqueName("archive-me");
+            var createResponse = await client.PostAsJsonAsync("/api/projects", new CreateProjectRequest { Name = name });
+            var created = await createResponse.Content.ReadFromJsonAsync<ApiResponse<ProjectResponse>>();
+
+            // Act
+            var response = await client.PostAsync($"/api/projects/{created!.Data!.Id}/archive", null);
+
+            // Assert: the archive call itself succeeded
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+            // Assert: the project no longer appears as an active project
+            var listResponse = await client.GetAsync("/api/projects");
+            var list = await listResponse.Content.ReadFromJsonAsync<ApiResponse<List<ProjectResponse>>>();
+            Assert.DoesNotContain(list!.Data!, p => p.Name == name);
+        }
+
+        [Fact]
+        public async Task Archive_AlreadyArchivedProject_Returns400()
+        {
+            // Arrange
+            var client = CreateAuthenticatedClient(userId: 6002);
+            var createResponse = await client.PostAsJsonAsync("/api/projects", new CreateProjectRequest
+            {
+                Name = UniqueName("double-archive")
+            });
+            var created = await createResponse.Content.ReadFromJsonAsync<ApiResponse<ProjectResponse>>();
+            await client.PostAsync($"/api/projects/{created!.Data!.Id}/archive", null);
+
+            // Act: archive the same project a second time
+            var response = await client.PostAsync($"/api/projects/{created.Data.Id}/archive", null);
+
+            // Assert
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        }
+
+        // ---------- Scenario 3: Unauthorized update/archive ----------
+
+        [Fact]
+        public async Task Update_NonOwner_Returns403()
+        {
+            // Arrange: owner A creates a project, owner B tries to edit it
+            var ownerAClient = CreateAuthenticatedClient(userId: 7001);
+            var ownerBClient = CreateAuthenticatedClient(userId: 7002);
+            var createResponse = await ownerAClient.PostAsJsonAsync("/api/projects", new CreateProjectRequest
+            {
+                Name = UniqueName("owner-a-only")
+            });
+            var created = await createResponse.Content.ReadFromJsonAsync<ApiResponse<ProjectResponse>>();
+
+            // Act
+            var response = await ownerBClient.PutAsJsonAsync($"/api/projects/{created!.Data!.Id}", new UpdateProjectRequest
+            {
+                Name = UniqueName("hijacked-name")
+            });
+
+            // Assert
+            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        }
+
+        [Fact]
+        public async Task Archive_NonOwner_Returns403()
+        {
+            // Arrange
+            var ownerAClient = CreateAuthenticatedClient(userId: 7003);
+            var ownerBClient = CreateAuthenticatedClient(userId: 7004);
+            var createResponse = await ownerAClient.PostAsJsonAsync("/api/projects", new CreateProjectRequest
+            {
+                Name = UniqueName("owner-a-project-2")
+            });
+            var created = await createResponse.Content.ReadFromJsonAsync<ApiResponse<ProjectResponse>>();
+
+            // Act
+            var response = await ownerBClient.PostAsync($"/api/projects/{created!.Data!.Id}/archive", null);
+
+            // Assert
+            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+
+            // Assert: it's still active, proving the rejected attempt had no effect
+            var listResponse = await ownerAClient.GetAsync("/api/projects");
+            var list = await listResponse.Content.ReadFromJsonAsync<ApiResponse<List<ProjectResponse>>>();
+            Assert.Contains(list!.Data!, p => p.Name == "owner-a-project-2" || p.Id == created.Data.Id);
+        }
+
+        [Fact]
+        public async Task Update_AdminNonOwner_IsAllowed()
+        {
+            // Arrange: Admins can manage projects they don't own
+            var ownerClient = CreateAuthenticatedClient(userId: 8001, Roles.User);
+            var adminClient = CreateAuthenticatedClient(userId: 8002, Roles.Admin);
+            var createResponse = await ownerClient.PostAsJsonAsync("/api/projects", new CreateProjectRequest
+            {
+                Name = UniqueName("admin-can-edit")
+            });
+            var created = await createResponse.Content.ReadFromJsonAsync<ApiResponse<ProjectResponse>>();
+            var newName = UniqueName("admin-edited-name");
+
+            // Act
+            var response = await adminClient.PutAsJsonAsync($"/api/projects/{created!.Data!.Id}", new UpdateProjectRequest
+            {
+                Name = newName
+            });
+
+            // Assert
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        }
+
+        [Fact]
+        public async Task Update_NoAuthToken_Returns401()
+        {
+            // Arrange
+            var client = _factory.CreateClient();
+
+            // Act
+            var response = await client.PutAsJsonAsync("/api/projects/1", new UpdateProjectRequest { Name = "irrelevant" });
+
+            // Assert
+            Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        }
+
+        [Fact]
+        public async Task Archive_NoAuthToken_Returns401()
+        {
+            // Arrange
+            var client = _factory.CreateClient();
+
+            // Act
+            var response = await client.PostAsync("/api/projects/1/archive", null);
+
+            // Assert
+            Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        }
     }
 }

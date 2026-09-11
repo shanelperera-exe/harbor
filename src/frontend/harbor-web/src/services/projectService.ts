@@ -7,9 +7,17 @@ export interface Project {
   repositoryUrl?: string | null;
   ownerId: number;
   createdAt: string;
+  isArchived: boolean;
+  updatedAt?: string | null;
 }
 
 export interface CreateProjectPayload {
+  name: string;
+  description?: string;
+  repositoryUrl?: string;
+}
+
+export interface UpdateProjectPayload {
   name: string;
   description?: string;
   repositoryUrl?: string;
@@ -52,4 +60,32 @@ export async function createProject(payload: CreateProjectPayload): Promise<Proj
   }
 
   return body.data as Project;
+}
+
+export async function updateProject(id: number, payload: UpdateProjectPayload): Promise<Project> {
+  const response = await fetch(`${projectApiBase}/${id}`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  });
+
+  const body = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(body?.detail || body?.title || 'Unable to update project.');
+  }
+
+  return body.data as Project;
+}
+
+export async function archiveProject(id: number): Promise<void> {
+  const response = await fetch(`${projectApiBase}/${id}/archive`, {
+    method: 'POST',
+    headers: authHeaders(),
+  });
+
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new Error(body?.detail || body?.title || 'Unable to archive project.');
+  }
 }

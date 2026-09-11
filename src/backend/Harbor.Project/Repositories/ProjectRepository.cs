@@ -47,54 +47,6 @@ namespace Harbor.Project.Repositories
             return count > 0;
         }
 
-        public async Task<List<ProjectEntity>> GetByOwnerAsync(int ownerId)
-        {
-            using var connection = _dbFactory.CreateConnection();
-            await connection.OpenAsync();
-
-            using var command = connection.CreateCommand();
-            command.CommandText =
-                "SELECT \"Id\", \"Name\", \"Description\", \"RepositoryUrl\", \"OwnerId\", \"CreatedAt\" " +
-                "FROM \"Projects\" WHERE \"OwnerId\" = @ownerId ORDER BY \"CreatedAt\" DESC";
-            command.Parameters.AddWithValue("ownerId", ownerId);
-
-            return await ReadProjectsAsync(command);
-        }
-
-        public async Task<List<ProjectEntity>> GetAllAsync()
-        {
-            using var connection = _dbFactory.CreateConnection();
-            await connection.OpenAsync();
-
-            using var command = connection.CreateCommand();
-            command.CommandText =
-                "SELECT \"Id\", \"Name\", \"Description\", \"RepositoryUrl\", \"OwnerId\", \"CreatedAt\" " +
-                "FROM \"Projects\" ORDER BY \"CreatedAt\" DESC";
-
-            return await ReadProjectsAsync(command);
-        }
-
-        private static async Task<List<ProjectEntity>> ReadProjectsAsync(System.Data.Common.DbCommand command)
-        {
-            var projects = new List<ProjectEntity>();
-            using var reader = await command.ExecuteReaderAsync();
-            while (await reader.ReadAsync())
-            {
-                projects.Add(new ProjectEntity
-                {
-                    Id = reader.GetInt32(0),
-                    Name = reader.GetString(1),
-                    Description = reader.IsDBNull(2) ? null : reader.GetString(2),
-                    RepositoryUrl = reader.IsDBNull(3) ? null : reader.GetString(3),
-                    OwnerId = reader.GetInt32(4),
-                    CreatedAt = reader.GetDateTime(5),
-                    IsArchived = reader.GetBoolean(6),
-                    ArchivedAt = reader.IsDBNull(7) ? null : reader.GetDateTime(7),
-                    UpdatedAt = reader.IsDBNull(8) ? null : reader.GetDateTime(8)
-                });
-            }
-            return projects;
-        }
         public async Task<ProjectEntity?> GetByIdAsync(int id)
         {
             using var connection = _dbFactory.CreateConnection();
@@ -109,6 +61,35 @@ namespace Harbor.Project.Repositories
 
             var projects = await ReadProjectsAsync(command);
             return projects.FirstOrDefault();
+        }
+
+        public async Task<List<ProjectEntity>> GetByOwnerAsync(int ownerId)
+        {
+            using var connection = _dbFactory.CreateConnection();
+            await connection.OpenAsync();
+
+            using var command = connection.CreateCommand();
+            command.CommandText =
+                "SELECT \"Id\", \"Name\", \"Description\", \"RepositoryUrl\", \"OwnerId\", \"CreatedAt\", " +
+                "\"IsArchived\", \"ArchivedAt\", \"UpdatedAt\" " +
+                "FROM \"Projects\" WHERE \"OwnerId\" = @ownerId AND \"IsArchived\" = FALSE ORDER BY \"CreatedAt\" DESC";
+            command.Parameters.AddWithValue("ownerId", ownerId);
+
+            return await ReadProjectsAsync(command);
+        }
+
+        public async Task<List<ProjectEntity>> GetAllAsync()
+        {
+            using var connection = _dbFactory.CreateConnection();
+            await connection.OpenAsync();
+
+            using var command = connection.CreateCommand();
+            command.CommandText =
+                "SELECT \"Id\", \"Name\", \"Description\", \"RepositoryUrl\", \"OwnerId\", \"CreatedAt\", " +
+                "\"IsArchived\", \"ArchivedAt\", \"UpdatedAt\" " +
+                "FROM \"Projects\" WHERE \"IsArchived\" = FALSE ORDER BY \"CreatedAt\" DESC";
+
+            return await ReadProjectsAsync(command);
         }
 
         public async Task<bool> UpdateAsync(ProjectEntity project)
@@ -145,6 +126,28 @@ namespace Harbor.Project.Repositories
 
             var rowsAffected = await command.ExecuteNonQueryAsync();
             return rowsAffected > 0;
+        }
+
+        private static async Task<List<ProjectEntity>> ReadProjectsAsync(System.Data.Common.DbCommand command)
+        {
+            var projects = new List<ProjectEntity>();
+            using var reader = await command.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                projects.Add(new ProjectEntity
+                {
+                    Id = reader.GetInt32(0),
+                    Name = reader.GetString(1),
+                    Description = reader.IsDBNull(2) ? null : reader.GetString(2),
+                    RepositoryUrl = reader.IsDBNull(3) ? null : reader.GetString(3),
+                    OwnerId = reader.GetInt32(4),
+                    CreatedAt = reader.GetDateTime(5),
+                    IsArchived = reader.GetBoolean(6),
+                    ArchivedAt = reader.IsDBNull(7) ? null : reader.GetDateTime(7),
+                    UpdatedAt = reader.IsDBNull(8) ? null : reader.GetDateTime(8)
+                });
+            }
+            return projects;
         }
     }
 }

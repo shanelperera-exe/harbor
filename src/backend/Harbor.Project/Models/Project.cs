@@ -8,5 +8,8 @@ namespace Harbor.Project.Models
         public string? RepositoryUrl { get; set; }
         public int OwnerId { get; set; }
         public DateTime CreatedAt { get; set; }
+        public bool IsArchived { get; set; }
+        public DateTime? ArchivedAt { get; set; }
+        public DateTime? UpdatedAt { get; set; }
     }
 }

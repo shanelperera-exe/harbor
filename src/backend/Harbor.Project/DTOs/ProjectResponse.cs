@@ -22,5 +22,11 @@ namespace Harbor.Project.DTOs
 
         /// <summary>UTC timestamp of when the project was created.</summary>
         public DateTime CreatedAt { get; set; }
+
+        /// <summary>Indicates whether the project is archived.</summary>
+        public bool IsArchived { get; set; }
+
+        /// <summary>Optional UTC timestamp of when the project was archived.</summary>
+        public DateTime? ArchivedAt { get; set; }
     }
 }

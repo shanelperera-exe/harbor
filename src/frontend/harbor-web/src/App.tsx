@@ -10,6 +10,7 @@ import Dashboard from './pages/dashboard/Dashboard';
 import CreateService from './pages/dashboard/CreateService';
 import Projects from './pages/projects/Projects';
 import CreateProject from './pages/projects/CreateProject';
+import EditProject from './pages/projects/EditProject';
 
 function App() {
   return (
@@ -27,6 +28,7 @@ function App() {
       <Route path="/projects" element={<DashboardLayout />}>
         <Route index element={<Projects />} />
         <Route path="new" element={<CreateProject />} />
+        <Route path=":id/edit" element={<EditProject />} />
       </Route>
     </Routes>
   );

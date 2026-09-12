@@ -3,10 +3,13 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
-Env.TraversePath().Load();
+if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("JWT_SECRET")))
+{
+    Env.TraversePath().Load();
+}
 
 var builder = WebApplication.CreateBuilder(args);
-
+// duplicate builder removed
 builder.Services.AddControllers();
 
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
@@ -62,9 +65,13 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET")!;
-var jwtIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER") ?? "harbor-auth";
-var jwtAudience = Environment.GetEnvironmentVariable("JWT_AUDIENCE") ?? "harbor-web";
+// Read through configuration rather than directly from the process environment.
+// This lets WebApplicationFactory provide isolated test settings without changing
+// JWT values for other tests running in the same process.
+var jwtSecret = builder.Configuration["JWT_SECRET"]
+    ?? throw new InvalidOperationException("JWT_SECRET is not configured.");
+var jwtIssuer = builder.Configuration["JWT_ISSUER"] ?? "harbor-auth";
+var jwtAudience = builder.Configuration["JWT_AUDIENCE"] ?? "harbor-web";
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -106,3 +113,8 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+/// <summary>
+/// Exposes the top-level Program for WebApplicationFactory-based integration tests.
+/// </summary>
+public partial class Program { }

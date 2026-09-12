@@ -155,5 +155,193 @@ namespace Harbor.Project.Tests
             Assert.Single(body.Data!);
             _projectServiceMock.Verify(s => s.GetAccessibleProjectsAsync(1, true), Times.Once);
         }
+
+        // ---------- Update: Scenario 1 - Update project ----------
+
+        [Fact]
+        public async Task Update_NoUserIdClaim_ReturnsUnauthorized()
+        {
+            // Arrange
+            SetUser(userId: null);
+            var request = new UpdateProjectRequest { Name = "new-name" };
+
+            // Act
+            var result = await _controller.Update(1, request);
+
+            // Assert
+            Assert.IsType<UnauthorizedResult>(result);
+            _projectServiceMock.Verify(
+                s => s.UpdateAsync(It.IsAny<int>(), It.IsAny<UpdateProjectRequest>(), It.IsAny<int>(), It.IsAny<bool>()),
+                Times.Never);
+        }
+
+        [Fact]
+        public async Task Update_ValidRequest_Returns200WithProject()
+        {
+            // Arrange
+            SetUser(userId: 1);
+            var request = new UpdateProjectRequest { Name = "renamed-project" };
+            var expected = new ProjectResponse { Id = 5, Name = "renamed-project", OwnerId = 1 };
+
+            _projectServiceMock
+                .Setup(s => s.UpdateAsync(5, request, 1, false))
+                .ReturnsAsync((true, (string?)null, false, expected));
+
+            // Act
+            var result = await _controller.Update(5, request);
+
+            // Assert
+            var okResult = Assert.IsType<OkObjectResult>(result);
+            var body = Assert.IsType<ApiResponse<ProjectResponse>>(okResult.Value);
+            Assert.Equal("renamed-project", body.Data!.Name);
+        }
+
+        [Fact]
+        public async Task Update_AdminUser_PassesIsAdminTrueToService()
+        {
+            // Arrange
+            SetUser(userId: 99, role: Roles.Admin);
+            var request = new UpdateProjectRequest { Name = "renamed-project" };
+            var expected = new ProjectResponse { Id = 5, Name = "renamed-project", OwnerId = 1 };
+
+            _projectServiceMock
+                .Setup(s => s.UpdateAsync(5, request, 99, true))
+                .ReturnsAsync((true, (string?)null, false, expected));
+
+            // Act
+            var result = await _controller.Update(5, request);
+
+            // Assert
+            Assert.IsType<OkObjectResult>(result);
+            _projectServiceMock.Verify(s => s.UpdateAsync(5, request, 99, true), Times.Once);
+        }
+
+        [Fact]
+        public async Task Update_InvalidRequest_Returns400WithProblemDetail()
+        {
+            // Arrange
+            SetUser(userId: 1);
+            var request = new UpdateProjectRequest { Name = "" };
+
+            _projectServiceMock
+                .Setup(s => s.UpdateAsync(5, request, 1, false))
+                .ReturnsAsync((false, "Project name is required.", false, (ProjectResponse?)null));
+
+            // Act
+            var result = await _controller.Update(5, request);
+
+            // Assert
+            var objectResult = Assert.IsType<ObjectResult>(result);
+            Assert.Equal(400, objectResult.StatusCode);
+        }
+
+        // ---------- Update: Scenario 3 - Unauthorized update ----------
+
+        [Fact]
+        public async Task Update_Forbidden_Returns403()
+        {
+            // Arrange
+            SetUser(userId: 20);
+            var request = new UpdateProjectRequest { Name = "new-name" };
+
+            _projectServiceMock
+                .Setup(s => s.UpdateAsync(5, request, 20, false))
+                .ReturnsAsync((false, "You do not have permission to update this project.", true, (ProjectResponse?)null));
+
+            // Act
+            var result = await _controller.Update(5, request);
+
+            // Assert
+            var objectResult = Assert.IsType<ObjectResult>(result);
+            Assert.Equal(403, objectResult.StatusCode);
+        }
+
+        // ---------- Archive: Scenario 2 - Archive project ----------
+
+        [Fact]
+        public async Task Archive_NoUserIdClaim_ReturnsUnauthorized()
+        {
+            // Arrange
+            SetUser(userId: null);
+
+            // Act
+            var result = await _controller.Archive(1);
+
+            // Assert
+            Assert.IsType<UnauthorizedResult>(result);
+            _projectServiceMock.Verify(
+                s => s.ArchiveAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task Archive_ValidRequest_Returns200()
+        {
+            // Arrange
+            SetUser(userId: 1);
+            _projectServiceMock
+                .Setup(s => s.ArchiveAsync(5, 1, false))
+                .ReturnsAsync((true, (string?)null, false));
+
+            // Act
+            var result = await _controller.Archive(5);
+
+            // Assert
+            var okResult = Assert.IsType<OkObjectResult>(result);
+            var body = Assert.IsType<ApiResponse<object>>(okResult.Value);
+            Assert.True(body.Success);
+        }
+
+        [Fact]
+        public async Task Archive_AdminUser_PassesIsAdminTrueToService()
+        {
+            // Arrange
+            SetUser(userId: 99, role: Roles.Admin);
+            _projectServiceMock
+                .Setup(s => s.ArchiveAsync(5, 99, true))
+                .ReturnsAsync((true, (string?)null, false));
+
+            // Act
+            var result = await _controller.Archive(5);
+
+            // Assert
+            Assert.IsType<OkObjectResult>(result);
+            _projectServiceMock.Verify(s => s.ArchiveAsync(5, 99, true), Times.Once);
+        }
+
+        [Fact]
+        public async Task Archive_AlreadyArchived_Returns400()
+        {
+            // Arrange
+            SetUser(userId: 1);
+            _projectServiceMock
+                .Setup(s => s.ArchiveAsync(5, 1, false))
+                .ReturnsAsync((false, "Project is already archived.", false));
+
+            // Act
+            var result = await _controller.Archive(5);
+
+            // Assert
+            var objectResult = Assert.IsType<ObjectResult>(result);
+            Assert.Equal(400, objectResult.StatusCode);
+        }
+
+        // ---------- Archive: Scenario 3 - Unauthorized archive ----------
+
+        [Fact]
+        public async Task Archive_Forbidden_Returns403()
+        {
+            // Arrange
+            SetUser(userId: 20);
+            _projectServiceMock
+                .Setup(s => s.ArchiveAsync(5, 20, false))
+                .ReturnsAsync((false, "You do not have permission to archive this project.", true));
+
+            // Act
+            var result = await _controller.Archive(5);
+
+            // Assert
+            var objectResult = Assert.IsType<ObjectResult>(result);
+            Assert.Equal(403, objectResult.StatusCode);
+        }
     }
 }

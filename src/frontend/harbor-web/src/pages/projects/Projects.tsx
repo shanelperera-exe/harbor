@@ -39,9 +39,18 @@ export default function Projects() {
           <div
             key={project.id}
             data-testid="project-card"
-            className="p-5 border border-gray-200 dark:border-[#333] bg-white dark:bg-[#111111]"
+            className="p-5 border border-gray-200 dark:border-[#333] bg-white dark:bg-[#111111] flex flex-col"
           >
-            <h2 className="text-lg font-medium mb-1">{project.name}</h2>
+            <div className="flex items-start justify-between gap-2 mb-1">
+              <h2 className="text-lg font-medium">{project.name}</h2>
+              <Link
+                to={`/projects/${project.id}/edit`}
+                data-testid="edit-project-link"
+                className="text-[13px] text-blue-600 dark:text-[#a585ff] flex-shrink-0 whitespace-nowrap"
+              >
+                Edit
+              </Link>
+            </div>
             {project.description && (
               <p className="text-gray-500 dark:text-[#a1a1aa] text-[15px] mb-3">{project.description}</p>
             )}

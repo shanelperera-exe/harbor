@@ -7,9 +7,17 @@ export interface Project {
   repositoryUrl?: string | null;
   ownerId: number;
   createdAt: string;
+  isArchived: boolean;
+  archivedAt?: string | null;
 }
 
 export interface CreateProjectPayload {
+  name: string;
+  description?: string;
+  repositoryUrl?: string;
+}
+
+export interface UpdateProjectPayload {
   name: string;
   description?: string;
   repositoryUrl?: string;
@@ -38,6 +46,14 @@ export async function getProjects(): Promise<Project[]> {
   return body.data as Project[];
 }
 
+export async function getProject(id: number): Promise<Project | undefined> {
+  // There's no single-project GET endpoint on the API, so we fetch the
+  // accessible list and find the one we need. Fine for the current scale;
+  // revisit if a dedicated GET /api/projects/{id} endpoint gets added.
+  const projects = await getProjects();
+  return projects.find((p) => p.id === id);
+}
+
 export async function createProject(payload: CreateProjectPayload): Promise<Project> {
   const response = await fetch(projectApiBase, {
     method: 'POST',
@@ -52,4 +68,32 @@ export async function createProject(payload: CreateProjectPayload): Promise<Proj
   }
 
   return body.data as Project;
+}
+
+export async function updateProject(id: number, payload: UpdateProjectPayload): Promise<Project> {
+  const response = await fetch(`${projectApiBase}/${id}`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  });
+
+  const body = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(body?.detail || body?.title || 'Unable to update project.');
+  }
+
+  return body.data as Project;
+}
+
+export async function archiveProject(id: number): Promise<void> {
+  const response = await fetch(`${projectApiBase}/${id}/archive`, {
+    method: 'POST',
+    headers: authHeaders(),
+  });
+
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new Error(body?.detail || body?.title || 'Unable to archive project.');
+  }
 }

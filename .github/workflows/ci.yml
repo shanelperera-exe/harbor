@@ -67,6 +67,7 @@ jobs:
       run: |
         dotnet run --project src/backend/Harbor.Authentication &
         dotnet run --project src/backend/Harbor.ApiGateway &
+        dotnet run --project src/backend/Harbor.Project &
         # Give backends a few seconds to initialize and run DB migrations
         sleep 10
 

@@ -8,7 +8,7 @@ export interface Project {
   ownerId: number;
   createdAt: string;
   isArchived: boolean;
-  updatedAt?: string | null;
+  archivedAt?: string | null;
 }
 
 export interface CreateProjectPayload {
@@ -44,6 +44,14 @@ export async function getProjects(): Promise<Project[]> {
   }
 
   return body.data as Project[];
+}
+
+export async function getProject(id: number): Promise<Project | undefined> {
+  // There's no single-project GET endpoint on the API, so we fetch the
+  // accessible list and find the one we need. Fine for the current scale;
+  // revisit if a dedicated GET /api/projects/{id} endpoint gets added.
+  const projects = await getProjects();
+  return projects.find((p) => p.id === id);
 }
 
 export async function createProject(payload: CreateProjectPayload): Promise<Project> {

@@ -1,27 +1,35 @@
 import { useEffect, useState } from 'react';
 import { AlertCircle } from 'lucide-react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { getProjects, updateProject, archiveProject, type Project } from '../../services/projectService';
+import { useNavigate, useParams, Link } from 'react-router-dom';
+import { getProject, updateProject, archiveProject, type Project } from '../../services/projectService';
 
 export default function EditProject() {
-  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
+  const projectId = Number(id);
 
   const [project, setProject] = useState<Project | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [repositoryUrl, setRepositoryUrl] = useState('');
   const [errors, setErrors] = useState<{ name?: string; general?: string }>({});
-  const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isArchiving, setIsArchiving] = useState(false);
 
   useEffect(() => {
-    getProjects()
-      .then((projects) => {
-        const found = projects.find((p) => p.id === Number(id));
+    if (!Number.isFinite(projectId)) {
+      setLoadError('Invalid project.');
+      setIsLoading(false);
+      return;
+    }
+
+    getProject(projectId)
+      .then((found) => {
         if (!found) {
-          setErrors({ general: 'Project not found or you do not have access to it.' });
+          setLoadError('Project not found.');
           return;
         }
         setProject(found);
@@ -29,9 +37,9 @@ export default function EditProject() {
         setDescription(found.description ?? '');
         setRepositoryUrl(found.repositoryUrl ?? '');
       })
-      .catch((err) => setErrors({ general: err instanceof Error ? err.message : 'Unable to load project.' }))
+      .catch((err) => setLoadError(err instanceof Error ? err.message : 'Unable to load project.'))
       .finally(() => setIsLoading(false));
-  }, [id]);
+  }, [projectId]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -49,12 +57,12 @@ export default function EditProject() {
     setIsSubmitting(true);
 
     try {
-      await updateProject(Number(id), {
+      await updateProject(projectId, {
         name: name.trim(),
         description: description.trim() || undefined,
         repositoryUrl: repositoryUrl.trim() || undefined,
       });
-      navigate('/projects', { state: { updatedProjectId: Number(id) } });
+      navigate('/projects', { state: { updatedProjectId: projectId } });
     } catch (err) {
       setErrors({ general: err instanceof Error ? err.message : 'Unable to update project.' });
     } finally {
@@ -63,14 +71,16 @@ export default function EditProject() {
   }
 
   async function handleArchive() {
-    if (!window.confirm('Archive this project? It will be hidden from your active projects.')) {
+    if (!window.confirm('Archive this project? It will no longer appear in your active project list.')) {
       return;
     }
 
     setIsArchiving(true);
+    setErrors({});
+
     try {
-      await archiveProject(Number(id));
-      navigate('/projects', { state: { archivedProjectId: Number(id) } });
+      await archiveProject(projectId);
+      navigate('/projects', { state: { archivedProjectId: projectId } });
     } catch (err) {
       setErrors({ general: err instanceof Error ? err.message : 'Unable to archive project.' });
       setIsArchiving(false);
@@ -85,10 +95,13 @@ export default function EditProject() {
     );
   }
 
-  if (!project) {
+  if (loadError || !project) {
     return (
       <div className="w-full h-full p-8 lg:px-24 xl:px-48 text-gray-900 dark:text-white bg-white dark:bg-[#090909]">
-        <p className="text-red-500" data-testid="edit-project-error">{errors.general}</p>
+        <p className="text-red-500" data-testid="edit-project-load-error">{loadError ?? 'Project not found.'}</p>
+        <Link to="/projects" className="text-blue-600 dark:text-[#a585ff] text-[15px]">
+          Back to projects
+        </Link>
       </div>
     );
   }
@@ -107,7 +120,8 @@ export default function EditProject() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             className={`h-10 w-full bg-transparent border ${errors.name ? 'border-red-500' : 'border-black dark:border-[#6b6b6b]'} px-3 focus:outline-none focus:ring-1 transition-colors`}
-            data-testid="edit-project-name-input"
+            placeholder="my-api-service"
+            data-testid="project-name-input"
           />
           {errors.name && <p className="text-red-500 dark:text-red-400 text-[13px]">{errors.name}</p>}
         </div>
@@ -120,7 +134,8 @@ export default function EditProject() {
             rows={3}
             maxLength={500}
             className="w-full bg-transparent border border-black dark:border-[#6b6b6b] px-3 py-2 focus:outline-none focus:ring-1"
-            data-testid="edit-project-description-input"
+            placeholder="What does this project do?"
+            data-testid="project-description-input"
           />
         </div>
 
@@ -131,7 +146,8 @@ export default function EditProject() {
             value={repositoryUrl}
             onChange={(e) => setRepositoryUrl(e.target.value)}
             className="h-10 w-full bg-transparent border border-black dark:border-[#6b6b6b] px-3 focus:outline-none focus:ring-1"
-            data-testid="edit-project-repo-input"
+            placeholder="https://github.com/your-org/your-repo"
+            data-testid="project-repo-input"
           />
         </div>
 
@@ -157,7 +173,7 @@ export default function EditProject() {
             onClick={handleArchive}
             disabled={isSubmitting || isArchiving}
             data-testid="archive-project-button"
-            className="h-10 w-full sm:w-auto sm:px-8 border border-red-500 text-red-500 font-medium disabled:cursor-not-allowed disabled:opacity-70"
+            className="h-10 w-full sm:w-auto sm:px-8 border border-red-500 text-red-600 dark:text-red-400 font-medium disabled:cursor-not-allowed disabled:opacity-70"
           >
             {isArchiving ? 'Archiving...' : 'Archive Project'}
           </button>

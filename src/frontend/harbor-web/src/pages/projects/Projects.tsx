@@ -36,13 +36,13 @@ export default function Projects() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" data-testid="projects-list">
         {projects.map((project) => (
-          <div
+                    <div
             key={project.id}
             data-testid="project-card"
-            className="p-5 border border-gray-200 dark:border-[#333] bg-white dark:bg-[#111111] flex flex-col"
+            className="p-5 border border-gray-200 dark:border-[#333] bg-white dark:bg-[#111111] flex flex-col min-w-0"
           >
             <div className="flex items-start justify-between gap-2 mb-1">
-              <h2 className="text-lg font-medium">{project.name}</h2>
+              <h2 className="text-lg font-medium truncate min-w-0 flex-1" title={project.name}>{project.name}</h2>
               <Link
                 to={`/projects/${project.id}/edit`}
                 data-testid="edit-project-link"

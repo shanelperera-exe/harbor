@@ -70,20 +70,36 @@ namespace Harbor.E2ETests.Pages
             return _wait.Until(d => d.FindElement(By.XPath("//p[contains(text(),'No deployments match this filter.')]"))).Text;
         }
 
-        public bool IsPreviousDisabled() => PreviousButton.GetAttribute("disabled") != null;
-        public bool IsNextDisabled() => NextButton.GetAttribute("disabled") != null;
-        public string GetCurrentPageLabel() => PageLabel.Text;
+        // _wait.Until() treats a returned `false` or empty string as "not ready yet" and
+        // keeps polling until it times out - fine for FindElement (which never legitimately
+        // returns null), wrong here: a `false`/not-disabled result is a valid, final answer,
+        // not a signal to keep retrying. So these use a plain retry that only re-runs on
+        // StaleElementReferenceException (the element being swapped out mid-read) and lets
+        // any real result - true or false - return immediately.
+        private T RetryOnStale<T>(Func<T> read)
+        {
+            var deadline = DateTime.UtcNow.Add(TimeSpan.FromSeconds(20));
+            while (true)
+            {
+                try { return read(); }
+                catch (StaleElementReferenceException) when (DateTime.UtcNow < deadline) { }
+            }
+        }
+
+        public bool IsPreviousDisabled() => RetryOnStale(() => PreviousButton.GetAttribute("disabled") != null);
+        public bool IsNextDisabled() => RetryOnStale(() => NextButton.GetAttribute("disabled") != null);
+        public string GetCurrentPageLabel() => RetryOnStale(() => PageLabel.Text);
 
         public void ClickNext()
         {
-            var previousLabel = PageLabel.Text;
+            var previousLabel = RetryOnStale(() => PageLabel.Text);
             NextButton.Click();
             _wait.Until(d => PageLabel.Text != previousLabel);
         }
 
         public void ClickPrevious()
         {
-            var previousLabel = PageLabel.Text;
+            var previousLabel = RetryOnStale(() => PageLabel.Text);
             PreviousButton.Click();
             _wait.Until(d => PageLabel.Text != previousLabel);
         }

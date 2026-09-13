@@ -34,5 +34,11 @@ namespace Harbor.E2ETests.Pages
                 return false;
             }
         }
+
+        public string GetError()
+        {
+            var error = _wait.Until(d => d.FindElement(By.CssSelector("[data-testid='environment-error']")));
+            return error.Text;
+        }
     }
 }

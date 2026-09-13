@@ -37,8 +37,19 @@ namespace Harbor.E2ETests.Pages
 
         public void FilterByStatus(string status)
         {
-            var select = new SelectElement(StatusFilter);
-            select.SelectByText(string.IsNullOrEmpty(status) ? "All statuses" : status);
+            var target = string.IsNullOrEmpty(status) ? "All statuses" : status;
+            new SelectElement(StatusFilter).SelectByText(target);
+
+            if (string.IsNullOrEmpty(status)) return; // "All statuses" has no single status to assert on
+
+            // Block until the refetch has actually landed and every visible row matches -
+            // without this, callers can grab a row reference mid-re-render and get an
+            // ElementClickIntercepted/stale error on the very next action.
+            _wait.Until(d =>
+            {
+                var statuses = GetVisibleStatuses();
+                return statuses.Count > 0 && statuses.All(s => s == status);
+            });
         }
 
         public IReadOnlyList<IWebElement> GetRows()

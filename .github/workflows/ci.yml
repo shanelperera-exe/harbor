@@ -68,8 +68,9 @@ jobs:
         dotnet run --project src/backend/Harbor.Authentication &
         dotnet run --project src/backend/Harbor.ApiGateway &
         dotnet run --project src/backend/Harbor.Project &
+        dotnet run --project src/backend/Harbor.Deployment &
         # Give backends a few seconds to initialize and run DB migrations
-        sleep 10
+        sleep 15
 
     - name: Start Frontend Server (Background)
       working-directory: ./src/frontend
@@ -77,6 +78,16 @@ jobs:
         npm run dev -- --port 5173 &
         # Give frontend a few seconds to serve
         sleep 5
+
+    - name: Seed Deployment Test Data
+      run: |
+        chmod +x scripts/ci/seed-deployment-data.sh
+        ./scripts/ci/seed-deployment-data.sh
+      env:
+        AUTH_URL: http://localhost:5196
+        POSTGRES_CONTAINER: harbor-postgres
+        POSTGRES_USER: harboruser
+        POSTGRES_DATABASE: harbor_db
 
     - name: Run Unit and E2E Tests
       run: dotnet test --no-build --verbosity normal

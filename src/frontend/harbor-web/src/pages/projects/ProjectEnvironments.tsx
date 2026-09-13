@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { createEnvironment, getEnvironments, type DeploymentEnvironment, type EnvironmentType } from '../../services/environmentService';
+import { createEnvironment, getEnvironments, removeEnvironment, updateEnvironment, type DeploymentEnvironment, type EnvironmentType } from '../../services/environmentService';
 import { getProject, type Project } from '../../services/projectService';
 
 const types: EnvironmentType[] = ['Development', 'Staging', 'Production'];
@@ -16,6 +16,9 @@ export default function ProjectEnvironments() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [editing, setEditing] = useState<number | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editType, setEditType] = useState<EnvironmentType>('Development');
 
   useEffect(() => {
     if (!Number.isInteger(projectId) || projectId < 1) { setError('Invalid project.'); setLoading(false); return; }
@@ -34,6 +37,31 @@ export default function ProjectEnvironments() {
       const created = await createEnvironment(projectId, { name, type });
       setEnvironments(current => [...current, created]); setName('');
     } catch (err) { setError(err instanceof Error ? err.message : 'Unable to create environment.'); }
+    finally { setSaving(false); }
+  }
+
+  function startEditing(environment: DeploymentEnvironment) {
+    setEditing(environment.id); setEditName(environment.name); setEditType(environment.type); setError(null);
+  }
+
+  async function saveEdit(environmentId: number) {
+    setError(null); setSaving(true);
+    try {
+      const updated = await updateEnvironment(projectId, environmentId, { name: editName, type: editType });
+      setEnvironments(current => current.map(environment => environment.id === environmentId ? updated : environment));
+      setEditing(null);
+    } catch (err) { setError(err instanceof Error ? err.message : 'Unable to update environment.'); }
+    finally { setSaving(false); }
+  }
+
+  async function remove(environmentId: number) {
+    if (!window.confirm('Remove this environment? Environments with deployment history will be deactivated.')) return;
+    setError(null); setSaving(true);
+    try {
+      const result = await removeEnvironment(projectId, environmentId);
+      setEnvironments(current => current.filter(environment => environment.id !== environmentId));
+      if (result.deactivated) setError(result.message);
+    } catch (err) { setError(err instanceof Error ? err.message : 'Unable to remove environment.'); }
     finally { setSaving(false); }
   }
 
@@ -58,7 +86,16 @@ export default function ProjectEnvironments() {
       </form>
       <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4" data-testid="environments-list">
         {environments.map(environment => <div key={environment.id} className="p-5 border border-gray-200 dark:border-[#333] bg-white dark:bg-[#111]">
-          <p className="text-lg font-medium">{environment.name}</p><p className="text-gray-500 dark:text-gray-400">{environment.type}</p>
+          {editing === environment.id ? <div className="grid gap-3">
+            <input required maxLength={100} value={editName} onChange={event => setEditName(event.target.value)} className="border p-2 bg-transparent" aria-label="Environment name" />
+            <select value={editType} onChange={event => setEditType(event.target.value as EnvironmentType)} className="border p-2 bg-transparent" aria-label="Environment type">
+              {types.map(value => <option key={value} value={value}>{value}</option>)}
+            </select>
+            <div className="flex gap-3"><button disabled={saving} onClick={() => saveEdit(environment.id)} className="text-blue-600">Save</button><button disabled={saving} onClick={() => setEditing(null)}>Cancel</button></div>
+          </div> : <>
+            <p className="text-lg font-medium">{environment.name}</p><p className="text-gray-500 dark:text-gray-400">{environment.type}</p>
+            <div className="flex gap-4 mt-4"><button disabled={saving} onClick={() => startEditing(environment)} className="text-blue-600">Edit</button><button disabled={saving} onClick={() => remove(environment.id)} className="text-red-600">Remove</button></div>
+          </>}
         </div>)}
         {environments.length === 0 && <p className="text-gray-500">No environments configured yet.</p>}
       </div>

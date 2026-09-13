@@ -16,7 +16,7 @@ public class EnvironmentServiceTests
     {
         _service = new EnvironmentService(_repository.Object);
         _repository.Setup(r => r.GetProjectAccessAsync(10)).ReturnsAsync((true, 5, false));
-        _repository.Setup(r => r.TypeExistsForProjectAsync(It.IsAny<int>(), It.IsAny<string>())).ReturnsAsync(false);
+        _repository.Setup(r => r.TypeExistsForProjectAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int?>())).ReturnsAsync(false);
         _repository.Setup(r => r.CreateAsync(It.IsAny<EnvironmentEntity>())).ReturnsAsync(42);
     }
 
@@ -77,5 +77,71 @@ public class EnvironmentServiceTests
         Assert.True(result.Success);
         Assert.Single(result.Data!);
         Assert.Equal("Production", result.Data![0].Type);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ValidOwnerRequest_UpdatesEnvironment()
+    {
+        _repository.Setup(r => r.GetByIdAsync(42, 10)).ReturnsAsync(new EnvironmentEntity { Id = 42, ProjectId = 10, Name = "old", Type = "Development", IsActive = true });
+        _repository.Setup(r => r.UpdateAsync(It.IsAny<EnvironmentEntity>())).ReturnsAsync(true);
+
+        var result = await _service.UpdateAsync(10, 42, new UpdateEnvironmentRequest { Name = "  primary  ", Type = "Staging" }, 5, false);
+
+        Assert.True(result.Success);
+        Assert.Equal("primary", result.Data!.Name);
+        Assert.Equal("Staging", result.Data.Type);
+        _repository.Verify(r => r.TypeExistsForProjectAsync(10, "Staging", 42), Times.Once);
+        _repository.Verify(r => r.UpdateAsync(It.Is<EnvironmentEntity>(e => e.Name == "primary" && e.Type == "Staging")), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_RenameWithDeploymentHistory_ReturnsValidationErrorWithoutUpdating()
+    {
+        _repository.Setup(r => r.GetByIdAsync(42, 10)).ReturnsAsync(new EnvironmentEntity { Id = 42, ProjectId = 10, Name = "production", Type = "Production", IsActive = true });
+        _repository.Setup(r => r.HasDeploymentHistoryAsync(10, "production")).ReturnsAsync(true);
+
+        var result = await _service.UpdateAsync(10, 42, new UpdateEnvironmentRequest { Name = "live", Type = "Production" }, 5, false);
+
+        Assert.False(result.Success);
+        Assert.Contains("cannot be renamed", result.Error!);
+        _repository.Verify(r => r.UpdateAsync(It.IsAny<EnvironmentEntity>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task RemoveAsync_EnvironmentWithDeploymentHistory_DeactivatesInsteadOfDeleting()
+    {
+        _repository.Setup(r => r.GetByIdAsync(42, 10)).ReturnsAsync(new EnvironmentEntity { Id = 42, ProjectId = 10, Name = "production", Type = "Production", IsActive = true });
+        _repository.Setup(r => r.HasDeploymentHistoryAsync(10, "production")).ReturnsAsync(true);
+        _repository.Setup(r => r.DeactivateAsync(42, 10, It.IsAny<DateTime>())).ReturnsAsync(true);
+
+        var result = await _service.RemoveAsync(10, 42, 5, false);
+
+        Assert.True(result.Success);
+        Assert.True(result.Data!.Deactivated);
+        Assert.Contains("deployment history", result.Data.Message);
+        _repository.Verify(r => r.DeleteAsync(It.IsAny<int>(), It.IsAny<int>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task RemoveAsync_UnusedEnvironment_DeletesEnvironment()
+    {
+        _repository.Setup(r => r.GetByIdAsync(42, 10)).ReturnsAsync(new EnvironmentEntity { Id = 42, ProjectId = 10, Name = "staging", Type = "Staging", IsActive = true });
+        _repository.Setup(r => r.DeleteAsync(42, 10)).ReturnsAsync(true);
+
+        var result = await _service.RemoveAsync(10, 42, 5, false);
+
+        Assert.True(result.Success);
+        Assert.False(result.Data!.Deactivated);
+        _repository.Verify(r => r.DeleteAsync(42, 10), Times.Once);
+    }
+
+    [Fact]
+    public async Task RemoveAsync_OtherUsersProject_ReturnsForbidden()
+    {
+        var result = await _service.RemoveAsync(10, 42, 6, false);
+
+        Assert.False(result.Success);
+        Assert.True(result.Forbidden);
+        _repository.Verify(r => r.GetByIdAsync(It.IsAny<int>(), It.IsAny<int>()), Times.Never);
     }
 }

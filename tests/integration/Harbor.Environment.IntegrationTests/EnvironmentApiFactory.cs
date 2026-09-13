@@ -45,6 +45,11 @@ public class EnvironmentApiFactory : WebApplicationFactory<global::Program>, IAs
                 "Id" SERIAL PRIMARY KEY, "Name" VARCHAR(100) NOT NULL, "OwnerId" INTEGER NOT NULL,
                 "CreatedAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, "IsArchived" BOOLEAN NOT NULL DEFAULT FALSE
             );
+            CREATE TABLE "Deployments" (
+                "Id" SERIAL PRIMARY KEY, "ProjectId" INTEGER NOT NULL, "OwnerId" INTEGER NOT NULL,
+                "Environment" VARCHAR(100) NOT NULL, "Version" VARCHAR(200) NOT NULL,
+                "Status" VARCHAR(30) NOT NULL, "StartedAt" TIMESTAMPTZ NOT NULL
+            );
             """, connection);
         await command.ExecuteNonQueryAsync();
     }

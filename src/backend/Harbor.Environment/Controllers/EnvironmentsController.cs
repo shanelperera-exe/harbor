@@ -54,5 +54,35 @@ public class EnvironmentsController(IEnvironmentService environmentService) : Co
         return Ok(new ApiResponse<List<EnvironmentResponse>> { Data = result.Data });
     }
 
+    /// <summary>Updates an active environment. Environments with deployment history cannot be renamed.</summary>
+    [HttpPut("{environmentId:int}")]
+    [ProducesResponseType(typeof(ApiResponse<EnvironmentResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> Update(int projectId, int environmentId, [FromBody] UpdateEnvironmentRequest request)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        var result = await environmentService.UpdateAsync(projectId, environmentId, request, userId.Value, User.IsInRole(Roles.Admin));
+        if (!result.Success) return Problem(detail: result.Error, statusCode: result.Forbidden ? StatusCodes.Status403Forbidden : StatusCodes.Status400BadRequest, title: result.Forbidden ? "Forbidden" : "Bad Request");
+        return Ok(new ApiResponse<EnvironmentResponse> { Data = result.Data });
+    }
+
+    /// <summary>Removes an unused environment or deactivates one with retained deployment history.</summary>
+    [HttpDelete("{environmentId:int}")]
+    [ProducesResponseType(typeof(ApiResponse<EnvironmentRemovalResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> Remove(int projectId, int environmentId)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        var result = await environmentService.RemoveAsync(projectId, environmentId, userId.Value, User.IsInRole(Roles.Admin));
+        if (!result.Success) return Problem(detail: result.Error, statusCode: result.Forbidden ? StatusCodes.Status403Forbidden : StatusCodes.Status400BadRequest, title: result.Forbidden ? "Forbidden" : "Bad Request");
+        return Ok(new ApiResponse<EnvironmentRemovalResponse> { Data = result.Data });
+    }
+
     private int? GetUserId() => int.TryParse(User.FindFirst("userId")?.Value, out var id) ? id : null;
 }

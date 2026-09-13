@@ -42,5 +42,11 @@ namespace Harbor.E2ETests.Pages
             var card = GetProjectCards().First(c => c.FindElement(By.TagName("h2")).Text == name);
             card.FindElement(By.CssSelector("[data-testid='edit-project-link']")).Click();
         }
+
+        public void ClickEnvironmentsFor(string name)
+        {
+            var card = GetProjectCards().First(c => c.FindElement(By.TagName("h2")).Text == name);
+            card.FindElement(By.CssSelector("[data-testid='project-environments-link']")).Click();
+        }
     }
 }

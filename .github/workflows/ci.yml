@@ -100,9 +100,11 @@ jobs:
         for i in $(seq 1 30); do
           if curl -sf -o /dev/null "http://localhost:5173/"; then
             echo "Frontend is up after ${i}s"
-            # Warm up Vite transpilation so first test doesn't hit a cold compile delay
+            # Warm up Vite transpilation so E2E tests don't hit cold compile delays
             curl -sf "http://localhost:5173/src/main.tsx" > /dev/null || true
-            sleep 2
+            curl -sf "http://localhost:5173/src/pages/auth/Login.tsx" > /dev/null || true
+            curl -sf "http://localhost:5173/src/pages/auth/CreateAccount.tsx" > /dev/null || true
+            sleep 3
             exit 0
           fi
           sleep 1
@@ -121,5 +123,7 @@ jobs:
         POSTGRES_DATABASE: harbor_db
 
     - name: Run Unit and E2E Tests
-      run: dotnet test --no-build --verbosity normal
+      run: |
+        sleep 5
+        dotnet test --no-build --verbosity normal
       

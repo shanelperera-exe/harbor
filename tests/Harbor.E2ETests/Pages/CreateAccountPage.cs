@@ -11,13 +11,13 @@ namespace Harbor.E2ETests.Pages
         public CreateAccountPage(IWebDriver driver)
         {
             _driver = driver;
-            _wait = new WebDriverWait(driver, TimeSpan.FromSeconds(10));
+            _wait = new WebDriverWait(driver, TimeSpan.FromSeconds(20));
         }
 
         private IWebElement UsernameInput => _wait.Until(d => d.FindElement(By.CssSelector("[data-testid='username-input']")));
-        private IWebElement EmailInput => _driver.FindElement(By.CssSelector("[data-testid='email-input']"));
-        private IWebElement PasswordInput => _driver.FindElement(By.CssSelector("[data-testid='password-input']"));
-        private IWebElement CreateAccountButton => _driver.FindElement(By.CssSelector("[data-testid='create-account-button']"));
+        private IWebElement EmailInput => _wait.Until(d => d.FindElement(By.CssSelector("[data-testid='email-input']")));
+        private IWebElement PasswordInput => _wait.Until(d => d.FindElement(By.CssSelector("[data-testid='password-input']")));
+        private IWebElement CreateAccountButton => _wait.Until(d => d.FindElement(By.CssSelector("[data-testid='create-account-button']")));
         private IWebElement ErrorMessage => _wait.Until(d => d.FindElement(By.CssSelector("[data-testid='error-message']")));
 
         public void NavigateTo()

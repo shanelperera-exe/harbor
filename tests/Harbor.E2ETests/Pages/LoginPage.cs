@@ -15,8 +15,8 @@ namespace Harbor.E2ETests.Pages
         }
 
         private IWebElement UsernameInput => _wait.Until(d => d.FindElement(By.CssSelector("[data-testid='username-input']")));
-        private IWebElement PasswordInput => _driver.FindElement(By.CssSelector("[data-testid='password-input']"));
-        private IWebElement LoginButton => _driver.FindElement(By.CssSelector("[data-testid='login-button']"));
+        private IWebElement PasswordInput => _wait.Until(d => d.FindElement(By.CssSelector("[data-testid='password-input']")));
+        private IWebElement LoginButton => _wait.Until(d => d.FindElement(By.CssSelector("[data-testid='login-button']")));
         private IWebElement ErrorMessage => _wait.Until(d => d.FindElement(By.CssSelector("[data-testid='error-message']")));
 
         public void NavigateTo()

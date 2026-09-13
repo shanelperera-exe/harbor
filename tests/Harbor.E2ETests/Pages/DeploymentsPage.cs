@@ -15,7 +15,7 @@ namespace Harbor.E2ETests.Pages
         public DeploymentsPage(IWebDriver driver)
         {
             _driver = driver;
-            _wait = new WebDriverWait(driver, TimeSpan.FromSeconds(10));
+            _wait = new WebDriverWait(driver, TimeSpan.FromSeconds(20));
             // React re-renders can swap the element out between "found" and "read" -
             // treat that as "not ready yet" and keep polling, same as NotFound.
             _wait.IgnoreExceptionTypes(typeof(NoSuchElementException), typeof(StaleElementReferenceException));

@@ -11,12 +11,12 @@ namespace Harbor.E2ETests.Pages
         public EditProjectPage(IWebDriver driver)
         {
             _driver = driver;
-            _wait = new WebDriverWait(driver, TimeSpan.FromSeconds(10));
+            _wait = new WebDriverWait(driver, TimeSpan.FromSeconds(20));
         }
 
         private IWebElement NameInput => _wait.Until(d => d.FindElement(By.CssSelector("[data-testid='project-name-input']")));
-        private IWebElement SaveButton => _driver.FindElement(By.CssSelector("[data-testid='save-project-button']"));
-        private IWebElement ArchiveButton => _driver.FindElement(By.CssSelector("[data-testid='archive-project-button']"));
+        private IWebElement SaveButton => _wait.Until(d => d.FindElement(By.CssSelector("[data-testid='save-project-button']")));
+        private IWebElement ArchiveButton => _wait.Until(d => d.FindElement(By.CssSelector("[data-testid='archive-project-button']")));
         private IWebElement GeneralErrorMessage => _wait.Until(d => d.FindElement(By.CssSelector("[data-testid='error-message']")));
 
         public void NavigateTo(int projectId)

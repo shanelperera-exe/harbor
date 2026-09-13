@@ -69,15 +69,41 @@ jobs:
         dotnet run --project src/backend/Harbor.ApiGateway &
         dotnet run --project src/backend/Harbor.Project &
         dotnet run --project src/backend/Harbor.Deployment &
-        # Give backends a few seconds to initialize and run DB migrations
-        sleep 15
+
+        wait_for_http() {
+          local name="$1"
+          local url="$2"
+          local max_attempts=30
+          for i in $(seq 1 "$max_attempts"); do
+            if curl -sf -o /dev/null "$url"; then
+              echo "$name is up after ${i}s"
+              return 0
+            fi
+            sleep 1
+          done
+          echo "::error::$name did not become ready at $url within ${max_attempts}s"
+          return 1
+        }
+
+        wait_for_http "Harbor.Authentication" "http://localhost:5196/swagger/v1/swagger.json"
+        wait_for_http "Harbor.ApiGateway"     "http://localhost:5053/health"
+        wait_for_http "Harbor.Project"        "http://localhost:5079/swagger/v1/swagger.json"
+        wait_for_http "Harbor.Deployment"     "http://localhost:5288/swagger/v1/swagger.json"
 
     - name: Start Frontend Server (Background)
       working-directory: ./src/frontend
       run: |
         npm run dev -- --port 5173 &
-        # Give frontend a few seconds to serve
-        sleep 5
+
+        for i in $(seq 1 30); do
+          if curl -sf -o /dev/null "http://localhost:5173/"; then
+            echo "Frontend is up after ${i}s"
+            exit 0
+          fi
+          sleep 1
+        done
+        echo "::error::Frontend did not become ready within 30s"
+        exit 1
 
     - name: Seed Deployment Test Data
       run: |
@@ -91,3 +117,4 @@ jobs:
 
     - name: Run Unit and E2E Tests
       run: dotnet test --no-build --verbosity normal
+      

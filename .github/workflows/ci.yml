@@ -69,6 +69,7 @@ jobs:
         dotnet run --project src/backend/Harbor.ApiGateway &
         dotnet run --project src/backend/Harbor.Project &
         dotnet run --project src/backend/Harbor.Deployment &
+        dotnet run --project src/backend/Harbor.Environment &
 
         wait_for_http() {
           local name="$1"
@@ -89,6 +90,7 @@ jobs:
         wait_for_http "Harbor.ApiGateway"     "http://localhost:5053/health"
         wait_for_http "Harbor.Project"        "http://localhost:5079/swagger/v1/swagger.json"
         wait_for_http "Harbor.Deployment"     "http://localhost:5288/swagger/v1/swagger.json"
+        wait_for_http "Harbor.Environment"    "http://localhost:5292/swagger/v1/swagger.json"
 
     - name: Start Frontend Server (Background)
       working-directory: ./src/frontend
@@ -98,6 +100,9 @@ jobs:
         for i in $(seq 1 30); do
           if curl -sf -o /dev/null "http://localhost:5173/"; then
             echo "Frontend is up after ${i}s"
+            # Warm up Vite transpilation so first test doesn't hit a cold compile delay
+            curl -sf "http://localhost:5173/src/main.tsx" > /dev/null || true
+            sleep 2
             exit 0
           fi
           sleep 1

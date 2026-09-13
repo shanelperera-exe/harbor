@@ -20,7 +20,7 @@ namespace Harbor.E2ETests.Tests
             createAccountPage.NavigateTo();
             createAccountPage.CreateAccount(username, email, password);
 
-            var wait = new WebDriverWait(Driver, TimeSpan.FromSeconds(10));
+            var wait = new WebDriverWait(Driver, TimeSpan.FromSeconds(20));
             wait.Until(d => d.Url.Contains("/dashboard"));
         }
 

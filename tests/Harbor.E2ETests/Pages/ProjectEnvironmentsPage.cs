@@ -11,7 +11,7 @@ namespace Harbor.E2ETests.Pages
         public ProjectEnvironmentsPage(IWebDriver driver)
         {
             _driver = driver;
-            _wait = new WebDriverWait(driver, TimeSpan.FromSeconds(10));
+            _wait = new WebDriverWait(driver, TimeSpan.FromSeconds(20));
         }
 
         public void Create(string name, string type)
@@ -24,9 +24,15 @@ namespace Harbor.E2ETests.Pages
 
         public bool HasEnvironment(string name, string type)
         {
-            _wait.Until(d => d.FindElement(By.CssSelector("[data-testid='environments-list']")));
-            return _driver.FindElements(By.CssSelector("[data-testid='environments-list'] > div"))
-                .Any(card => card.Text.Contains(name) && card.Text.Contains(type));
+            try
+            {
+                return _wait.Until(d => d.FindElements(By.CssSelector("[data-testid='environments-list'] > div"))
+                    .Any(card => card.Text.Contains(name) && card.Text.Contains(type)));
+            }
+            catch (WebDriverTimeoutException)
+            {
+                return false;
+            }
         }
     }
 }

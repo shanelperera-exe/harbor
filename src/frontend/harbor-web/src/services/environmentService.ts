@@ -1,0 +1,33 @@
+const environmentApiBase = import.meta.env.VITE_ENVIRONMENT_API_URL || 'http://localhost:5292/api/projects';
+
+export type EnvironmentType = 'Development' | 'Staging' | 'Production';
+
+export interface DeploymentEnvironment {
+  id: number;
+  projectId: number;
+  name: string;
+  type: EnvironmentType;
+  createdAt: string;
+}
+
+function headers(): HeadersInit {
+  const token = localStorage.getItem('harbor_token');
+  return { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+}
+
+async function parse<T>(response: Response, fallback: string): Promise<T> {
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(body?.detail || body?.title || fallback);
+  return body.data as T;
+}
+
+export function getEnvironments(projectId: number): Promise<DeploymentEnvironment[]> {
+  return fetch(`${environmentApiBase}/${projectId}/environments`, { headers: headers() })
+    .then(response => parse<DeploymentEnvironment[]>(response, 'Unable to load environments.'));
+}
+
+export function createEnvironment(projectId: number, payload: { name: string; type: EnvironmentType }): Promise<DeploymentEnvironment> {
+  return fetch(`${environmentApiBase}/${projectId}/environments`, {
+    method: 'POST', headers: headers(), body: JSON.stringify(payload),
+  }).then(response => parse<DeploymentEnvironment>(response, 'Unable to create environment.'));
+}

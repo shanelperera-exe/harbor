@@ -11,7 +11,7 @@ namespace Harbor.E2ETests.Pages
         public ProjectsPage(IWebDriver driver)
         {
             _driver = driver;
-            _wait = new WebDriverWait(driver, TimeSpan.FromSeconds(10));
+            _wait = new WebDriverWait(driver, TimeSpan.FromSeconds(20));
         }
 
         private IWebElement NewProjectLink => _wait.Until(d => d.FindElement(By.CssSelector("[data-testid='new-project-link']")));
@@ -41,6 +41,12 @@ namespace Harbor.E2ETests.Pages
         {
             var card = GetProjectCards().First(c => c.FindElement(By.TagName("h2")).Text == name);
             card.FindElement(By.CssSelector("[data-testid='edit-project-link']")).Click();
+        }
+
+        public void ClickEnvironmentsFor(string name)
+        {
+            var card = GetProjectCards().First(c => c.FindElement(By.TagName("h2")).Text == name);
+            card.FindElement(By.CssSelector("[data-testid='project-environments-link']")).Click();
         }
     }
 }

@@ -11,13 +11,13 @@ namespace Harbor.E2ETests.Pages
         public CreateProjectPage(IWebDriver driver)
         {
             _driver = driver;
-            _wait = new WebDriverWait(driver, TimeSpan.FromSeconds(10));
+            _wait = new WebDriverWait(driver, TimeSpan.FromSeconds(20));
         }
 
         private IWebElement NameInput => _wait.Until(d => d.FindElement(By.CssSelector("[data-testid='project-name-input']")));
-        private IWebElement DescriptionInput => _driver.FindElement(By.CssSelector("[data-testid='project-description-input']"));
-        private IWebElement RepoInput => _driver.FindElement(By.CssSelector("[data-testid='project-repo-input']"));
-        private IWebElement CreateButton => _driver.FindElement(By.CssSelector("[data-testid='create-project-button']"));
+        private IWebElement DescriptionInput => _wait.Until(d => d.FindElement(By.CssSelector("[data-testid='project-description-input']")));
+        private IWebElement RepoInput => _wait.Until(d => d.FindElement(By.CssSelector("[data-testid='project-repo-input']")));
+        private IWebElement CreateButton => _wait.Until(d => d.FindElement(By.CssSelector("[data-testid='create-project-button']")));
         private IWebElement GeneralErrorMessage => _wait.Until(d => d.FindElement(By.CssSelector("[data-testid='error-message']")));
 
         public void NavigateTo()

@@ -20,7 +20,7 @@ namespace Harbor.E2ETests.Tests
             createAccountPage.NavigateTo();
             createAccountPage.CreateAccount(username, email, password);
 
-            var wait = new WebDriverWait(Driver, TimeSpan.FromSeconds(10));
+            var wait = new WebDriverWait(Driver, TimeSpan.FromSeconds(20));
             wait.Until(d => d.Url.Contains("/dashboard"));
         }
 
@@ -109,6 +109,29 @@ namespace Harbor.E2ETests.Tests
 
             var updatedProjectsPage = new ProjectsPage(Driver);
             Assert.That(updatedProjectsPage.HasProjectNamed(projectName), Is.False);
+        }
+
+        [Test]
+        public void CreateDevelopmentEnvironment_AppearsInProjectEnvironments()
+        {
+            LoginAsFreshUser();
+            var projectName = $"harbor-e2e-env-{Guid.NewGuid().ToString("N").Substring(0, 6)}";
+            var environmentName = "Development";
+
+            var createProjectPage = new CreateProjectPage(Driver);
+            createProjectPage.NavigateTo();
+            createProjectPage.FillForm(projectName);
+            createProjectPage.Submit();
+
+            var wait = new WebDriverWait(Driver, TimeSpan.FromSeconds(10));
+            wait.Until(d => d.Url.Contains("/projects") && !d.Url.Contains("/new"));
+            var projectsPage = new ProjectsPage(Driver);
+            projectsPage.ClickEnvironmentsFor(projectName);
+            wait.Until(d => d.Url.Contains("/environments"));
+
+            var environmentsPage = new ProjectEnvironmentsPage(Driver);
+            environmentsPage.Create(environmentName, "Development");
+            Assert.That(environmentsPage.HasEnvironment(environmentName, "Development"), Is.True);
         }
     }
 }

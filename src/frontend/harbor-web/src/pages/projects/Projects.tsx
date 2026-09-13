@@ -50,6 +50,13 @@ export default function Projects() {
               >
                 Edit
               </Link>
+              <Link
+                to={`/projects/${project.id}/environments`}
+                data-testid="project-environments-link"
+                className="text-[13px] text-blue-600 dark:text-[#a585ff] flex-shrink-0 whitespace-nowrap"
+              >
+                Environments
+              </Link>
             </div>
             {project.description && (
               <p className="text-gray-500 dark:text-[#a1a1aa] text-[15px] mb-3">{project.description}</p>

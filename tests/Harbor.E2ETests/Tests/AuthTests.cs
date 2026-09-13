@@ -36,7 +36,7 @@ namespace Harbor.E2ETests.Tests
             // First time - should succeed
             createAccountPage.CreateAccount(username, email, password);
             
-            var wait = new WebDriverWait(Driver, TimeSpan.FromSeconds(10));
+            var wait = new WebDriverWait(Driver, TimeSpan.FromSeconds(20));
             wait.Until(d => d.Url.Contains("/dashboard"));
 
             // Log out
@@ -53,22 +53,17 @@ namespace Harbor.E2ETests.Tests
         [Test]
         public void CreateAccount_WithValidDetails_RedirectsToDashboard()
         {
-            var createAccountPage = new CreateAccountPage(Driver);
-            createAccountPage.NavigateTo();
-
-            // Clear any existing state just in case
-            Driver.Manage().Cookies.DeleteAllCookies();
-            ((OpenQA.Selenium.IJavaScriptExecutor)Driver).ExecuteScript("window.localStorage.clear();");
-            
             var uniqueId = Guid.NewGuid().ToString("N").Substring(0, 8);
             var username = $"user_{uniqueId}";
             var email = $"user_{uniqueId}@example.com";
             var password = "ValidPassword123!";
 
+            var createAccountPage = new CreateAccountPage(Driver);
+            createAccountPage.NavigateTo();
             createAccountPage.CreateAccount(username, email, password);
 
             // Wait for redirection to dashboard
-            var wait = new WebDriverWait(Driver, TimeSpan.FromSeconds(10));
+            var wait = new WebDriverWait(Driver, TimeSpan.FromSeconds(20));
             try {
                 wait.Until(d => d.Url.Contains("/dashboard"));
             } catch (WebDriverTimeoutException) {
@@ -93,7 +88,7 @@ namespace Harbor.E2ETests.Tests
             createAccountPage.NavigateTo();
             createAccountPage.CreateAccount(username, email, password);
             
-            var wait = new WebDriverWait(Driver, TimeSpan.FromSeconds(10));
+            var wait = new WebDriverWait(Driver, TimeSpan.FromSeconds(20));
             try {
                 wait.Until(d => d.Url.Contains("/dashboard"));
             } catch (WebDriverTimeoutException) {

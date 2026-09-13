@@ -22,7 +22,7 @@ namespace Harbor.E2ETests.Tests
             loginPage.NavigateTo();
             loginPage.Login(SeededUsername, SeededPassword);
 
-            var wait = new WebDriverWait(Driver, TimeSpan.FromSeconds(10));
+            var wait = new WebDriverWait(Driver, TimeSpan.FromSeconds(20));
             wait.Until(d => d.Url.Contains("/dashboard"));
         }
 

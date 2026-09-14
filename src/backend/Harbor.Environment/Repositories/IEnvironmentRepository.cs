@@ -13,4 +13,5 @@ public interface IEnvironmentRepository
     Task<bool> HasDeploymentHistoryAsync(int projectId, string environmentName);
     Task<(bool Exists, int OwnerId, bool IsArchived)> GetProjectAccessAsync(int projectId);
     Task<bool> TypeExistsForProjectAsync(int projectId, string type, int? excludeEnvironmentId = null);
+    Task<bool> UpdateDeploymentInfoAsync(int environmentId, int projectId, string? deploymentUrl, string? provider);
 }

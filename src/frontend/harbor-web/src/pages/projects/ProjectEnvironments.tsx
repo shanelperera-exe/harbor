@@ -14,6 +14,7 @@ export default function ProjectEnvironments() {
   const [name, setName] = useState('');
   const [type, setType] = useState<EnvironmentType>('Development');
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState<number | null>(null);
@@ -32,7 +33,7 @@ export default function ProjectEnvironments() {
   }, [projectId]);
 
   async function submit(event: FormEvent) {
-    event.preventDefault(); setError(null); setSaving(true);
+    event.preventDefault(); setError(null); setNotice(null); setSaving(true);
     try {
       const created = await createEnvironment(projectId, { name, type });
       setEnvironments(current => [...current, created]); setName('');
@@ -41,11 +42,11 @@ export default function ProjectEnvironments() {
   }
 
   function startEditing(environment: DeploymentEnvironment) {
-    setEditing(environment.id); setEditName(environment.name); setEditType(environment.type); setError(null);
+    setEditing(environment.id); setEditName(environment.name); setEditType(environment.type); setError(null); setNotice(null);
   }
 
   async function saveEdit(environmentId: number) {
-    setError(null); setSaving(true);
+    setError(null); setNotice(null); setSaving(true);
     try {
       const updated = await updateEnvironment(projectId, environmentId, { name: editName, type: editType });
       setEnvironments(current => current.map(environment => environment.id === environmentId ? updated : environment));
@@ -56,11 +57,11 @@ export default function ProjectEnvironments() {
 
   async function remove(environmentId: number) {
     if (!window.confirm('Remove this environment? Environments with deployment history will be deactivated.')) return;
-    setError(null); setSaving(true);
+    setError(null); setNotice(null); setSaving(true);
     try {
       const result = await removeEnvironment(projectId, environmentId);
       setEnvironments(current => current.filter(environment => environment.id !== environmentId));
-      if (result.deactivated) setError(result.message);
+      if (result.deactivated) setNotice(result.message);
     } catch (err) { setError(err instanceof Error ? err.message : 'Unable to remove environment.'); }
     finally { setSaving(false); }
   }
@@ -70,6 +71,7 @@ export default function ProjectEnvironments() {
     <h1 className="text-3xl font-semibold mt-3">{project ? `${project.name} environments` : 'Project environments'}</h1>
     <p className="text-gray-500 dark:text-gray-400 mt-2">Define the deployment targets for this project.</p>
     {error && <p className="text-red-500 mt-5" data-testid="environment-error">{error}</p>}
+    {notice && <p className="text-blue-600 dark:text-[#a585ff] mt-5" data-testid="environment-notice">{notice}</p>}
     {loading ? <p className="text-gray-500 mt-5">Loading environments...</p> : <>
       <form onSubmit={submit} className="mt-7 max-w-xl grid gap-4 border border-gray-200 dark:border-[#333] p-5" data-testid="create-environment-form">
         <label className="grid gap-1">Name

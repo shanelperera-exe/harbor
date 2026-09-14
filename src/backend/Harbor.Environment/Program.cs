@@ -1,6 +1,7 @@
 using DotNetEnv;
 using Harbor.Environment.Data;
 using Harbor.Environment.Repositories;
+using Harbor.Environment.Security;
 using Harbor.Environment.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -59,11 +60,11 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
 builder.Services.AddAuthorization();
 builder.Services.AddSingleton<DbConnectionFactory>();
 builder.Services.AddScoped<IEnvironmentRepository, EnvironmentRepository>();
-builder.Services.AddScoped<IEnvironmentService, EnvironmentService>();builder.Services.AddScoped<IEnvironmentRepository, EnvironmentRepository>();
 builder.Services.AddScoped<IEnvironmentService, EnvironmentService>();
-builder.Services.AddScoped<IEnvironmentConfigurationRepository, EnvironmentConfigurationRepository>(); // new
-builder.Services.AddScoped<IEnvironmentConfigurationService, EnvironmentConfigurationService>();        // new
-builder.Services.AddSingleton<IEnvironmentSecretProtector, EnvironmentSecretProtector>();                // newvar app = builder.Build();
+builder.Services.AddScoped<IEnvironmentConfigurationRepository, EnvironmentConfigurationRepository>();
+builder.Services.AddScoped<IEnvironmentConfigurationService, EnvironmentConfigurationService>();
+builder.Services.AddSingleton<IEnvironmentSecretProtector, EnvironmentSecretProtector>();
+var app = builder.Build();
 DatabaseInitializer.Initialize(app.Configuration);
 
 // Configure the HTTP request pipeline.

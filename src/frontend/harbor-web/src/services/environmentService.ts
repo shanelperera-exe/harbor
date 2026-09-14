@@ -8,6 +8,8 @@ export interface DeploymentEnvironment {
   name: string;
   type: EnvironmentType;
   createdAt: string;
+  isActive: boolean;
+  deactivatedAt?: string;
 }
 
 function headers(): HeadersInit {
@@ -30,4 +32,15 @@ export function createEnvironment(projectId: number, payload: { name: string; ty
   return fetch(`${environmentApiBase}/${projectId}/environments`, {
     method: 'POST', headers: headers(), body: JSON.stringify(payload),
   }).then(response => parse<DeploymentEnvironment>(response, 'Unable to create environment.'));
+}
+
+export function updateEnvironment(projectId: number, environmentId: number, payload: { name: string; type: EnvironmentType }): Promise<DeploymentEnvironment> {
+  return fetch(`${environmentApiBase}/${projectId}/environments/${environmentId}`, {
+    method: 'PUT', headers: headers(), body: JSON.stringify(payload),
+  }).then(response => parse<DeploymentEnvironment>(response, 'Unable to update environment.'));
+}
+
+export function removeEnvironment(projectId: number, environmentId: number): Promise<{ deactivated: boolean; message: string }> {
+  return fetch(`${environmentApiBase}/${projectId}/environments/${environmentId}`, { method: 'DELETE', headers: headers() })
+    .then(response => parse<{ deactivated: boolean; message: string }>(response, 'Unable to remove environment.'));
 }

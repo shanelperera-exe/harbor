@@ -59,9 +59,11 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
 builder.Services.AddAuthorization();
 builder.Services.AddSingleton<DbConnectionFactory>();
 builder.Services.AddScoped<IEnvironmentRepository, EnvironmentRepository>();
+builder.Services.AddScoped<IEnvironmentService, EnvironmentService>();builder.Services.AddScoped<IEnvironmentRepository, EnvironmentRepository>();
 builder.Services.AddScoped<IEnvironmentService, EnvironmentService>();
-
-var app = builder.Build();
+builder.Services.AddScoped<IEnvironmentConfigurationRepository, EnvironmentConfigurationRepository>(); // new
+builder.Services.AddScoped<IEnvironmentConfigurationService, EnvironmentConfigurationService>();        // new
+builder.Services.AddSingleton<IEnvironmentSecretProtector, EnvironmentSecretProtector>();                // newvar app = builder.Build();
 DatabaseInitializer.Initialize(app.Configuration);
 
 // Configure the HTTP request pipeline.

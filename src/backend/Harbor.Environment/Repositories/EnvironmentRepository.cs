@@ -122,7 +122,7 @@ public class EnvironmentRepository(DbConnectionFactory dbFactory) : IEnvironment
         command.CommandText = "SELECT COUNT(1) FROM \"Environments\" WHERE \"ProjectId\" = @projectId AND \"Type\" = @type AND \"IsActive\" = TRUE AND (@excludeEnvironmentId IS NULL OR \"Id\" <> @excludeEnvironmentId);";
         command.Parameters.AddWithValue("projectId", projectId);
         command.Parameters.AddWithValue("type", type);
-        command.Parameters.AddWithValue("excludeEnvironmentId", (object?)excludeEnvironmentId ?? DBNull.Value);
+        command.Parameters.AddWithValue("excludeEnvironmentId", NpgsqlTypes.NpgsqlDbType.Integer, (object?)excludeEnvironmentId ?? DBNull.Value);
         return Convert.ToInt64(await command.ExecuteScalarAsync()) > 0;
     }
 }

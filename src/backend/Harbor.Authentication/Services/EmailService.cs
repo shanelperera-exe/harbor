@@ -47,7 +47,7 @@ namespace Harbor.Authentication.Services
             using var client = new SmtpClient();
             try
             {
-                await client.ConnectAsync(host, port, SecureSocketOptions.StartTls);
+                await client.ConnectAsync(host, port, SecureSocketOptions.Auto);
                 await client.AuthenticateAsync(username, password);
                 await client.SendAsync(message);
                 await client.DisconnectAsync(true);

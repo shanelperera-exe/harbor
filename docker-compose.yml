@@ -15,5 +15,13 @@ services:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
 
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: harbor-mailpit
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+    restart: unless-stopped
+
 volumes:
   postgres_data:

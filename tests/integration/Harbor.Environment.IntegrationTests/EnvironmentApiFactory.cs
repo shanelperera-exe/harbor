@@ -16,6 +16,7 @@ public class EnvironmentApiFactory : WebApplicationFactory<global::Program>, IAs
     public const string JwtSecret = "environment-integration-key-at-least-32chars";
     public const string JwtIssuer = "harbor-auth-test";
     public const string JwtAudience = "harbor-web-test";
+    public const string SecretsKey = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
     private readonly PostgreSqlContainer _container = new PostgreSqlBuilder().WithImage("postgres:16-alpine")
         .WithDatabase("harbor_test").WithUsername("harbor_test").WithPassword("harbor_test").Build();
 
@@ -25,6 +26,7 @@ public class EnvironmentApiFactory : WebApplicationFactory<global::Program>, IAs
         builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(new Dictionary<string, string?>
         {
             ["JWT_SECRET"] = JwtSecret, ["JWT_ISSUER"] = JwtIssuer, ["JWT_AUDIENCE"] = JwtAudience,
+            ["ENVIRONMENT_SECRETS_KEY"] = SecretsKey,
             ["ConnectionStrings:HarborDb"] = _container.GetConnectionString(), ["Cors:AllowedOrigins:0"] = "http://localhost:5173"
         }));
         builder.ConfigureServices(services => services.PostConfigure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, options =>

@@ -12,10 +12,12 @@ namespace Harbor.E2ETests
         public void Setup()
         {
             var options = new ChromeOptions();
-            options.AddArgument("--headless"); 
+            options.AddArgument("--headless");
             options.AddArgument("--disable-gpu");
             options.AddArgument("--no-sandbox");
-            
+            options.AddArgument("--disable-dev-shm-usage");
+            options.AddArgument("--window-size=1920,1080");
+
             Driver = new ChromeDriver(options);
             Driver.Manage().Window.Maximize();
         }

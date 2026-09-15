@@ -96,21 +96,30 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+      - name: Log in to ACR
+        run: docker login ${{ env.ACR_LOGIN_SERVER }} -u ${{ secrets.ACR_USERNAME }} -p ${{ secrets.ACR_PASSWORD }}
+
+      - name: Build and Push Frontend Image
+        run: |
+          docker build \
+            --build-arg VITE_API_BASE_URL=${{ vars.API_GATEWAY_URL }} \
+            -f ${{ matrix.dockerfile }} \
+            -t ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.service }}:${{ github.sha }} \
+            .
+          docker push ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.service }}:${{ github.sha }}
+
       - name: Deploy to Azure Container Apps
         uses: azure/container-apps-deploy-action@v1
         with:
-          appSourcePath: ${{ github.workspace }}
           registryUrl: ${{ env.ACR_LOGIN_SERVER }}
           registryUsername: ${{ secrets.ACR_USERNAME }}
           registryPassword: ${{ secrets.ACR_PASSWORD }}
           containerAppName: ${{ matrix.service }}
           resourceGroup: ${{ env.RESOURCE_GROUP }}
           containerAppEnvironment: ${{ env.ACA_ENVIRONMENT }}
-          imageToBuild: ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.service }}:${{ github.sha }}
-          dockerfilePath: ${{ matrix.dockerfile }}
+          imageToDeploy: ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.service }}:${{ github.sha }}
           ingress: external
           targetPort: 80
-          buildArguments: "VITE_API_BASE_URL=${{ vars.API_GATEWAY_URL }}"
 
   deploy-api-gateway:
     name: Deploy API Gateway

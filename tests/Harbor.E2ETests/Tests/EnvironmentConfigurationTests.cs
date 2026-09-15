@@ -120,6 +120,9 @@ namespace Harbor.E2ETests.Tests
 
             Driver.Navigate().Back();
 
+            var wait = new OpenQA.Selenium.Support.UI.WebDriverWait(Driver, TimeSpan.FromSeconds(20));
+            wait.Until(d => !environments.GetCardText(environmentName).Contains("Not configured yet"));
+
             var cardText = environments.GetCardText(environmentName);
 
             Assert.Multiple(() =>

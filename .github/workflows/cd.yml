@@ -2,7 +2,7 @@ name: CD Pipeline
 
 on:
   push:
-    branches: [ "main", "develop" ]
+    branches: [ "main" ]
   workflow_dispatch:
 
 env:
@@ -14,7 +14,7 @@ jobs:
   deploy-backend-apis:
     name: Deploy Backend APIs
     runs-on: ubuntu-latest
-    environment: Development
+    environment: Production
     strategy:
       matrix:
         include:
@@ -71,11 +71,14 @@ jobs:
             SMTP_PASSWORD=${{ secrets.SMTP_PASSWORD }}
             SMTP_FROM_NAME=${{ vars.SMTP_FROM_NAME }}
             SMTP_FROM_EMAIL=${{ vars.SMTP_FROM_EMAIL }}
+            ENVIRONMENT_SECRETS_KEY=${{ secrets.ENVIRONMENT_SECRETS_KEY }}
+            GITHUB_TOKEN=${{ secrets.GH_TOKEN }}
+            GITHUB_WEBHOOK_SECRET=${{ secrets.GH_WEBHOOK_SECRET }}
 
   deploy-frontends:
     name: Deploy Frontend UIs
     runs-on: ubuntu-latest
-    environment: Development
+    environment: Production
     strategy:
       matrix:
         include:
@@ -113,7 +116,7 @@ jobs:
     name: Deploy API Gateway
     runs-on: ubuntu-latest
     needs: deploy-backend-apis
-    environment: Development
+    environment: Production
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4

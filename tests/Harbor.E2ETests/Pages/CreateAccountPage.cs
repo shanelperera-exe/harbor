@@ -22,7 +22,7 @@ namespace Harbor.E2ETests.Pages
 
         public void NavigateTo()
         {
-            _driver.Navigate().GoToUrl("http://localhost:5173/register");
+            _driver.Navigate().GoToUrl("http://localhost:8080/register");
         }
 
         public void CreateAccount(string username, string email, string password)

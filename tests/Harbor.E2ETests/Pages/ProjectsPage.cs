@@ -18,7 +18,7 @@ namespace Harbor.E2ETests.Pages
 
         public void NavigateTo()
         {
-            _driver.Navigate().GoToUrl("http://localhost:5173/projects");
+            _driver.Navigate().GoToUrl("http://localhost:8080/projects");
         }
 
         public void ClickNewProject()

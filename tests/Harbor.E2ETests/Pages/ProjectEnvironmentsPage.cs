@@ -12,13 +12,8 @@ namespace Harbor.E2ETests.Pages
         public ProjectEnvironmentsPage(IWebDriver driver)
         {
             _driver = driver;
-            // These ceilings are intentionally generous: on CI, environment creation involves
-            // two DB round-trips (project access + type-uniqueness check) before the insert,
-            // on a runner that's also running four other backend services, Postgres, and a
-            // Vite dev server concurrently. Locally this settles in ~1-2s; under CI contention
-            // it has been observed taking 20-30s. See BUG-US11-001 follow-up / CI investigation.
-            _wait = new WebDriverWait(driver, TimeSpan.FromSeconds(30));
-            _extendedWait = new WebDriverWait(driver, TimeSpan.FromSeconds(60));
+            _wait = new WebDriverWait(driver, TimeSpan.FromSeconds(20));
+            _extendedWait = new WebDriverWait(driver, TimeSpan.FromSeconds(30));
         }
 
         private void ScrollToAndClick(IWebElement element)
@@ -60,29 +55,43 @@ namespace Harbor.E2ETests.Pages
                 }
             });
 
-            // Wait for the card to appear with explicit retry and visibility check
-            _extendedWait.Until(d =>
+            // Wait for either the card to appear OR an error banner to show - whichever
+            // happens first. Previously this only waited for the card, so a real
+            // creation failure (bad request, 403, validation error, etc.) was
+            // indistinguishable from CI slowness: both just burned the full timeout.
+            var outcome = _extendedWait.Until(d =>
             {
                 try
                 {
                     var cards = d.FindElements(By.CssSelector("[data-testid='environments-list'] > div"));
-                    return cards.Any(card =>
+                    if (cards.Any(card =>
                     {
-                        try
-                        {
-                            return card.Displayed && card.Text.Contains(name);
-                        }
-                        catch
-                        {
-                            return false;
-                        }
-                    });
+                        try { return card.Displayed && card.Text.Contains(name); }
+                        catch { return false; }
+                    }))
+                    {
+                        return "ok";
+                    }
+
+                    var errors = d.FindElements(By.CssSelector("[data-testid='environment-error']"));
+                    if (errors.Count > 0 && errors[0].Displayed)
+                    {
+                        return "error:" + errors[0].Text;
+                    }
+
+                    return null;
                 }
                 catch
                 {
-                    return false;
+                    return null;
                 }
             });
+
+            if (outcome != null && outcome.StartsWith("error:"))
+            {
+                throw new InvalidOperationException(
+                    $"Environment creation failed for '{name}': {outcome.Substring("error:".Length)}");
+            }
         }
 
         public bool HasEnvironment(string name, string type)
@@ -186,20 +195,6 @@ namespace Harbor.E2ETests.Pages
 
             // Wait for saving to complete (edit mode exits when saving finishes)
             _wait.Until(d => d.FindElements(By.CssSelector("input[aria-label='Environment name']")).Count == 0);
-        }
-
-        public void OpenConfiguration(string name)
-        {
-            var card = GetCard(name);
-            var link = card.FindElement(By.XPath(".//a[contains(., 'Configure deployment')]"));
-            ScrollToAndClick(link);
-
-            _wait.Until(d => d.Url.Contains("/configure"));
-        }
-
-        public string GetCardText(string name)
-        {
-            return GetCard(name).Text;
         }
 
         public void Remove(string name)

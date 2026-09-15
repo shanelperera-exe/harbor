@@ -21,7 +21,7 @@ namespace Harbor.E2ETests.Pages
 
         public void NavigateTo()
         {
-            _driver.Navigate().GoToUrl("http://localhost:8080/login");
+            _driver.Navigate().GoToUrl("http://localhost:5173/login");
         }
 
         public void Login(string username, string password)

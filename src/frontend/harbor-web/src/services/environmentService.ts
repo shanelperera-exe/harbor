@@ -10,6 +10,39 @@ export interface DeploymentEnvironment {
   createdAt: string;
   isActive: boolean;
   deactivatedAt?: string;
+  deploymentUrl?: string;
+  provider?: string;
+}
+
+export interface ConfigurationItem {
+  key: string;
+  value: string;
+}
+
+export interface SecureValueEntry {
+  key: string;
+  isSet: boolean;
+}
+
+export interface SecureValueInput {
+  key: string;
+  /** Omit or leave blank to keep the previously stored secret unchanged. */
+  value?: string;
+}
+
+export interface EnvironmentConfiguration {
+  environmentId: number;
+  deploymentUrl?: string;
+  provider?: string;
+  configuration: ConfigurationItem[];
+  secureValues: SecureValueEntry[];
+}
+
+export interface ConfigureEnvironmentPayload {
+  deploymentUrl: string;
+  provider: string;
+  configuration: ConfigurationItem[];
+  secureValues: SecureValueInput[];
 }
 
 function headers(): HeadersInit {
@@ -43,4 +76,19 @@ export function updateEnvironment(projectId: number, environmentId: number, payl
 export function removeEnvironment(projectId: number, environmentId: number): Promise<{ deactivated: boolean; message: string }> {
   return fetch(`${environmentApiBase}/${projectId}/environments/${environmentId}`, { method: 'DELETE', headers: headers() })
     .then(response => parse<{ deactivated: boolean; message: string }>(response, 'Unable to remove environment.'));
+}
+
+export function getEnvironmentConfiguration(projectId: number, environmentId: number): Promise<EnvironmentConfiguration> {
+  return fetch(`${environmentApiBase}/${projectId}/environments/${environmentId}/configuration`, { headers: headers() })
+    .then(response => parse<EnvironmentConfiguration>(response, 'Unable to load environment configuration.'));
+}
+
+export function saveEnvironmentConfiguration(
+  projectId: number,
+  environmentId: number,
+  payload: ConfigureEnvironmentPayload,
+): Promise<EnvironmentConfiguration> {
+  return fetch(`${environmentApiBase}/${projectId}/environments/${environmentId}/configuration`, {
+    method: 'PUT', headers: headers(), body: JSON.stringify(payload),
+  }).then(response => parse<EnvironmentConfiguration>(response, 'Unable to save environment configuration.'));
 }

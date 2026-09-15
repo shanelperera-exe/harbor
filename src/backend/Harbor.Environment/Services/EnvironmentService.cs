@@ -83,6 +83,7 @@ public class EnvironmentService(IEnvironmentRepository environmentRepository) : 
     private static EnvironmentResponse ToResponse(EnvironmentEntity environment) => new()
     {
         Id = environment.Id, ProjectId = environment.ProjectId, Name = environment.Name,
-        Type = environment.Type, CreatedAt = environment.CreatedAt, IsActive = environment.IsActive, DeactivatedAt = environment.DeactivatedAt
+        Type = environment.Type, CreatedAt = environment.CreatedAt, IsActive = environment.IsActive, DeactivatedAt = environment.DeactivatedAt,
+        DeploymentUrl = environment.DeploymentUrl, Provider = environment.Provider
     };
 }

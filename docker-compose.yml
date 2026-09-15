@@ -1,18 +1,128 @@
-
 services:
   postgres:
     image: postgres:15-alpine
     container_name: harbor-postgres
-    # The .env file is automatically loaded by docker-compose,
-    # but we can explicitly pass the variables from it.
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DATABASE}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DATABASE:-harbor}
     ports:
-      - "${POSTGRES_PORT}:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: harbor-mailpit
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+    restart: unless-stopped
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: src/backend/Harbor.ApiGateway/Dockerfile
+    container_name: harbor-api-gateway
+    env_file: .env
+    ports:
+      - "5000:8080"
+    restart: unless-stopped
+
+  authentication-service:
+    build:
+      context: .
+      dockerfile: src/backend/Harbor.Authentication/Dockerfile
+    container_name: harbor-authentication
+    env_file: .env
+    environment:
+      POSTGRES_SERVER: postgres
+      POSTGRES_PORT: 5432
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
+    ports:
+      - "5001:8080"
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+  project-service:
+    build:
+      context: .
+      dockerfile: src/backend/Harbor.Project/Dockerfile
+    container_name: harbor-project
+    env_file: .env
+    environment:
+      POSTGRES_SERVER: postgres
+      POSTGRES_PORT: 5432
+    ports:
+      - "5002:8080"
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+  environment-service:
+    build:
+      context: .
+      dockerfile: src/backend/Harbor.Environment/Dockerfile
+    container_name: harbor-environment
+    env_file: .env
+    environment:
+      POSTGRES_SERVER: postgres
+      POSTGRES_PORT: 5432
+    ports:
+      - "5003:8080"
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+  deployment-service:
+    build:
+      context: .
+      dockerfile: src/backend/Harbor.Deployment/Dockerfile
+    container_name: harbor-deployment
+    env_file: .env
+    environment:
+      POSTGRES_SERVER: postgres
+      POSTGRES_PORT: 5432
+    ports:
+      - "5004:8080"
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+  reporting-service:
+    build:
+      context: .
+      dockerfile: src/backend/Harbor.Reporting/Dockerfile
+    container_name: harbor-reporting
+    env_file: .env
+    environment:
+      POSTGRES_SERVER: postgres
+      POSTGRES_PORT: 5432
+    ports:
+      - "5005:8080"
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+  harbor-web:
+    build:
+      context: src/frontend/harbor-web
+      dockerfile: Dockerfile
+    container_name: harbor-web
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+
+  harbor-admin:
+    build:
+      context: src/frontend/harbor-admin
+      dockerfile: Dockerfile
+    container_name: harbor-admin
+    ports:
+      - "8081:80"
     restart: unless-stopped
 
 volumes:

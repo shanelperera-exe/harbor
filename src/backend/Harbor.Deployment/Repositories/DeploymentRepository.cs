@@ -59,6 +59,51 @@ public class DeploymentRepository(DbConnectionFactory dbFactory) : IDeploymentRe
         return result;
     }
 
+    public async Task<int> CreateAsync(DeploymentEntity deployment)
+    {
+        await using var connection = dbFactory.CreateConnection();
+        await connection.OpenAsync();
+        await using var command = connection.CreateCommand();
+        command.CommandText = "INSERT INTO \"Deployments\" (\"ProjectId\", \"OwnerId\", \"Environment\", \"Version\", \"CommitSha\", \"Status\", \"StartedAt\") VALUES (@projectId, @ownerId, @environment, @version, @commitSha, @status, @startedAt) RETURNING \"Id\";";
+        command.Parameters.AddWithValue("projectId", deployment.ProjectId);
+        command.Parameters.AddWithValue("ownerId", deployment.OwnerId);
+        command.Parameters.AddWithValue("environment", deployment.Environment);
+        command.Parameters.AddWithValue("version", deployment.Version);
+        command.Parameters.AddWithValue("commitSha", (object?)deployment.CommitSha ?? DBNull.Value);
+        command.Parameters.AddWithValue("status", deployment.Status);
+        command.Parameters.AddWithValue("startedAt", deployment.StartedAt);
+        return Convert.ToInt32(await command.ExecuteScalarAsync());
+    }
+
+    public async Task<(bool Exists, int OwnerId, bool IsArchived)> GetProjectAccessAsync(int projectId)
+    {
+        await using var connection = dbFactory.CreateConnection();
+        await connection.OpenAsync();
+        await using var command = connection.CreateCommand();
+        command.CommandText = "SELECT \"OwnerId\", \"IsArchived\" FROM \"Projects\" WHERE \"Id\" = @projectId;";
+        command.Parameters.AddWithValue("projectId", projectId);
+
+        await using var reader = await command.ExecuteReaderAsync();
+        return await reader.ReadAsync()
+            ? (true, reader.GetInt32(0), reader.GetBoolean(1))
+            : (false, 0, false);
+    }
+
+    public async Task<(bool Exists, bool IsActive, string Type)?> GetEnvironmentByNameAsync(int projectId, string environmentName)
+    {
+        await using var connection = dbFactory.CreateConnection();
+        await connection.OpenAsync();
+        await using var command = connection.CreateCommand();
+        command.CommandText = "SELECT \"IsActive\", \"Type\" FROM \"Environments\" WHERE \"ProjectId\" = @projectId AND \"Name\" = @environmentName;";
+        command.Parameters.AddWithValue("projectId", projectId);
+        command.Parameters.AddWithValue("environmentName", environmentName);
+
+        await using var reader = await command.ExecuteReaderAsync();
+        return await reader.ReadAsync()
+            ? (true, reader.GetBoolean(0), reader.GetString(1))
+            : null;
+    }
+
     private static void AddFilters(NpgsqlCommand command, int ownerId, int? projectId, string? status)
     {
         command.Parameters.AddWithValue("ownerId", ownerId);

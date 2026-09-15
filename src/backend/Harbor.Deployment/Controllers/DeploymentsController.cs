@@ -32,5 +32,43 @@ public class DeploymentsController(IDeploymentService deploymentService) : Contr
         return deployment is null ? NotFound() : Ok(deployment);
     }
 
+    /// <summary>Creates a deployment request for a project and environment the authenticated user has access to.</summary>
+    /// <param name="request">The project, environment, version, and optional commit SHA.</param>
+    /// <response code="201">The deployment request was created.</response>
+    /// <response code="400">The request fails validation or the project/environment is invalid.</response>
+    /// <response code="401">The caller is not authenticated.</response>
+    /// <response code="403">The caller does not have permission to deploy to this project.</response>
+    [HttpPost]
+    [ProducesResponseType(typeof(CreateDeploymentResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<CreateDeploymentResponse>> Create([FromBody] CreateDeploymentRequest request)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+
+        var result = await deploymentService.CreateAsync(request, userId.Value, User.IsInRole("Admin"));
+
+        if (!result.Success)
+        {
+            return Problem(detail: result.Error, statusCode: StatusCodes.Status400BadRequest, title: result.Error);
+        }
+
+        var response = new CreateDeploymentResponse
+        {
+            Id = result.DeploymentId!.Value,
+            ProjectId = request.ProjectId,
+            OwnerId = userId.Value,
+            Environment = request.Environment,
+            Version = request.Version,
+            CommitSha = request.CommitSha,
+            Status = "Pending",
+            StartedAt = DateTime.UtcNow
+        };
+
+        return StatusCode(StatusCodes.Status201Created, response);
+    }
+
     private int? GetUserId() => int.TryParse(User.FindFirst("userId")?.Value, out var id) ? id : null;
 }

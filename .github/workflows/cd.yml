@@ -102,7 +102,7 @@ jobs:
       - name: Build and Push Frontend Image
         run: |
           docker build \
-            --build-arg VITE_API_BASE_URL=${{ vars.API_GATEWAY_URL }} \
+            --build-arg VITE_API_BASE_URL=${{ vars.API_GATEWAY_URL }}/api \
             -f ${{ matrix.dockerfile }} \
             -t ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.service }}:${{ github.sha }} \
             .

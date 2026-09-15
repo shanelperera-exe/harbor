@@ -183,6 +183,22 @@ namespace Harbor.E2ETests.Pages
             _wait.Until(d => d.FindElements(By.CssSelector("input[aria-label='Environment name']")).Count == 0);
         }
 
+        /// <summary>Opens the US-11 "Configure deployment" screen for the named environment.</summary>
+        public void OpenConfiguration(string name)
+        {
+            var card = GetCard(name);
+            var link = card.FindElement(By.XPath(".//a[contains(., 'Configure deployment')]"));
+            ScrollToAndClick(link);
+
+            _wait.Until(d => d.Url.Contains("/configure"));
+        }
+
+        /// <summary>The visible text of an environment card — used to assert the deployment URL / provider summary.</summary>
+        public string GetCardText(string name)
+        {
+            return GetCard(name).Text;
+        }
+
         public void Remove(string name)
         {
             var card = GetCard(name);

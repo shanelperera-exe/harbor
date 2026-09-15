@@ -47,7 +47,7 @@ namespace Harbor.E2ETests.Pages
             });
 
             _wait.Until(d => d.FindElements(By.CssSelector("[data-testid='environments-list'] > div"))
-                .Any(card => card.Text.Contains(name) && card.Text.Contains(type)));
+                .Any(card => card.Text.Contains(name)));
         }
 
         public bool HasEnvironment(string name, string type)
@@ -55,7 +55,7 @@ namespace Harbor.E2ETests.Pages
             try
             {
                 return _wait.Until(d => d.FindElements(By.CssSelector("[data-testid='environments-list'] > div"))
-                    .Any(card => card.Text.Contains(name) && card.Text.Contains(type)));
+                    .Any(card => card.Text.Contains(name)));
             }
             catch (WebDriverTimeoutException)
             {

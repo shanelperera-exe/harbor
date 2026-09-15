@@ -119,7 +119,9 @@ namespace Harbor.E2ETests.Tests
             Assert.That(configuration.WaitForNotice(), Is.True);
 
             Driver.Navigate().Back();
-            Driver.Navigate().Refresh();
+
+            var wait = new OpenQA.Selenium.Support.UI.WebDriverWait(Driver, TimeSpan.FromSeconds(20));
+            wait.Until(d => environments.GetCardText(environmentName).Contains(ValidUrl));
 
             var cardText = environments.GetCardText(environmentName);
 

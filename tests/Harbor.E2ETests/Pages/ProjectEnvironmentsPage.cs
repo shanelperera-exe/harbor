@@ -160,7 +160,7 @@ namespace Harbor.E2ETests.Pages
         public void StartEdit(string name)
         {
             var card = GetCard(name);
-            var editButton = card.FindElement(By.XPath(".//button[text()='Edit']"));
+            var editButton = card.FindElement(By.XPath(".//button[contains(., 'Edit')]"));
             _wait.Until(d => editButton.Displayed && editButton.Enabled);
             ScrollToAndClick(editButton);
 
@@ -175,7 +175,7 @@ namespace Harbor.E2ETests.Pages
 
             new SelectElement(_driver.FindElement(By.CssSelector("select[aria-label='Environment type']"))).SelectByText(newType);
 
-            var saveButton = _driver.FindElement(By.XPath("//button[text()='Save']"));
+            var saveButton = _driver.FindElement(By.XPath("//button[contains(., 'Save')]"));
             _wait.Until(d => saveButton.Displayed && saveButton.Enabled);
             ScrollToAndClick(saveButton);
 
@@ -202,7 +202,7 @@ namespace Harbor.E2ETests.Pages
         public void Remove(string name)
         {
             var card = GetCard(name);
-            var removeButton = card.FindElement(By.XPath(".//button[text()='Remove']"));
+            var removeButton = card.FindElement(By.XPath(".//button[contains(., 'Remove')]"));
             _wait.Until(d => removeButton.Displayed && removeButton.Enabled);
             ScrollToAndClick(removeButton);
 
@@ -213,7 +213,15 @@ namespace Harbor.E2ETests.Pages
             _wait.Until(d =>
             {
                 var cards = d.FindElements(By.CssSelector("[data-testid='environments-list'] > div"));
-                return cards.Count == 0 || !cards.Any(c => c.Text.Contains(name));
+                if (cards.Count == 0) return true;
+                try
+                {
+                    return !cards.Any(c => c.Text.Contains(name));
+                }
+                catch (StaleElementReferenceException)
+                {
+                    return false;
+                }
             });
         }
     }

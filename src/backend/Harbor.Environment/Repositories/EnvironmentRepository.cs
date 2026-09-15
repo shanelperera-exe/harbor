@@ -28,7 +28,7 @@ public class EnvironmentRepository(DbConnectionFactory dbFactory) : IEnvironment
         await connection.OpenAsync();
         await using var command = connection.CreateCommand();
 
-        command.CommandText = "SELECT \"Id\", \"ProjectId\", \"Name\", \"Type\", \"CreatedAt\", \"IsActive\", \"DeactivatedAt\" FROM \"Environments\" " +
+        command.CommandText = "SELECT \"Id\", \"ProjectId\", \"Name\", \"Type\", \"CreatedAt\", \"IsActive\", \"DeactivatedAt\", \"DeploymentUrl\", \"Provider\" FROM \"Environments\" " +
                               "WHERE \"ProjectId\" = @projectId AND \"IsActive\" = TRUE ORDER BY \"CreatedAt\";";
 
         command.Parameters.AddWithValue("projectId", projectId);
@@ -47,7 +47,9 @@ public class EnvironmentRepository(DbConnectionFactory dbFactory) : IEnvironment
                 Type = reader.GetString(3),
                 CreatedAt = reader.GetDateTime(4),
                 IsActive = reader.GetBoolean(5),
-                DeactivatedAt = reader.IsDBNull(6) ? null : reader.GetDateTime(6)
+                DeactivatedAt = reader.IsDBNull(6) ? null : reader.GetDateTime(6),
+                DeploymentUrl = reader.IsDBNull(7) ? null : reader.GetString(7),
+                Provider = reader.IsDBNull(8) ? null : reader.GetString(8)
             });
         }
 

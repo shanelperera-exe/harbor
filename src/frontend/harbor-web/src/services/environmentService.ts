@@ -57,7 +57,7 @@ async function parse<T>(response: Response, fallback: string): Promise<T> {
 }
 
 export function getEnvironments(projectId: number): Promise<DeploymentEnvironment[]> {
-  return fetch(`${environmentApiBase}/${projectId}/environments`, { headers: headers() })
+  return fetch(`${environmentApiBase}/${projectId}/environments`, { headers: headers(), cache: 'no-store' })
     .then(response => parse<DeploymentEnvironment[]>(response, 'Unable to load environments.'));
 }
 

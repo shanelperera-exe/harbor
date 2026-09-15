@@ -22,7 +22,7 @@ public static class DatabaseInitializer
             var username = Environment.GetEnvironmentVariable("POSTGRES_USER") ?? "harboruser";
             var password = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD") ?? "harbor@1234";
 
-            connectionString = $"Host={host};Port={port};Database={database};Username={username};Password={password};";
+            connectionString = $"Host={host};Port={port};Database={database};Username={username};Password={password};Ssl Mode=Require;Trust Server Certificate=true;";
         }
 
         var result = DeployChanges.To.PostgresqlDatabase(connectionString)

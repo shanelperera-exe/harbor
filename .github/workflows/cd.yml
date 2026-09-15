@@ -155,18 +155,19 @@ jobs:
           dockerfilePath: src/backend/Harbor.ApiGateway/Dockerfile
           ingress: external
           targetPort: 8080
-          environmentVariables: |
-            ReverseProxy__Clusters__authCluster__Destinations__destination1__Address=https://harbor-auth-api.internal.${{ env.DOMAIN }}
-            ReverseProxy__Clusters__projectCluster__Destinations__destination1__Address=https://harbor-project-api.internal.${{ env.DOMAIN }}
-            ReverseProxy__Clusters__environmentCluster__Destinations__destination1__Address=https://harbor-env-api.internal.${{ env.DOMAIN }}
-            ReverseProxy__Clusters__deploymentCluster__Destinations__destination1__Address=https://harbor-deploy-api.internal.${{ env.DOMAIN }}
-            ReverseProxy__Clusters__reportingCluster__Destinations__destination1__Address=https://harbor-report-api.internal.${{ env.DOMAIN }}
 
-      - name: Set CORS allowed origins on API Gateway
+      - name: Configure API Gateway environment variables
         run: |
           az containerapp update \
             --name harbor-api-gateway \
             --resource-group ${{ env.RESOURCE_GROUP }} \
-            --set-env-vars "ALLOWED_ORIGINS=${{ vars.ALLOWED_ORIGINS }}"
+            --set-env-vars \
+              "ReverseProxy__Clusters__authCluster__Destinations__destination1__Address=https://harbor-auth-api.internal.${{ env.DOMAIN }}" \
+              "ReverseProxy__Clusters__projectCluster__Destinations__destination1__Address=https://harbor-project-api.internal.${{ env.DOMAIN }}" \
+              "ReverseProxy__Clusters__environmentCluster__Destinations__destination1__Address=https://harbor-env-api.internal.${{ env.DOMAIN }}" \
+              "ReverseProxy__Clusters__deploymentCluster__Destinations__destination1__Address=https://harbor-deploy-api.internal.${{ env.DOMAIN }}" \
+              "ReverseProxy__Clusters__reportingCluster__Destinations__destination1__Address=https://harbor-report-api.internal.${{ env.DOMAIN }}" \
+              "ALLOWED_ORIGINS=${{ vars.ALLOWED_ORIGINS }}"
+
 
 

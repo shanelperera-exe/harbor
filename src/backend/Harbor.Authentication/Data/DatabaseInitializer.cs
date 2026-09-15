@@ -24,7 +24,7 @@ namespace Harbor.Authentication.Data
                 var username = Environment.GetEnvironmentVariable("POSTGRES_USER") ?? "harboruser";
                 var password = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD") ?? "harbor@1234";
 
-                connectionString = $"Host={host};Port={port};Database={database};Username={username};Password={password};";
+                connectionString = $"Host={host};Port={port};Database={database};Username={username};Password={password};Ssl Mode=Require;Trust Server Certificate=true;";
             }
 
             // We skip EnsureDatabase because harbor_db is already created by our Docker environment.

@@ -13,7 +13,7 @@ public static class DatabaseInitializer
                $"Port={System.Environment.GetEnvironmentVariable("POSTGRES_PORT") ?? "5432"};" +
                $"Database={System.Environment.GetEnvironmentVariable("POSTGRES_DATABASE") ?? "harbor_db"};" +
                $"Username={System.Environment.GetEnvironmentVariable("POSTGRES_USER") ?? "harboruser"};" +
-               $"Password={System.Environment.GetEnvironmentVariable("POSTGRES_PASSWORD") ?? "harbor@1234"};";
+               $"Password={System.Environment.GetEnvironmentVariable("POSTGRES_PASSWORD") ?? "harbor@1234"};Ssl Mode=Require;Trust Server Certificate=true;";
         var result = DeployChanges.To.PostgresqlDatabase(connectionString)
             .WithScriptsEmbeddedInAssembly(Assembly.GetExecutingAssembly()).Build().PerformUpgrade();
         if (!result.Successful) throw new InvalidOperationException("Environment database migration failed.", result.Error);

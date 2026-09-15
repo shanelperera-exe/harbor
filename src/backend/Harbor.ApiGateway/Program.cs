@@ -20,7 +20,9 @@ var connectionStringBuilder = new NpgsqlConnectionStringBuilder
     Port = int.TryParse(Environment.GetEnvironmentVariable("POSTGRES_PORT"), out var port) ? port : 5432,
     Database = Environment.GetEnvironmentVariable("POSTGRES_DATABASE"),
     Username = Environment.GetEnvironmentVariable("POSTGRES_USER"),
-    Password = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD")
+    Password = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD"),
+    SslMode = SslMode.Require,
+    TrustServerCertificate = true
 };
 
 if (!string.IsNullOrEmpty(connectionStringBuilder.Host))

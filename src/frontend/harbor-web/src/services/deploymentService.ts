@@ -50,3 +50,18 @@ export async function getDeploymentHistory(filters: { projectId?: number; status
 export async function getDeploymentDetails(id: number): Promise<DeploymentDetails> {
   return readResponse<DeploymentDetails>(await fetch(`${deploymentApiBase}/${id}`, { headers: headers() }), 'Unable to load deployment details.');
 }
+
+export interface CreateDeploymentRequest {
+  projectId: number;
+  environment: string;
+  version: string;
+  commitSha?: string | null;
+}
+
+export async function createDeployment(request: CreateDeploymentRequest): Promise<Deployment> {
+  return readResponse<Deployment>(await fetch(deploymentApiBase, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...headers() },
+    body: JSON.stringify(request),
+  }), 'Unable to create deployment.');
+}

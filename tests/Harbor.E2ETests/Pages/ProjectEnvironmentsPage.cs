@@ -14,12 +14,37 @@ namespace Harbor.E2ETests.Pages
             _wait = new WebDriverWait(driver, TimeSpan.FromSeconds(20));
         }
 
+        private void ScrollToAndClick(IWebElement element)
+        {
+            ((IJavaScriptExecutor)_driver).ExecuteScript("arguments[0].scrollIntoView(true);", element);
+            _wait.Until(d => element.Displayed && element.Enabled);
+            element.Click();
+        }
+
         public void Create(string name, string type)
         {
-            _wait.Until(d => d.FindElement(By.CssSelector("[data-testid='create-environment-form']")));
-            _driver.FindElement(By.CssSelector("[data-testid='create-environment-form'] input")).SendKeys(name);
-            new SelectElement(_driver.FindElement(By.CssSelector("[data-testid='create-environment-form'] select"))).SelectByText(type);
-            _driver.FindElement(By.CssSelector("[data-testid='create-environment-form'] button")).Click();
+            _wait.Until(d => d.FindElements(By.CssSelector("[data-testid='create-environment-form']")).Count > 0);
+
+            var form = _driver.FindElement(By.CssSelector("[data-testid='create-environment-form']"));
+            var nameInput = form.FindElement(By.CssSelector("input"));
+            var select = form.FindElement(By.CssSelector("select"));
+            var submitButton = form.FindElement(By.CssSelector("button"));
+
+            nameInput.Clear();
+            nameInput.SendKeys(name);
+            new SelectElement(select).SelectByText(type);
+
+            // Wait for button to be clickable before clicking
+            _wait.Until(d => submitButton.Enabled && submitButton.Displayed);
+            ScrollToAndClick(submitButton);
+
+            // Wait for the saving state to complete (button becomes re-enabled)
+            _wait.Until(d =>
+            {
+                var btn = _driver.FindElement(By.CssSelector("[data-testid='create-environment-form'] button"));
+                return !btn.GetAttribute("disabled").Contains("disabled") ||
+                       btn.Text.Contains("Create environment");
+            });
         }
 
         public bool HasEnvironment(string name, string type)
@@ -61,7 +86,9 @@ namespace Harbor.E2ETests.Pages
         public void StartEdit(string name)
         {
             var card = GetCard(name);
-            card.FindElement(By.XPath(".//button[text()='Edit']")).Click();
+            var editButton = card.FindElement(By.XPath(".//button[text()='Edit']"));
+            _wait.Until(d => editButton.Displayed && editButton.Enabled);
+            ScrollToAndClick(editButton);
         }
 
         public void SaveEdit(string newName, string newType)
@@ -72,16 +99,34 @@ namespace Harbor.E2ETests.Pages
 
             new SelectElement(_driver.FindElement(By.CssSelector("select[aria-label='Environment type']"))).SelectByText(newType);
 
-            _driver.FindElement(By.XPath("//button[text()='Save']")).Click();
+            var saveButton = _driver.FindElement(By.XPath("//button[text()='Save']"));
+            _wait.Until(d => saveButton.Displayed && saveButton.Enabled);
+            ScrollToAndClick(saveButton);
+
+            // Wait for saving to complete
+            _wait.Until(d =>
+            {
+                var btn = _driver.FindElement(By.XPath("//button[text()='Save']"));
+                return btn == null || !btn.Enabled || btn.Text.Contains("Save");
+            });
         }
 
         public void Remove(string name)
         {
             var card = GetCard(name);
-            card.FindElement(By.XPath(".//button[text()='Remove']")).Click();
+            var removeButton = card.FindElement(By.XPath(".//button[text()='Remove']"));
+            _wait.Until(d => removeButton.Displayed && removeButton.Enabled);
+            ScrollToAndClick(removeButton);
 
             _wait.Until(d => d.SwitchTo().Alert() != null);
             _driver.SwitchTo().Alert().Accept();
+
+            // Wait for the removal to complete (card disappears or list updates)
+            _wait.Until(d =>
+            {
+                var cards = d.FindElements(By.CssSelector("[data-testid='environments-list'] > div"));
+                return cards.Count == 0 || !cards.Any(c => c.Text.Contains(name));
+            });
         }
     }
 }

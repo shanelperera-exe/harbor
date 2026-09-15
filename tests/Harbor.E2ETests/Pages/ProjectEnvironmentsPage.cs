@@ -42,7 +42,7 @@ namespace Harbor.E2ETests.Pages
             _wait.Until(d =>
             {
                 var btn = _driver.FindElement(By.CssSelector("[data-testid='create-environment-form'] button"));
-                return !btn.GetAttribute("disabled").Contains("disabled") ||
+                return !(btn.GetAttribute("disabled") ?? "").Contains("disabled") ||
                        btn.Text.Contains("Create environment");
             });
         }

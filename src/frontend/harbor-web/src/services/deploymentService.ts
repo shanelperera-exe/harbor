@@ -1,4 +1,4 @@
-const deploymentApiBase = import.meta.env.VITE_DEPLOYMENT_API_URL || 'http://localhost:5288/api/deployments';
+const deploymentApiBase = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api') + '/deployments';
 
 export interface Deployment {
   id: number;

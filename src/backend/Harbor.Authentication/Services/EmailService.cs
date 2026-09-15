@@ -25,7 +25,7 @@ namespace Harbor.Authentication.Services
             var password = Environment.GetEnvironmentVariable("SMTP_PASSWORD") ?? _config["Smtp:Password"];
             var fromName = Environment.GetEnvironmentVariable("SMTP_FROM_NAME") ?? _config["Smtp:FromName"] ?? "Harbor Team";
             var fromEmail = Environment.GetEnvironmentVariable("SMTP_FROM_EMAIL") ?? _config["Smtp:FromEmail"] ?? "noreply@harbor.com";
-            
+
             var maskedEmail = MaskEmail(toEmail);
 
             if (string.IsNullOrEmpty(host) || string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
@@ -51,7 +51,7 @@ namespace Harbor.Authentication.Services
                 await client.AuthenticateAsync(username, password);
                 await client.SendAsync(message);
                 await client.DisconnectAsync(true);
-                
+
                 _logger.LogInformation("Email sent successfully to {toEmail}", maskedEmail);
             }
             catch (Exception ex)

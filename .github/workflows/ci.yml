@@ -2,7 +2,7 @@ name: CI Pipeline
 
 on:
   push:
-    branches: [ "main", "master", "develop" ]
+    branches: [ "main", "master", "develop", "feature/*" ]
   pull_request:
     branches: [ "main", "master", "develop" ]
 
@@ -13,131 +13,137 @@ jobs:
     environment: Development
 
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-    - name: Generate Test .env file
-      run: |
-        echo "POSTGRES_SERVER=localhost" >> .env
-        echo "POSTGRES_PORT=5432" >> .env
-        echo "POSTGRES_DATABASE=harbor_db" >> .env
-        echo "POSTGRES_USER=harboruser" >> .env
-        echo "POSTGRES_PASSWORD=harborpass" >> .env
-        echo "JWT_SECRET=super_secret_jwt_key_that_is_at_least_32_bytes_long_for_testing" >> .env
-        echo "JWT_ISSUER=HarborAuth" >> .env
-        echo "JWT_AUDIENCE=HarborClients" >> .env
-        echo "ADMIN_EMAIL=admin@harbor.local" >> .env
-        echo "ADMIN_PASSWORD=Admin123!" >> .env
-        echo "API_GATEWAY_URL=http://localhost:5053" >> .env
-        echo "SMTP_HOST=localhost" >> .env
-        echo "SMTP_PORT=25" >> .env
-        echo "SMTP_USERNAME=test" >> .env
-        echo "SMTP_PASSWORD=test" >> .env
-        echo "SMTP_FROM_NAME=Harbor CI" >> .env
-        echo "SMTP_FROM_EMAIL=ci@harbor.local" >> .env
+      - name: Generate Test .env file
+        run: |
+          echo "POSTGRES_SERVER=localhost" >> .env
+          echo "POSTGRES_PORT=5432" >> .env
+          echo "POSTGRES_DATABASE=harbor_db" >> .env
+          echo "POSTGRES_USER=harboruser" >> .env
+          echo "POSTGRES_PASSWORD=harborpass" >> .env
+          echo "JWT_SECRET=super_secret_jwt_key_that_is_at_least_32_bytes_long_for_testing" >> .env
+          echo "JWT_ISSUER=HarborAuth" >> .env
+          echo "JWT_AUDIENCE=HarborClients" >> .env
+          echo "ADMIN_EMAIL=admin@harbor.local" >> .env
+          echo "ADMIN_PASSWORD=Admin123!" >> .env
+          echo "API_GATEWAY_URL=http://localhost:5053" >> .env
+          echo "SMTP_HOST=localhost" >> .env
+          echo "SMTP_PORT=25" >> .env
+          echo "SMTP_USERNAME=test" >> .env
+          echo "SMTP_PASSWORD=test" >> .env
+          echo "SMTP_FROM_NAME=Harbor CI" >> .env
+          echo "SMTP_FROM_EMAIL=ci@harbor.local" >> .env
 
-    - name: Start PostgreSQL Database
-      run: docker compose up -d postgres
+      - name: Start PostgreSQL Database
+        run: docker compose up -d postgres
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
-    - name: Install Frontend Dependencies
-      working-directory: ./src/frontend
-      run: npm install
+      - name: Install Frontend Dependencies
+        working-directory: ./src/frontend
+        run: npm install
 
-    - name: Build Frontend
-      working-directory: ./src/frontend
-      run: npm run build
+      - name: Build Frontend
+        working-directory: ./src/frontend
+        run: npm run build
 
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: 10.0.x
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
 
-    - name: Restore Backend Dependencies
-      run: dotnet restore
+      - name: Restore Backend Dependencies
+        run: dotnet restore
 
-    - name: Build Backend
-      run: dotnet build --no-restore
+      - name: Build Backend
+        run: dotnet build --no-restore
 
-    - name: Start Harbor Backend Services (Background)
-      run: |
-        dotnet run --project src/backend/Harbor.Authentication &
-        dotnet run --project src/backend/Harbor.ApiGateway &
-        dotnet run --project src/backend/Harbor.Project &
-        dotnet run --project src/backend/Harbor.Deployment &
-        dotnet run --project src/backend/Harbor.Environment &
+      - name: Start Harbor Backend Services (Background)
+        run: |
+          dotnet run --project src/backend/Harbor.Authentication &
 
-        wait_for_http() {
-          local name="$1"
-          local url="$2"
-          local max_attempts=30
-          for i in $(seq 1 "$max_attempts"); do
-            if curl -sf -o /dev/null "$url"; then
-              echo "$name is up after ${i}s"
-              return 0
+          ReverseProxy__Clusters__authCluster__Destinations__destination1__Address=http://localhost:5196 \
+          ReverseProxy__Clusters__projectCluster__Destinations__destination1__Address=http://localhost:5079 \
+          ReverseProxy__Clusters__deploymentCluster__Destinations__destination1__Address=http://localhost:5288 \
+          ReverseProxy__Clusters__environmentCluster__Destinations__destination1__Address=http://localhost:5292 \
+          ReverseProxy__Clusters__reportingCluster__Destinations__destination1__Address=http://localhost:5243 \
+          dotnet run --project src/backend/Harbor.ApiGateway &
+          dotnet run --project src/backend/Harbor.Project &
+          dotnet run --project src/backend/Harbor.Deployment &
+          dotnet run --project src/backend/Harbor.Environment &
+
+          wait_for_http() {
+            local name="$1"
+            local url="$2"
+            local max_attempts=30
+            for i in $(seq 1 "$max_attempts"); do
+              if curl -sf -o /dev/null "$url"; then
+                echo "$name is up after ${i}s"
+                return 0
+              fi
+              sleep 1
+            done
+            echo "::error::$name did not become ready at $url within ${max_attempts}s"
+            return 1
+          }
+
+          wait_for_http "Harbor.Authentication" "http://localhost:5196/swagger/v1/swagger.json"
+          wait_for_http "Harbor.ApiGateway"     "http://localhost:5053/health"
+          wait_for_http "Harbor.Project"        "http://localhost:5079/swagger/v1/swagger.json"
+          wait_for_http "Harbor.Deployment"     "http://localhost:5288/swagger/v1/swagger.json"
+          wait_for_http "Harbor.Environment"    "http://localhost:5292/swagger/v1/swagger.json"
+
+      - name: Start Frontend Server (Background)
+        working-directory: ./src/frontend
+        run: |
+          VITE_API_BASE_URL=http://localhost:5053/api npm run dev -- --port 5173 &
+
+          for i in $(seq 1 30); do
+            if curl -sf -o /dev/null "http://localhost:5173/"; then
+              echo "Frontend is up after ${i}s"
+              # Warm up Vite transpilation so E2E tests don't hit cold compile delays
+              curl -sf "http://localhost:5173/src/main.tsx" > /dev/null || true
+              curl -sf "http://localhost:5173/src/pages/auth/Login.tsx" > /dev/null || true
+              curl -sf "http://localhost:5173/src/pages/auth/CreateAccount.tsx" > /dev/null || true
+              sleep 3
+              exit 0
             fi
             sleep 1
           done
-          echo "::error::$name did not become ready at $url within ${max_attempts}s"
-          return 1
-        }
+          echo "::error::Frontend did not become ready within 30s"
+          exit 1
 
-        wait_for_http "Harbor.Authentication" "http://localhost:5196/swagger/v1/swagger.json"
-        wait_for_http "Harbor.ApiGateway"     "http://localhost:5053/health"
-        wait_for_http "Harbor.Project"        "http://localhost:5079/swagger/v1/swagger.json"
-        wait_for_http "Harbor.Deployment"     "http://localhost:5288/swagger/v1/swagger.json"
-        wait_for_http "Harbor.Environment"    "http://localhost:5292/swagger/v1/swagger.json"
+      - name: Seed Deployment Test Data
+        run: |
+          chmod +x scripts/ci/seed-deployment-data.sh
+          ./scripts/ci/seed-deployment-data.sh
+        env:
+          AUTH_URL: http://localhost:5196
+          POSTGRES_CONTAINER: harbor-postgres
+          POSTGRES_USER: harboruser
+          POSTGRES_DATABASE: harbor_db
 
-    - name: Start Frontend Server (Background)
-      working-directory: ./src/frontend
-      run: |
-        npm run dev -- --port 5173 &
+      - name: Run Unit and Integration Tests
+        run: |
+          sleep 5
+          dotnet test --no-build --verbosity normal \
+            --filter "FullyQualifiedName!~Harbor.E2ETests"
 
-        for i in $(seq 1 30); do
-          if curl -sf -o /dev/null "http://localhost:5173/"; then
-            echo "Frontend is up after ${i}s"
-            # Warm up Vite transpilation so E2E tests don't hit cold compile delays
-            curl -sf "http://localhost:5173/src/main.tsx" > /dev/null || true
-            curl -sf "http://localhost:5173/src/pages/auth/Login.tsx" > /dev/null || true
-            curl -sf "http://localhost:5173/src/pages/auth/CreateAccount.tsx" > /dev/null || true
-            sleep 3
-            exit 0
-          fi
-          sleep 1
-        done
-        echo "::error::Frontend did not become ready within 30s"
-        exit 1
-
-    - name: Seed Deployment Test Data
-      run: |
-        chmod +x scripts/ci/seed-deployment-data.sh
-        ./scripts/ci/seed-deployment-data.sh
-      env:
-        AUTH_URL: http://localhost:5196
-        POSTGRES_CONTAINER: harbor-postgres
-        POSTGRES_USER: harboruser
-        POSTGRES_DATABASE: harbor_db
-
-    - name: Run Unit and Integration Tests
-      run: |
-        sleep 5
-        dotnet test --no-build --verbosity normal \
-          --filter "FullyQualifiedName!~Harbor.E2ETests"
-
-    - name: Run E2E Tests
-      # Runs after the Testcontainers-backed integration tests (which spin up
-      # Docker Postgres containers) have finished, instead of in the same
-      # solution-wide `dotnet test`. MSBuild was fanning that single command
-      # out across parallel nodes, so Selenium/Chrome ended up competing with
-      # Docker container startup for CPU on the runner. That contention was
-      # the real cause of the intermittent WebDriverTimeoutException on the
-      # first Selenium element-wait of the run (e.g.
-      # AuthTests.CreateAccount_WithAlreadyUsedEmail_ShowsErrorMessage),
-      # unrelated to any application or test-code bug.
-      run: |
-        dotnet test --no-build --verbosity normal \
-          tests/Harbor.E2ETests/Harbor.E2ETests.csproj
+      - name: Run E2E Tests
+        # Runs after the Testcontainers-backed integration tests (which spin up
+        # Docker Postgres containers) have finished, instead of in the same
+        # solution-wide `dotnet test`. MSBuild was fanning that single command
+        # out across parallel nodes, so Selenium/Chrome ended up competing with
+        # Docker container startup for CPU on the runner. That contention was
+        # the real cause of the intermittent WebDriverTimeoutException on the
+        # first Selenium element-wait of the run (e.g.
+        # AuthTests.CreateAccount_WithAlreadyUsedEmail_ShowsErrorMessage),
+        # unrelated to any application or test-code bug.
+        run: |
+          dotnet test --no-build --verbosity normal \
+            tests/Harbor.E2ETests/Harbor.E2ETests.csproj

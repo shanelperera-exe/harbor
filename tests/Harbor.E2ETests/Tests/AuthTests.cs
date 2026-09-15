@@ -32,10 +32,10 @@ namespace Harbor.E2ETests.Tests
 
             var createAccountPage = new CreateAccountPage(Driver);
             createAccountPage.NavigateTo();
-            
+
             // First time - should succeed
             createAccountPage.CreateAccount(username, email, password);
-            
+
             var wait = new WebDriverWait(Driver, TimeSpan.FromSeconds(20));
             wait.Until(d => d.Url.Contains("/dashboard"));
 
@@ -71,7 +71,7 @@ namespace Harbor.E2ETests.Tests
                 try { error = createAccountPage.GetErrorMessage(); } catch {}
                 Assert.Fail($"Failed to redirect to dashboard. Error on page: {error}");
             }
-            
+
             Assert.That(Driver.Url, Does.Contain("/dashboard"));
         }
 
@@ -83,11 +83,11 @@ namespace Harbor.E2ETests.Tests
             var username = $"user_{uniqueId}";
             var email = $"user_{uniqueId}@example.com";
             var password = "ValidPassword123!";
-            
+
             var createAccountPage = new CreateAccountPage(Driver);
             createAccountPage.NavigateTo();
             createAccountPage.CreateAccount(username, email, password);
-            
+
             var wait = new WebDriverWait(Driver, TimeSpan.FromSeconds(20));
             try {
                 wait.Until(d => d.Url.Contains("/dashboard"));

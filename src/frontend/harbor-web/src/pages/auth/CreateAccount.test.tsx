@@ -29,10 +29,10 @@ describe('CreateAccount Component', () => {
     );
 
     const passwordInput = screen.getByTestId('password-input');
-    
+
     // Type weak password
     fireEvent.change(passwordInput, { target: { value: 'weak' } });
-    
+
     // Test the specific criteria visually if needed, but we can also just test fetch behaviour
   });
 

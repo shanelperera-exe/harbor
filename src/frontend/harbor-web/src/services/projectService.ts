@@ -1,4 +1,4 @@
-const projectApiBase = import.meta.env.VITE_PROJECT_API_URL || 'http://localhost:5079/api/projects';
+const projectApiBase = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api') + '/projects';
 
 export interface Project {
   id: number;

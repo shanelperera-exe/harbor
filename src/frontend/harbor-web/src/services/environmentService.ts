@@ -1,4 +1,4 @@
-const environmentApiBase = import.meta.env.VITE_ENVIRONMENT_API_URL || 'http://localhost:5292/api/projects';
+const environmentApiBase = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api') + '/projects';
 
 export type EnvironmentType = 'Development' | 'Staging' | 'Production';
 

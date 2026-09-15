@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Mail, Key, Eye, EyeOff, User } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 
-const authApiBase = import.meta.env.VITE_AUTH_API_URL || 'http://localhost:5053/api/auth';
+const authApiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
 export default function CreateAccount() {
   const navigate = useNavigate();
@@ -179,7 +179,7 @@ export default function CreateAccount() {
                     {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                   </button>
                 </div>
-                
+
                 {password.length > 0 && (
                   <div className="flex flex-col space-y-2 mt-1.5">
                     <div className="flex space-x-1.5 h-1">
@@ -187,7 +187,7 @@ export default function CreateAccount() {
                         <div
                           key={level}
                           className={`flex-1 rounded-full transition-colors duration-300 ${
-                            strength >= level 
+                            strength >= level
                               ? (strength < 2 ? 'bg-red-500' : strength < 3 ? 'bg-yellow-500' : strength < 4 ? 'bg-blue-500' : 'bg-green-500')
                               : 'bg-gray-200 dark:bg-[#333]'
                           }`}

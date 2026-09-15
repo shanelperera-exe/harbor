@@ -8,6 +8,11 @@ import MainLayout from './components/layout/MainLayout';
 import DashboardLayout from './components/layout/DashboardLayout';
 import Dashboard from './pages/dashboard/Dashboard';
 import CreateService from './pages/dashboard/CreateService';
+import Projects from './pages/projects/Projects';
+import CreateProject from './pages/projects/CreateProject';
+import EditProject from './pages/projects/EditProject';
+import Deployments from './pages/deployments/Deployments';
+import ProjectEnvironments from './pages/projects/ProjectEnvironments';
 
 function App() {
   return (
@@ -21,6 +26,15 @@ function App() {
       <Route path="/dashboard" element={<DashboardLayout />}>
         <Route index element={<Dashboard />} />
         <Route path="new" element={<CreateService />} />
+      </Route>
+      <Route path="/projects" element={<DashboardLayout />}>
+        <Route index element={<Projects />} />
+        <Route path="new" element={<CreateProject />} />
+        <Route path=":id/edit" element={<EditProject />} />
+        <Route path=":id/environments" element={<ProjectEnvironments />} />
+      </Route>
+      <Route path="/deployments" element={<DashboardLayout />}>
+        <Route index element={<Deployments />} />
       </Route>
     </Routes>
   );

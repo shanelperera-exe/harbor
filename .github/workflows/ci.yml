@@ -35,7 +35,7 @@ jobs:
           echo "SMTP_PASSWORD=test" >> .env
           echo "SMTP_FROM_NAME=Harbor CI" >> .env
           echo "SMTP_FROM_EMAIL=ci@harbor.local" >> .env
-          echo "ENVIRONMENT_SECRETS_KEY=${{ secrets.ENVIRONMENT_SECRETS_KEY }}" >> .env
+          echo "ENVIRONMENT_SECRETS_KEY=$(openssl rand -base64 32)" >> .env
 
       - name: Start PostgreSQL Database
         run: docker compose up -d postgres

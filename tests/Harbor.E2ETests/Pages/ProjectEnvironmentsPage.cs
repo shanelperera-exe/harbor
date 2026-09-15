@@ -171,6 +171,20 @@ namespace Harbor.E2ETests.Pages
             });
         }
 
+        public void OpenConfiguration(string name)
+        {
+            var card = GetCard(name);
+            var link = card.FindElement(By.XPath(".//a[contains(., 'Configure deployment')]"));
+            ScrollToAndClick(link);
+
+            _wait.Until(d => d.Url.Contains("/configure"));
+        }
+
+        public string GetCardText(string name)
+        {
+            return GetCard(name).Text;
+        }
+
         public void StartEdit(string name)
         {
             var card = GetCard(name);

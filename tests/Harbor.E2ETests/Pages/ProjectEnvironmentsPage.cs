@@ -213,7 +213,15 @@ namespace Harbor.E2ETests.Pages
             _wait.Until(d =>
             {
                 var cards = d.FindElements(By.CssSelector("[data-testid='environments-list'] > div"));
-                return cards.Count == 0 || !cards.Any(c => c.Text.Contains(name));
+                if (cards.Count == 0) return true;
+                try
+                {
+                    return !cards.Any(c => c.Text.Contains(name));
+                }
+                catch (StaleElementReferenceException)
+                {
+                    return false;
+                }
             });
         }
     }

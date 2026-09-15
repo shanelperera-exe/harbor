@@ -161,3 +161,5 @@ jobs:
             ReverseProxy__Clusters__environmentCluster__Destinations__destination1__Address=https://harbor-env-api.internal.${{ env.DOMAIN }}
             ReverseProxy__Clusters__deploymentCluster__Destinations__destination1__Address=https://harbor-deploy-api.internal.${{ env.DOMAIN }}
             ReverseProxy__Clusters__reportingCluster__Destinations__destination1__Address=https://harbor-report-api.internal.${{ env.DOMAIN }}
+            ALLOWED_ORIGINS=https://harbor-web-ui.${{ env.DOMAIN }},https://harbor-admin-ui.${{ env.DOMAIN }}
+

@@ -1,6 +1,26 @@
 @Harbor.Deployment_HostAddress = http://localhost:5288
 
-GET {{Harbor.Deployment_HostAddress}}/weatherforecast/
+GET {{Harbor.Deployment_HostAddress}}/api/deployments?ProjectId=1&Page=1&PageSize=20
 Accept: application/json
+Authorization: Bearer {{token}}
+
+###
+
+POST {{Harbor.Deployment_HostAddress}}/api/deployments
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "ProjectId": 1,
+  "Environment": "production",
+  "Version": "1.0.0",
+  "CommitSha": "abc123def456"
+}
+
+###
+
+GET {{Harbor.Deployment_HostAddress}}/api/deployments/1
+Accept: application/json
+Authorization: Bearer {{token}}
 
 ###

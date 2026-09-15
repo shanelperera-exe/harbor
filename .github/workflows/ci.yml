@@ -92,6 +92,14 @@ jobs:
         wait_for_http "Harbor.Deployment"     "http://localhost:5288/swagger/v1/swagger.json"
         wait_for_http "Harbor.Environment"    "http://localhost:5292/swagger/v1/swagger.json"
 
+        # /swagger/v1/swagger.json only proves the process is listening - it doesn't
+        # confirm the DB connection pool is warmed up or the JIT has finished tiering.
+        # Under CI's shared 2-core runner (5 backend services + Postgres + Vite all
+        # starting concurrently), the first real DB-backed request can be slow enough
+        # to trip Selenium's wait ceilings even after every health check passes.
+        echo "Giving backend services a moment to stabilize..."
+        sleep 10
+
     - name: Start Frontend Server (Background)
       working-directory: ./src/frontend
       run: |

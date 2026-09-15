@@ -12,8 +12,13 @@ namespace Harbor.E2ETests.Pages
         public ProjectEnvironmentsPage(IWebDriver driver)
         {
             _driver = driver;
-            _wait = new WebDriverWait(driver, TimeSpan.FromSeconds(20));
-            _extendedWait = new WebDriverWait(driver, TimeSpan.FromSeconds(30));
+            // These ceilings are intentionally generous: on CI, environment creation involves
+            // two DB round-trips (project access + type-uniqueness check) before the insert,
+            // on a runner that's also running four other backend services, Postgres, and a
+            // Vite dev server concurrently. Locally this settles in ~1-2s; under CI contention
+            // it has been observed taking 20-30s. See BUG-US11-001 follow-up / CI investigation.
+            _wait = new WebDriverWait(driver, TimeSpan.FromSeconds(30));
+            _extendedWait = new WebDriverWait(driver, TimeSpan.FromSeconds(60));
         }
 
         private void ScrollToAndClick(IWebElement element)
@@ -183,7 +188,6 @@ namespace Harbor.E2ETests.Pages
             _wait.Until(d => d.FindElements(By.CssSelector("input[aria-label='Environment name']")).Count == 0);
         }
 
-        /// <summary>Opens the US-11 "Configure deployment" screen for the named environment.</summary>
         public void OpenConfiguration(string name)
         {
             var card = GetCard(name);
@@ -193,7 +197,6 @@ namespace Harbor.E2ETests.Pages
             _wait.Until(d => d.Url.Contains("/configure"));
         }
 
-        /// <summary>The visible text of an environment card — used to assert the deployment URL / provider summary.</summary>
         public string GetCardText(string name)
         {
             return GetCard(name).Text;

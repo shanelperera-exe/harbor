@@ -74,43 +74,6 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-// TEMPORARY DIAGNOSTIC MIDDLEWARE - remove once the cause of the CI create-environment
-// failures is found. Logs the outcome of every request to this service, and turns any
-// unhandled exception into a 500 whose body contains the real exception message/type
-// instead of an empty body (which is what was showing up as the frontend's generic
-// "Unable to create environment." fallback text, masking whether this was a 500 or
-// a bare 401 Unauthorized()).
-app.Use(async (context, next) =>
-{
-    var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
-    try
-    {
-        await next();
-        logger.LogInformation(
-            "Environment API {Method} {Path} -> {StatusCode}",
-            context.Request.Method, context.Request.Path, context.Response.StatusCode);
-    }
-    catch (Exception ex)
-    {
-        logger.LogError(
-            ex,
-            "Unhandled exception in Harbor.Environment for {Method} {Path}",
-            context.Request.Method, context.Request.Path);
-
-        if (!context.Response.HasStarted)
-        {
-            context.Response.Clear();
-            context.Response.StatusCode = StatusCodes.Status500InternalServerError;
-            context.Response.ContentType = "application/json";
-            await context.Response.WriteAsJsonAsync(new
-            {
-                detail = $"{ex.GetType().Name}: {ex.Message}",
-                title = "Unhandled exception (diagnostic middleware)"
-            });
-        }
-    }
-});
-
 app.UseCors("DefaultPolicy");
 app.UseHttpsRedirection();
 

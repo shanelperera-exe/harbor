@@ -135,6 +135,15 @@ jobs:
             --filter "FullyQualifiedName!~Harbor.E2ETests"
 
       - name: Run E2E Tests
+        # Runs after the Testcontainers-backed integration tests (which spin up
+        # Docker Postgres containers) have finished, instead of in the same
+        # solution-wide `dotnet test`. MSBuild was fanning that single command
+        # out across parallel nodes, so Selenium/Chrome ended up competing with
+        # Docker container startup for CPU on the runner. That contention was
+        # the real cause of the intermittent WebDriverTimeoutException on the
+        # first Selenium element-wait of the run (e.g.
+        # AuthTests.CreateAccount_WithAlreadyUsedEmail_ShowsErrorMessage),
+        # unrelated to any application or test-code bug.
         run: |
           dotnet test --no-build --verbosity normal \
             tests/Harbor.E2ETests/Harbor.E2ETests.csproj

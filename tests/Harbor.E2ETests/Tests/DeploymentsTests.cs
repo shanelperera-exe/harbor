@@ -126,7 +126,10 @@ namespace Harbor.E2ETests.Tests
             Assert.That(rows, Is.Not.Empty);
 
             // Click the first Succeeded row's Details button directly.
-            rows[0].FindElement(By.XPath(".//button[text()='Details']")).Click();
+            // Use ClickDetailsForVersion to ensure proper waiting for the panel to load
+            // and avoid stale element issues.
+            var version = rows[0].FindElement(By.XPath(".//td")).Text.Trim();
+            deploymentsPage.ClickDetailsForVersion(version);
 
             Assert.That(deploymentsPage.HasFailureBanner(), Is.False);
         }

@@ -13,6 +13,8 @@ import CreateProject from './pages/projects/CreateProject';
 import EditProject from './pages/projects/EditProject';
 import Deployments from './pages/deployments/Deployments';
 import ProjectEnvironments from './pages/projects/ProjectEnvironments';
+import EnvironmentConfiguration from './pages/projects/EnvironmentConfiguration';
+import Environments from './pages/environments/Environments';
 
 function App() {
   return (
@@ -32,6 +34,10 @@ function App() {
         <Route path="new" element={<CreateProject />} />
         <Route path=":id/edit" element={<EditProject />} />
         <Route path=":id/environments" element={<ProjectEnvironments />} />
+        <Route path=":id/environments/:environmentId/configure" element={<EnvironmentConfiguration />} />
+      </Route>
+      <Route path="/environments" element={<DashboardLayout />}>
+        <Route index element={<Environments />} />
       </Route>
       <Route path="/deployments" element={<DashboardLayout />}>
         <Route index element={<Deployments />} />

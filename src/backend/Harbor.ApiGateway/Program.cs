@@ -32,7 +32,7 @@ builder.Services.AddReverseProxy()
     .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
 
 var allOrigins = (Environment.GetEnvironmentVariable("ALLOWED_ORIGINS") ?? "")
-    .Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
 builder.Services.AddCors(options =>
 {

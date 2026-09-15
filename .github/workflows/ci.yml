@@ -67,7 +67,7 @@ jobs:
       - name: Start Harbor Backend Services (Background)
         run: |
           dotnet run --project src/backend/Harbor.Authentication &
-
+          sleep 5
           ReverseProxy__Clusters__authCluster__Destinations__destination1__Address=http://localhost:5196 \
           ReverseProxy__Clusters__projectCluster__Destinations__destination1__Address=http://localhost:5079 \
           ReverseProxy__Clusters__deploymentCluster__Destinations__destination1__Address=http://localhost:5288 \

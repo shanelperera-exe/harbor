@@ -9,4 +9,6 @@ public class EnvironmentResponse
     public DateTime CreatedAt { get; set; }
     public bool IsActive { get; set; }
     public DateTime? DeactivatedAt { get; set; }
+    public string? DeploymentUrl { get; set; }
+    public string? Provider { get; set; }
 }

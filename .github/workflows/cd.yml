@@ -3,63 +3,149 @@ name: CD Pipeline
 on:
   push:
     branches: [ "main", "develop" ]
+  workflow_dispatch:
+
+env:
+  ACR_LOGIN_SERVER: ${{ vars.ACR_LOGIN_SERVER }}
+  RESOURCE_GROUP: rg-harbor-centralindia
+  ACA_ENVIRONMENT: harbor-env
 
 jobs:
-  deploy:
-    name: Deploy
+  deploy-backend-apis:
+    name: Deploy Backend APIs
     runs-on: ubuntu-latest
-    
-    # Dynamically select the GitHub Environment based on the branch
-    environment: 
-      name: ${{ github.ref == 'refs/heads/main' && 'Production' || 'Staging' }}
+    environment: Development
+    strategy:
+      matrix:
+        include:
+          - service: harbor-auth-api
+            dockerfile: src/backend/Harbor.Authentication/Dockerfile
+          - service: harbor-project-api
+            dockerfile: src/backend/Harbor.Project/Dockerfile
+          - service: harbor-env-api
+            dockerfile: src/backend/Harbor.Environment/Dockerfile
+          - service: harbor-deploy-api
+            dockerfile: src/backend/Harbor.Deployment/Dockerfile
+          - service: harbor-report-api
+            dockerfile: src/backend/Harbor.Reporting/Dockerfile
 
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-    - name: Build Frontend
-      working-directory: ./src/frontend
-      run: |
-        npm install
-        npm run build
+      - name: Deploy to Azure Container Apps
+        uses: azure/container-apps-deploy-action@v1
+        with:
+          appSourcePath: ${{ github.workspace }}
+          registryUrl: ${{ env.ACR_LOGIN_SERVER }}
+          registryUsername: ${{ secrets.ACR_USERNAME }}
+          registryPassword: ${{ secrets.ACR_PASSWORD }}
+          containerAppName: ${{ matrix.service }}
+          resourceGroup: ${{ env.RESOURCE_GROUP }}
+          containerAppEnvironment: ${{ env.ACA_ENVIRONMENT }}
+          imageToBuild: ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.service }}:${{ github.sha }}
+          dockerfilePath: ${{ matrix.dockerfile }}
+          ingress: internal
+          targetPort: 8080
+          environmentVariables: |
+            POSTGRES_SERVER=${{ vars.POSTGRES_SERVER }}
+            POSTGRES_PORT=${{ vars.POSTGRES_PORT }}
+            POSTGRES_DATABASE=${{ vars.POSTGRES_DATABASE }}
+            POSTGRES_USER=${{ vars.POSTGRES_USER }}
+            POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+            JWT_SECRET=${{ secrets.JWT_SECRET }}
+            JWT_ISSUER=${{ vars.JWT_ISSUER }}
+            JWT_AUDIENCE=${{ vars.JWT_AUDIENCE }}
+            ADMIN_EMAIL=${{ vars.ADMIN_EMAIL }}
+            ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}
+            KAFKA_BOOTSTRAP_SERVERS=${{ vars.KAFKA_BOOTSTRAP_SERVERS }}
+            KAFKA_DEPLOYMENT_TOPIC=${{ vars.KAFKA_DEPLOYMENT_TOPIC }}
+            SMTP_HOST=${{ vars.SMTP_HOST }}
+            SMTP_PORT=${{ vars.SMTP_PORT }}
+            SMTP_USERNAME=${{ vars.SMTP_USERNAME }}
+            SMTP_PASSWORD=${{ secrets.SMTP_PASSWORD }}
+            SMTP_FROM_NAME=${{ vars.SMTP_FROM_NAME }}
+            SMTP_FROM_EMAIL=${{ vars.SMTP_FROM_EMAIL }}
 
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: 10.0.x
+  deploy-frontends:
+    name: Deploy Frontend UIs
+    runs-on: ubuntu-latest
+    environment: Development
+    strategy:
+      matrix:
+        include:
+          - service: harbor-admin-ui
+            dockerfile: src/frontend/harbor-admin/Dockerfile
+          - service: harbor-web-ui
+            dockerfile: src/frontend/harbor-web/Dockerfile
 
-    - name: Build and Publish Backend
-      run: dotnet publish --configuration Release --output ./publish
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-    - name: Generate .env file for deployment
-      run: |
-        echo "POSTGRES_SERVER=${{ vars.POSTGRES_SERVER }}" >> ./publish/.env
-        echo "POSTGRES_PORT=${{ vars.POSTGRES_PORT }}" >> ./publish/.env
-        echo "POSTGRES_DATABASE=${{ vars.POSTGRES_DATABASE }}" >> ./publish/.env
-        echo "POSTGRES_USER=${{ vars.POSTGRES_USER }}" >> ./publish/.env
-        echo "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}" >> ./publish/.env
-        echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> ./publish/.env
-        echo "JWT_ISSUER=${{ vars.JWT_ISSUER }}" >> ./publish/.env
-        echo "JWT_AUDIENCE=${{ vars.JWT_AUDIENCE }}" >> ./publish/.env
-        echo "ADMIN_EMAIL=${{ vars.ADMIN_EMAIL }}" >> ./publish/.env
-        echo "ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}" >> ./publish/.env
-        echo "API_GATEWAY_URL=${{ vars.API_GATEWAY_URL }}" >> ./publish/.env
-        echo "KAFKA_BOOTSTRAP_SERVERS=${{ vars.KAFKA_BOOTSTRAP_SERVERS }}" >> ./publish/.env
-        echo "KAFKA_DEPLOYMENT_TOPIC=${{ vars.KAFKA_DEPLOYMENT_TOPIC }}" >> ./publish/.env
-        echo "SMTP_HOST=${{ vars.SMTP_HOST }}" >> ./publish/.env
-        echo "SMTP_PORT=${{ vars.SMTP_PORT }}" >> ./publish/.env
-        echo "SMTP_USERNAME=${{ vars.SMTP_USERNAME }}" >> ./publish/.env
-        echo "SMTP_PASSWORD=${{ secrets.SMTP_PASSWORD }}" >> ./publish/.env
-        echo "SMTP_FROM_NAME=${{ vars.SMTP_FROM_NAME }}" >> ./publish/.env
-        echo "SMTP_FROM_EMAIL=${{ vars.SMTP_FROM_EMAIL }}" >> ./publish/.env
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-    - name: Deploy to Server
-      run: |
-        echo "Deploying to ${{ github.ref == 'refs/heads/main' && 'Production' || 'Staging' }}..."
-        # Add your specific deployment commands here
-        # E.g., copying ./publish to your server via SCP, or pushing a Docker container
+      - name: Deploy to Azure Container Apps
+        uses: azure/container-apps-deploy-action@v1
+        with:
+          appSourcePath: ${{ github.workspace }}
+          registryUrl: ${{ env.ACR_LOGIN_SERVER }}
+          registryUsername: ${{ secrets.ACR_USERNAME }}
+          registryPassword: ${{ secrets.ACR_PASSWORD }}
+          containerAppName: ${{ matrix.service }}
+          resourceGroup: ${{ env.RESOURCE_GROUP }}
+          containerAppEnvironment: ${{ env.ACA_ENVIRONMENT }}
+          imageToBuild: ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.service }}:${{ github.sha }}
+          dockerfilePath: ${{ matrix.dockerfile }}
+          ingress: external
+          targetPort: 80
+          buildArguments: "VITE_API_BASE_URL=${{ vars.API_GATEWAY_URL }}"
+
+  deploy-api-gateway:
+    name: Deploy API Gateway
+    runs-on: ubuntu-latest
+    needs: deploy-backend-apis
+    environment: Development
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Get ACA Environment Domain
+        id: get-domain
+        run: |
+          DOMAIN=$(az containerapp env show -n ${{ env.ACA_ENVIRONMENT }} -g ${{ env.RESOURCE_GROUP }} --query properties.defaultDomain -o tsv)
+          echo "DOMAIN=$DOMAIN" >> $GITHUB_ENV
+
+      - name: Deploy API Gateway to ACA
+        uses: azure/container-apps-deploy-action@v1
+        with:
+          appSourcePath: ${{ github.workspace }}
+          registryUrl: ${{ env.ACR_LOGIN_SERVER }}
+          registryUsername: ${{ secrets.ACR_USERNAME }}
+          registryPassword: ${{ secrets.ACR_PASSWORD }}
+          containerAppName: harbor-api-gateway
+          resourceGroup: ${{ env.RESOURCE_GROUP }}
+          containerAppEnvironment: ${{ env.ACA_ENVIRONMENT }}
+          imageToBuild: ${{ env.ACR_LOGIN_SERVER }}/harbor-api-gateway:${{ github.sha }}
+          dockerfilePath: src/backend/Harbor.ApiGateway/Dockerfile
+          ingress: external
+          targetPort: 8080
+          environmentVariables: |
+            ReverseProxy__Clusters__authCluster__Destinations__destination1__Address=https://harbor-auth-api.internal.${{ env.DOMAIN }}
+            ReverseProxy__Clusters__projectCluster__Destinations__destination1__Address=https://harbor-project-api.internal.${{ env.DOMAIN }}
+            ReverseProxy__Clusters__environmentCluster__Destinations__destination1__Address=https://harbor-env-api.internal.${{ env.DOMAIN }}
+            ReverseProxy__Clusters__deploymentCluster__Destinations__destination1__Address=https://harbor-deploy-api.internal.${{ env.DOMAIN }}
+            ReverseProxy__Clusters__reportingCluster__Destinations__destination1__Address=https://harbor-report-api.internal.${{ env.DOMAIN }}

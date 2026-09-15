@@ -34,7 +34,12 @@ builder.Services.AddReverseProxy()
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontendOrigins",
-        b => b.WithOrigins("http://localhost:5173", "http://localhost:5174")
+        b => b.WithOrigins("http://localhost:5173", "http://localhost:5174", "http://localhost:8080", "http://localhost:8081")
+              .AllowAnyMethod()
+              .AllowAnyHeader()
+              .AllowCredentials());
+    options.AddDefaultPolicy(
+        b => b.WithOrigins("http://localhost:5173", "http://localhost:5174", "http://localhost:8080", "http://localhost:8081")
               .AllowAnyMethod()
               .AllowAnyHeader()
               .AllowCredentials());
@@ -49,9 +54,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
-
 app.UseCors("AllowFrontendOrigins");
+app.UseHttpsRedirection();
 
 app.UseAuthorization();
 

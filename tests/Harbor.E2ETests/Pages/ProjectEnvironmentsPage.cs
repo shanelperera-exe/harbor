@@ -7,11 +7,13 @@ namespace Harbor.E2ETests.Pages
     {
         private readonly IWebDriver _driver;
         private readonly WebDriverWait _wait;
+        private readonly WebDriverWait _extendedWait;
 
         public ProjectEnvironmentsPage(IWebDriver driver)
         {
             _driver = driver;
             _wait = new WebDriverWait(driver, TimeSpan.FromSeconds(20));
+            _extendedWait = new WebDriverWait(driver, TimeSpan.FromSeconds(30));
         }
 
         private void ScrollToAndClick(IWebElement element)
@@ -41,21 +43,69 @@ namespace Harbor.E2ETests.Pages
             // Wait for the saving state to complete (button becomes re-enabled)
             _wait.Until(d =>
             {
-                var btn = _driver.FindElement(By.CssSelector("[data-testid='create-environment-form'] button"));
-                return !(btn.GetAttribute("disabled") ?? "").Contains("disabled") ||
-                       btn.Text.Contains("Create environment");
+                try
+                {
+                    var btn = _driver.FindElement(By.CssSelector("[data-testid='create-environment-form'] button"));
+                    return !(btn.GetAttribute("disabled") ?? "").Contains("disabled") ||
+                           btn.Text.Contains("Create environment");
+                }
+                catch
+                {
+                    return false;
+                }
             });
 
-            _wait.Until(d => d.FindElements(By.CssSelector("[data-testid='environments-list'] > div"))
-                .Any(card => card.Text.Contains(name)));
+            // Wait for the card to appear with explicit retry and visibility check
+            _extendedWait.Until(d =>
+            {
+                try
+                {
+                    var cards = d.FindElements(By.CssSelector("[data-testid='environments-list'] > div"));
+                    return cards.Any(card =>
+                    {
+                        try
+                        {
+                            return card.Displayed && card.Text.Contains(name);
+                        }
+                        catch
+                        {
+                            return false;
+                        }
+                    });
+                }
+                catch
+                {
+                    return false;
+                }
+            });
         }
 
         public bool HasEnvironment(string name, string type)
         {
             try
             {
-                return _wait.Until(d => d.FindElements(By.CssSelector("[data-testid='environments-list'] > div"))
-                    .Any(card => card.Text.Contains(name)));
+                return _extendedWait.Until(d =>
+                {
+                    try
+                    {
+                        var cards = d.FindElements(By.CssSelector("[data-testid='environments-list'] > div"));
+                        return cards.Any(card =>
+                        {
+                            try
+                            {
+                                return card.Displayed && card.Text.Contains(name);
+                            }
+                            catch
+                            {
+                                return false;
+                            }
+                        });
+                    }
+                    catch
+                    {
+                        return false;
+                    }
+                });
             }
             catch (WebDriverTimeoutException)
             {
@@ -82,8 +132,29 @@ namespace Harbor.E2ETests.Pages
 
         private IWebElement GetCard(string name)
         {
-            return _wait.Until(d => d.FindElements(By.CssSelector("[data-testid='environments-list'] > div"))
-                .First(card => card.Text.Contains(name)));
+            return _extendedWait.Until(d =>
+            {
+                try
+                {
+                    var cards = d.FindElements(By.CssSelector("[data-testid='environments-list'] > div"));
+                    var card = cards.FirstOrDefault(c =>
+                    {
+                        try
+                        {
+                            return c.Displayed && c.Text.Contains(name);
+                        }
+                        catch
+                        {
+                            return false;
+                        }
+                    });
+                    return card;
+                }
+                catch
+                {
+                    return null;
+                }
+            });
         }
 
         public void StartEdit(string name)

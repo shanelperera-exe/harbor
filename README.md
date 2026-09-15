@@ -98,8 +98,8 @@ This file is git-ignored — never commit real credentials.
 **2. Create the database table:**
 ```sql
 CREATE TABLE IF NOT EXISTS "Users" (
-  "Id"                      SERIAL PRIMARY KEY,
-  "Username"                VARCHAR(255) NOT NULL UNIQUE,
+                                     "Id"                      SERIAL PRIMARY KEY,
+                                     "Username"                VARCHAR(255) NOT NULL UNIQUE,
   "Email"                   VARCHAR(255) NOT NULL UNIQUE,
   "PasswordHash"            VARCHAR(255) NOT NULL,
   "Role"                    VARCHAR(50)  NOT NULL,

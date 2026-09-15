@@ -160,7 +160,7 @@ namespace Harbor.E2ETests.Pages
         public void StartEdit(string name)
         {
             var card = GetCard(name);
-            var editButton = card.FindElement(By.XPath(".//button[text()='Edit']"));
+            var editButton = card.FindElement(By.XPath(".//button[contains(., 'Edit')]"));
             _wait.Until(d => editButton.Displayed && editButton.Enabled);
             ScrollToAndClick(editButton);
 
@@ -175,7 +175,7 @@ namespace Harbor.E2ETests.Pages
 
             new SelectElement(_driver.FindElement(By.CssSelector("select[aria-label='Environment type']"))).SelectByText(newType);
 
-            var saveButton = _driver.FindElement(By.XPath("//button[text()='Save']"));
+            var saveButton = _driver.FindElement(By.XPath("//button[contains(., 'Save')]"));
             _wait.Until(d => saveButton.Displayed && saveButton.Enabled);
             ScrollToAndClick(saveButton);
 
@@ -183,10 +183,26 @@ namespace Harbor.E2ETests.Pages
             _wait.Until(d => d.FindElements(By.CssSelector("input[aria-label='Environment name']")).Count == 0);
         }
 
+        /// <summary>Opens the US-11 "Configure deployment" screen for the named environment.</summary>
+        public void OpenConfiguration(string name)
+        {
+            var card = GetCard(name);
+            var link = card.FindElement(By.XPath(".//a[contains(., 'Configure deployment')]"));
+            ScrollToAndClick(link);
+
+            _wait.Until(d => d.Url.Contains("/configure"));
+        }
+
+        /// <summary>The visible text of an environment card — used to assert the deployment URL / provider summary.</summary>
+        public string GetCardText(string name)
+        {
+            return GetCard(name).Text;
+        }
+
         public void Remove(string name)
         {
             var card = GetCard(name);
-            var removeButton = card.FindElement(By.XPath(".//button[text()='Remove']"));
+            var removeButton = card.FindElement(By.XPath(".//button[contains(., 'Remove')]"));
             _wait.Until(d => removeButton.Displayed && removeButton.Enabled);
             ScrollToAndClick(removeButton);
 
@@ -197,7 +213,15 @@ namespace Harbor.E2ETests.Pages
             _wait.Until(d =>
             {
                 var cards = d.FindElements(By.CssSelector("[data-testid='environments-list'] > div"));
-                return cards.Count == 0 || !cards.Any(c => c.Text.Contains(name));
+                if (cards.Count == 0) return true;
+                try
+                {
+                    return !cards.Any(c => c.Text.Contains(name));
+                }
+                catch (StaleElementReferenceException)
+                {
+                    return false;
+                }
             });
         }
     }

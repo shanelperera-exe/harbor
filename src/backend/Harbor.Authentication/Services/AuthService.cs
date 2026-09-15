@@ -170,14 +170,14 @@ namespace Harbor.Authentication.Services
         public async Task<(bool Success, string? Error)> ResetPasswordAsync(ResetPasswordRequest request)
         {
             var user = await _userRepository.GetByEmailAsync(request.Email);
-            
+
             if (user == null || user.PasswordResetToken != request.Token || user.PasswordResetTokenExpiry < DateTime.UtcNow)
             {
                 return (false, "Invalid or expired reset token.");
             }
 
             var newPasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
-            
+
             await _userRepository.UpdatePasswordAsync(user.Id, newPasswordHash);
             await _userRepository.UpdatePasswordResetTokenAsync(user.Id, null, null); // Clear the token
 

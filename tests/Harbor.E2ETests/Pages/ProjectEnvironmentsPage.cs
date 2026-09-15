@@ -45,6 +45,9 @@ namespace Harbor.E2ETests.Pages
                 return !(btn.GetAttribute("disabled") ?? "").Contains("disabled") ||
                        btn.Text.Contains("Create environment");
             });
+
+            _wait.Until(d => d.FindElements(By.CssSelector("[data-testid='environments-list'] > div"))
+                .Any(card => card.Text.Contains(name) && card.Text.Contains(type)));
         }
 
         public bool HasEnvironment(string name, string type)
@@ -89,6 +92,8 @@ namespace Harbor.E2ETests.Pages
             var editButton = card.FindElement(By.XPath(".//button[text()='Edit']"));
             _wait.Until(d => editButton.Displayed && editButton.Enabled);
             ScrollToAndClick(editButton);
+
+            _wait.Until(d => d.FindElements(By.CssSelector("input[aria-label='Environment name']")).Count > 0);
         }
 
         public void SaveEdit(string newName, string newType)
@@ -103,12 +108,8 @@ namespace Harbor.E2ETests.Pages
             _wait.Until(d => saveButton.Displayed && saveButton.Enabled);
             ScrollToAndClick(saveButton);
 
-            // Wait for saving to complete
-            _wait.Until(d =>
-            {
-                var btn = _driver.FindElement(By.XPath("//button[text()='Save']"));
-                return btn == null || !btn.Enabled || btn.Text.Contains("Save");
-            });
+            // Wait for saving to complete (edit mode exits when saving finishes)
+            _wait.Until(d => d.FindElements(By.CssSelector("input[aria-label='Environment name']")).Count == 0);
         }
 
         public void Remove(string name)

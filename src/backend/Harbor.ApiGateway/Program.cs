@@ -21,7 +21,9 @@ var connectionStringBuilder = new NpgsqlConnectionStringBuilder
     Database = Environment.GetEnvironmentVariable("POSTGRES_DATABASE"),
     Username = Environment.GetEnvironmentVariable("POSTGRES_USER"),
     Password = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD"),
-    SslMode = SslMode.Require,
+    SslMode = Enum.TryParse<SslMode>(Environment.GetEnvironmentVariable("POSTGRES_SSL_MODE"), true, out var sslMode)
+        ? sslMode
+        : SslMode.Require,
     TrustServerCertificate = true
 };
 

@@ -107,7 +107,11 @@ namespace Harbor.E2ETests.Pages
         public void ClickDetailsForVersion(string version)
         {
             var row = GetRows().First(r => r.Text.Contains(version));
-            row.FindElement(By.XPath(".//button[text()='Details']")).Click();
+            var detailsButton = row.FindElement(By.XPath(".//button[text()='Details']"));
+            ((IJavaScriptExecutor)_driver)
+                .ExecuteScript("arguments[0].scrollIntoView({block:'center'});", detailsButton);
+            _wait.Until(d => detailsButton.Displayed && detailsButton.Enabled);
+            detailsButton.Click();
             _wait.Until(d => DetailsPanel != null); // wait for the placeholder to be replaced
         }
 

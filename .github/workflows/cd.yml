@@ -85,33 +85,40 @@ jobs:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
           GH_WEBHOOK_SECRET: ${{ secrets.GH_WEBHOOK_SECRET }}
         run: |
-          az containerapp update \
-            --name "${{ matrix.service }}" \
-            --resource-group "${{ env.RESOURCE_GROUP }}" \
-            --set-env-vars \
-              "POSTGRES_SERVER=${{ vars.POSTGRES_SERVER }}" \
-              "POSTGRES_PORT=${{ vars.POSTGRES_PORT }}" \
-              "POSTGRES_DATABASE=${{ vars.POSTGRES_DATABASE }}" \
-              "POSTGRES_USER=${{ vars.POSTGRES_USER }}" \
-              "POSTGRES_PASSWORD=$POSTGRES_PASSWORD" \
-              "POSTGRES_SSL_MODE=Require" \
-              "JWT_SECRET=$JWT_SECRET" \
-              "JWT_ISSUER=${{ vars.JWT_ISSUER }}" \
-              "JWT_AUDIENCE=${{ vars.JWT_AUDIENCE }}" \
-              "ADMIN_EMAIL=${{ vars.ADMIN_EMAIL }}" \
-              "ADMIN_PASSWORD=$ADMIN_PASSWORD" \
-              "KAFKA_BOOTSTRAP_SERVERS=${{ vars.KAFKA_BOOTSTRAP_SERVERS }}" \
-              "KAFKA_DEPLOYMENT_TOPIC=${{ vars.KAFKA_DEPLOYMENT_TOPIC }}" \
-              "SMTP_HOST=${{ vars.SMTP_HOST }}" \
-              "SMTP_PORT=${{ vars.SMTP_PORT }}" \
-              "SMTP_USERNAME=${{ vars.SMTP_USERNAME }}" \
-              "SMTP_PASSWORD=$SMTP_PASSWORD" \
-              "SMTP_FROM_NAME=${{ vars.SMTP_FROM_NAME }}" \
-              "SMTP_FROM_EMAIL=${{ vars.SMTP_FROM_EMAIL }}" \
-              "ENVIRONMENT_SECRETS_KEY=$ENVIRONMENT_SECRETS_KEY" \
-              "GITHUB_TOKEN=$GH_TOKEN" \
-              "GITHUB_WEBHOOK_SECRET=$GH_WEBHOOK_SECRET" \
-              "ALLOWED_ORIGINS=${{ vars.ALLOWED_ORIGINS }}"
+          for attempt in 1 2 3; do
+            if az containerapp update \
+              --name "${{ matrix.service }}" \
+              --resource-group "${{ env.RESOURCE_GROUP }}" \
+              --set-env-vars \
+                "POSTGRES_SERVER=${{ vars.POSTGRES_SERVER }}" \
+                "POSTGRES_PORT=${{ vars.POSTGRES_PORT }}" \
+                "POSTGRES_DATABASE=${{ vars.POSTGRES_DATABASE }}" \
+                "POSTGRES_USER=${{ vars.POSTGRES_USER }}" \
+                "POSTGRES_PASSWORD=$POSTGRES_PASSWORD" \
+                "POSTGRES_SSL_MODE=Require" \
+                "JWT_SECRET=$JWT_SECRET" \
+                "JWT_ISSUER=${{ vars.JWT_ISSUER }}" \
+                "JWT_AUDIENCE=${{ vars.JWT_AUDIENCE }}" \
+                "ADMIN_EMAIL=${{ vars.ADMIN_EMAIL }}" \
+                "ADMIN_PASSWORD=$ADMIN_PASSWORD" \
+                "KAFKA_BOOTSTRAP_SERVERS=${{ vars.KAFKA_BOOTSTRAP_SERVERS }}" \
+                "KAFKA_DEPLOYMENT_TOPIC=${{ vars.KAFKA_DEPLOYMENT_TOPIC }}" \
+                "SMTP_HOST=${{ vars.SMTP_HOST }}" \
+                "SMTP_PORT=${{ vars.SMTP_PORT }}" \
+                "SMTP_USERNAME=${{ vars.SMTP_USERNAME }}" \
+                "SMTP_PASSWORD=$SMTP_PASSWORD" \
+                "SMTP_FROM_NAME=${{ vars.SMTP_FROM_NAME }}" \
+                "SMTP_FROM_EMAIL=${{ vars.SMTP_FROM_EMAIL }}" \
+                "ENVIRONMENT_SECRETS_KEY=$ENVIRONMENT_SECRETS_KEY" \
+                "GITHUB_TOKEN=$GH_TOKEN" \
+                "GITHUB_WEBHOOK_SECRET=$GH_WEBHOOK_SECRET" \
+                "ALLOWED_ORIGINS=${{ vars.ALLOWED_ORIGINS }}"; then
+              exit 0
+            fi
+            echo "Azure Container Apps update failed (attempt $attempt/3); retrying..."
+            sleep 15
+          done
+          exit 1
 
   deploy-frontends:
     name: Deploy Frontend UIs
@@ -196,16 +203,23 @@ jobs:
 
       - name: Configure API Gateway environment variables
         run: |
-          az containerapp update \
-            --name harbor-api-gateway \
-            --resource-group ${{ env.RESOURCE_GROUP }} \
-            --set-env-vars \
-              "ReverseProxy__Clusters__authCluster__Destinations__destination1__Address=https://harbor-auth-api.internal.${{ env.DOMAIN }}" \
-              "ReverseProxy__Clusters__projectCluster__Destinations__destination1__Address=https://harbor-project-api.internal.${{ env.DOMAIN }}" \
-              "ReverseProxy__Clusters__environmentCluster__Destinations__destination1__Address=https://harbor-env-api.internal.${{ env.DOMAIN }}" \
-              "ReverseProxy__Clusters__deploymentCluster__Destinations__destination1__Address=https://harbor-deploy-api.internal.${{ env.DOMAIN }}" \
-              "ReverseProxy__Clusters__reportingCluster__Destinations__destination1__Address=https://harbor-report-api.internal.${{ env.DOMAIN }}" \
-              "ALLOWED_ORIGINS=${{ vars.ALLOWED_ORIGINS }}"
+          for attempt in 1 2 3; do
+            if az containerapp update \
+              --name harbor-api-gateway \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --set-env-vars \
+                "ReverseProxy__Clusters__authCluster__Destinations__destination1__Address=https://harbor-auth-api.internal.${{ env.DOMAIN }}" \
+                "ReverseProxy__Clusters__projectCluster__Destinations__destination1__Address=https://harbor-project-api.internal.${{ env.DOMAIN }}" \
+                "ReverseProxy__Clusters__environmentCluster__Destinations__destination1__Address=https://harbor-env-api.internal.${{ env.DOMAIN }}" \
+                "ReverseProxy__Clusters__deploymentCluster__Destinations__destination1__Address=https://harbor-deploy-api.internal.${{ env.DOMAIN }}" \
+                "ReverseProxy__Clusters__reportingCluster__Destinations__destination1__Address=https://harbor-report-api.internal.${{ env.DOMAIN }}" \
+                "ALLOWED_ORIGINS=${{ vars.ALLOWED_ORIGINS }}"; then
+              exit 0
+            fi
+            echo "Azure API Gateway update failed (attempt $attempt/3); retrying..."
+            sleep 15
+          done
+          exit 1
 
 
 

@@ -22,7 +22,20 @@ namespace Harbor.E2ETests.Pages
 
         public void NavigateTo()
         {
-            _driver.Navigate().GoToUrl("http://localhost:5173/register");
+            for (var attempt = 1; attempt <= 2; attempt++)
+            {
+                _driver.Navigate().GoToUrl("http://localhost:5173/register");
+
+                try
+                {
+                    _wait.Until(d => d.FindElement(By.CssSelector("[data-testid='username-input']")).Displayed);
+                    return;
+                }
+                catch (WebDriverTimeoutException) when (attempt < 2)
+                {
+                    _driver.Navigate().Refresh();
+                }
+            }
         }
 
         public void CreateAccount(string username, string email, string password)

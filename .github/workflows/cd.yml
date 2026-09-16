@@ -75,9 +75,15 @@ jobs:
             GITHUB_TOKEN=${{ secrets.GH_TOKEN }}
             GITHUB_WEBHOOK_SECRET=${{ secrets.GH_WEBHOOK_SECRET }}
 
-      - name: Apply backend database settings
+      - name: Apply backend runtime configuration
         env:
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          ENVIRONMENT_SECRETS_KEY: ${{ secrets.ENVIRONMENT_SECRETS_KEY }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GH_WEBHOOK_SECRET: ${{ secrets.GH_WEBHOOK_SECRET }}
         run: |
           az containerapp update \
             --name "${{ matrix.service }}" \
@@ -88,7 +94,24 @@ jobs:
               "POSTGRES_DATABASE=${{ vars.POSTGRES_DATABASE }}" \
               "POSTGRES_USER=${{ vars.POSTGRES_USER }}" \
               "POSTGRES_PASSWORD=$POSTGRES_PASSWORD" \
-              "POSTGRES_SSL_MODE=Require"
+              "POSTGRES_SSL_MODE=Require" \
+              "JWT_SECRET=$JWT_SECRET" \
+              "JWT_ISSUER=${{ vars.JWT_ISSUER }}" \
+              "JWT_AUDIENCE=${{ vars.JWT_AUDIENCE }}" \
+              "ADMIN_EMAIL=${{ vars.ADMIN_EMAIL }}" \
+              "ADMIN_PASSWORD=$ADMIN_PASSWORD" \
+              "KAFKA_BOOTSTRAP_SERVERS=${{ vars.KAFKA_BOOTSTRAP_SERVERS }}" \
+              "KAFKA_DEPLOYMENT_TOPIC=${{ vars.KAFKA_DEPLOYMENT_TOPIC }}" \
+              "SMTP_HOST=${{ vars.SMTP_HOST }}" \
+              "SMTP_PORT=${{ vars.SMTP_PORT }}" \
+              "SMTP_USERNAME=${{ vars.SMTP_USERNAME }}" \
+              "SMTP_PASSWORD=$SMTP_PASSWORD" \
+              "SMTP_FROM_NAME=${{ vars.SMTP_FROM_NAME }}" \
+              "SMTP_FROM_EMAIL=${{ vars.SMTP_FROM_EMAIL }}" \
+              "ENVIRONMENT_SECRETS_KEY=$ENVIRONMENT_SECRETS_KEY" \
+              "GITHUB_TOKEN=$GH_TOKEN" \
+              "GITHUB_WEBHOOK_SECRET=$GH_WEBHOOK_SECRET" \
+              "ALLOWED_ORIGINS=${{ vars.ALLOWED_ORIGINS }}"
 
   deploy-frontends:
     name: Deploy Frontend UIs

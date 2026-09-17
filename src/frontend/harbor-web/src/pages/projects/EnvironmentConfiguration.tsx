@@ -120,13 +120,13 @@ export default function EnvironmentConfiguration() {
       <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
         <AlertCircle className="w-4 h-4" /><p>{error ?? 'Environment not found.'}</p>
       </div>
-      <Link to={`/projects/${projectId}/environments`} className="text-[15px] text-blue-600 dark:text-[#a585ff]">Back to environments</Link>
+      <Link to={`/projects/${projectId}/environments`} className="text-[15px] text-blue-600 dark:text-[#3b82f6]">Back to environments</Link>
     </div>;
   }
 
   return (
     <div className="w-full h-full p-8 lg:px-24 xl:px-48 text-gray-900 dark:text-white overflow-y-auto bg-white dark:bg-[#090909] transition-colors duration-300">
-      <Link to={`/projects/${projectId}/environments`} className="text-[13px] text-blue-600 dark:text-[#a585ff]">← Environments</Link>
+      <Link to={`/projects/${projectId}/environments`} className="text-[13px] text-blue-600 dark:text-[#3b82f6]">← Environments</Link>
 
       <div className="flex items-center gap-3 mt-3">
         <h1 className="text-3xl font-semibold">{environment.name}</h1>
@@ -142,7 +142,7 @@ export default function EnvironmentConfiguration() {
         </div>
       )}
       {notice && (
-        <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-[#a585ff] mt-5" data-testid="configuration-notice">
+        <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-[#3b82f6] mt-5" data-testid="configuration-notice">
           <CheckCircle2 className="w-4 h-4 flex-shrink-0" /><p>{notice}</p>
         </div>
       )}
@@ -199,7 +199,7 @@ export default function EnvironmentConfiguration() {
           </div>
           <button
             type="button" onClick={() => setConfigRows(current => [...current, newRow()])}
-            className="flex items-center gap-1 text-[13px] text-blue-600 dark:text-[#a585ff] font-medium w-fit"
+            className="flex items-center gap-1 text-[13px] text-blue-600 dark:text-[#3b82f6] font-medium w-fit"
           >
             <Plus className="w-3.5 h-3.5" /> Add configuration value
           </button>
@@ -235,7 +235,7 @@ export default function EnvironmentConfiguration() {
                     {row.revealed ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
-                {row.isSet && <ShieldCheck className="w-4 h-4 text-blue-600 dark:text-[#a585ff] flex-shrink-0" aria-label="Value is set" />}
+                {row.isSet && <ShieldCheck className="w-4 h-4 text-blue-600 dark:text-[#3b82f6] flex-shrink-0" aria-label="Value is set" />}
                 <button
                   type="button" onClick={() => setSecretRows(current => current.filter(r => r.id !== row.id))}
                   aria-label="Remove secure value" className="text-gray-400 hover:text-red-600 dark:hover:text-red-400 flex-shrink-0"
@@ -247,7 +247,7 @@ export default function EnvironmentConfiguration() {
           </div>
           <button
             type="button" onClick={() => setSecretRows(current => [...current, newSecretRow()])}
-            className="flex items-center gap-1 text-[13px] text-blue-600 dark:text-[#a585ff] font-medium w-fit"
+            className="flex items-center gap-1 text-[13px] text-blue-600 dark:text-[#3b82f6] font-medium w-fit"
           >
             <Plus className="w-3.5 h-3.5" /> Add secure value
           </button>

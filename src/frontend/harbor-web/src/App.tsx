@@ -1,13 +1,11 @@
 import './App.css';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import Home from './pages/home/Home';
 import CreateAccount from './pages/auth/CreateAccount';
 import Login from './pages/auth/Login';
 import PasswordReset from './pages/auth/PasswordReset';
 import MainLayout from './components/layout/MainLayout';
 import DashboardLayout from './components/layout/DashboardLayout';
-import Dashboard from './pages/dashboard/Dashboard';
-import CreateService from './pages/dashboard/CreateService';
 import Projects from './pages/projects/Projects';
 import CreateProject from './pages/projects/CreateProject';
 import EditProject from './pages/projects/EditProject';
@@ -25,10 +23,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/password-reset" element={<PasswordReset />} />
       </Route>
-      <Route path="/dashboard" element={<DashboardLayout />}>
-        <Route index element={<Dashboard />} />
-        <Route path="new" element={<CreateService />} />
-      </Route>
+      <Route path="/dashboard" element={<Navigate to="/projects" replace />} />
       <Route path="/projects" element={<DashboardLayout />}>
         <Route index element={<Projects />} />
         <Route path="new" element={<CreateProject />} />

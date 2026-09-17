@@ -52,7 +52,7 @@ export default function Login() {
         avatarSvg: payload.avatarSvg ?? null,
       }));
       window.dispatchEvent(new Event('storage'));
-      navigate('/dashboard');
+      navigate('/projects');
     } catch (err) {
       setErrors({ general: err instanceof Error ? err.message : 'Unable to sign in.' });
     } finally {

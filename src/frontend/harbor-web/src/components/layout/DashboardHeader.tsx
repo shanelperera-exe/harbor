@@ -341,7 +341,6 @@ export default function DashboardHeader({
   }, [dropdownOpen]);
 
   const routeConfig: Record<string, { label: string; icon: React.ReactNode }> = {
-    '/dashboard':    { label: 'Dashboard',    icon: <IconBlueprints /> },
     '/projects':     { label: 'Projects',     icon: <IconProjects /> },
     '/environments': { label: 'Environments', icon: <IconGroups /> },
     '/deployments':  { label: 'Deployments',  icon: <IconWebhooks /> },

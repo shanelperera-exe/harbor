@@ -99,7 +99,7 @@ export default function EditProject() {
     return (
       <div className="w-full h-full p-8 lg:px-24 xl:px-48 text-gray-900 dark:text-white bg-white dark:bg-[#090909]">
         <p className="text-red-500" data-testid="edit-project-load-error">{loadError ?? 'Project not found.'}</p>
-        <Link to="/projects" className="text-blue-600 dark:text-[#a585ff] text-[15px]">
+        <Link to="/projects" className="text-blue-600 dark:text-[#3b82f6] text-[15px]">
           Back to projects
         </Link>
       </div>

@@ -77,7 +77,7 @@ export default function CreateAccount() {
       }));
       window.dispatchEvent(new Event('storage'));
 
-      navigate('/dashboard');
+      navigate('/projects');
     } catch (err) {
       setErrors({ general: err instanceof Error ? err.message : 'Unable to create account.' });
     } finally {

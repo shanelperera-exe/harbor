@@ -41,7 +41,7 @@ export default function Navbar() {
             <NavLink to="/login">Sign In</NavLink>
           </div>
         )}
-        <Link to={isLoggedIn ? "/dashboard" : "/register"} className="group relative z-[1] cursor-pointer bg-gray-900 dark:bg-white px-5 lg:px-[30px] flex items-center h-full font-normal transition-colors duration-300 text-white dark:text-black hover:text-white overflow-hidden">
+        <Link to={isLoggedIn ? "/projects" : "/register"} className="group relative z-[1] cursor-pointer bg-gray-900 dark:bg-white px-5 lg:px-[30px] flex items-center h-full font-normal transition-colors duration-300 text-white dark:text-black hover:text-white overflow-hidden">
           <div className="pointer-events-none absolute inset-0 z-[0] h-full w-full scale-x-0 bg-[#2563eb] transition-transform duration-300 ease-out origin-right group-hover:origin-left group-hover:scale-x-100"></div>
           <span className="relative z-[1]">{isLoggedIn ? 'Dashboard' : 'Get Started'}</span>
         </Link>

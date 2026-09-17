@@ -1,4 +1,6 @@
-import { Link, useLocation } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useLocation, useMatch } from 'react-router-dom';
+import { getProject, type Project } from '../../services/projectService';
 import { RxDashboard } from "react-icons/rx";
 
 const NavItem = ({ icon, label, to, isFooter = false, isButton = false }: any) => {
@@ -7,11 +9,11 @@ const NavItem = ({ icon, label, to, isFooter = false, isButton = false }: any) =
   const baseClasses = "group/shell-side-nav-item flex items-center w-full px-2 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 space-x-3 py-2 transition-colors duration-200";
   
   const activeClasses = isActive 
-    ? "bg-[#2563eb] text-white text-[16px] font-medium" 
-    : "hover:bg-gray-100 dark:hover:bg-[#272727] hover:text-gray-900 dark:hover:text-[#f0f0f0] text-gray-600 dark:text-[#c7c7c7] text-[16px] font-medium";
+    ? "bg-[#2563eb] text-white text-[17px] font-medium" 
+    : "hover:bg-gray-100 dark:hover:bg-[#272727] hover:text-gray-900 dark:hover:text-[#f0f0f0] text-gray-600 dark:text-[#c7c7c7] text-[17px] font-medium";
 
   const footerClasses = isFooter 
-    ? "text-[15px] text-gray-500 dark:text-[#c7c7c7] hover:text-gray-900 dark:hover:text-[#f0f0f0] space-x-2 py-1.5 font-medium" 
+    ? "text-[16px] text-gray-500 dark:text-[#c7c7c7] hover:text-gray-900 dark:hover:text-[#f0f0f0] space-x-2 py-1.5 font-medium" 
     : activeClasses;
 
   if (isButton) {
@@ -57,6 +59,23 @@ export default function SideNav({
   mobileOpen?: boolean; 
   onClose?: () => void;
 } = {}) {
+  const projectMatch = useMatch('/projects/:id/*');
+  const projectIdStr = projectMatch?.params?.id;
+  const projectId = projectIdStr ? parseInt(projectIdStr, 10) : null;
+  const isProjectContext = !!projectId && !isNaN(projectId);
+
+  const [project, setProject] = useState<Project | null>(null);
+
+  useEffect(() => {
+    if (isProjectContext) {
+      getProject(projectId).then(setProject).catch(() => {});
+    } else {
+      setProject(null);
+    }
+  }, [isProjectContext, projectId]);
+
+  const location = useLocation();
+
   return (
     <>
       {/* Mobile backdrop */}
@@ -77,29 +96,86 @@ export default function SideNav({
       `}>
         <div role="separator" tabIndex={0} className="hidden md:block absolute top-0 h-full -right-1 w-2 cursor-col-resize select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"></div>
 
-        <div className="flex-grow overflow-y-auto min-h-48 scrollbar-thin">
-        <div className="flex flex-col space-y-6 px-3 py-4">
-          <NavSection title="Workspace">
-            <NavItem label="Dashboard" to="/dashboard" icon={<IconBlueprints />} />
-            <NavItem label="Projects" to="/projects" icon={<IconProjects />} />
-          </NavSection>
+        <div className="flex-grow overflow-y-auto overflow-x-hidden min-h-48 scrollbar-thin">
+          {isProjectContext ? (
+            <div className="flex flex-col space-y-2 mt-4 px-3 py-1">
+              <Link 
+                to="/projects"
+                className="flex items-center space-x-2 py-1 text-[13px] text-[#b3b3b3] hover:text-[#f0f0f0] transition-colors outline-none focus:outline-none"
+              >
+                <svg fill="currentColor" aria-hidden="true" className="flex-shrink-0 ml-1 w-3 h-3" width="16" height="16" viewBox="0 0 16 16"><path d="M7 13L7.705 12.295L3.915 8.5H14V7.5H3.915L7.705 3.705L7 3L2 8L7 13Z"></path></svg>
+                <span>Projects</span>
+              </Link>
+              
+              <div className="flex items-center space-x-2 text-[#f0f0f0] px-1 py-3">
+                <svg fill="currentColor" aria-hidden="true" className="flex-shrink-0 w-5 h-5 text-[#f0f0f0]" width="16" height="16" viewBox="0 0 16 16"><path d="M10.65 2.45L8.4 1.1C8.25 1.05 8.15 1 8 1C7.85 1 7.75 1.05 7.65 1.1L5.4 2.45C5.15 2.6 5 2.85 5 3.1V5.9C5 6.15 5.15 6.4 5.35 6.55L7.6 7.9C7.7 7.95 7.85 8 7.95 8C8.05 8 8.2 7.95 8.3 7.9L10.55 6.55C10.75 6.4 10.9 6.2 10.9 5.9V3.1C11 2.85 10.85 2.6 10.65 2.45ZM10 5.75L8 6.95L6 5.75V3.25L8 2.05L10 3.25V5.75Z"></path><path d="M14.65 9.45L12.4 8.1C12.25 8.05 12.15 8 12 8C11.85 8 11.75 8.05 11.65 8.1L9.4 9.45C9.2 9.6 9.05 9.8 9.05 10.1V12.9C9.05 13.15 9.2 13.4 9.4 13.55L11.65 14.9C11.75 14.95 11.9 15 12 15C12.1 15 12.25 14.95 12.35 14.9L14.6 13.55C14.8 13.4 14.95 13.2 14.95 12.9V10.1C15 9.85 14.85 9.6 14.65 9.45ZM14 12.75L12 13.95L10 12.75V10.25L12 9.05L14 10.25V12.75Z"></path><path d="M6.65 9.45L4.4 8.1C4.25 8.05 4.15 8 4 8C3.85 8 3.75 8.05 3.65 8.1L1.4 9.45C1.15 9.6 1 9.85 1 10.1V12.9C1 13.15 1.15 13.4 1.35 13.55L3.6 14.9C3.75 14.95 3.85 15 4 15C4.15 15 4.25 14.95 4.35 14.9L6.6 13.55C6.8 13.4 6.95 13.2 6.95 12.9V10.1C7 9.85 6.85 9.6 6.65 9.45ZM6 12.75L4 13.95L2 12.75V10.25L4 9.05L6 10.25V12.75Z"></path></svg>
+                <span className="font-medium truncate">{project ? project.name : 'Loading...'}</span>
+              </div>
+              
+              <div className="flex flex-col space-y-6 py-2">
+                <ul>
+                  <li>
+                    <Link 
+                      to={`/projects/${projectId}/environments`}
+                      className={`group/shell-side-nav-item flex items-center w-full px-2 text-left space-x-3 py-2 transition-colors duration-200 ${
+                        location.pathname === `/projects/${projectId}/environments` || location.pathname === `/projects/${projectId}`
+                        ? 'bg-[#2563eb] text-white text-[17px] font-medium' 
+                        : 'hover:bg-gray-100 dark:hover:bg-[#272727] hover:text-gray-900 dark:hover:text-[#f0f0f0] text-gray-600 dark:text-[#c7c7c7] text-[17px] font-medium'
+                      }`}
+                    >
+                      <div className="flex-shrink-0 w-5 h-5 text-current flex items-center justify-center">
+                        <svg fill="currentColor" aria-hidden="true" className="w-4 h-4" width="16" height="16" viewBox="0 0 16 16"><path d="M13 10.5H12V13H13V10.5Z"></path><path d="M11 8H10V13H11V8Z"></path><path d="M5.5 13C4.8372 12.9992 4.20177 12.7356 3.7331 12.2669C3.26442 11.7982 3.00078 11.1628 3 10.5H4C4 10.7967 4.08797 11.0867 4.2528 11.3334C4.41762 11.58 4.65189 11.7723 4.92597 11.8858C5.20006 11.9994 5.50166 12.0291 5.79264 11.9712C6.08361 11.9133 6.35088 11.7704 6.56066 11.5607C6.77044 11.3509 6.9133 11.0836 6.97118 10.7926C7.02906 10.5017 6.99935 10.2001 6.88582 9.92597C6.77229 9.65189 6.58003 9.41762 6.33336 9.2528C6.08668 9.08797 5.79667 9 5.5 9V8C6.16304 8 6.79893 8.26339 7.26777 8.73223C7.73661 9.20107 8 9.83696 8 10.5C8 11.163 7.73661 11.7989 7.26777 12.2678C6.79893 12.7366 6.16304 13 5.5 13Z"></path><path d="M14 1H2C1.73486 1.00026 1.48066 1.10571 1.29319 1.29319C1.10571 1.48066 1.00026 1.73486 1 2V14C1.0003 14.2651 1.10576 14.5193 1.29323 14.7068C1.4807 14.8942 1.73488 14.9997 2 15H14C14.2651 14.9996 14.5193 14.8942 14.7067 14.7067C14.8942 14.5193 14.9996 14.2651 15 14V2C14.9997 1.73488 14.8942 1.4807 14.7068 1.29323C14.5193 1.10576 14.2651 1.0003 14 1ZM14 5.5H7V2H14V5.5ZM6 2V5.5H2V2H6ZM2 14V6.5H14.0003L14.001 14H2Z"></path></svg>
+                      </div>
+                      <span className="truncate">Overview</span>
+                    </Link>
+                  </li>
+                </ul>
+                
+                <div className="relative space-y-2">
+                  <div className="text-[#b3b3b3] px-2.5 text-[12px] uppercase font-mono tracking-wider">Manage</div>
+                  <ul>
+                    <li>
+                      <Link 
+                        to={`/projects/${projectId}/settings`}
+                        className={`group/shell-side-nav-item flex items-center w-full px-2 text-left space-x-3 py-2 transition-colors duration-200 ${
+                          location.pathname === `/projects/${projectId}/settings`
+                          ? 'bg-[#2563eb] text-white text-[17px] font-medium' 
+                          : 'hover:bg-gray-100 dark:hover:bg-[#272727] hover:text-gray-900 dark:hover:text-[#f0f0f0] text-gray-600 dark:text-[#c7c7c7] text-[17px] font-medium'
+                        }`}
+                      >
+                        <div className="flex-shrink-0 w-5 h-5 text-current flex items-center justify-center">
+                          <IconSettings />
+                        </div>
+                        <span className="truncate">Settings</span>
+                      </Link>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col space-y-6 px-3 py-4">
+              <NavSection title="Workspace">
+                <NavItem label="Projects" to="/projects" icon={<IconProjects />} />
+              </NavSection>
 
-          <NavSection title="Infrastructure">
-            <NavItem label="Environments" to="/environments" icon={<IconGroups />} />
-            <NavItem label="Deployments" to="/deployments" icon={<IconWebhooks />} />
-          </NavSection>
+              <NavSection title="Infrastructure">
+                <NavItem label="Environments" to="/environments" icon={<IconGroups />} />
+                <NavItem label="Deployments" to="/deployments" icon={<IconWebhooks />} />
+              </NavSection>
 
-          <NavSection title="Observability">
-            <NavItem label="Reports" to="/reports" icon={<IconObservability />} />
-          </NavSection>
+              <NavSection title="Observability">
+                <NavItem label="Reports" to="/reports" icon={<IconObservability />} />
+              </NavSection>
 
-          <NavSection title="System">
-            <NavItem label="Settings" to="/settings" icon={<IconSettings />} />
-          </NavSection>
+              <NavSection title="System">
+                <NavItem label="Settings" to="/settings" icon={<IconSettings />} />
+              </NavSection>
+            </div>
+          )}
+          
+          <div aria-hidden="true" className="pointer-events-none sticky bottom-0 left-0 w-full h-4 bg-gradient-to-t from-gray-50 dark:from-[#141414] to-transparent transition-colors duration-300"></div>
         </div>
-        
-        <div aria-hidden="true" className="pointer-events-none sticky bottom-0 left-0 w-full h-4 bg-gradient-to-t from-gray-50 dark:from-[#141414] to-transparent transition-colors duration-300"></div>
-      </div>
 
       <footer className="flex flex-col space-y-4 px-3 py-4 border-t border-gray-200 dark:border-[#4d4d4d] transition-colors duration-300">
         <div className="relative">

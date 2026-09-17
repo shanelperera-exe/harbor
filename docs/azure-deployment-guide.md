@@ -115,7 +115,7 @@ Switch to the **Variables** tab (next to Secrets). Click **New repository variab
 | `SMTP_FROM_NAME` | `Harbor System` |
 | `SMTP_FROM_EMAIL` | `no-reply@yourdomain.com` |
 
-> **Note on `API_GATEWAY_URL`**: This is critical for the React frontend build. It must match the exact URL that the API Gateway Container App will receive. Because we name the container `harbor-api-gateway`, the URL will always be `https://harbor-api-gateway.<default-domain>`.
+> **Note on `API_GATEWAY_URL`**: Set this to the gateway origin only, without a trailing slash or `/api`, for example `https://harbor-api-gateway.<default-domain>`. The CD workflow appends `/api` when building both React frontends because their API calls use the `/api` gateway route.
 
 ---
 

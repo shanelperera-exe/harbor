@@ -19,12 +19,13 @@ namespace Harbor.Authentication.Data
             if (string.IsNullOrWhiteSpace(connectionString))
             {
                 var host = Environment.GetEnvironmentVariable("POSTGRES_SERVER") ?? "localhost";
-                var port = Environment.GetEnvironmentVariable("POSTGRES_PORT") ?? "5433";
+                var port = Environment.GetEnvironmentVariable("POSTGRES_PORT") ?? "5432";
                 var database = Environment.GetEnvironmentVariable("POSTGRES_DATABASE") ?? "harbor_db";
                 var username = Environment.GetEnvironmentVariable("POSTGRES_USER") ?? "harboruser";
                 var password = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD") ?? "harbor@1234";
+                var sslMode = Environment.GetEnvironmentVariable("POSTGRES_SSL_MODE") ?? "Require";
 
-                connectionString = $"Host={host};Port={port};Database={database};Username={username};Password={password};";
+                connectionString = $"Host={host};Port={port};Database={database};Username={username};Password={password};Ssl Mode={sslMode};Trust Server Certificate=true;";
             }
 
             // We skip EnsureDatabase because harbor_db is already created by our Docker environment.

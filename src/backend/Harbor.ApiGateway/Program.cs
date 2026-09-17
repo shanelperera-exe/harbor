@@ -20,7 +20,11 @@ var connectionStringBuilder = new NpgsqlConnectionStringBuilder
     Port = int.TryParse(Environment.GetEnvironmentVariable("POSTGRES_PORT"), out var port) ? port : 5432,
     Database = Environment.GetEnvironmentVariable("POSTGRES_DATABASE"),
     Username = Environment.GetEnvironmentVariable("POSTGRES_USER"),
-    Password = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD")
+    Password = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD"),
+    SslMode = Enum.TryParse<SslMode>(Environment.GetEnvironmentVariable("POSTGRES_SSL_MODE"), true, out var sslMode)
+        ? sslMode
+        : SslMode.Require,
+    TrustServerCertificate = true
 };
 
 if (!string.IsNullOrEmpty(connectionStringBuilder.Host))
@@ -31,20 +35,18 @@ if (!string.IsNullOrEmpty(connectionStringBuilder.Host))
 builder.Services.AddReverseProxy()
     .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
 
+var allOrigins = (Environment.GetEnvironmentVariable("ALLOWED_ORIGINS") ?? "")
+    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontendOrigins",
-        b => b.WithOrigins("http://localhost:5173", "http://localhost:5174", "http://localhost:8080", "http://localhost:8081")
+        b => b.WithOrigins(allOrigins)
               .AllowAnyMethod()
               .AllowAnyHeader()
               .AllowCredentials());
     options.AddDefaultPolicy(
-        b => b.WithOrigins("http://localhost:5173", "http://localhost:5174", "http://localhost:8080", "http://localhost:8081")
-              .AllowAnyMethod()
-              .AllowAnyHeader()
-              .AllowCredentials());
-    options.AddDefaultPolicy(
-        b => b.WithOrigins("http://localhost:5173", "http://localhost:5174")
+        b => b.WithOrigins(allOrigins)
               .AllowAnyMethod()
               .AllowAnyHeader()
               .AllowCredentials());

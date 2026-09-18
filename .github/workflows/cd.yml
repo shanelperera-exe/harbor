@@ -74,6 +74,11 @@ jobs:
             ENVIRONMENT_SECRETS_KEY=${{ secrets.ENVIRONMENT_SECRETS_KEY }}
             GITHUB_TOKEN=${{ secrets.GH_TOKEN }}
             GITHUB_WEBHOOK_SECRET=${{ secrets.GH_WEBHOOK_SECRET }}
+            GOOGLE_CLIENT_ID=${{ vars.GOOGLE_CLIENT_ID }}
+            GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
+            GITHUB_CLIENT_ID=${{ vars.GITHUB_CLIENT_ID }}
+            GITHUB_CLIENT_SECRET=${{ secrets.GITHUB_CLIENT_SECRET }}
+            FRONTEND_URL=${{ vars.FRONTEND_URL }}
 
       - name: Apply backend runtime configuration
         env:
@@ -84,6 +89,8 @@ jobs:
           ENVIRONMENT_SECRETS_KEY: ${{ secrets.ENVIRONMENT_SECRETS_KEY }}
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
           GH_WEBHOOK_SECRET: ${{ secrets.GH_WEBHOOK_SECRET }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GITHUB_CLIENT_SECRET: ${{ secrets.GITHUB_CLIENT_SECRET }}
         run: |
           for attempt in 1 2 3; do
             if az containerapp update \
@@ -112,6 +119,11 @@ jobs:
                 "ENVIRONMENT_SECRETS_KEY=$ENVIRONMENT_SECRETS_KEY" \
                 "GITHUB_TOKEN=$GH_TOKEN" \
                 "GITHUB_WEBHOOK_SECRET=$GH_WEBHOOK_SECRET" \
+                "GOOGLE_CLIENT_ID=${{ vars.GOOGLE_CLIENT_ID }}" \
+                "GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET" \
+                "GITHUB_CLIENT_ID=${{ vars.GITHUB_CLIENT_ID }}" \
+                "GITHUB_CLIENT_SECRET=$GITHUB_CLIENT_SECRET" \
+                "FRONTEND_URL=${{ vars.FRONTEND_URL }}" \
                 "ALLOWED_ORIGINS=${{ vars.ALLOWED_ORIGINS }}"; then
               exit 0
             fi

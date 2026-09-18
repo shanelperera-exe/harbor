@@ -4,6 +4,10 @@ import { Link, useNavigate } from 'react-router-dom';
 
 const authApiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
+function startExternalLogin(provider: 'google' | 'github') {
+  window.location.assign(`${authApiBase}/auth/external/${provider}`);
+}
+
 export default function Login() {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
@@ -73,6 +77,7 @@ export default function Login() {
               <div className="grid gap-3 grid-cols-1 sm:grid-cols-2">
                 <button
                   type="button"
+                  onClick={() => startExternalLogin('github')}
                   className="group flex items-center justify-center space-x-2 h-10 px-4 bg-transparent border border-gray-300 dark:border-[#525252]/40 hover:bg-gray-100 dark:hover:bg-white text-black dark:text-[#e3e3e3] hover:text-black focus:outline-none focus:ring-2 focus:ring-[#e3e3e3] focus:ring-offset-2 focus:ring-offset-[#090909] rounded-none transition-colors duration-200"
                 >
                   <svg width="19" height="19" viewBox="0 0 24 23" xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 fill-black dark:fill-[#e3e3e3] group-hover:fill-black transition-colors">
@@ -83,6 +88,7 @@ export default function Login() {
 
                 <button
                   type="button"
+                  onClick={() => startExternalLogin('google')}
                   className="group flex items-center justify-center space-x-2 h-10 px-4 bg-transparent border border-gray-300 dark:border-[#525252]/40 hover:bg-gray-100 dark:hover:bg-white text-black dark:text-[#e3e3e3] hover:text-black focus:outline-none focus:ring-2 focus:ring-[#e3e3e3] focus:ring-offset-2 focus:ring-offset-[#090909] rounded-none transition-colors duration-200"
                 >
                   <svg viewBox="0 0 17 16" className="w-5 h-5" xmlns="http://www.w3.org/2000/svg">

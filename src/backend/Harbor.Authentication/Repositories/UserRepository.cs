@@ -124,6 +124,35 @@ namespace Harbor.Authentication.Repositories
             return null;
         }
 
+        public async Task<User?> GetByIdAsync(int userId)
+        {
+            using var connection = _dbFactory.CreateConnection();
+            await connection.OpenAsync();
+
+            using var command = connection.CreateCommand();
+            command.CommandText =
+                "SELECT \"Id\", \"Username\", \"Email\", \"PasswordHash\", \"Role\", \"CreatedAt\", \"AvatarSvg\" " +
+                "FROM \"Users\" WHERE \"Id\" = @userId LIMIT 1";
+            command.Parameters.AddWithValue("userId", userId);
+
+            using var reader = await command.ExecuteReaderAsync();
+            if (await reader.ReadAsync())
+            {
+                return new User
+                {
+                    Id = reader.GetInt32(0),
+                    Username = reader.GetString(1),
+                    Email = reader.GetString(2),
+                    PasswordHash = reader.GetString(3),
+                    Role = reader.GetString(4),
+                    CreatedAt = reader.GetDateTime(5),
+                    AvatarSvg = reader.IsDBNull(6) ? null : reader.GetString(6)
+                };
+            }
+
+            return null;
+        }
+
         public async Task UpdatePasswordResetTokenAsync(int userId, string? token, DateTime? expiry)
         {
             using var connection = _dbFactory.CreateConnection();
@@ -190,6 +219,21 @@ namespace Harbor.Authentication.Repositories
             using var command = connection.CreateCommand();
             command.CommandText = "UPDATE \"Users\" SET \"AvatarSvg\" = @avatarSvg WHERE \"Id\" = @userId";
             command.Parameters.AddWithValue("userId", userId);
+            command.Parameters.AddWithValue("avatarSvg", avatarSvg);
+
+            await command.ExecuteNonQueryAsync();
+        }
+
+        public async Task UpdateProfileAsync(int userId, string username, string email, string avatarSvg)
+        {
+            using var connection = _dbFactory.CreateConnection();
+            await connection.OpenAsync();
+
+            using var command = connection.CreateCommand();
+            command.CommandText = "UPDATE \"Users\" SET \"Username\" = @username, \"Email\" = @email, \"AvatarSvg\" = @avatarSvg WHERE \"Id\" = @userId";
+            command.Parameters.AddWithValue("userId", userId);
+            command.Parameters.AddWithValue("username", username);
+            command.Parameters.AddWithValue("email", email);
             command.Parameters.AddWithValue("avatarSvg", avatarSvg);
 
             await command.ExecuteNonQueryAsync();

@@ -1,25 +1,63 @@
 import { useEffect, useState } from "react";
 import UserAvatar from "../../components/ui/UserAvatar";
 
+const authApiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+
+function GoogleIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 17 16" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="flex-shrink-0">
+      <path d="M15.706 8.167C15.706 7.647 15.659 7.147 15.573 6.667H8.666V9.507H12.613C12.439 10.42 11.92 11.194 11.139 11.714V13.56H13.519C14.906 12.28 15.706 10.4 15.706 8.167Z" fill="#4285F4" />
+      <path d="M8.666 15.667C10.646 15.667 12.313 15.014 13.519 13.56L11.139 11.714C10.486 12.154 9.646 12.414 8.666 12.414C6.773 12.414 5.166 11.134 4.586 9.427H2.126V11.334C3.326 13.714 5.793 15.667 8.666 15.667Z" fill="#34A853" />
+      <path d="M4.586 9.427C4.439 8.987 4.353 8.514 4.353 8.011C4.353 7.507 4.439 7.034 4.586 6.594V4.687H2.126C1.626 5.674 1.333 6.787 1.333 8.011C1.333 9.234 1.626 10.347 2.126 11.334L4.586 9.427Z" fill="#FBBC05" />
+      <path d="M8.666 3.607C9.746 3.607 10.706 3.98 11.473 4.7L13.573 2.6C12.299 1.414 10.646 0.667 8.666 0.667C5.793 0.667 3.326 2.62 2.126 5L4.586 6.907C5.166 5.2 6.773 3.607 8.666 3.607Z" fill="#EA4335" />
+    </svg>
+  );
+}
+
 export default function AccountSettings() {
   const [activeSection, setActiveSection] = useState('profile');
   const [isEditingName, setIsEditingName] = useState(false);
   const [isEditingEmail, setIsEditingEmail] = useState(false);
   const [isEditingTheme, setIsEditingTheme] = useState(false);
   const [isEditingLogTheme, setIsEditingLogTheme] = useState(false);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordNotice, setPasswordNotice] = useState('');
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [themeDropdownOpen, setThemeDropdownOpen] = useState(false);
   const [logThemeDropdownOpen, setLogThemeDropdownOpen] = useState(false);
   const [loginMethodDropdownOpen, setLoginMethodDropdownOpen] = useState(false);
+  const [linkedLoginMethods, setLinkedLoginMethods] = useState<string[]>(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem('harbor_login_methods') ?? '[]');
+      return Array.isArray(stored) ? stored : [];
+    } catch {
+      return [];
+    }
+  });
   const [credentialDropdownOpen, setCredentialDropdownOpen] = useState(false);
   const getInitialTheme = () => {
     const saved = localStorage.getItem('harbor_theme');
-    if (saved) return saved;
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    return saved === 'light' || saved === 'dark' || saved === 'system' ? saved : 'system';
   };
   const [theme, setTheme] = useState(getInitialTheme());
   const [savedTheme, setSavedTheme] = useState(getInitialTheme());
-  const [logTheme, setLogTheme] = useState('match-dashboard');
-  const [savedLogTheme, setSavedLogTheme] = useState('match-dashboard');
+  const getInitialLogTheme = () => localStorage.getItem('harbor_log_theme') ?? 'match-dashboard';
+  const [logTheme, setLogTheme] = useState(getInitialLogTheme);
+  const [savedLogTheme, setSavedLogTheme] = useState(getInitialLogTheme);
+
+  function applyDashboardTheme(selectedTheme: string) {
+    const shouldUseDark = selectedTheme === 'dark' || (
+      selectedTheme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches
+    );
+    document.documentElement.classList.toggle('dark', shouldUseDark);
+  }
+
+  useEffect(() => {
+    applyDashboardTheme(theme);
+  }, [theme]);
 
   const themeOptions = [
     {
@@ -81,12 +119,153 @@ export default function AccountSettings() {
     catch { return {}; }
   }
   const [storedUser] = useState(readUser);
-  const currentUsername: string = storedUser.username ?? 'Shanel Perera';
-  const currentEmail: string = storedUser.email ?? 'shanelradperera@gmail.com';
-  const avatarSvg: string | null = storedUser.avatarSvg ?? null;
+  const [profile, setProfile] = useState({
+    username: storedUser.username ?? '',
+    email: storedUser.email ?? '',
+    role: storedUser.role ?? '',
+    avatarSvg: storedUser.avatarSvg ?? null,
+  });
+  const [profileError, setProfileError] = useState('');
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const deploymentCredentials: string[] = [];
+
+  const currentUsername: string = profile.username;
+  const currentEmail: string = profile.email;
+  const avatarSvg: string | null = profile.avatarSvg;
 
   const [name, setName] = useState(currentUsername);
   const [email, setEmail] = useState(currentEmail);
+
+  function linkLoginMethod(provider: string) {
+    setLinkedLoginMethods((current) => {
+      const next = current.includes(provider) ? current : [...current, provider];
+      localStorage.setItem('harbor_login_methods', JSON.stringify(next));
+      return next;
+    });
+    setLoginMethodDropdownOpen(false);
+  }
+
+  useEffect(() => {
+    const token = localStorage.getItem('harbor_token');
+    if (!token) return;
+
+    async function loadProfile() {
+      try {
+        const response = await fetch(`${authApiBase}/auth/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const responseData = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(responseData?.message || responseData?.detail || 'Unable to load profile.');
+        }
+
+        const nextProfile = responseData.data;
+        setProfile(nextProfile);
+        setName(nextProfile.username);
+        setEmail(nextProfile.email);
+        localStorage.setItem('harbor_user', JSON.stringify(nextProfile));
+        window.dispatchEvent(new Event('storage'));
+      } catch (error) {
+        setProfileError(error instanceof Error ? error.message : 'Unable to load profile.');
+      }
+    }
+
+    void loadProfile();
+  }, []);
+
+  async function saveProfile(field: 'name' | 'email') {
+    const nextUsername = name.trim();
+    const nextEmail = email.trim();
+    if (!nextUsername || !nextEmail) {
+      setProfileError('Username and email are required.');
+      return;
+    }
+
+    const token = localStorage.getItem('harbor_token');
+    if (!token) {
+      setProfileError('You must be signed in to update your profile.');
+      return;
+    }
+
+    setProfileError('');
+    setIsSavingProfile(true);
+    try {
+      const response = await fetch(`${authApiBase}/auth/me`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username: nextUsername, email: nextEmail }),
+      });
+      const responseData = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(responseData?.detail || responseData?.message || 'Unable to save profile.');
+      }
+
+      const nextProfile = responseData.data;
+      setProfile(nextProfile);
+      setName(nextProfile.username);
+      setEmail(nextProfile.email);
+      localStorage.setItem('harbor_user', JSON.stringify(nextProfile));
+      window.dispatchEvent(new Event('storage'));
+      if (field === 'name') setIsEditingName(false);
+      if (field === 'email') setIsEditingEmail(false);
+    } catch (error) {
+      setProfileError(error instanceof Error ? error.message : 'Unable to save profile.');
+    } finally {
+      setIsSavingProfile(false);
+    }
+  }
+
+  async function changePassword(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setPasswordError('');
+    setPasswordNotice('');
+
+    if (newPassword.length < 8) {
+      setPasswordError('Password must be at least 8 characters long.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError('Passwords do not match.');
+      return;
+    }
+
+    const token = localStorage.getItem('harbor_token');
+    if (!token) {
+      setPasswordError('You must be signed in to change your password.');
+      return;
+    }
+
+    setIsChangingPassword(true);
+    try {
+      const response = await fetch(`${authApiBase}/auth/password`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ newPassword }),
+      });
+      const responseData = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(responseData?.detail || responseData?.message || 'Unable to change password.');
+      }
+
+      setNewPassword('');
+      setConfirmPassword('');
+      setPasswordNotice('Password changed successfully.');
+      window.setTimeout(() => {
+        setIsPasswordModalOpen(false);
+        setPasswordNotice('');
+      }, 900);
+    } catch (error) {
+      setPasswordError(error instanceof Error ? error.message : 'Unable to change password.');
+    } finally {
+      setIsChangingPassword(false);
+    }
+  }
 
   useEffect(() => {
     const handleScroll = () => {
@@ -172,6 +351,9 @@ export default function AccountSettings() {
                         <div className="flex-1 small:pr-4">
                           <div className="">
                             <h2 className="text-[24px] font-[500] leading-[28px] tracking-[-0.24px] text-strong" style={{ fontFamily: 'Roobert, sans-serif' }}>Profile</h2>
+                            {profileError && (
+                              <p role="alert" className="mt-2 text-sm text-red-600 dark:text-red-400">{profileError}</p>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -182,12 +364,12 @@ export default function AccountSettings() {
                         <div className="grid grid-cols-1 xl:grid-cols-3 gap-y-4 xl:gap-y-0 xl:gap-x-10">
                           <div className="col-span-1">
                             <div className="flex items-center">
-                              <label htmlFor="name" className="inline-block text-lg font-bold text-primary mb-1">Full Name</label>
+                              <label htmlFor="name" className="inline-block text-lg font-bold text-primary mb-1">User name</label>
                             </div>
                           </div>
                           <div className="col-span-2 text-secondary">
                             <div>
-                              <form noValidate onSubmit={(e) => { e.preventDefault(); setIsEditingName(false); }}>
+                              <form noValidate onSubmit={(e) => { e.preventDefault(); void saveProfile('name'); }}>
                                 <div className="flex flex-col">
                                   <div className="flex relative">
                                     <input 
@@ -211,7 +393,7 @@ export default function AccountSettings() {
                                       <button type="button" onClick={() => { setIsEditingName(false); setName(currentUsername); }} className="type-interface-01 button-ghost-text hover:button-ghost-background--hover hover:button-ghost-text--hover h-10 py-2.5 px-3 flex items-center border border-solid border-[#6b6b6b]">
                                         Cancel
                                       </button>
-                                      <button type="submit" disabled={name === currentUsername} className="type-interface-01 button-primary-text button-primary-background hover:button-primary-background--hover disabled:opacity-50 disabled:cursor-not-allowed h-10 py-2.5 px-4 flex items-center rounded-none font-medium text-black bg-white">
+                                      <button type="submit" disabled={isSavingProfile || name.trim() === currentUsername} className="type-interface-01 button-primary-text button-primary-background hover:button-primary-background--hover disabled:opacity-50 disabled:cursor-not-allowed h-10 py-2.5 px-4 flex items-center rounded-none font-medium text-black bg-white">
                                         Save changes
                                       </button>
                                     </div>
@@ -235,7 +417,7 @@ export default function AccountSettings() {
                           </div>
                           <div className="col-span-2 text-secondary">
                             <div>
-                              <form noValidate onSubmit={(e) => { e.preventDefault(); setIsEditingEmail(false); }}>
+                              <form noValidate onSubmit={(e) => { e.preventDefault(); void saveProfile('email'); }}>
                                 <div className="flex flex-col">
                                   <div className="flex relative">
                                     <input 
@@ -259,7 +441,7 @@ export default function AccountSettings() {
                                       <button type="button" onClick={() => { setIsEditingEmail(false); setEmail(currentEmail); }} className="type-interface-01 button-ghost-text hover:button-ghost-background--hover hover:button-ghost-text--hover h-10 py-2.5 px-3 flex items-center border border-solid border-[#6b6b6b]">
                                         Cancel
                                       </button>
-                                      <button type="submit" disabled={email === currentEmail} className="type-interface-01 button-primary-text button-primary-background hover:button-primary-background--hover disabled:opacity-50 disabled:cursor-not-allowed h-10 py-2.5 px-4 flex items-center rounded-none font-medium text-black bg-white">
+                                      <button type="submit" disabled={isSavingProfile || email.trim() === currentEmail} className="type-interface-01 button-primary-text button-primary-background hover:button-primary-background--hover disabled:opacity-50 disabled:cursor-not-allowed h-10 py-2.5 px-4 flex items-center rounded-none font-medium text-black bg-white">
                                         Save changes
                                       </button>
                                     </div>
@@ -394,22 +576,8 @@ export default function AccountSettings() {
                                         setSavedTheme(theme); 
                                         setIsEditingTheme(false); 
                                         setThemeDropdownOpen(false); 
-                                        
-                                        if (theme === 'system') {
-                                          localStorage.removeItem('harbor_theme');
-                                          if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                                            document.documentElement.classList.add('dark');
-                                          } else {
-                                            document.documentElement.classList.remove('dark');
-                                          }
-                                        } else {
-                                          localStorage.setItem('harbor_theme', theme);
-                                          if (theme === 'dark') {
-                                            document.documentElement.classList.add('dark');
-                                          } else {
-                                            document.documentElement.classList.remove('dark');
-                                          }
-                                        }
+                                        localStorage.setItem('harbor_theme', theme);
+                                        applyDashboardTheme(theme);
                                       }} className="type-interface-01 button-primary-text button-primary-background hover:button-primary-background--hover disabled:opacity-50 disabled:cursor-not-allowed h-10 py-2.5 px-4 flex items-center rounded-none font-medium text-black bg-white">
                                         Save changes
                                       </button>
@@ -506,7 +674,14 @@ export default function AccountSettings() {
                                       <button type="button" onClick={() => { setIsEditingLogTheme(false); setLogTheme(savedLogTheme); setLogThemeDropdownOpen(false); }} className="type-interface-01 button-ghost-text hover:button-ghost-background--hover hover:button-ghost-text--hover h-10 py-2.5 px-3 flex items-center border border-solid border-[#6b6b6b]">
                                         Cancel
                                       </button>
-                                      <button type="submit" disabled={logTheme === savedLogTheme} onClick={(e) => { e.preventDefault(); setSavedLogTheme(logTheme); setIsEditingLogTheme(false); setLogThemeDropdownOpen(false); }} className="type-interface-01 button-primary-text button-primary-background hover:button-primary-background--hover disabled:opacity-50 disabled:cursor-not-allowed h-10 py-2.5 px-4 flex items-center rounded-none font-medium text-black bg-white">
+                                      <button type="submit" disabled={logTheme === savedLogTheme} onClick={(e) => {
+                                        e.preventDefault();
+                                        setSavedLogTheme(logTheme);
+                                        setIsEditingLogTheme(false);
+                                        setLogThemeDropdownOpen(false);
+                                        localStorage.setItem('harbor_log_theme', logTheme);
+                                        window.dispatchEvent(new Event('harbor-log-theme-change'));
+                                      }} className="type-interface-01 button-primary-text button-primary-background hover:button-primary-background--hover disabled:opacity-50 disabled:cursor-not-allowed h-10 py-2.5 px-4 flex items-center rounded-none font-medium text-black bg-white">
                                         Save changes
                                       </button>
                                     </div>
@@ -548,8 +723,8 @@ export default function AccountSettings() {
                             <p className="text-[14px] text-gray-500 dark:text-[#a1a1aa]"></p>
                           </div>
                           <div className="col-span-2">
-                            <button type="button" className="text-[14px] font-medium text-gray-900 dark:text-[#e3e3e3] hover:bg-gray-100 dark:hover:bg-[#1a1a1a] border border-solid border-[#6b6b6b] h-10 py-2.5 px-3 flex items-center transition-colors">
-                              Create Password
+                            <button type="button" onClick={() => { setPasswordError(''); setPasswordNotice(''); setIsPasswordModalOpen(true); }} className="text-[14px] font-medium text-gray-900 dark:text-[#e3e3e3] hover:bg-gray-100 dark:hover:bg-[#1a1a1a] border border-solid border-[#6b6b6b] h-10 py-2.5 px-3 flex items-center transition-colors">
+                              Change password
                             </button>
                           </div>
                         </div>
@@ -557,9 +732,10 @@ export default function AccountSettings() {
                         <div className="grid grid-cols-1 xl:grid-cols-3 gap-y-4 xl:gap-y-0 xl:gap-x-10 mb-8">
                           <div>
                             <label className="inline-block text-lg font-bold text-primary mb-1">Login Methods</label>
-                            <p className="text-[14px] text-gray-500 dark:text-[#a1a1aa]">You can access your Render account with these login methods.</p>
+                            <p className="text-[14px] text-gray-500 dark:text-[#a1a1aa]">Use these methods to sign in to your Harbor account.</p>
                           </div>
                           <div className="col-span-2">
+                            {linkedLoginMethods.length > 0 && (
                             <ul className="space-y-2 mb-4">
                               <li>
                                 <div className="border border-solid border-[#6b6b6b] py-1 px-3 grid grid-cols-[max-content_1fr_max-content] items-center gap-2">
@@ -570,10 +746,12 @@ export default function AccountSettings() {
                                 </div>
                               </li>
                             </ul>
+                            )}
                             
                             <div className="relative inline-block">
                               <button type="button" onClick={() => setLoginMethodDropdownOpen(!loginMethodDropdownOpen)} aria-expanded={loginMethodDropdownOpen} className="text-[14px] font-medium text-gray-900 dark:text-[#e3e3e3] hover:bg-gray-100 dark:hover:bg-[#1a1a1a] border border-solid border-[#6b6b6b] h-10 py-2.5 px-3 flex items-center transition-colors">
-                                <span className="me-1.5 flex items-center">
+                                <span className="me-1.5 flex items-center gap-1">
+                                  <span className="block border border-solid border-gray-300 dark:border-[#525252] p-0.5 relative rounded-[0.25rem] bg-white dark:bg-[#1a1a1a]"><GoogleIcon /></span>
                                   <span className="block border border-solid border-gray-300 dark:border-[#525252] p-0.5 relative rounded-[0.25rem] bg-white dark:bg-[#1a1a1a]">
                                     <svg width="15" height="15" viewBox="0 0 24 23" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="flex-shrink-0 text-black dark:text-white" aria-label="GitHub"><path fillRule="evenodd" clipRule="evenodd" d="M12.0183 0.405518C5.73469 0.405518 0.655029 5.50047 0.655029 11.8036C0.655029 16.8421 3.90974 21.107 8.42489 22.6165C8.9894 22.73 9.19618 22.3712 9.19618 22.0695C9.19618 21.8052 9.17757 20.8995 9.17757 19.9558C6.01659 20.6352 5.35835 18.597 5.35835 18.597C4.85036 17.2761 4.09768 16.9365 4.09768 16.9365C3.06309 16.2383 4.17304 16.2383 4.17304 16.2383C5.32067 16.3138 5.92286 17.4083 5.92286 17.4083C6.9386 19.1443 8.57538 18.6538 9.23386 18.3518C9.32782 17.6158 9.62904 17.1063 9.94886 16.8233C7.42775 16.5591 4.77523 15.5778 4.77523 11.1996C4.77523 9.95415 5.22647 8.93516 5.94146 8.14266C5.82866 7.85966 5.43348 6.68944 6.05451 5.12321C6.05451 5.12321 7.01396 4.82122 9.17733 6.2932C10.1036 6.0437 11.0587 5.91677 12.0183 5.91571C12.9777 5.91571 13.9558 6.04794 14.8589 6.2932C17.0226 4.82122 17.982 5.12321 17.982 5.12321C18.603 6.68944 18.2076 7.85966 18.0948 8.14266C18.8287 8.93516 19.2613 9.95415 19.2613 11.1996C19.2613 15.5778 16.6088 16.5401 14.0688 16.8233C14.4828 17.1818 14.8401 17.861 14.8401 18.9368C14.8401 20.4653 14.8215 21.692 14.8215 22.0692C14.8215 22.3712 15.0285 22.73 15.5928 22.6167C20.1079 21.1068 23.3626 16.8421 23.3626 11.8036C23.3813 5.50047 18.283 0.405518 12.0183 0.405518Z"></path></svg>
                                   </span>
@@ -584,7 +762,13 @@ export default function AccountSettings() {
                               
                               {loginMethodDropdownOpen && (
                                 <div className="min-w-[208px] p-2 bg-white dark:bg-[#0d0d0d] border border-solid border-[#6b6b6b] shadow-lg outline-none absolute z-50 left-0 top-full mt-1">
-                                  <button type="button" onClick={() => setLoginMethodDropdownOpen(false)} className="w-full flex relative text-[14px] text-gray-900 dark:text-[#e3e3e3] py-2 px-3 focus-visible:outline-none cursor-pointer hover:bg-gray-100 dark:hover:bg-[#1a1a1a] transition-colors rounded">
+                                  <button type="button" onClick={() => linkLoginMethod('google')} className="w-full flex relative text-[14px] text-gray-900 dark:text-[#e3e3e3] py-2 px-3 focus-visible:outline-none cursor-pointer hover:bg-gray-100 dark:hover:bg-[#1a1a1a] transition-colors rounded">
+                                    <div className="w-full flex items-center space-x-2.5">
+                                      <span className="block border border-solid border-gray-300 dark:border-[#525252] p-0.5 relative rounded-[0.25rem] bg-white dark:bg-[#1a1a1a]"><GoogleIcon /></span>
+                                      <span className="flex-1 text-left truncate font-medium">Google</span>
+                                    </div>
+                                  </button>
+                                  <button type="button" onClick={() => linkLoginMethod('github')} className="w-full flex relative text-[14px] text-gray-900 dark:text-[#e3e3e3] py-2 px-3 focus-visible:outline-none cursor-pointer hover:bg-gray-100 dark:hover:bg-[#1a1a1a] transition-colors rounded">
                                     <div className="w-full flex items-center space-x-2.5">
                                       <span className="block border border-solid border-gray-300 dark:border-[#525252] p-0.5 relative rounded-[0.25rem] bg-white dark:bg-[#1a1a1a]">
                                         <svg width="15" height="15" viewBox="0 0 24 23" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="flex-shrink-0 text-black dark:text-white" aria-label="GitHub"><path fillRule="evenodd" clipRule="evenodd" d="M12.0183 0.405518C5.73469 0.405518 0.655029 5.50047 0.655029 11.8036C0.655029 16.8421 3.90974 21.107 8.42489 22.6165C8.9894 22.73 9.19618 22.3712 9.19618 22.0695C9.19618 21.8052 9.17757 20.8995 9.17757 19.9558C6.01659 20.6352 5.35835 18.597 5.35835 18.597C4.85036 17.2761 4.09768 16.9365 4.09768 16.9365C3.06309 16.2383 4.17304 16.2383 4.17304 16.2383C5.32067 16.3138 5.92286 17.4083 5.92286 17.4083C6.9386 19.1443 8.57538 18.6538 9.23386 18.3518C9.32782 17.6158 9.62904 17.1063 9.94886 16.8233C7.42775 16.5591 4.77523 15.5778 4.77523 11.1996C4.77523 9.95415 5.22647 8.93516 5.94146 8.14266C5.82866 7.85966 5.43348 6.68944 6.05451 5.12321C6.05451 5.12321 7.01396 4.82122 9.17733 6.2932C10.1036 6.0437 11.0587 5.91677 12.0183 5.91571C12.9777 5.91571 13.9558 6.04794 14.8589 6.2932C17.0226 4.82122 17.982 5.12321 17.982 5.12321C18.603 6.68944 18.2076 7.85966 18.0948 8.14266C18.8287 8.93516 19.2613 9.95415 19.2613 11.1996C19.2613 15.5778 16.6088 16.5401 14.0688 16.8233C14.4828 17.1818 14.8401 17.861 14.8401 18.9368C14.8401 20.4653 14.8215 21.692 14.8215 22.0692C14.8215 22.3712 15.0285 22.73 15.5928 22.6167C20.1079 21.1068 23.3626 16.8421 23.3626 11.8036C23.3813 5.50047 18.283 0.405518 12.0183 0.405518Z"></path></svg>
@@ -605,6 +789,7 @@ export default function AccountSettings() {
                           </div>
                           <div className="col-span-2">
                             <ul className="space-y-2 mb-4">
+                              {deploymentCredentials.length > 0 ? (
                               <li>
                                 <div className="">
                                   <details className="group border border-solid border-gray-300 dark:border-[#525252]">
@@ -613,7 +798,7 @@ export default function AccountSettings() {
                                       <span className="block border border-solid border-gray-300 dark:border-[#525252] p-0.5 relative rounded-[0.25rem] bg-white dark:bg-[#1a1a1a]">
                                         <svg width="15" height="15" viewBox="0 0 24 23" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="flex-shrink-0 text-black dark:text-white" aria-label="GitHub"><path fillRule="evenodd" clipRule="evenodd" d="M12.0183 0.405518C5.73469 0.405518 0.655029 5.50047 0.655029 11.8036C0.655029 16.8421 3.90974 21.107 8.42489 22.6165C8.9894 22.73 9.19618 22.3712 9.19618 22.0695C9.19618 21.8052 9.17757 20.8995 9.17757 19.9558C6.01659 20.6352 5.35835 18.597 5.35835 18.597C4.85036 17.2761 4.09768 16.9365 4.09768 16.9365C3.06309 16.2383 4.17304 16.2383 4.17304 16.2383C5.32067 16.3138 5.92286 17.4083 5.92286 17.4083C6.9386 19.1443 8.57538 18.6538 9.23386 18.3518C9.32782 17.6158 9.62904 17.1063 9.94886 16.8233C7.42775 16.5591 4.77523 15.5778 4.77523 11.1996C4.77523 9.95415 5.22647 8.93516 5.94146 8.14266C5.82866 7.85966 5.43348 6.68944 6.05451 5.12321C6.05451 5.12321 7.01396 4.82122 9.17733 6.2932C10.1036 6.0437 11.0587 5.91677 12.0183 5.91571C12.9777 5.91571 13.9558 6.04794 14.8589 6.2932C17.0226 4.82122 17.982 5.12321 17.982 5.12321C18.603 6.68944 18.2076 7.85966 18.0948 8.14266C18.8287 8.93516 19.2613 9.95415 19.2613 11.1996C19.2613 15.5778 16.6088 16.5401 14.0688 16.8233C14.4828 17.1818 14.8401 17.861 14.8401 18.9368C14.8401 20.4653 14.8215 21.692 14.8215 22.0692C14.8215 22.3712 15.0285 22.73 15.5928 22.6167C20.1079 21.1068 23.3626 16.8421 23.3626 11.8036C23.3813 5.50047 18.283 0.405518 12.0183 0.405518Z"></path></svg>
                                       </span>
-                                      <span className="text-[14px] font-medium text-gray-900 dark:text-white flex-1">shanelperera-exe</span>
+                                      <span className="text-[14px] font-medium text-gray-900 dark:text-white flex-1">{currentUsername}</span>
                                       
                                       <button type="button" className="h-8 w-8 flex items-center justify-center rounded transition-colors text-gray-500 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-[#272727]" onClick={(e) => e.preventDefault()}>
                                         <span className="sr-only">Options</span>
@@ -626,6 +811,11 @@ export default function AccountSettings() {
                                   </details>
                                 </div>
                               </li>
+                              ) : (
+                                <li className="border border-dashed border-gray-300 dark:border-[#525252] py-3 px-3 text-[14px] text-gray-500 dark:text-[#a1a1aa]">
+                                  No Git deployment credentials configured.
+                                </li>
+                              )}
                             </ul>
                             
                             <div className="relative inline-block">
@@ -665,6 +855,35 @@ export default function AccountSettings() {
             </div>
           </div>
       </main>
+      {isPasswordModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 px-4" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !isChangingPassword) setIsPasswordModalOpen(false); }}>
+          <div role="dialog" aria-modal="true" aria-labelledby="change-password-title" className="w-full max-w-md border border-gray-300 bg-white p-6 shadow-xl dark:border-[#525252] dark:bg-[#0d0d0d]">
+            <div className="mb-6 flex items-start justify-between gap-4">
+              <div>
+                <h2 id="change-password-title" className="text-xl font-medium text-gray-900 dark:text-white">Change password</h2>
+                <p className="mt-1 text-sm text-gray-500 dark:text-[#a1a1aa]">Create a new password for your Harbor account.</p>
+              </div>
+              <button type="button" aria-label="Close change password dialog" disabled={isChangingPassword} onClick={() => setIsPasswordModalOpen(false)} className="text-2xl leading-none text-gray-500 hover:text-gray-900 disabled:opacity-50 dark:hover:text-white">&times;</button>
+            </div>
+            <form onSubmit={changePassword} className="space-y-4">
+              <div>
+                <label htmlFor="new-password" className="mb-1 block text-sm font-medium text-gray-900 dark:text-white">New password</label>
+                <input id="new-password" type="password" autoComplete="new-password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} className="h-10 w-full border border-gray-300 bg-transparent px-3 text-gray-900 outline-none focus:border-[#2563eb] focus:ring-1 focus:ring-[#2563eb] dark:border-[#525252] dark:text-white" />
+              </div>
+              <div>
+                <label htmlFor="confirm-password" className="mb-1 block text-sm font-medium text-gray-900 dark:text-white">Confirm password</label>
+                <input id="confirm-password" type="password" autoComplete="new-password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} className="h-10 w-full border border-gray-300 bg-transparent px-3 text-gray-900 outline-none focus:border-[#2563eb] focus:ring-1 focus:ring-[#2563eb] dark:border-[#525252] dark:text-white" />
+              </div>
+              {passwordError && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{passwordError}</p>}
+              {passwordNotice && <p role="status" className="text-sm text-green-600 dark:text-green-400">{passwordNotice}</p>}
+              <div className="flex justify-end gap-3 pt-2">
+                <button type="button" disabled={isChangingPassword} onClick={() => setIsPasswordModalOpen(false)} className="h-10 border border-[#6b6b6b] px-3 text-sm text-gray-900 disabled:opacity-50 dark:text-white">Cancel</button>
+                <button type="submit" disabled={isChangingPassword || !newPassword || !confirmPassword} className="h-10 bg-white px-4 text-sm font-medium text-black disabled:cursor-not-allowed disabled:opacity-50">{isChangingPassword ? 'Changing...' : 'Change password'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

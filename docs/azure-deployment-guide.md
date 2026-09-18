@@ -114,6 +114,29 @@ Switch to the **Variables** tab (next to Secrets). Click **New repository variab
 | `SMTP_USERNAME` | (Optional) e.g., `apikey` |
 | `SMTP_FROM_NAME` | `Harbor System` |
 | `SMTP_FROM_EMAIL` | `no-reply@yourdomain.com` |
+| `FRONTEND_URL` | Public Harbor web URL, for example `https://harbor-web-ui.<default-domain>` |
+| `GOOGLE_CLIENT_ID` | Google OAuth web client ID |
+| `GITHUB_CLIENT_ID` | GitHub OAuth app client ID |
+
+Add these as **repository secrets** as well:
+
+| Name | Value |
+|------|-------|
+| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
+| `GITHUB_CLIENT_SECRET` | GitHub OAuth app client secret |
+
+Configure the production OAuth applications with these callback URLs:
+
+```text
+Google: https://harbor-api-gateway.<default-domain>/api/auth/external/google/callback
+GitHub: https://harbor-api-gateway.<default-domain>/api/auth/external/github/callback
+```
+
+For Google **Authorized JavaScript origins**, use:
+
+```text
+https://harbor-web-ui.<default-domain>
+```
 
 > **Note on `API_GATEWAY_URL`**: Set this to the gateway origin only, without a trailing slash or `/api`, for example `https://harbor-api-gateway.<default-domain>`. The CD workflow appends `/api` when building both React frontends because their API calls use the `/api` gateway route.
 

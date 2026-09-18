@@ -14,6 +14,7 @@ import ProjectEnvironments from './pages/projects/ProjectEnvironments';
 import EnvironmentConfiguration from './pages/projects/EnvironmentConfiguration';
 import Environments from './pages/environments/Environments';
 import AccountSettings from './pages/settings/AccountSettings';
+import ExternalAuthCallback from './pages/auth/ExternalAuthCallback';
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
         <Route path="/register" element={<CreateAccount />} />
         <Route path="/login" element={<Login />} />
         <Route path="/password-reset" element={<PasswordReset />} />
+        <Route path="/oauth/callback" element={<ExternalAuthCallback />} />
       </Route>
       <Route path="/dashboard" element={<Navigate to="/projects" replace />} />
       <Route path="/projects" element={<DashboardLayout />}>

@@ -183,5 +183,83 @@ namespace Harbor.Authentication.Services
 
             return (true, null);
         }
+
+        public async Task<(bool Success, string? Error)> ChangePasswordAsync(int userId, ChangePasswordRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.NewPassword) || request.NewPassword.Length < 8)
+            {
+                return (false, "Password must be at least 8 characters long.");
+            }
+
+            var user = await _userRepository.GetByIdAsync(userId);
+            if (user == null)
+            {
+                return (false, "User not found.");
+            }
+
+            var passwordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+            await _userRepository.UpdatePasswordAsync(userId, passwordHash);
+
+            return (true, null);
+        }
+
+        public async Task<(bool Success, string? Error, ProfileResponse? Data)> GetProfileAsync(int userId)
+        {
+            var user = await _userRepository.GetByIdAsync(userId);
+            if (user == null)
+            {
+                return (false, "User not found.", null);
+            }
+
+            if (string.IsNullOrEmpty(user.AvatarSvg))
+            {
+                user.AvatarSvg = GenerateAvatar(user.Username);
+                await _userRepository.UpdateAvatarAsync(user.Id, user.AvatarSvg);
+            }
+
+            return (true, null, ToProfileResponse(user));
+        }
+
+        public async Task<(bool Success, string? Error, ProfileResponse? Data)> UpdateProfileAsync(int userId, ProfileRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Email))
+            {
+                return (false, "Username and email are required.", null);
+            }
+
+            var emailAttribute = new System.ComponentModel.DataAnnotations.EmailAddressAttribute();
+            if (!emailAttribute.IsValid(request.Email))
+            {
+                return (false, "Email address is not valid.", null);
+            }
+
+            var user = await _userRepository.GetByIdAsync(userId);
+            if (user == null)
+            {
+                return (false, "User not found.", null);
+            }
+
+            var existing = await _userRepository.GetByUsernameOrEmailAsync(request.Username.Trim(), request.Email.Trim());
+            if (existing != null && existing.Id != userId)
+            {
+                return (false, "That username or email is already in use.", null);
+            }
+
+            user.Username = request.Username.Trim();
+            user.Email = request.Email.Trim();
+            user.AvatarSvg = GenerateAvatar(user.Username);
+            await _userRepository.UpdateProfileAsync(userId, user.Username, user.Email, user.AvatarSvg);
+
+            return (true, null, ToProfileResponse(user));
+        }
+
+        private static ProfileResponse ToProfileResponse(User user) => new()
+        {
+            Id = user.Id,
+            Username = user.Username,
+            Email = user.Email,
+            Role = user.Role,
+            AvatarSvg = user.AvatarSvg
+        };
     }
 }

@@ -15,6 +15,7 @@ import EnvironmentConfiguration from './pages/projects/EnvironmentConfiguration'
 import Environments from './pages/environments/Environments';
 import AccountSettings from './pages/settings/AccountSettings';
 import ExternalAuthCallback from './pages/auth/ExternalAuthCallback';
+import NewService from './pages/services/NewService';
 
 function App() {
   return (
@@ -31,6 +32,7 @@ function App() {
         <Route index element={<Projects />} />
         <Route path="new" element={<CreateProject />} />
         <Route path=":id/settings" element={<ProjectSettings />} />
+        <Route path=":projectId/services/new" element={<NewService />} />
         <Route path=":id/environments" element={<ProjectEnvironments />} />
         <Route path=":id/environments/:environmentId/configure" element={<EnvironmentConfiguration />} />
       </Route>

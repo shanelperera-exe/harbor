@@ -19,12 +19,11 @@ namespace Harbor.Project.Repositories
 
             using var command = connection.CreateCommand();
             command.CommandText =
-                "INSERT INTO \"Projects\" (\"Name\", \"Description\", \"RepositoryUrl\", \"OwnerId\", \"CreatedAt\") " +
-                "VALUES (@name, @description, @repositoryUrl, @ownerId, @createdAt) " +
+                "INSERT INTO \"Projects\" (\"Name\", \"Description\", \"OwnerId\", \"CreatedAt\") " +
+                "VALUES (@name, @description, @ownerId, @createdAt) " +
                 "RETURNING \"Id\";";
             command.Parameters.AddWithValue("name", project.Name);
             command.Parameters.AddWithValue("description", project.Description ?? (object)DBNull.Value);
-            command.Parameters.AddWithValue("repositoryUrl", project.RepositoryUrl ?? (object)DBNull.Value);
             command.Parameters.AddWithValue("ownerId", project.OwnerId);
             command.Parameters.AddWithValue("createdAt", DateTime.UtcNow);
 
@@ -54,7 +53,7 @@ namespace Harbor.Project.Repositories
 
             using var command = connection.CreateCommand();
             command.CommandText =
-                "SELECT \"Id\", \"Name\", \"Description\", \"RepositoryUrl\", \"OwnerId\", \"CreatedAt\", " +
+                "SELECT \"Id\", \"Name\", \"Description\", \"OwnerId\", \"CreatedAt\", " +
                 "\"IsArchived\", \"ArchivedAt\", \"UpdatedAt\" " +
                 "FROM \"Projects\" WHERE \"Id\" = @id";
             command.Parameters.AddWithValue("id", id);
@@ -70,7 +69,7 @@ namespace Harbor.Project.Repositories
 
             using var command = connection.CreateCommand();
             command.CommandText =
-                "SELECT \"Id\", \"Name\", \"Description\", \"RepositoryUrl\", \"OwnerId\", \"CreatedAt\", " +
+                "SELECT \"Id\", \"Name\", \"Description\", \"OwnerId\", \"CreatedAt\", " +
                 "\"IsArchived\", \"ArchivedAt\", \"UpdatedAt\" " +
                 "FROM \"Projects\" WHERE \"OwnerId\" = @ownerId AND \"IsArchived\" = FALSE ORDER BY \"CreatedAt\" DESC";
             command.Parameters.AddWithValue("ownerId", ownerId);
@@ -85,7 +84,7 @@ namespace Harbor.Project.Repositories
 
             using var command = connection.CreateCommand();
             command.CommandText =
-                "SELECT \"Id\", \"Name\", \"Description\", \"RepositoryUrl\", \"OwnerId\", \"CreatedAt\", " +
+                "SELECT \"Id\", \"Name\", \"Description\", \"OwnerId\", \"CreatedAt\", " +
                 "\"IsArchived\", \"ArchivedAt\", \"UpdatedAt\" " +
                 "FROM \"Projects\" WHERE \"IsArchived\" = FALSE ORDER BY \"CreatedAt\" DESC";
 
@@ -100,11 +99,10 @@ namespace Harbor.Project.Repositories
             using var command = connection.CreateCommand();
             command.CommandText =
                 "UPDATE \"Projects\" SET \"Name\" = @name, \"Description\" = @description, " +
-                "\"RepositoryUrl\" = @repositoryUrl, \"UpdatedAt\" = @updatedAt " +
+                "\"UpdatedAt\" = @updatedAt " +
                 "WHERE \"Id\" = @id AND \"IsArchived\" = FALSE";
             command.Parameters.AddWithValue("name", project.Name);
             command.Parameters.AddWithValue("description", project.Description ?? (object)DBNull.Value);
-            command.Parameters.AddWithValue("repositoryUrl", project.RepositoryUrl ?? (object)DBNull.Value);
             command.Parameters.AddWithValue("updatedAt", DateTime.UtcNow);
             command.Parameters.AddWithValue("id", project.Id);
 
@@ -139,12 +137,11 @@ namespace Harbor.Project.Repositories
                     Id = reader.GetInt32(0),
                     Name = reader.GetString(1),
                     Description = reader.IsDBNull(2) ? null : reader.GetString(2),
-                    RepositoryUrl = reader.IsDBNull(3) ? null : reader.GetString(3),
-                    OwnerId = reader.GetInt32(4),
-                    CreatedAt = reader.GetDateTime(5),
-                    IsArchived = reader.GetBoolean(6),
-                    ArchivedAt = reader.IsDBNull(7) ? null : reader.GetDateTime(7),
-                    UpdatedAt = reader.IsDBNull(8) ? null : reader.GetDateTime(8)
+                    OwnerId = reader.GetInt32(3),
+                    CreatedAt = reader.GetDateTime(4),
+                    IsArchived = reader.GetBoolean(5),
+                    ArchivedAt = reader.IsDBNull(6) ? null : reader.GetDateTime(6),
+                    UpdatedAt = reader.IsDBNull(7) ? null : reader.GetDateTime(7)
                 });
             }
             return projects;

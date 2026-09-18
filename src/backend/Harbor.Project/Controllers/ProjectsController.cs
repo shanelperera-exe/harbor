@@ -22,7 +22,7 @@ namespace Harbor.Project.Controllers
         /// <summary>
         /// Creates a new project owned by the authenticated user.
         /// </summary>
-        /// <param name="request">The project name, optional description, and optional repository URL.</param>
+        /// <param name="request">The project name, and optional description.</param>
         /// <response code="201">The project was created successfully.</response>
         /// <response code="400">The request failed validation (e.g. missing name, duplicate name).</response>
         /// <response code="401">The caller is not authenticated.</response>
@@ -69,7 +69,7 @@ namespace Harbor.Project.Controllers
         }
 
         /// <summary>
-        /// Updates an existing project's name, description, and repository URL.
+        /// Updates an existing project's name and description.
         /// </summary>
         /// <param name="id">The id of the project to update.</param>
         /// <param name="request">The updated project fields.</param>

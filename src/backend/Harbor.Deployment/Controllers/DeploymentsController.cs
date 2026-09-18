@@ -58,7 +58,7 @@ public class DeploymentsController(IDeploymentService deploymentService) : Contr
         var response = new CreateDeploymentResponse
         {
             Id = result.DeploymentId!.Value,
-            ProjectId = request.ProjectId,
+            ServiceId = request.ServiceId,
             OwnerId = userId.Value,
             Environment = request.Environment,
             Version = request.Version,

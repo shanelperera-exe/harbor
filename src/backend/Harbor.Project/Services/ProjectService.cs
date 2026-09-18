@@ -40,7 +40,6 @@ namespace Harbor.Project.Services
             {
                 Name = request.Name.Trim(),
                 Description = request.Description?.Trim(),
-                RepositoryUrl = request.RepositoryUrl?.Trim(),
                 OwnerId = ownerId
             };
 
@@ -51,7 +50,6 @@ namespace Harbor.Project.Services
                 Id = newId,
                 Name = project.Name,
                 Description = project.Description,
-                RepositoryUrl = project.RepositoryUrl,
                 OwnerId = project.OwnerId,
                 CreatedAt = DateTime.UtcNow,
                 IsArchived = false,
@@ -117,7 +115,6 @@ namespace Harbor.Project.Services
 
             project.Name = trimmedName;
             project.Description = request.Description?.Trim();
-            project.RepositoryUrl = request.RepositoryUrl?.Trim();
 
             var updated = await _projectRepository.UpdateAsync(project);
             if (!updated)
@@ -163,7 +160,6 @@ namespace Harbor.Project.Services
             Id = p.Id,
             Name = p.Name,
             Description = p.Description,
-            RepositoryUrl = p.RepositoryUrl,
             OwnerId = p.OwnerId,
             CreatedAt = p.CreatedAt,
             IsArchived = p.IsArchived,

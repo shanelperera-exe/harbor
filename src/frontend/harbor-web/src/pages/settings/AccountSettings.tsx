@@ -14,6 +14,14 @@ function GoogleIcon() {
   );
 }
 
+function GitHubIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 23" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="flex-shrink-0 text-black dark:text-white">
+      <path fillRule="evenodd" clipRule="evenodd" d="M12.0183 0.405518C5.73469 0.405518 0.655029 5.50047 0.655029 11.8036C0.655029 16.8421 3.90974 21.107 8.42489 22.6165C8.9894 22.73 9.19618 22.3712 9.19618 22.0695C9.19618 21.8052 9.17757 20.8995 9.17757 19.9558C6.01659 20.6352 5.35835 18.597 5.35835 18.597C4.85036 17.2761 4.09768 16.9365 4.09768 16.9365C3.06309 16.2383 4.17304 16.2383 4.17304 16.2383C5.32067 16.3138 5.92286 17.4083 5.92286 17.4083C6.9386 19.1443 8.57538 18.6538 9.23386 18.3518C9.32775 17.6158 9.62887 17.1063 9.94857 16.8233C7.42775 16.5591 4.77523 15.5778 4.77523 11.1996C4.77523 9.95415 5.22647 8.93516 5.94146 8.14266C5.82866 7.85966 5.43348 6.68944 6.05451 5.12321C6.05451 5.12321 7.01396 4.82122 9.17733 6.2932C10.1036 6.0437 11.0587 5.91677 12.0183 5.91571C12.9777 5.91571 13.9558 6.04794 14.8589 6.2932C17.0226 4.82122 17.982 5.12321 17.982 5.12321C18.6036 6.68944 18.2076 7.85966 18.0948 8.14266C18.8287 8.93516 19.2613 9.95415 19.2613 11.1996C19.2613 15.5778 16.6088 16.5401 14.0688 16.8233C14.4828 17.1818 14.8401 17.8613 14.8401 18.9368C14.8401 20.4653 14.8215 21.692 14.8215 22.0692C14.8215 22.3712 15.0285 22.73 15.5928 22.6167C20.1079 21.1068 23.3626 16.8421 23.3626 11.8036C23.3813 5.50047 18.283 0.405518 12.0183 0.405518Z" />
+    </svg>
+  );
+}
+
 export default function AccountSettings() {
   const [activeSection, setActiveSection] = useState('profile');
   const [isEditingName, setIsEditingName] = useState(false);
@@ -29,14 +37,6 @@ export default function AccountSettings() {
   const [themeDropdownOpen, setThemeDropdownOpen] = useState(false);
   const [logThemeDropdownOpen, setLogThemeDropdownOpen] = useState(false);
   const [loginMethodDropdownOpen, setLoginMethodDropdownOpen] = useState(false);
-  const [linkedLoginMethods, setLinkedLoginMethods] = useState<string[]>(() => {
-    try {
-      const stored = JSON.parse(localStorage.getItem('harbor_login_methods') ?? '[]');
-      return Array.isArray(stored) ? stored : [];
-    } catch {
-      return [];
-    }
-  });
   const [credentialDropdownOpen, setCredentialDropdownOpen] = useState(false);
   const getInitialTheme = () => {
     const saved = localStorage.getItem('harbor_theme');
@@ -119,11 +119,20 @@ export default function AccountSettings() {
     catch { return {}; }
   }
   const [storedUser] = useState(readUser);
-  const [profile, setProfile] = useState({
+  const [profile, setProfile] = useState<{
+    username: string;
+    email: string;
+    role: string;
+    avatarSvg: string | null;
+    loginMethods: string[];
+    hasPassword: boolean;
+  }>({
     username: storedUser.username ?? '',
     email: storedUser.email ?? '',
     role: storedUser.role ?? '',
     avatarSvg: storedUser.avatarSvg ?? null,
+    loginMethods: Array.isArray(storedUser.loginMethods) ? storedUser.loginMethods : [],
+    hasPassword: storedUser.hasPassword === true,
   });
   const [profileError, setProfileError] = useState('');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
@@ -136,13 +145,18 @@ export default function AccountSettings() {
   const [name, setName] = useState(currentUsername);
   const [email, setEmail] = useState(currentEmail);
 
-  function linkLoginMethod(provider: string) {
-    setLinkedLoginMethods((current) => {
-      const next = current.includes(provider) ? current : [...current, provider];
-      localStorage.setItem('harbor_login_methods', JSON.stringify(next));
-      return next;
+  async function linkLoginMethod(provider: string) {
+    const token = localStorage.getItem('harbor_token');
+    if (!token) return;
+
+    const response = await fetch(`${authApiBase}/auth/external/${provider}/link`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
     });
-    setLoginMethodDropdownOpen(false);
+    const data = await response.json().catch(() => ({}));
+    if (response.ok && data.url) {
+      window.location.assign(`${authApiBase}${data.url.replace('/api', '')}`);
+    }
   }
 
   useEffect(() => {
@@ -255,6 +269,7 @@ export default function AccountSettings() {
 
       setNewPassword('');
       setConfirmPassword('');
+      setProfile((current) => ({ ...current, hasPassword: true }));
       setPasswordNotice('Password changed successfully.');
       window.setTimeout(() => {
         setIsPasswordModalOpen(false);
@@ -724,7 +739,7 @@ export default function AccountSettings() {
                           </div>
                           <div className="col-span-2">
                             <button type="button" onClick={() => { setPasswordError(''); setPasswordNotice(''); setIsPasswordModalOpen(true); }} className="text-[14px] font-medium text-gray-900 dark:text-[#e3e3e3] hover:bg-gray-100 dark:hover:bg-[#1a1a1a] border border-solid border-[#6b6b6b] h-10 py-2.5 px-3 flex items-center transition-colors">
-                              Change password
+                              {profile.hasPassword ? 'Change password' : 'Create password'}
                             </button>
                           </div>
                         </div>
@@ -735,26 +750,26 @@ export default function AccountSettings() {
                             <p className="text-[14px] text-gray-500 dark:text-[#a1a1aa]">Use these methods to sign in to your Harbor account.</p>
                           </div>
                           <div className="col-span-2">
-                            {linkedLoginMethods.length > 0 && (
-                            <ul className="space-y-2 mb-4">
-                              <li>
-                                <div className="border border-solid border-[#6b6b6b] py-1 px-3 grid grid-cols-[max-content_1fr_max-content] items-center gap-2">
-                                  <span className="block">
-                                    <svg width="17" height="16" viewBox="0 0 17 16" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="w-4 h-4"><path d="M15.706 8.16699C15.706 7.64699 15.6593 7.14699 15.5727 6.66699H8.66602V9.50699H12.6127C12.4393 10.4203 11.9193 11.1937 11.1393 11.7137V13.5603H13.5193C14.906 12.2803 15.706 10.4003 15.706 8.16699Z" fill="#4285F4"></path><path d="M8.66581 15.3337C10.6458 15.3337 12.3058 14.6804 13.5191 13.5604L11.1391 11.7137C10.4858 12.1537 9.65247 12.4204 8.66581 12.4204C6.75914 12.4204 5.13914 11.1337 4.55914 9.40039H2.11914V11.2937C3.32581 13.6871 5.79914 15.3337 8.66581 15.3337Z" fill="#34A853"></path><path d="M4.55967 9.39289C4.41301 8.95289 4.32634 8.48622 4.32634 7.99956C4.32634 7.51289 4.41301 7.04622 4.55967 6.60622V4.71289H2.11967C1.61967 5.69956 1.33301 6.81289 1.33301 7.99956C1.33301 9.18622 1.61967 10.2996 2.11967 11.2862L4.01967 9.80622L4.55967 9.39289Z" fill="#FBBC05"></path><path d="M8.66581 3.58699C9.74581 3.58699 10.7058 3.96033 11.4725 4.68033L13.5725 2.58033C12.2991 1.39366 10.6458 0.666992 8.66581 0.666992C5.79914 0.666992 3.32581 2.31366 2.11914 4.71366L4.55914 6.60699C5.13914 4.87366 6.75914 3.58699 8.66581 3.58699Z" fill="#EA4335"></path></svg>
-                                  </span>
-                                  <span className="text-[14px] leading-[40px] font-medium text-gray-900 dark:text-white">{currentEmail}</span>
-                                </div>
-                              </li>
-                            </ul>
+                            {profile.loginMethods.length > 0 && (
+                              <ul className="space-y-2 mb-4">
+                                {profile.loginMethods.map((method) => (
+                                  <li key={method}>
+                                    <div className="border border-solid border-[#6b6b6b] py-1 px-3 grid grid-cols-[max-content_1fr_max-content] items-center gap-2">
+                                      <span className="block">{method === 'google' ? <GoogleIcon /> : <GitHubIcon />}</span>
+                                      <span className="text-[14px] leading-[40px] font-medium text-gray-900 dark:text-white">{method === 'google' ? 'Google' : 'GitHub'} ({currentEmail})</span>
+                                    </div>
+                                  </li>
+                                ))}
+                              </ul>
                             )}
                             
                             <div className="relative inline-block">
                               <button type="button" onClick={() => setLoginMethodDropdownOpen(!loginMethodDropdownOpen)} aria-expanded={loginMethodDropdownOpen} className="text-[14px] font-medium text-gray-900 dark:text-[#e3e3e3] hover:bg-gray-100 dark:hover:bg-[#1a1a1a] border border-solid border-[#6b6b6b] h-10 py-2.5 px-3 flex items-center transition-colors">
                                 <span className="me-1.5 flex items-center gap-1">
-                                  <span className="block border border-solid border-gray-300 dark:border-[#525252] p-0.5 relative rounded-[0.25rem] bg-white dark:bg-[#1a1a1a]"><GoogleIcon /></span>
-                                  <span className="block border border-solid border-gray-300 dark:border-[#525252] p-0.5 relative rounded-[0.25rem] bg-white dark:bg-[#1a1a1a]">
+                                  {!profile.loginMethods.includes('google') && <span className="block border border-solid border-gray-300 dark:border-[#525252] p-0.5 relative rounded-[0.25rem] bg-white dark:bg-[#1a1a1a]"><GoogleIcon /></span>}
+                                  {!profile.loginMethods.includes('github') && <span className="block border border-solid border-gray-300 dark:border-[#525252] p-0.5 relative rounded-[0.25rem] bg-white dark:bg-[#1a1a1a]">
                                     <svg width="15" height="15" viewBox="0 0 24 23" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="flex-shrink-0 text-black dark:text-white" aria-label="GitHub"><path fillRule="evenodd" clipRule="evenodd" d="M12.0183 0.405518C5.73469 0.405518 0.655029 5.50047 0.655029 11.8036C0.655029 16.8421 3.90974 21.107 8.42489 22.6165C8.9894 22.73 9.19618 22.3712 9.19618 22.0695C9.19618 21.8052 9.17757 20.8995 9.17757 19.9558C6.01659 20.6352 5.35835 18.597 5.35835 18.597C4.85036 17.2761 4.09768 16.9365 4.09768 16.9365C3.06309 16.2383 4.17304 16.2383 4.17304 16.2383C5.32067 16.3138 5.92286 17.4083 5.92286 17.4083C6.9386 19.1443 8.57538 18.6538 9.23386 18.3518C9.32782 17.6158 9.62904 17.1063 9.94886 16.8233C7.42775 16.5591 4.77523 15.5778 4.77523 11.1996C4.77523 9.95415 5.22647 8.93516 5.94146 8.14266C5.82866 7.85966 5.43348 6.68944 6.05451 5.12321C6.05451 5.12321 7.01396 4.82122 9.17733 6.2932C10.1036 6.0437 11.0587 5.91677 12.0183 5.91571C12.9777 5.91571 13.9558 6.04794 14.8589 6.2932C17.0226 4.82122 17.982 5.12321 17.982 5.12321C18.603 6.68944 18.2076 7.85966 18.0948 8.14266C18.8287 8.93516 19.2613 9.95415 19.2613 11.1996C19.2613 15.5778 16.6088 16.5401 14.0688 16.8233C14.4828 17.1818 14.8401 17.861 14.8401 18.9368C14.8401 20.4653 14.8215 21.692 14.8215 22.0692C14.8215 22.3712 15.0285 22.73 15.5928 22.6167C20.1079 21.1068 23.3626 16.8421 23.3626 11.8036C23.3813 5.50047 18.283 0.405518 12.0183 0.405518Z"></path></svg>
-                                  </span>
+                                  </span>}
                                 </span>
                                 <span className="me-3">Add login method</span>
                                 <svg fill="currentColor" aria-hidden="true" className={`w-4 h-4 transition-transform ${loginMethodDropdownOpen ? 'rotate-180' : ''}`} viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M8 10.9998L3 5.9998L3.7 5.2998L8 9.5998L12.3 5.2998L13 5.9998L8 10.9998Z"></path></svg>
@@ -762,20 +777,21 @@ export default function AccountSettings() {
                               
                               {loginMethodDropdownOpen && (
                                 <div className="min-w-[208px] p-2 bg-white dark:bg-[#0d0d0d] border border-solid border-[#6b6b6b] shadow-lg outline-none absolute z-50 left-0 top-full mt-1">
-                                  <button type="button" onClick={() => linkLoginMethod('google')} className="w-full flex relative text-[14px] text-gray-900 dark:text-[#e3e3e3] py-2 px-3 focus-visible:outline-none cursor-pointer hover:bg-gray-100 dark:hover:bg-[#1a1a1a] transition-colors rounded">
+                                  {!profile.loginMethods.includes('google') && <button type="button" onClick={() => linkLoginMethod('google')} className="w-full flex relative text-[14px] text-gray-900 dark:text-[#e3e3e3] py-2 px-3 focus-visible:outline-none cursor-pointer hover:bg-gray-100 dark:hover:bg-[#1a1a1a] transition-colors rounded">
                                     <div className="w-full flex items-center space-x-2.5">
                                       <span className="block border border-solid border-gray-300 dark:border-[#525252] p-0.5 relative rounded-[0.25rem] bg-white dark:bg-[#1a1a1a]"><GoogleIcon /></span>
                                       <span className="flex-1 text-left truncate font-medium">Google</span>
                                     </div>
-                                  </button>
-                                  <button type="button" onClick={() => linkLoginMethod('github')} className="w-full flex relative text-[14px] text-gray-900 dark:text-[#e3e3e3] py-2 px-3 focus-visible:outline-none cursor-pointer hover:bg-gray-100 dark:hover:bg-[#1a1a1a] transition-colors rounded">
+                                  </button>}
+                                  {!profile.loginMethods.includes('github') && <button type="button" onClick={() => linkLoginMethod('github')} className="w-full flex relative text-[14px] text-gray-900 dark:text-[#e3e3e3] py-2 px-3 focus-visible:outline-none cursor-pointer hover:bg-gray-100 dark:hover:bg-[#1a1a1a] transition-colors rounded">
                                     <div className="w-full flex items-center space-x-2.5">
                                       <span className="block border border-solid border-gray-300 dark:border-[#525252] p-0.5 relative rounded-[0.25rem] bg-white dark:bg-[#1a1a1a]">
                                         <svg width="15" height="15" viewBox="0 0 24 23" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="flex-shrink-0 text-black dark:text-white" aria-label="GitHub"><path fillRule="evenodd" clipRule="evenodd" d="M12.0183 0.405518C5.73469 0.405518 0.655029 5.50047 0.655029 11.8036C0.655029 16.8421 3.90974 21.107 8.42489 22.6165C8.9894 22.73 9.19618 22.3712 9.19618 22.0695C9.19618 21.8052 9.17757 20.8995 9.17757 19.9558C6.01659 20.6352 5.35835 18.597 5.35835 18.597C4.85036 17.2761 4.09768 16.9365 4.09768 16.9365C3.06309 16.2383 4.17304 16.2383 4.17304 16.2383C5.32067 16.3138 5.92286 17.4083 5.92286 17.4083C6.9386 19.1443 8.57538 18.6538 9.23386 18.3518C9.32782 17.6158 9.62904 17.1063 9.94886 16.8233C7.42775 16.5591 4.77523 15.5778 4.77523 11.1996C4.77523 9.95415 5.22647 8.93516 5.94146 8.14266C5.82866 7.85966 5.43348 6.68944 6.05451 5.12321C6.05451 5.12321 7.01396 4.82122 9.17733 6.2932C10.1036 6.0437 11.0587 5.91677 12.0183 5.91571C12.9777 5.91571 13.9558 6.04794 14.8589 6.2932C17.0226 4.82122 17.982 5.12321 17.982 5.12321C18.603 6.68944 18.2076 7.85966 18.0948 8.14266C18.8287 8.93516 19.2613 9.95415 19.2613 11.1996C19.2613 15.5778 16.6088 16.5401 14.0688 16.8233C14.4828 17.1818 14.8401 17.861 14.8401 18.9368C14.8401 20.4653 14.8215 21.692 14.8215 22.0692C14.8215 22.3712 15.0285 22.73 15.5928 22.6167C20.1079 21.1068 23.3626 16.8421 23.3626 11.8036C23.3813 5.50047 18.283 0.405518 12.0183 0.405518Z"></path></svg>
                                       </span>
                                       <span className="flex-1 text-left truncate font-medium">GitHub</span>
                                     </div>
-                                  </button>
+                                  </button>}
+                                  {profile.loginMethods.length === 2 && <p className="px-3 py-2 text-sm text-gray-500 dark:text-[#a1a1aa]">All login methods are connected.</p>}
                                 </div>
                               )}
                             </div>
@@ -860,7 +876,7 @@ export default function AccountSettings() {
           <div role="dialog" aria-modal="true" aria-labelledby="change-password-title" className="w-full max-w-md border border-gray-300 bg-white p-6 shadow-xl dark:border-[#525252] dark:bg-[#0d0d0d]">
             <div className="mb-6 flex items-start justify-between gap-4">
               <div>
-                <h2 id="change-password-title" className="text-xl font-medium text-gray-900 dark:text-white">Change password</h2>
+                <h2 id="change-password-title" className="text-xl font-medium text-gray-900 dark:text-white">{profile.hasPassword ? 'Change password' : 'Create password'}</h2>
                 <p className="mt-1 text-sm text-gray-500 dark:text-[#a1a1aa]">Create a new password for your Harbor account.</p>
               </div>
               <button type="button" aria-label="Close change password dialog" disabled={isChangingPassword} onClick={() => setIsPasswordModalOpen(false)} className="text-2xl leading-none text-gray-500 hover:text-gray-900 disabled:opacity-50 dark:hover:text-white">&times;</button>
@@ -878,7 +894,7 @@ export default function AccountSettings() {
               {passwordNotice && <p role="status" className="text-sm text-green-600 dark:text-green-400">{passwordNotice}</p>}
               <div className="flex justify-end gap-3 pt-2">
                 <button type="button" disabled={isChangingPassword} onClick={() => setIsPasswordModalOpen(false)} className="h-10 border border-[#6b6b6b] px-3 text-sm text-gray-900 disabled:opacity-50 dark:text-white">Cancel</button>
-                <button type="submit" disabled={isChangingPassword || !newPassword || !confirmPassword} className="h-10 bg-white px-4 text-sm font-medium text-black disabled:cursor-not-allowed disabled:opacity-50">{isChangingPassword ? 'Changing...' : 'Change password'}</button>
+                <button type="submit" disabled={isChangingPassword || !newPassword || !confirmPassword} className="h-10 bg-white px-4 text-sm font-medium text-black disabled:cursor-not-allowed disabled:opacity-50">{isChangingPassword ? 'Saving...' : profile.hasPassword ? 'Change password' : 'Create password'}</button>
               </div>
             </form>
           </div>

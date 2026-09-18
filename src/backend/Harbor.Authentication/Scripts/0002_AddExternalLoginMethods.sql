@@ -1,0 +1,2 @@
+ALTER TABLE "Users"
+ADD COLUMN IF NOT EXISTS "ExternalLoginMethods" TEXT NOT NULL DEFAULT '';

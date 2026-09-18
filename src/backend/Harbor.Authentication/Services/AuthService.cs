@@ -217,7 +217,10 @@ namespace Harbor.Authentication.Services
                 await _userRepository.UpdateAvatarAsync(user.Id, user.AvatarSvg);
             }
 
-            return (true, null, ToProfileResponse(user));
+            var profile = ToProfileResponse(user);
+            profile.LoginMethods = await _userRepository.GetExternalLoginMethodsAsync(user.Id);
+            profile.HasPassword = await _userRepository.GetHasPasswordAsync(user.Id);
+            return (true, null, profile);
         }
 
         public async Task<(bool Success, string? Error, ProfileResponse? Data)> UpdateProfileAsync(int userId, ProfileRequest request)
@@ -250,7 +253,10 @@ namespace Harbor.Authentication.Services
             user.AvatarSvg = GenerateAvatar(user.Username);
             await _userRepository.UpdateProfileAsync(userId, user.Username, user.Email, user.AvatarSvg);
 
-            return (true, null, ToProfileResponse(user));
+            var updatedProfile = ToProfileResponse(user);
+            updatedProfile.LoginMethods = await _userRepository.GetExternalLoginMethodsAsync(user.Id);
+            updatedProfile.HasPassword = await _userRepository.GetHasPasswordAsync(user.Id);
+            return (true, null, updatedProfile);
         }
 
         private static ProfileResponse ToProfileResponse(User user) => new()
@@ -259,7 +265,9 @@ namespace Harbor.Authentication.Services
             Username = user.Username,
             Email = user.Email,
             Role = user.Role,
-            AvatarSvg = user.AvatarSvg
+            AvatarSvg = user.AvatarSvg,
+            LoginMethods = Array.Empty<string>(),
+            HasPassword = user.HasPassword
         };
     }
 }

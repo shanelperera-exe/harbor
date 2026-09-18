@@ -6,15 +6,15 @@ namespace Harbor.Deployment.Repositories;
 
 public class DeploymentRepository(DbConnectionFactory dbFactory) : IDeploymentRepository
 {
-    public async Task<(IReadOnlyList<DeploymentEntity> Items, int TotalCount)> GetHistoryAsync(int ownerId, int? projectId, string? status, int skip, int take)
+    public async Task<(IReadOnlyList<DeploymentEntity> Items, int TotalCount)> GetHistoryAsync(int ownerId, int? serviceId, string? status, int skip, int take)
     {
         await using var connection = dbFactory.CreateConnection();
         await connection.OpenAsync();
 
         var whereClauses = new List<string> { "\"OwnerId\" = @ownerId" };
-        if (projectId.HasValue)
+        if (serviceId.HasValue)
         {
-            whereClauses.Add("\"ProjectId\" = @projectId");
+            whereClauses.Add("\"ServiceId\" = @serviceId");
         }
         if (!string.IsNullOrWhiteSpace(status))
         {
@@ -24,12 +24,12 @@ public class DeploymentRepository(DbConnectionFactory dbFactory) : IDeploymentRe
 
         await using var count = connection.CreateCommand();
         count.CommandText = $"SELECT COUNT(1) FROM \"Deployments\" {filter}";
-        AddFilters(count, ownerId, projectId, status);
+        AddFilters(count, ownerId, serviceId, status);
         var total = Convert.ToInt32(await count.ExecuteScalarAsync());
 
         await using var command = connection.CreateCommand();
-        command.CommandText = $"SELECT \"Id\", \"ProjectId\", \"OwnerId\", \"Environment\", \"Version\", \"CommitSha\", \"Status\", \"StartedAt\", \"CompletedAt\", \"FailureReason\" FROM \"Deployments\" {filter} ORDER BY \"StartedAt\" DESC, \"Id\" DESC OFFSET @skip LIMIT @take";
-        AddFilters(command, ownerId, projectId, status);
+        command.CommandText = $"SELECT \"Id\", \"ServiceId\", \"OwnerId\", \"Environment\", \"Version\", \"CommitSha\", \"Status\", \"StartedAt\", \"CompletedAt\", \"FailureReason\" FROM \"Deployments\" {filter} ORDER BY \"StartedAt\" DESC, \"Id\" DESC OFFSET @skip LIMIT @take";
+        AddFilters(command, ownerId, serviceId, status);
         command.Parameters.AddWithValue("skip", skip);
         command.Parameters.AddWithValue("take", take);
         return (await ReadDeploymentsAsync(command), total);
@@ -40,7 +40,7 @@ public class DeploymentRepository(DbConnectionFactory dbFactory) : IDeploymentRe
         await using var connection = dbFactory.CreateConnection();
         await connection.OpenAsync();
         await using var command = connection.CreateCommand();
-        command.CommandText = "SELECT \"Id\", \"ProjectId\", \"OwnerId\", \"Environment\", \"Version\", \"CommitSha\", \"Status\", \"StartedAt\", \"CompletedAt\", \"FailureReason\" FROM \"Deployments\" WHERE \"Id\" = @id AND \"OwnerId\" = @ownerId";
+        command.CommandText = "SELECT \"Id\", \"ServiceId\", \"OwnerId\", \"Environment\", \"Version\", \"CommitSha\", \"Status\", \"StartedAt\", \"CompletedAt\", \"FailureReason\" FROM \"Deployments\" WHERE \"Id\" = @id AND \"OwnerId\" = @ownerId";
         command.Parameters.AddWithValue("id", id);
         command.Parameters.AddWithValue("ownerId", ownerId);
         return (await ReadDeploymentsAsync(command)).SingleOrDefault();
@@ -64,8 +64,8 @@ public class DeploymentRepository(DbConnectionFactory dbFactory) : IDeploymentRe
         await using var connection = dbFactory.CreateConnection();
         await connection.OpenAsync();
         await using var command = connection.CreateCommand();
-        command.CommandText = "INSERT INTO \"Deployments\" (\"ProjectId\", \"OwnerId\", \"Environment\", \"Version\", \"CommitSha\", \"Status\", \"StartedAt\") VALUES (@projectId, @ownerId, @environment, @version, @commitSha, @status, @startedAt) RETURNING \"Id\";";
-        command.Parameters.AddWithValue("projectId", deployment.ProjectId);
+        command.CommandText = "INSERT INTO \"Deployments\" (\"ServiceId\", \"OwnerId\", \"Environment\", \"Version\", \"CommitSha\", \"Status\", \"StartedAt\") VALUES (@serviceId, @ownerId, @environment, @version, @commitSha, @status, @startedAt) RETURNING \"Id\";";
+        command.Parameters.AddWithValue("serviceId", deployment.ServiceId);
         command.Parameters.AddWithValue("ownerId", deployment.OwnerId);
         command.Parameters.AddWithValue("environment", deployment.Environment);
         command.Parameters.AddWithValue("version", deployment.Version);
@@ -75,18 +75,18 @@ public class DeploymentRepository(DbConnectionFactory dbFactory) : IDeploymentRe
         return Convert.ToInt32(await command.ExecuteScalarAsync());
     }
 
-    public async Task<(bool Exists, int OwnerId, bool IsArchived)> GetProjectAccessAsync(int projectId)
+    public async Task<(bool Exists, int OwnerId, bool IsArchived, int ProjectId)> GetServiceAccessAsync(int serviceId)
     {
         await using var connection = dbFactory.CreateConnection();
         await connection.OpenAsync();
         await using var command = connection.CreateCommand();
-        command.CommandText = "SELECT \"OwnerId\", \"IsArchived\" FROM \"Projects\" WHERE \"Id\" = @projectId;";
-        command.Parameters.AddWithValue("projectId", projectId);
+        command.CommandText = "SELECT p.\"OwnerId\", p.\"IsArchived\", s.\"ProjectId\" FROM \"Services\" s JOIN \"Projects\" p ON s.\"ProjectId\" = p.\"Id\" WHERE s.\"Id\" = @serviceId;";
+        command.Parameters.AddWithValue("serviceId", serviceId);
 
         await using var reader = await command.ExecuteReaderAsync();
         return await reader.ReadAsync()
-            ? (true, reader.GetInt32(0), reader.GetBoolean(1))
-            : (false, 0, false);
+            ? (true, reader.GetInt32(0), reader.GetBoolean(1), reader.GetInt32(2))
+            : (false, 0, false, 0);
     }
 
     public async Task<(bool Exists, bool IsActive, string Type)?> GetEnvironmentByNameAsync(int projectId, string environmentName)
@@ -104,12 +104,12 @@ public class DeploymentRepository(DbConnectionFactory dbFactory) : IDeploymentRe
             : null;
     }
 
-    private static void AddFilters(NpgsqlCommand command, int ownerId, int? projectId, string? status)
+    private static void AddFilters(NpgsqlCommand command, int ownerId, int? serviceId, string? status)
     {
         command.Parameters.AddWithValue("ownerId", ownerId);
-        if (projectId.HasValue)
+        if (serviceId.HasValue)
         {
-            command.Parameters.AddWithValue("projectId", projectId.Value);
+            command.Parameters.AddWithValue("serviceId", serviceId.Value);
         }
         if (!string.IsNullOrWhiteSpace(status))
         {
@@ -121,7 +121,7 @@ public class DeploymentRepository(DbConnectionFactory dbFactory) : IDeploymentRe
     {
         var result = new List<DeploymentEntity>();
         await using var reader = await command.ExecuteReaderAsync();
-        while (await reader.ReadAsync()) result.Add(new DeploymentEntity { Id = reader.GetInt32(0), ProjectId = reader.GetInt32(1), OwnerId = reader.GetInt32(2), Environment = reader.GetString(3), Version = reader.GetString(4), CommitSha = reader.IsDBNull(5) ? null : reader.GetString(5), Status = reader.GetString(6), StartedAt = reader.GetDateTime(7), CompletedAt = reader.IsDBNull(8) ? null : reader.GetDateTime(8), FailureReason = reader.IsDBNull(9) ? null : reader.GetString(9) });
+        while (await reader.ReadAsync()) result.Add(new DeploymentEntity { Id = reader.GetInt32(0), ServiceId = reader.GetInt32(1), OwnerId = reader.GetInt32(2), Environment = reader.GetString(3), Version = reader.GetString(4), CommitSha = reader.IsDBNull(5) ? null : reader.GetString(5), Status = reader.GetString(6), StartedAt = reader.GetDateTime(7), CompletedAt = reader.IsDBNull(8) ? null : reader.GetDateTime(8), FailureReason = reader.IsDBNull(9) ? null : reader.GetString(9) });
         return result;
     }
 }

@@ -7,5 +7,7 @@ namespace Harbor.Authentication.DTOs
         public string Email { get; set; } = string.Empty;
         public string Role { get; set; } = string.Empty;
         public string? AvatarSvg { get; set; }
+        public string[] LoginMethods { get; set; } = Array.Empty<string>();
+        public bool HasPassword { get; set; }
     }
 }

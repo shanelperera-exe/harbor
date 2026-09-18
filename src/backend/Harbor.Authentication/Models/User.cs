@@ -6,6 +6,7 @@ namespace Harbor.Authentication.Models
         public string Username { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
         public string PasswordHash { get; set; } = string.Empty;
+        public bool HasPassword { get; set; } = true;
         public string Role { get; set; } = "Developer";
         public string? AvatarSvg { get; set; }
         public string? PasswordResetToken { get; set; }

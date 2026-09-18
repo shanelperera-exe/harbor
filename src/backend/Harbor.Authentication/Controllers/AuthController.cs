@@ -162,14 +162,26 @@ namespace Harbor.Authentication.Controllers
                 return Problem(detail: "External login is unavailable.", statusCode: StatusCodes.Status503ServiceUnavailable, title: "External login unavailable");
             }
 
+            var linkResult = await HttpContext.AuthenticateAsync("ExternalLink");
             var result = await HttpContext.AuthenticateAsync("External");
             if (!result.Succeeded || result.Principal == null)
             {
                 return RedirectToFrontend("error=External%20login%20failed");
             }
 
+            var accessToken = result.Properties?.GetTokenValue("access_token");
+
             await HttpContext.SignOutAsync("External");
-            var (success, error, data) = await _externalAuthService.LoginOrRegisterAsync(result.Principal);
+            if (linkResult.Succeeded && linkResult.Principal != null && int.TryParse(linkResult.Principal.FindFirstValue("userId"), out var linkedUserId))
+            {
+                await HttpContext.SignOutAsync("ExternalLink");
+                var (linked, linkError) = await _externalAuthService.LinkAsync(linkedUserId, result.Principal, provider.ToLowerInvariant(), accessToken);
+                return linked
+                    ? RedirectToFrontend("linked=true")
+                    : RedirectToFrontend($"error={Uri.EscapeDataString(linkError ?? "Unable to link provider.")}");
+            }
+
+            var (success, error, data) = await _externalAuthService.LoginOrRegisterAsync(result.Principal, provider.ToLowerInvariant(), accessToken);
             if (!success || data == null)
             {
                 return RedirectToFrontend($"error={Uri.EscapeDataString(error ?? "External login failed.")}");
@@ -177,6 +189,39 @@ namespace Harbor.Authentication.Controllers
 
             var query = $"token={Uri.EscapeDataString(data.Token)}&username={Uri.EscapeDataString(data.Username)}&email={Uri.EscapeDataString(data.Email)}&role={Uri.EscapeDataString(data.Role)}&avatarSvg={Uri.EscapeDataString(data.AvatarSvg ?? string.Empty)}";
             return RedirectToFrontend(query);
+        }
+
+        [Authorize]
+        [HttpPost("external/{provider}/link")]
+        public async Task<IActionResult> LinkExternalLogin(string provider)
+        {
+            if (!int.TryParse(User.FindFirstValue("userId"), out var userId)) return Unauthorized();
+            var scheme = provider.ToLowerInvariant() switch
+            {
+                "google" => "Google",
+                "github" => "GitHub",
+                _ => null
+            };
+            if (scheme == null) return NotFound(new { message = "Unsupported external login provider." });
+
+            var linkIdentity = new ClaimsIdentity("ExternalLink");
+            linkIdentity.AddClaim(new Claim("userId", userId.ToString()));
+            await HttpContext.SignInAsync("ExternalLink", new ClaimsPrincipal(linkIdentity), new AuthenticationProperties { IsPersistent = false });
+            return Ok(new { url = $"/api/auth/external/{provider.ToLowerInvariant()}/link/start" });
+        }
+
+        [AllowAnonymous]
+        [HttpGet("external/{provider}/link/start")]
+        public IActionResult StartLinkedExternalLogin(string provider)
+        {
+            var scheme = provider.ToLowerInvariant() switch
+            {
+                "google" => "Google",
+                "github" => "GitHub",
+                _ => null
+            };
+            if (scheme == null) return NotFound(new { message = "Unsupported external login provider." });
+            return Challenge(new AuthenticationProperties { RedirectUri = $"/api/auth/external/{provider.ToLowerInvariant()}/complete" }, scheme);
         }
 
         private static IActionResult RedirectToFrontend(string query)

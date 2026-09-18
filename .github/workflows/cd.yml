@@ -79,6 +79,7 @@ jobs:
             GITHUB_CLIENT_ID=${{ vars.GITHUB_CLIENT_ID }}
             GITHUB_CLIENT_SECRET=${{ secrets.GITHUB_CLIENT_SECRET }}
             FRONTEND_URL=${{ vars.FRONTEND_URL }}
+            API_GATEWAY_URL=${{ vars.API_GATEWAY_URL }}
 
       - name: Apply backend runtime configuration
         env:
@@ -121,9 +122,10 @@ jobs:
                 "GITHUB_WEBHOOK_SECRET=$GH_WEBHOOK_SECRET" \
                 "GOOGLE_CLIENT_ID=${{ vars.GOOGLE_CLIENT_ID }}" \
                 "GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET" \
-                "GITHUB_CLIENT_ID=${{ vars.GITHUB_CLIENT_ID }}" \
-                "GITHUB_CLIENT_SECRET=$GITHUB_CLIENT_SECRET" \
+                "GITHUB_CLIENT_ID=${{ vars.GH_CLIENT_ID }}" \
+                "GITHUB_CLIENT_SECRET=$GH_CLIENT_SECRET" \
                 "FRONTEND_URL=${{ vars.FRONTEND_URL }}" \
+                "API_GATEWAY_URL=${{ vars.API_GATEWAY_URL }}" \
                 "ALLOWED_ORIGINS=${{ vars.ALLOWED_ORIGINS }}"; then
               exit 0
             fi

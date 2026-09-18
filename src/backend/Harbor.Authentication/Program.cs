@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authentication.OAuth;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.AspNetCore.HttpOverrides;
 using System.Text;
 using Dapper;
 Env.TraversePath().Load();
@@ -12,6 +14,12 @@ var builder = WebApplication.CreateBuilder(args);
 
 
 builder.Services.AddControllers();
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedHost | ForwardedHeaders.XForwardedProto;
+    options.KnownIPNetworks.Clear();
+    options.KnownProxies.Clear();
+});
 
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
 if (allowedOrigins == null || allowedOrigins.Length == 0)
@@ -74,6 +82,11 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         options.ExpireTimeSpan = TimeSpan.FromMinutes(5);
         options.Cookie.Name = "harbor.external";
     })
+    .AddCookie("ExternalLink", options =>
+    {
+        options.ExpireTimeSpan = TimeSpan.FromMinutes(5);
+        options.Cookie.Name = "harbor.external-link";
+    })
     .AddJwtBearer(options =>
     {
         options.TokenValidationParameters = new TokenValidationParameters
@@ -90,6 +103,17 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 var googleClientId = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID");
 var googleClientSecret = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET");
+var publicApiOrigin = Environment.GetEnvironmentVariable("API_GATEWAY_URL") ?? "http://localhost:5000";
+
+static string UsePublicCallbackOrigin(string authorizeUrl, string publicOrigin, PathString callbackPath)
+{
+    var uri = new Uri(authorizeUrl);
+    var query = QueryHelpers.ParseQuery(uri.Query)
+        .ToDictionary(pair => pair.Key, pair => (string?)pair.Value.ToString());
+    query["redirect_uri"] = $"{publicOrigin.TrimEnd('/')}{callbackPath}";
+    return QueryHelpers.AddQueryString(uri.GetLeftPart(UriPartial.Path), query);
+}
+
 if (!string.IsNullOrWhiteSpace(googleClientId) && !string.IsNullOrWhiteSpace(googleClientSecret))
 {
     builder.Services.AddAuthentication().AddGoogle("Google", options =>
@@ -98,6 +122,11 @@ if (!string.IsNullOrWhiteSpace(googleClientId) && !string.IsNullOrWhiteSpace(goo
         options.ClientSecret = googleClientSecret;
         options.SignInScheme = "External";
         options.CallbackPath = "/api/auth/external/google/callback";
+        options.Events.OnRedirectToAuthorizationEndpoint = context =>
+        {
+            context.Response.Redirect(UsePublicCallbackOrigin(context.RedirectUri, publicApiOrigin, options.CallbackPath));
+            return Task.CompletedTask;
+        };
         options.Events.OnTicketReceived = context =>
         {
             context.ReturnUri = "/api/auth/external/google/complete";
@@ -119,7 +148,14 @@ if (!string.IsNullOrWhiteSpace(githubClientId) && !string.IsNullOrWhiteSpace(git
         options.AuthorizationEndpoint = "https://github.com/login/oauth/authorize";
         options.TokenEndpoint = "https://github.com/login/oauth/access_token";
         options.UserInformationEndpoint = "https://api.github.com/user";
+        options.SaveTokens = true;
         options.Scope.Add("user:email");
+        options.Scope.Add("repo");
+        options.Events.OnRedirectToAuthorizationEndpoint = context =>
+        {
+            context.Response.Redirect(UsePublicCallbackOrigin(context.RedirectUri, publicApiOrigin, options.CallbackPath));
+            return Task.CompletedTask;
+        };
         options.ClaimActions.MapJsonKey(System.Security.Claims.ClaimTypes.NameIdentifier, "id");
         options.ClaimActions.MapJsonKey(System.Security.Claims.ClaimTypes.Name, "login");
         options.ClaimActions.MapJsonKey(System.Security.Claims.ClaimTypes.Email, "email");
@@ -211,6 +247,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("DefaultPolicy");
+app.UseForwardedHeaders();
 app.UseHttpsRedirection();
 
 app.UseAuthentication();

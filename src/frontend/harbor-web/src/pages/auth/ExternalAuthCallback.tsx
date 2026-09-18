@@ -9,6 +9,11 @@ export default function ExternalAuthCallback() {
   useEffect(() => {
     const externalError = searchParams.get('error');
     const token = searchParams.get('token');
+    const linked = searchParams.get('linked') === 'true';
+    if (linked) {
+      navigate('/settings', { replace: true });
+      return;
+    }
     if (externalError || !token) {
       setError(externalError || 'External login failed.');
       return;

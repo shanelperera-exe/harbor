@@ -3,7 +3,7 @@ namespace Harbor.Deployment.DTOs;
 public class CreateDeploymentResponse
 {
     public int Id { get; init; }
-    public int ProjectId { get; init; }
+    public int ServiceId { get; init; }
     public int OwnerId { get; init; }
     public string Environment { get; init; } = string.Empty;
     public string Version { get; init; } = string.Empty;

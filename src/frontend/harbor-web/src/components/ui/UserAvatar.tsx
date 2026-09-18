@@ -24,7 +24,7 @@ export default function UserAvatar({
   if (svgString) {
     return (
       <span
-        className={`flex-shrink-0 inline-flex items-center justify-center overflow-hidden border border-gray-200 dark:border-[#333] ${className}`}
+        className={`flex-shrink-0 inline-flex items-center justify-center overflow-hidden border border-gray-300 dark:border-[#525252] ${className}`}
         style={{ width: size, height: size }}
         dangerouslySetInnerHTML={{ __html: svgString }}
         aria-label={`${username} avatar`}
@@ -46,7 +46,7 @@ export default function UserAvatar({
 
   return (
     <span
-      className={`flex-shrink-0 flex items-center justify-center font-semibold leading-none capitalize border border-gray-200 dark:border-[#333] ${colourClass} ${className}`}
+      className={`flex-shrink-0 flex items-center justify-center font-semibold leading-none capitalize border border-gray-300 dark:border-[#525252] ${colourClass} ${className}`}
       style={{ width: size, height: size, fontSize: Math.floor(size * 0.44) }}
       aria-label={`${username} avatar`}
       role="img"

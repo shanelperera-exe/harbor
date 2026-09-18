@@ -8,11 +8,12 @@ import MainLayout from './components/layout/MainLayout';
 import DashboardLayout from './components/layout/DashboardLayout';
 import Projects from './pages/projects/Projects';
 import CreateProject from './pages/projects/CreateProject';
-import EditProject from './pages/projects/EditProject';
+import ProjectSettings from './pages/projects/ProjectSettings';
 import Deployments from './pages/deployments/Deployments';
 import ProjectEnvironments from './pages/projects/ProjectEnvironments';
 import EnvironmentConfiguration from './pages/projects/EnvironmentConfiguration';
 import Environments from './pages/environments/Environments';
+import AccountSettings from './pages/settings/AccountSettings';
 
 function App() {
   return (
@@ -27,7 +28,7 @@ function App() {
       <Route path="/projects" element={<DashboardLayout />}>
         <Route index element={<Projects />} />
         <Route path="new" element={<CreateProject />} />
-        <Route path=":id/edit" element={<EditProject />} />
+        <Route path=":id/settings" element={<ProjectSettings />} />
         <Route path=":id/environments" element={<ProjectEnvironments />} />
         <Route path=":id/environments/:environmentId/configure" element={<EnvironmentConfiguration />} />
       </Route>
@@ -36,6 +37,9 @@ function App() {
       </Route>
       <Route path="/deployments" element={<DashboardLayout />}>
         <Route index element={<Deployments />} />
+      </Route>
+      <Route path="/settings" element={<DashboardLayout />}>
+        <Route index element={<AccountSettings />} />
       </Route>
     </Routes>
   );

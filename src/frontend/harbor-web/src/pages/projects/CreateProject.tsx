@@ -53,7 +53,7 @@ export default function CreateProject() {
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className={`h-10 w-full bg-transparent border ${errors.name ? 'border-red-500' : 'border-black dark:border-[#6b6b6b]'} px-3 focus:outline-none focus:ring-1 transition-colors`}
+            className={`h-10 w-full bg-transparent border ${errors.name ? 'border-red-500' : 'border-gray-300 dark:border-[#525252]'} px-3 focus:outline-none focus:ring-1 focus:ring-[#2563eb] focus:border-[#2563eb] transition-colors`}
             placeholder="my-api-service"
             data-testid="project-name-input"
           />
@@ -67,7 +67,7 @@ export default function CreateProject() {
             onChange={(e) => setDescription(e.target.value)}
             rows={3}
             maxLength={500}
-            className="w-full bg-transparent border border-black dark:border-[#6b6b6b] px-3 py-2 focus:outline-none focus:ring-1"
+            className="w-full bg-transparent border border-gray-300 dark:border-[#525252] px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#2563eb] focus:border-[#2563eb]"
             placeholder="What does this project do?"
             data-testid="project-description-input"
           />
@@ -79,7 +79,7 @@ export default function CreateProject() {
             type="text"
             value={repositoryUrl}
             onChange={(e) => setRepositoryUrl(e.target.value)}
-            className="h-10 w-full bg-transparent border border-black dark:border-[#6b6b6b] px-3 focus:outline-none focus:ring-1"
+            className="h-10 w-full bg-transparent border border-gray-300 dark:border-[#525252] px-3 focus:outline-none focus:ring-1 focus:ring-[#2563eb] focus:border-[#2563eb]"
             placeholder="https://github.com/your-org/your-repo"
             data-testid="project-repo-input"
           />

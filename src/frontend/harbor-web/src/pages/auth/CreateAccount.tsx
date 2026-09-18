@@ -106,7 +106,7 @@ export default function CreateAccount() {
               <div className="grid gap-3 grid-cols-1 sm:grid-cols-2">
                 <button
                   type="button"
-                  className="group flex items-center justify-center space-x-2 h-10 px-4 bg-transparent border border-black dark:border-white/40 hover:bg-gray-100 dark:hover:bg-white text-black dark:text-[#e3e3e3] hover:text-black focus:outline-none focus:ring-2 focus:ring-[#e3e3e3] focus:ring-offset-2 focus:ring-offset-[#090909] rounded-none transition-colors duration-200"
+                  className="group flex items-center justify-center space-x-2 h-10 px-4 bg-transparent border border-gray-300 dark:border-[#525252]/40 hover:bg-gray-100 dark:hover:bg-white text-black dark:text-[#e3e3e3] hover:text-black focus:outline-none focus:ring-2 focus:ring-[#e3e3e3] focus:ring-offset-2 focus:ring-offset-[#090909] rounded-none transition-colors duration-200"
                 >
                   <svg width="19" height="19" viewBox="0 0 24 23" xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 fill-black dark:fill-[#e3e3e3] group-hover:fill-black transition-colors">
                     <path fillRule="evenodd" clipRule="evenodd" d="M12.0183 0.405518C5.73469 0.405518 0.655029 5.50047 0.655029 11.8036C0.655029 16.8421 3.90974 21.107 8.42489 22.6165C8.9894 22.73 9.19618 22.3712 9.19618 22.0695C9.19618 21.8052 9.17757 20.8995 9.17757 19.9558C6.01659 20.6352 5.35835 18.597 5.35835 18.597C4.85036 17.2761 4.09768 16.9365 4.09768 16.9365C3.06309 16.2383 4.17304 16.2383 4.17304 16.2383C5.32067 16.3138 5.92286 17.4083 5.92286 17.4083C6.9386 19.1443 8.57538 18.6538 9.23386 18.3518C9.32782 17.6158 9.62904 17.1063 9.94886 16.8233C7.42775 16.5591 4.77523 15.5778 4.77523 11.1996C4.77523 9.95415 5.22647 8.93516 5.94146 8.14266C5.82866 7.85966 5.43348 6.68944 6.05451 5.12321C6.05451 5.12321 7.01396 4.82122 9.17733 6.2932C10.1036 6.0437 11.0587 5.91677 12.0183 5.91571C12.9777 5.91571 13.9558 6.04794 14.8589 6.2932C17.0226 4.82122 17.982 5.12321 17.982 5.12321C18.603 6.68944 18.2076 7.85966 18.0948 8.14266C18.8287 8.93516 19.2613 9.95415 19.2613 11.1996C19.2613 15.5778 16.6088 16.5401 14.0688 16.8233C14.4828 17.1818 14.8401 17.861 14.8401 18.9368C14.8401 20.4653 14.8215 21.692 14.8215 22.0692C14.8215 22.3712 15.0285 22.73 15.5928 22.6167C20.1079 21.1068 23.3626 16.8421 23.3626 11.8036C23.3813 5.50047 18.283 0.405518 12.0183 0.405518Z"></path>
@@ -116,7 +116,7 @@ export default function CreateAccount() {
 
                 <button
                   type="button"
-                  className="group flex items-center justify-center space-x-2 h-10 px-4 bg-transparent border border-black dark:border-white/40 hover:bg-gray-100 dark:hover:bg-white text-black dark:text-[#e3e3e3] hover:text-black focus:outline-none focus:ring-2 focus:ring-[#e3e3e3] focus:ring-offset-2 focus:ring-offset-[#090909] rounded-none transition-colors duration-200"
+                  className="group flex items-center justify-center space-x-2 h-10 px-4 bg-transparent border border-gray-300 dark:border-[#525252]/40 hover:bg-gray-100 dark:hover:bg-white text-black dark:text-[#e3e3e3] hover:text-black focus:outline-none focus:ring-2 focus:ring-[#e3e3e3] focus:ring-offset-2 focus:ring-offset-[#090909] rounded-none transition-colors duration-200"
                 >
                   <svg viewBox="0 0 17 16" className="w-5 h-5" xmlns="http://www.w3.org/2000/svg">
                     <path d="M15.706 8.167C15.706 7.647 15.6593 7.147 15.5727 6.667H8.666V9.507H12.6127C12.4393 10.4203 11.9193 11.1937 11.1393 11.7137V13.5603H13.5193C14.906 12.2803 15.706 10.4003 15.706 8.167Z" fill="#4285F4"></path>
@@ -146,7 +146,7 @@ export default function CreateAccount() {
                     type="text"
                     value={username}
                     onChange={(event) => setUsername(event.target.value)}
-                    className={`h-10 w-full bg-transparent border ${errors.username ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-black dark:border-[#6b6b6b] focus:border-black dark:focus:border-[#f0f0f0] focus:ring-black dark:focus:ring-[#f0f0f0]'} text-black dark:text-[#f0f0f0] pl-10 pr-3 focus:outline-none focus:ring-1 transition-colors placeholder:text-gray-400 dark:placeholder:text-[#8f8f8f]`}
+                    className={`h-10 w-full bg-transparent border ${errors.username ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-[#525252] focus:border-[#2563eb] dark:focus:border-[#2563eb] focus:ring-[#2563eb] dark:focus:ring-[#2563eb]'} text-black dark:text-[#f0f0f0] pl-10 pr-3 focus:outline-none focus:ring-1 transition-colors placeholder:text-gray-400 dark:placeholder:text-[#8f8f8f]`}
                     placeholder="your_username"
                     autoComplete="username"
                     data-testid="username-input"
@@ -165,7 +165,7 @@ export default function CreateAccount() {
                     type="email"
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
-                    className={`h-10 w-full bg-transparent border ${errors.email ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-black dark:border-[#6b6b6b] focus:border-black dark:focus:border-[#f0f0f0] focus:ring-black dark:focus:ring-[#f0f0f0]'} text-black dark:text-[#f0f0f0] pl-10 pr-3 focus:outline-none focus:ring-1 transition-colors placeholder:text-gray-400 dark:placeholder:text-[#8f8f8f]`}
+                    className={`h-10 w-full bg-transparent border ${errors.email ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-[#525252] focus:border-[#2563eb] dark:focus:border-[#2563eb] focus:ring-[#2563eb] dark:focus:ring-[#2563eb]'} text-black dark:text-[#f0f0f0] pl-10 pr-3 focus:outline-none focus:ring-1 transition-colors placeholder:text-gray-400 dark:placeholder:text-[#8f8f8f]`}
                     placeholder="your@email.com"
                     autoComplete="email"
                     data-testid="email-input"
@@ -184,7 +184,7 @@ export default function CreateAccount() {
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
-                    className={`h-10 w-full bg-transparent border ${errors.password ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-black dark:border-[#6b6b6b] focus:border-black dark:focus:border-[#f0f0f0] focus:ring-black dark:focus:ring-[#f0f0f0]'} text-black dark:text-[#f0f0f0] pl-10 pr-10 focus:outline-none focus:ring-1 transition-colors placeholder:text-gray-400 dark:placeholder:text-[#8f8f8f]`}
+                    className={`h-10 w-full bg-transparent border ${errors.password ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-[#525252] focus:border-[#2563eb] dark:focus:border-[#2563eb] focus:ring-[#2563eb] dark:focus:ring-[#2563eb]'} text-black dark:text-[#f0f0f0] pl-10 pr-10 focus:outline-none focus:ring-1 transition-colors placeholder:text-gray-400 dark:placeholder:text-[#8f8f8f]`}
                     placeholder="correct horse battery staple"
                     autoComplete="new-password"
                     data-testid="password-input"

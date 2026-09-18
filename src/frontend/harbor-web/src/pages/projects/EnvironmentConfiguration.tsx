@@ -148,7 +148,7 @@ export default function EnvironmentConfiguration() {
       )}
 
       <form onSubmit={submit} className="mt-7 max-w-2xl grid gap-8">
-        <section className="border border-gray-200 dark:border-[#333] p-5 grid gap-4">
+        <section className="border border-gray-300 dark:border-[#525252] p-5 grid gap-4">
           <div className="flex items-center gap-2 text-[15px] font-medium">
             <Globe className="w-4 h-4" /> Deployment information
           </div>
@@ -156,14 +156,14 @@ export default function EnvironmentConfiguration() {
             <input
               type="url" required value={deploymentUrl} onChange={e => setDeploymentUrl(e.target.value)}
               placeholder="https://api.staging.example.com"
-              className="h-10 font-roobert border border-black dark:border-[#6b6b6b] px-3 bg-transparent focus:outline-none focus:ring-1"
+              className="h-10 font-roobert border border-gray-300 dark:border-[#525252] px-3 bg-transparent focus:outline-none focus:ring-1 focus:ring-[#2563eb] focus:border-[#2563eb]"
             />
           </label>
           <label className="grid gap-1 text-[15px]">Provider
             <input
               list="provider-suggestions" required value={provider} onChange={e => setProvider(e.target.value)}
               placeholder="e.g. AWS"
-              className="h-10 border border-black dark:border-[#6b6b6b] px-3 bg-transparent focus:outline-none focus:ring-1"
+              className="h-10 border border-gray-300 dark:border-[#525252] px-3 bg-transparent focus:outline-none focus:ring-1 focus:ring-[#2563eb] focus:border-[#2563eb]"
             />
             <datalist id="provider-suggestions">
               {providerSuggestions.map(option => <option key={option} value={option} />)}
@@ -171,7 +171,7 @@ export default function EnvironmentConfiguration() {
           </label>
         </section>
 
-        <section className="border border-gray-200 dark:border-[#333] p-5 grid gap-4">
+        <section className="border border-gray-300 dark:border-[#525252] p-5 grid gap-4">
           <div className="flex items-center gap-2 text-[15px] font-medium">
             Configuration
           </div>
@@ -181,12 +181,12 @@ export default function EnvironmentConfiguration() {
                 <input
                   value={row.key} onChange={e => updateConfigRow(row.id, { key: e.target.value })}
                   placeholder="KEY" maxLength={100}
-                  className="h-10 flex-1 min-w-0 font-roobert border border-black dark:border-[#6b6b6b] px-3 bg-transparent focus:outline-none focus:ring-1"
+                  className="h-10 flex-1 min-w-0 font-roobert border border-gray-300 dark:border-[#525252] px-3 bg-transparent focus:outline-none focus:ring-1 focus:ring-[#2563eb] focus:border-[#2563eb]"
                 />
                 <input
                   value={row.value} onChange={e => updateConfigRow(row.id, { value: e.target.value })}
                   placeholder="value" maxLength={2000}
-                  className="h-10 flex-[2] min-w-0 font-roobert border border-black dark:border-[#6b6b6b] px-3 bg-transparent focus:outline-none focus:ring-1"
+                  className="h-10 flex-[2] min-w-0 font-roobert border border-gray-300 dark:border-[#525252] px-3 bg-transparent focus:outline-none focus:ring-1 focus:ring-[#2563eb] focus:border-[#2563eb]"
                 />
                 <button
                   type="button" onClick={() => setConfigRows(current => current.filter(r => r.id !== row.id))}
@@ -205,7 +205,7 @@ export default function EnvironmentConfiguration() {
           </button>
         </section>
 
-        <section className="border border-gray-200 dark:border-[#333] p-5 grid gap-4">
+        <section className="border border-gray-300 dark:border-[#525252] p-5 grid gap-4">
           <div className="flex items-center gap-2 text-[15px] font-medium">
             <Lock className="w-4 h-4" /> Secure values
           </div>
@@ -218,14 +218,14 @@ export default function EnvironmentConfiguration() {
                 <input
                   value={row.key} onChange={e => updateSecretRow(row.id, { key: e.target.value })}
                   placeholder="KEY" maxLength={100} disabled={row.isSet}
-                  className="h-10 flex-1 min-w-0 font-roobert border border-black dark:border-[#6b6b6b] px-3 bg-transparent focus:outline-none focus:ring-1 disabled:opacity-60"
+                  className="h-10 flex-1 min-w-0 font-roobert border border-gray-300 dark:border-[#525252] px-3 bg-transparent focus:outline-none focus:ring-1 focus:ring-[#2563eb] focus:border-[#2563eb] disabled:opacity-60"
                 />
                 <div className="flex-[2] min-w-0 relative">
                   <input
                     type={row.revealed ? 'text' : 'password'}
                     value={row.value} onChange={e => updateSecretRow(row.id, { value: e.target.value })}
                     placeholder={row.isSet ? 'Set · leave blank to keep' : 'value'} maxLength={2000}
-                    className="h-10 w-full font-roobert border border-black dark:border-[#6b6b6b] pl-3 pr-9 bg-transparent focus:outline-none focus:ring-1"
+                    className="h-10 w-full font-roobert border border-gray-300 dark:border-[#525252] pl-3 pr-9 bg-transparent focus:outline-none focus:ring-1 focus:ring-[#2563eb] focus:border-[#2563eb]"
                   />
                   <button
                     type="button" onClick={() => updateSecretRow(row.id, { revealed: !row.revealed })}

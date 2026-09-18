@@ -55,7 +55,7 @@ export default function PasswordReset() {
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className={`h-10 w-full bg-transparent border ${errors.email ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-black dark:border-[#6b6b6b] focus:border-black dark:focus:border-[#f0f0f0] focus:ring-black dark:focus:ring-[#f0f0f0]'} text-black dark:text-[#f0f0f0] pl-10 pr-3 focus:outline-none focus:ring-1 transition-colors placeholder:text-gray-400 dark:placeholder:text-[#8f8f8f]`}
+                      className={`h-10 w-full bg-transparent border ${errors.email ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-[#525252] focus:border-[#2563eb] dark:focus:border-[#2563eb] focus:ring-[#2563eb] dark:focus:ring-[#2563eb]'} text-black dark:text-[#f0f0f0] pl-10 pr-3 focus:outline-none focus:ring-1 transition-colors placeholder:text-gray-400 dark:placeholder:text-[#8f8f8f]`}
                       placeholder="your@email.com"
                     />
                   </div>
@@ -76,7 +76,7 @@ export default function PasswordReset() {
               </div>
             </div>
           ) : (
-            <div className="space-y-4 border border-black dark:border-[#6b6b6b] p-6 lg:p-8 bg-white dark:bg-[#0a0a0a] transition-colors duration-300">
+            <div className="space-y-4 border border-gray-300 dark:border-[#525252] p-6 lg:p-8 bg-white dark:bg-[#0a0a0a] transition-colors duration-300">
               <p className="text-[17px] text-black dark:text-[#f0f0f0] transition-colors duration-300">
                 You will receive a password reset email soon.
               </p>

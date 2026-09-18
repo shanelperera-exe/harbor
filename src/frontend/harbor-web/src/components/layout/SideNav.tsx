@@ -67,8 +67,8 @@ export default function SideNav({
   const [project, setProject] = useState<Project | null>(null);
 
   useEffect(() => {
-    if (isProjectContext) {
-      getProject(projectId).then(setProject).catch(() => {});
+    if (projectId && !isNaN(projectId)) {
+      getProject(projectId).then(p => setProject(p || null)).catch(() => {});
     } else {
       setProject(null);
     }
@@ -89,7 +89,7 @@ export default function SideNav({
       {/* Sidebar navigation */}
       <nav className={`
         fixed top-14 left-0 z-[50] flex flex-col justify-between w-[260px] md:w-[294px] h-[calc(100vh-3.5rem)] 
-        bg-gray-50 dark:bg-[#141414] border-r border-gray-200 dark:border-[#4d4d4d] 
+        bg-gray-50 dark:bg-[#141414] border-r border-gray-300 dark:border-[#525252] 
         transition-transform duration-300 ease-in-out
         md:relative md:top-0 md:h-full md:translate-x-0
         ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}
@@ -101,14 +101,14 @@ export default function SideNav({
             <div className="flex flex-col space-y-2 mt-4 px-3 py-1">
               <Link 
                 to="/projects"
-                className="flex items-center space-x-2 py-1 text-[13px] text-[#b3b3b3] hover:text-[#f0f0f0] transition-colors outline-none focus:outline-none"
+                className="flex items-center space-x-2 py-1 text-[13px] text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors outline-none focus:outline-none"
               >
                 <svg fill="currentColor" aria-hidden="true" className="flex-shrink-0 ml-1 w-3 h-3" width="16" height="16" viewBox="0 0 16 16"><path d="M7 13L7.705 12.295L3.915 8.5H14V7.5H3.915L7.705 3.705L7 3L2 8L7 13Z"></path></svg>
                 <span>Projects</span>
               </Link>
               
-              <div className="flex items-center space-x-2 text-[#f0f0f0] px-1 py-3">
-                <svg fill="currentColor" aria-hidden="true" className="flex-shrink-0 w-5 h-5 text-[#f0f0f0]" width="16" height="16" viewBox="0 0 16 16"><path d="M10.65 2.45L8.4 1.1C8.25 1.05 8.15 1 8 1C7.85 1 7.75 1.05 7.65 1.1L5.4 2.45C5.15 2.6 5 2.85 5 3.1V5.9C5 6.15 5.15 6.4 5.35 6.55L7.6 7.9C7.7 7.95 7.85 8 7.95 8C8.05 8 8.2 7.95 8.3 7.9L10.55 6.55C10.75 6.4 10.9 6.2 10.9 5.9V3.1C11 2.85 10.85 2.6 10.65 2.45ZM10 5.75L8 6.95L6 5.75V3.25L8 2.05L10 3.25V5.75Z"></path><path d="M14.65 9.45L12.4 8.1C12.25 8.05 12.15 8 12 8C11.85 8 11.75 8.05 11.65 8.1L9.4 9.45C9.2 9.6 9.05 9.8 9.05 10.1V12.9C9.05 13.15 9.2 13.4 9.4 13.55L11.65 14.9C11.75 14.95 11.9 15 12 15C12.1 15 12.25 14.95 12.35 14.9L14.6 13.55C14.8 13.4 14.95 13.2 14.95 12.9V10.1C15 9.85 14.85 9.6 14.65 9.45ZM14 12.75L12 13.95L10 12.75V10.25L12 9.05L14 10.25V12.75Z"></path><path d="M6.65 9.45L4.4 8.1C4.25 8.05 4.15 8 4 8C3.85 8 3.75 8.05 3.65 8.1L1.4 9.45C1.15 9.6 1 9.85 1 10.1V12.9C1 13.15 1.15 13.4 1.35 13.55L3.6 14.9C3.75 14.95 3.85 15 4 15C4.15 15 4.25 14.95 4.35 14.9L6.6 13.55C6.8 13.4 6.95 13.2 6.95 12.9V10.1C7 9.85 6.85 9.6 6.65 9.45ZM6 12.75L4 13.95L2 12.75V10.25L4 9.05L6 10.25V12.75Z"></path></svg>
+              <div className="flex items-center space-x-2 text-black dark:text-[#f0f0f0] px-1 py-3">
+                <svg fill="currentColor" aria-hidden="true" className="flex-shrink-0 w-5 h-5 text-black dark:text-[#f0f0f0]" width="16" height="16" viewBox="0 0 16 16"><path d="M10.65 2.45L8.4 1.1C8.25 1.05 8.15 1 8 1C7.85 1 7.75 1.05 7.65 1.1L5.4 2.45C5.15 2.6 5 2.85 5 3.1V5.9C5 6.15 5.15 6.4 5.35 6.55L7.6 7.9C7.7 7.95 7.85 8 7.95 8C8.05 8 8.2 7.95 8.3 7.9L10.55 6.55C10.75 6.4 10.9 6.2 10.9 5.9V3.1C11 2.85 10.85 2.6 10.65 2.45ZM10 5.75L8 6.95L6 5.75V3.25L8 2.05L10 3.25V5.75Z"></path><path d="M14.65 9.45L12.4 8.1C12.25 8.05 12.15 8 12 8C11.85 8 11.75 8.05 11.65 8.1L9.4 9.45C9.2 9.6 9.05 9.8 9.05 10.1V12.9C9.05 13.15 9.2 13.4 9.4 13.55L11.65 14.9C11.75 14.95 11.9 15 12 15C12.1 15 12.25 14.95 12.35 14.9L14.6 13.55C14.8 13.4 14.95 13.2 14.95 12.9V10.1C15 9.85 14.85 9.6 14.65 9.45ZM14 12.75L12 13.95L10 12.75V10.25L12 9.05L14 10.25V12.75Z"></path><path d="M6.65 9.45L4.4 8.1C4.25 8.05 4.15 8 4 8C3.85 8 3.75 8.05 3.65 8.1L1.4 9.45C1.15 9.6 1 9.85 1 10.1V12.9C1 13.15 1.15 13.4 1.35 13.55L3.6 14.9C3.75 14.95 3.85 15 4 15C4.15 15 4.25 14.95 4.35 14.9L6.6 13.55C6.8 13.4 6.95 13.2 6.95 12.9V10.1C7 9.85 6.85 9.6 6.65 9.45ZM6 12.75L4 13.95L2 12.75V10.25L4 9.05L6 10.25V12.75Z"></path></svg>
                 <span className="font-medium truncate">{project ? project.name : 'Loading...'}</span>
               </div>
               
@@ -177,7 +177,7 @@ export default function SideNav({
           <div aria-hidden="true" className="pointer-events-none sticky bottom-0 left-0 w-full h-4 bg-gradient-to-t from-gray-50 dark:from-[#141414] to-transparent transition-colors duration-300"></div>
         </div>
 
-      <footer className="flex flex-col space-y-4 px-3 py-4 border-t border-gray-200 dark:border-[#4d4d4d] transition-colors duration-300">
+      <footer className="flex flex-col space-y-4 px-3 py-4 border-t border-gray-300 dark:border-[#525252] transition-colors duration-300">
         <div className="relative">
           <ul className="mb-4 pr-8">
             <NavItem label="Contact support" isButton isFooter icon={<IconSupport />} />

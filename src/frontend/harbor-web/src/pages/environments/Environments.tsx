@@ -38,7 +38,7 @@ export default function Environments() {
             <Link
               key={project.id}
               to={`/projects/${project.id}/environments`}
-              className="flex items-center justify-between p-5 border border-gray-200 dark:border-[#333] bg-white dark:bg-[#111111] hover:bg-gray-50 dark:hover:bg-[#151515] transition-colors"
+              className="flex items-center justify-between p-5 border border-gray-300 dark:border-[#525252] bg-white dark:bg-[#111111] hover:bg-gray-50 dark:hover:bg-[#151515] transition-colors"
             >
               <div className="min-w-0">
                 <p className="text-lg font-medium truncate" title={project.name}>{project.name}</p>

@@ -10,10 +10,13 @@ const NewServiceConfigure: React.FC = () => {
   const [name, setName] = useState(repo?.name || '');
   const [branch, setBranch] = useState(repo?.defaultBranch || 'main');
   const [rootDir, setRootDir] = useState('');
-  const [envVars, setEnvVars] = useState([{ key: '', value: '' }]);
+  const [buildCommand, setBuildCommand] = useState('npm run build');
+  const [publishDir, setPublishDir] = useState('dist');
+  const [startCommand, setStartCommand] = useState('npm start');
+  const [envVars, setEnvVars] = useState([{ key: '', value: '', isHidden: true }]);
+  const [envSecrets, setEnvSecrets] = useState([{ key: '', value: '', isHidden: true }]);
   const [isDeploying, setIsDeploying] = useState(false);
   const [error, setError] = useState('');
-  const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
   
   // Need to fetch current project name to display in the Project dropdown
   const [projectName, setProjectName] = useState('Loading...');
@@ -45,7 +48,7 @@ const NewServiceConfigure: React.FC = () => {
   }, [repo, navigate, projectId, serviceType]);
 
   const handleAddEnvVar = () => {
-    setEnvVars([...envVars, { key: '', value: '' }]);
+    setEnvVars([...envVars, { key: '', value: '', isHidden: true }]);
   };
   
   const handleEnvChange = (index: number, field: 'key' | 'value', val: string) => {
@@ -54,8 +57,34 @@ const NewServiceConfigure: React.FC = () => {
     setEnvVars(newVars);
   };
   
+  const handleToggleEnvVisibility = (index: number) => {
+    const newVars = [...envVars];
+    newVars[index].isHidden = !newVars[index].isHidden;
+    setEnvVars(newVars);
+  };
+  
   const handleRemoveEnvVar = (index: number) => {
     setEnvVars(envVars.filter((_, i) => i !== index));
+  };
+  
+  const handleAddEnvSecret = () => {
+    setEnvSecrets([...envSecrets, { key: '', value: '', isHidden: true }]);
+  };
+  
+  const handleEnvSecretChange = (index: number, field: 'key' | 'value', val: string) => {
+    const newSecrets = [...envSecrets];
+    newSecrets[index][field] = val;
+    setEnvSecrets(newSecrets);
+  };
+  
+  const handleToggleEnvSecretVisibility = (index: number) => {
+    const newSecrets = [...envSecrets];
+    newSecrets[index].isHidden = !newSecrets[index].isHidden;
+    setEnvSecrets(newSecrets);
+  };
+  
+  const handleRemoveEnvSecret = (index: number) => {
+    setEnvSecrets(envSecrets.filter((_, i) => i !== index));
   };
 
   const handleDeploy = async (e: React.FormEvent) => {
@@ -88,7 +117,12 @@ const NewServiceConfigure: React.FC = () => {
           repositoryUrl: repo.url,
           repositoryName: repo.fullName,
           repositoryBranch: branch.trim(),
-          // We could send envVars and rootDir here if backend supports it later
+          rootDir: rootDir.trim(),
+          buildCommand: buildCommand.trim(),
+          publishDir: serviceType === 'static' ? publishDir.trim() : undefined,
+          startCommand: serviceType === 'web' ? startCommand.trim() : undefined,
+          envVars: envVars.filter(env => env.key.trim() !== ''),
+          envSecrets: envSecrets.filter(sec => sec.key.trim() !== '')
         })
       });
 
@@ -125,7 +159,7 @@ const NewServiceConfigure: React.FC = () => {
             <div className="grid xl:grid-cols-3 xl:gap-y-0 xl:gap-x-10 grid-cols-1 md:grid-cols-3 gap-y-2 md:gap-y-0 mb-8">
               <div className="col-span-1">
                 <div className="flex items-center">
-                  <label className="inline-block text-gray-900 dark:text-[#f0f0f0] mb-1 text-[18px] font-semibold tracking-[0.16px] normal-case">Github Repository</label>
+                  <label className="inline-block text-gray-900 dark:text-[#f0f0f0] mb-1 text-[18px] font-semibold tracking-[0.16px] normal-case">GitHub Repository</label>
                 </div>
               </div>
               <div className="col-span-2 text-gray-600 dark:text-[#c7c7c7]">
@@ -133,7 +167,7 @@ const NewServiceConfigure: React.FC = () => {
                   <span className="inline-flex w-7">
                     <svg width="20" height="20" viewBox="0 0 24 23" fill="currentColor" xmlns="http://www.w3.org/2000/svg" className="flex-shrink-0 text-gray-900 dark:text-[#f0f0f0]" aria-label="GitHub"><path fillRule="evenodd" clipRule="evenodd" d="M12.0183 0.405518C5.73469 0.405518 0.655029 5.50047 0.655029 11.8036C0.655029 16.8421 3.90974 21.107 8.42489 22.6165C8.9894 22.73 9.19618 22.3712 9.19618 22.0695C9.19618 21.8052 9.17757 20.8995 9.17757 19.9558C6.01659 20.6352 5.35835 18.597 5.35835 18.597C4.85036 17.2761 4.09768 16.9365 4.09768 16.9365C3.06309 16.2383 4.17304 16.2383 4.17304 16.2383C5.32067 16.3138 5.92286 17.4083 5.92286 17.4083C6.9386 19.1443 8.57538 18.6538 9.23386 18.3518C9.32782 17.6158 9.62904 17.1063 9.94886 16.8233C7.42775 16.5591 4.77523 15.5778 4.77523 11.1996C4.77523 9.95415 5.22647 8.93516 5.94146 8.14266C5.82866 7.85966 5.43348 6.68944 6.05451 5.12321C6.05451 5.12321 7.01396 4.82122 9.17733 6.2932C10.1036 6.0437 11.0587 5.91677 12.0183 5.91571C12.9777 5.91571 13.9558 6.04794 14.8589 6.2932C17.0226 4.82122 17.982 5.12321 17.982 5.12321C18.603 6.68944 18.2076 7.85966 18.0948 8.14266C18.8287 8.93516 19.2613 9.95415 19.2613 11.1996C19.2613 15.5778 16.6088 16.5401 14.0688 16.8233C14.4828 17.1818 14.8401 17.861 14.8401 18.9368C14.8401 20.4653 14.8215 21.692 14.8215 22.0692C14.8215 22.3712 15.0285 22.73 15.5928 22.6167C20.1079 21.1068 23.3626 16.8421 23.3626 11.8036C23.3813 5.50047 18.283 0.405518 12.0183 0.405518Z"></path></svg>
                   </span>
-                  <a rel="noopener noreferrer" className="group inline-flex items-center cursor-pointer outline-none text-[#60a5fa] hover:text-[#93c5fd] text-[16px] no-underline p-0 transition-colors" target="_blank" href={repo.url}>
+                  <a rel="noopener noreferrer" className="group inline-flex items-center cursor-pointer outline-none text-gray-900 dark:text-white hover:text-[#2563eb] dark:hover:text-[#2563eb] text-[16px] no-underline p-0 transition-colors" target="_blank" href={repo.url}>
                     {repo.owner} <span className="text-[#b3b3b3] px-1">/</span> {repo.name}
                   </a>
                   <span className="hidden md:inline-block">
@@ -167,7 +201,7 @@ const NewServiceConfigure: React.FC = () => {
                   <div>
                     <div className="flex flex-col">
                       <div className="flex relative">
-                        <input id="serviceName" placeholder="example-service-name" className="h-12 truncate text-[16px] w-full m-0 py-2.5 px-3 bg-transparent placeholder-gray-400 dark:placeholder-[#8f8f8f] outline-none focus-visible:border-[#2563eb] focus-visible:ring-1 focus-visible:ring-[#2563eb] border border-solid border-gray-300 dark:border-[#6b6b6b] rounded-none appearance-none text-gray-900 dark:text-[#f0f0f0] hover:border-gray-400 dark:hover:border-[#b3b3b3] transition-colors" type="text" value={name} onChange={e => setName(e.target.value)} />
+                        <input id="serviceName" placeholder="example-service-name" className="h-12 truncate text-[16px] w-full m-0 py-2.5 px-3 bg-transparent placeholder-gray-400 dark:placeholder-[#8f8f8f] outline-none focus-visible:border-[#2563eb] border border-solid border-gray-300 dark:border-[#6b6b6b] rounded-none appearance-none text-gray-900 dark:text-[#f0f0f0] hover:border-gray-400 dark:hover:border-[#b3b3b3] transition-colors" type="text" value={name} onChange={e => setName(e.target.value)} />
                       </div>
                     </div>
                   </div>
@@ -180,7 +214,7 @@ const NewServiceConfigure: React.FC = () => {
                   <div className="flex items-center">
                     <legend className="inline-block text-gray-900 dark:text-[#f0f0f0] mb-1 text-[18px] font-semibold tracking-[0.16px] normal-case">
                       Project
-                      <span className="ml-2 text-[#2563eb] text-[16px] font-normal tracking-[0.16px] normal-case">Optional</span>
+                      <span className="ml-2 text-gray-500 dark:text-gray-400 text-[16px] font-normal tracking-[0.16px] normal-case">Optional</span>
                     </legend>
                   </div>
                   <p className="text-gray-600 dark:text-[#c7c7c7] text-[16px] leading-[24px] font-normal tracking-[0.16px] normal-case">
@@ -238,7 +272,7 @@ const NewServiceConfigure: React.FC = () => {
                     <div className="flex flex-col">
                       <div className="flex relative">
                         <svg fill="currentColor" aria-hidden="true" className="absolute inset-y-0 my-auto w-4 h-4 text-gray-400 dark:text-[#f0f0f0] pointer-events-none left-3" width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M13 9C12.5578 9.00128 12.1285 9.14923 11.7794 9.42069C11.4303 9.69214 11.1812 10.0717 11.071 10.5H8.99998C8.60229 10.4996 8.22102 10.3414 7.93981 10.0602C7.6586 9.77897 7.50042 9.3977 7.49998 9V7C7.49808 6.45731 7.3179 5.93028 6.98718 5.5H11.071C11.1927 5.97133 11.4821 6.3821 11.885 6.65531C12.2879 6.92851 12.7766 7.0454 13.2595 6.98406C13.7424 6.92273 14.1864 6.68737 14.5081 6.32212C14.8299 5.95687 15.0075 5.48679 15.0075 5C15.0075 4.51322 14.8299 4.04314 14.5081 3.67789C14.1864 3.31264 13.7424 3.07728 13.2595 3.01595C12.7766 2.95461 12.2879 3.0715 11.885 3.3447C11.4821 3.61791 11.1927 4.02868 11.071 4.5H4.92898C4.80729 4.02868 4.51787 3.61791 4.11498 3.3447C3.71209 3.0715 3.22339 2.95461 2.74048 3.01595C2.25758 3.07728 1.81362 3.31264 1.49182 3.67789C1.17003 4.04314 0.992493 4.51322 0.992493 5C0.992493 5.48679 1.17003 5.95687 1.49182 6.32212C1.81362 6.68737 2.25758 6.92273 2.74048 6.98406C3.22339 7.0454 3.71209 6.92851 4.11498 6.65531C4.51787 6.3821 4.80729 5.97133 4.92898 5.5H4.99998C5.39768 5.50044 5.77895 5.65862 6.06016 5.93983C6.34137 6.22104 6.49955 6.60231 6.49998 7V9C6.50076 9.66281 6.76441 10.2982 7.23308 10.7669C7.70175 11.2356 8.33718 11.4992 8.99998 11.5H11.071C11.1651 11.8614 11.3587 12.1891 11.6297 12.446C11.9007 12.7029 12.2383 12.8786 12.6042 12.9532C12.9701 13.0278 13.3496 12.9984 13.6996 12.8682C14.0496 12.7379 14.356 12.5122 14.5841 12.2165C14.8123 11.9209 14.9529 11.5672 14.9901 11.1956C15.0273 10.8241 14.9595 10.4495 14.7946 10.1145C14.6296 9.77954 14.374 9.49752 14.0567 9.30051C13.7395 9.1035 13.3734 8.99939 13 9ZM13 4C13.1978 4 13.3911 4.05865 13.5556 4.16854C13.72 4.27842 13.8482 4.4346 13.9239 4.61732C13.9996 4.80005 14.0194 5.00111 13.9808 5.1951C13.9422 5.38908 13.8469 5.56726 13.7071 5.70711C13.5672 5.84696 13.3891 5.9422 13.1951 5.98079C13.0011 6.01938 12.8 5.99957 12.6173 5.92388C12.4346 5.8482 12.2784 5.72002 12.1685 5.55557C12.0586 5.39113 12 5.19779 12 5C12.0003 4.73488 12.1057 4.4807 12.2932 4.29323C12.4807 4.10576 12.7349 4.00031 13 4ZM2.99998 6C2.8022 6 2.60886 5.94136 2.44441 5.83147C2.27996 5.72159 2.15179 5.56541 2.0761 5.38269C2.00042 5.19996 1.98061 4.9989 2.0192 4.80491C2.05778 4.61093 2.15302 4.43275 2.29288 4.2929C2.43273 4.15305 2.61091 4.0578 2.80489 4.01922C2.99887 3.98063 3.19994 4.00044 3.38267 4.07613C3.56539 4.15181 3.72157 4.27999 3.83145 4.44443C3.94134 4.60888 3.99998 4.80222 3.99998 5C3.99972 5.26514 3.89428 5.51934 3.7068 5.70682C3.51932 5.8943 3.26512 5.99974 2.99998 6ZM13 12C12.8022 12 12.6089 11.9414 12.4444 11.8315C12.28 11.7216 12.1518 11.5654 12.0761 11.3827C12.0004 11.2 11.9806 10.9989 12.0192 10.8049C12.0578 10.6109 12.153 10.4328 12.2929 10.2929C12.4327 10.153 12.6109 10.0578 12.8049 10.0192C12.9989 9.98063 13.1999 10.0004 13.3827 10.0761C13.5654 10.1518 13.7216 10.28 13.8315 10.4444C13.9413 10.6089 14 10.8022 14 11C13.9996 11.2651 13.8942 11.5193 13.7067 11.7067C13.5192 11.8942 13.2651 11.9996 13 12Z"></path></svg>
-                        <input id="branch" placeholder="Search" className="truncate text-[16px] w-full m-0 py-2.5 px-3 bg-transparent placeholder-gray-400 dark:placeholder-[#8f8f8f] outline-none focus-visible:border-[#2563eb] focus-visible:ring-1 focus-visible:ring-[#2563eb] border border-solid border-gray-300 dark:border-[#6b6b6b] rounded-none appearance-none text-gray-900 dark:text-[#f0f0f0] hover:border-gray-400 dark:hover:border-[#b3b3b3] pl-9 pr-12 h-12 transition-colors" type="text" value={branch} onChange={e => setBranch(e.target.value)} />
+                        <input id="branch" placeholder="Search" className="truncate text-[16px] w-full m-0 py-2.5 px-3 bg-transparent placeholder-gray-400 dark:placeholder-[#8f8f8f] outline-none focus-visible:border-[#2563eb] border border-solid border-gray-300 dark:border-[#6b6b6b] rounded-none appearance-none text-gray-900 dark:text-[#f0f0f0] hover:border-gray-400 dark:hover:border-[#b3b3b3] pl-9 pr-12 h-12 transition-colors" type="text" value={branch} onChange={e => setBranch(e.target.value)} />
                       </div>
                     </div>
                   </div>
@@ -251,7 +285,7 @@ const NewServiceConfigure: React.FC = () => {
                   <div className="flex items-center">
                     <label htmlFor="rootDir" className="inline-block text-gray-900 dark:text-[#f0f0f0] mb-1 text-[18px] font-semibold tracking-[0.16px] normal-case">
                       Root Directory
-                      <span className="ml-2 text-[#2563eb] text-[16px] font-normal tracking-[0.16px] normal-case">Optional</span>
+                      <span className="ml-2 text-gray-500 dark:text-gray-400 text-[16px] font-normal tracking-[0.16px] normal-case">Optional</span>
                     </label>
                   </div>
                   <div className="text-[#c7c7c7] text-[16px] leading-[24px] font-normal tracking-[0.16px] normal-case">
@@ -262,72 +296,171 @@ const NewServiceConfigure: React.FC = () => {
                   <div>
                     <div className="flex flex-col">
                       <div className="flex relative">
-                        <input id="rootDir" placeholder="e.g. src" className="h-12 truncate font-mono text-[16px] w-full m-0 py-2.5 px-3 bg-transparent placeholder-gray-400 dark:placeholder-[#8f8f8f] outline-none focus-visible:border-[#2563eb] focus-visible:ring-1 focus-visible:ring-[#2563eb] border border-solid border-gray-300 dark:border-[#6b6b6b] rounded-none appearance-none text-gray-900 dark:text-[#f0f0f0] hover:border-gray-400 dark:hover:border-[#b3b3b3] transition-colors" type="text" value={rootDir} onChange={e => setRootDir(e.target.value)} />
+                        <input id="rootDir" placeholder="e.g. src" className="h-12 truncate font-mono text-[16px] w-full m-0 py-2.5 px-3 bg-transparent placeholder-gray-400 dark:placeholder-[#8f8f8f] outline-none focus-visible:border-[#2563eb] border border-solid border-gray-300 dark:border-[#6b6b6b] rounded-none appearance-none text-gray-900 dark:text-[#f0f0f0] hover:border-gray-400 dark:hover:border-[#b3b3b3] transition-colors" type="text" value={rootDir} onChange={e => setRootDir(e.target.value)} />
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Environment Variables */}
-              <div>
-                <div id="environment-variables" className="p-6 md:p-8 bg-transparent border border-solid border-gray-300 dark:border-[#4d4d4d] scroll-mt-20">
-                  <div className="mb-8">
-                    <div className="flex justify-between">
-                      <div className="flex-1 small:pr-4">
-                        <div>
-                          <h4 className="text-gray-900 dark:text-white text-[20px] font-semibold">Environment Variables</h4>
-                        </div>
-                        <div className="text-[16px] leading-[24px] font-normal tracking-[0.16px] normal-case text-gray-600 dark:text-[#c7c7c7] mt-1 max-w-xl">
-                          Set environment-specific config and secrets (such as API keys), then read those values from your code.
+              {/* Build Command */}
+              <div className="grid grid-cols-1 xl:grid-cols-3 gap-y-4 xl:gap-y-0 xl:gap-x-10 mt-8">
+                <div className="col-span-1">
+                  <div className="flex items-center">
+                    <label htmlFor="buildCommand" className="inline-block text-gray-900 dark:text-[#f0f0f0] mb-1 text-[18px] font-semibold tracking-[0.16px] normal-case">
+                      Build Command
+                    </label>
+                  </div>
+                  <div className="text-gray-600 dark:text-[#c7c7c7] text-[16px] leading-[24px] font-normal tracking-[0.16px] normal-case">
+                    Harbor runs this command to build your app before each deploy.
+                  </div>
+                </div>
+                <div className="col-span-2 text-[#c7c7c7]">
+                  <div>
+                    <div className="flex flex-col">
+                      <div className="flex relative">
+                        <span className="absolute inset-y-0 left-3 flex items-center text-gray-500 dark:text-[#8f8f8f] text-[20px] font-mono select-none pointer-events-none">
+                          $
+                        </span>
+                        <input id="buildCommand" placeholder="npm run build" className="h-12 truncate font-mono text-[16px] w-full m-0 py-2.5 pl-8 pr-3 bg-transparent placeholder-gray-400 dark:placeholder-[#8f8f8f] outline-none focus-visible:border-[#2563eb] border border-solid border-gray-300 dark:border-[#6b6b6b] rounded-none appearance-none text-gray-900 dark:text-[#f0f0f0] hover:border-gray-400 dark:hover:border-[#b3b3b3] transition-colors" type="text" value={buildCommand} onChange={e => setBuildCommand(e.target.value)} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Conditionally Render Publish Directory or Start Command */}
+              {serviceType === 'static' ? (
+                <div className="grid grid-cols-1 xl:grid-cols-3 gap-y-4 xl:gap-y-0 xl:gap-x-10 mt-8">
+                  <div className="col-span-1">
+                    <div className="flex items-center">
+                      <label htmlFor="publishDir" className="inline-block text-gray-900 dark:text-[#f0f0f0] mb-1 text-[18px] font-semibold tracking-[0.16px] normal-case">
+                        Publish Directory
+                      </label>
+                    </div>
+                    <div className="text-gray-600 dark:text-[#c7c7c7] text-[16px] leading-[24px] font-normal tracking-[0.16px] normal-case">
+                      The relative path of the directory containing built assets to publish. Examples: <code className="px-1 py-0.5 font-mono text-[14px] bg-gray-200 dark:bg-[#141414] rounded">./</code>, <code className="px-1 py-0.5 font-mono text-[14px] bg-gray-200 dark:bg-[#141414] rounded">./build</code>, <code className="px-1 py-0.5 font-mono text-[14px] bg-gray-200 dark:bg-[#141414] rounded">dist</code>.
+                    </div>
+                  </div>
+                  <div className="col-span-2 text-[#c7c7c7]">
+                    <div>
+                      <div className="flex flex-col">
+                        <div className="flex relative">
+                          <input id="publishDir" placeholder="dist" className="h-12 truncate font-mono text-[16px] w-full m-0 py-2.5 px-3 bg-transparent placeholder-gray-400 dark:placeholder-[#8f8f8f] outline-none focus-visible:border-[#2563eb] border border-solid border-gray-300 dark:border-[#6b6b6b] rounded-none appearance-none text-gray-900 dark:text-[#f0f0f0] hover:border-gray-400 dark:hover:border-[#b3b3b3] transition-colors" type="text" value={publishDir} onChange={e => setPublishDir(e.target.value)} />
                         </div>
                       </div>
                     </div>
                   </div>
-                  <div className="text-[14px] text-gray-900 dark:text-[#f0f0f0]">
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 xl:grid-cols-3 gap-y-4 xl:gap-y-0 xl:gap-x-10 mt-8">
+                  <div className="col-span-1">
+                    <div className="flex items-center">
+                      <label htmlFor="startCommand" className="inline-block text-gray-900 dark:text-[#f0f0f0] mb-1 text-[18px] font-semibold tracking-[0.16px] normal-case">
+                        Start Command
+                      </label>
+                    </div>
+                    <div className="text-gray-600 dark:text-[#c7c7c7] text-[16px] leading-[24px] font-normal tracking-[0.16px] normal-case">
+                      Harbor runs this command to start your web service.
+                    </div>
+                  </div>
+                  <div className="col-span-2 text-[#c7c7c7]">
+                    <div>
+                      <div className="flex flex-col">
+                        <div className="flex relative">
+                          <span className="absolute inset-y-0 left-3 flex items-center text-gray-500 dark:text-[#8f8f8f] text-[20px] font-mono select-none pointer-events-none">
+                            $
+                          </span>
+                          <input id="startCommand" placeholder="npm start" className="h-12 truncate font-mono text-[16px] w-full m-0 py-2.5 pl-8 pr-3 bg-transparent placeholder-gray-400 dark:placeholder-[#8f8f8f] outline-none focus-visible:border-[#2563eb] border border-solid border-gray-300 dark:border-[#6b6b6b] rounded-none appearance-none text-gray-900 dark:text-[#f0f0f0] hover:border-gray-400 dark:hover:border-[#b3b3b3] transition-colors" type="text" value={startCommand} onChange={e => setStartCommand(e.target.value)} />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Environment Variables */}
+              <div>
+                <div id="environment-variables" className="p-6 md:p-8 bg-transparent dark:bg-[#0d0d0d] border border-solid border-gray-300 dark:border-[#4d4d4d] scroll-mt-20">
+                  <div className="mb-8">
+                    <div className="flex justify-between">
+                      <div className="flex-1 small:pr-4">
+                        <div className="">
+                          <h4 className="text-gray-900 dark:text-white text-[18px] font-semibold font-['Roobert',sans-serif]">Environment Variables</h4>
+                        </div>
+                        <div className="text-[16px] leading-[24px] text-gray-600 dark:text-[#c7c7c7] mt-1 max-w-xl font-['Neue_Montreal',sans-serif]">
+                          Set environment-specific config and secrets (such as API keys), then read those values from your code. 
+                          <a rel="noopener noreferrer" target="_blank" className="font-inherit text-[#2563eb] hover:text-[#1d4ed8] active:text-[#1e3a8a] hover:underline relative no-underline outline-none ml-1" href="https://render.com/docs/configure-environment-variables">Learn more.</a>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-[16px] leading-[24px] text-gray-900 dark:text-[#f0f0f0] font-['Neue_Montreal',sans-serif]">
                     <div className="col-span-2 mt-0">
                       {envVars.length > 0 && (
-                        <table className="w-full border border-solid border-gray-300 dark:border-[#4d4d4d] mb-5">
+                        <table className="w-full border border-solid border-gray-300 dark:border-[#4d4d4d]">
                           <thead className="border-b border-solid border-gray-300 dark:border-[#4d4d4d]">
                             <tr>
-                              <th scope="col" className="w-1/3 py-3 pl-7 pr-4 text-left uppercase text-[12px] font-mono text-gray-900 dark:text-[#f0f0f0]">Key</th>
-                              <th scope="col" className="py-3 pl-2 pr-4 text-left uppercase text-[12px] font-mono text-gray-900 dark:text-[#f0f0f0]">Value</th>
+                              <th scope="col" className="w-1/3 py-3 pl-7 pr-4 text-left font-mono text-[16px] uppercase text-gray-900 dark:text-[#f0f0f0]">Key</th>
+                              <th scope="col" className="py-3 pl-2 pr-4 text-left font-mono text-[16px] uppercase text-gray-900 dark:text-[#f0f0f0]">Value</th>
                               <th scope="col" className="w-px pr-4"><span className="sr-only">Delete</span></th>
                             </tr>
                           </thead>
                           <tbody>
                             {envVars.map((envVar, idx) => (
                               <tr key={idx}>
-                                <td className="w-1/3 p-4 pt-4 align-top">
+                                <td className="w-1/3 p-4 pt-0 align-top [tr:first-of-type_>_&]:pt-4">
                                   <div className="flex flex-col">
+                                    <label htmlFor={`env-key-${idx}`} className="inline-block text-[12px] font-medium text-[#f0f0f0] mb-2 sr-only">Key</label>
                                     <div className="flex relative">
-                                        <input 
-                                          placeholder="NAME_OF_VARIABLE" 
-                                          className="h-12 truncate font-mono text-[16px] w-full m-0 py-2.5 px-3 bg-transparent placeholder-gray-400 dark:placeholder-[#8f8f8f] outline-none focus-visible:border-[#2563eb] focus-visible:ring-1 focus-visible:ring-[#2563eb] border border-solid border-gray-300 dark:border-[#6b6b6b] rounded-none appearance-none text-gray-900 dark:text-[#f0f0f0] hover:border-gray-400 dark:hover:border-[#b3b3b3] transition-colors" 
-                                          type="text" 
-                                          value={envVar.key} 
+                                      <input 
+                                        placeholder="NAME_OF_VARIABLE" 
+                                        id={`env-key-${idx}`} 
+                                        className="h-10 truncate font-mono text-[16px] w-full m-0 py-2.5 px-3 bg-transparent placeholder-gray-400 dark:placeholder-[#8f8f8f] outline-none border border-solid rounded-none appearance-none text-gray-900 dark:text-[#f0f0f0] border-gray-300 dark:border-[#6b6b6b] focus:border-[#2563eb]" 
+                                        type="text" 
+                                        value={envVar.key} 
                                         onChange={(e) => handleEnvChange(idx, 'key', e.target.value)} 
                                       />
                                     </div>
                                   </div>
                                 </td>
-                                <td className="pb-4 pr-4 pt-4 align-top">
+                                <td className="pb-4 pr-4 align-top [tr:first-of-type_>_&]:pt-4">
                                   <div className="w-full flex items-start space-x-4 scroll-mt-16 scroll-mb-2">
                                     <div className="flex flex-col w-full">
+                                      <label htmlFor={`env-value-${idx}`} className="inline-block text-[12px] font-medium text-[#f0f0f0] mb-2 sr-only">Value</label>
                                       <div className="flex relative">
-                                        <textarea 
-                                          rows={1} 
+                                        <input 
+                                          type={envVar.isHidden ? "password" : "text"}
+                                          name={`envVars.${idx}.value`} 
                                           placeholder="value" 
-                                          className="font-mono text-[16px] w-full m-0 px-3 bg-transparent placeholder-gray-400 dark:placeholder-[#8f8f8f] outline-none focus-visible:border-[#2563eb] focus-visible:ring-1 focus-visible:ring-[#2563eb] border border-solid border-gray-300 dark:border-[#6b6b6b] rounded-none appearance-none text-gray-900 dark:text-[#f0f0f0] hover:border-gray-400 dark:hover:border-[#b3b3b3] min-h-12 py-3 transition-colors" 
+                                          dir="auto" 
+                                          autoComplete="off" 
+                                          spellCheck="false" 
+                                          id={`env-value-${idx}`} 
+                                          className="h-10 font-mono text-[16px] w-full m-0 px-3 bg-transparent placeholder-gray-400 dark:placeholder-[#8f8f8f] outline-none border border-solid rounded-none appearance-none text-gray-900 dark:text-[#f0f0f0] border-gray-300 dark:border-[#6b6b6b] focus:border-[#2563eb] min-h-10 py-2"
                                           value={envVar.value}
                                           onChange={(e) => handleEnvChange(idx, 'value', e.target.value)}
-                                        ></textarea>
+                                        />
                                       </div>
+                                    </div>
+                                    <div className="flex items-center space-x-2 justify-start">
+                                      <button type="button" aria-label="Toggle secret visibility" onClick={() => handleToggleEnvVisibility(idx)} className="text-[16px] text-gray-600 dark:text-[#e3e3e3] hover:bg-gray-100 dark:hover:bg-[#ffffff1a] hover:text-gray-900 dark:hover:text-[#f0f0f0] active:bg-gray-200 dark:active:bg-[#fff3] active:text-gray-900 dark:active:text-[#fff] h-10 py-2.5 px-3 outline-none flex items-center group/button transition-colors">
+                                        {envVar.isHidden ? (
+                                          <svg fill="currentColor" width="16" height="17" viewBox="0 0 16 17" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M2.61997 11.7667L3.33497 11.0567C2.55208 10.3538 1.93696 9.48406 1.53497 8.51172C2.54997 5.97672 5.34997 4.01172 7.99997 4.01172C8.68192 4.02072 9.35769 4.14236 9.99997 4.37172L10.775 3.59172C9.8963 3.22038 8.95382 3.02339 7.99997 3.01172C6.37023 3.07301 4.79416 3.6105 3.46657 4.55776C2.13898 5.50503 1.11805 6.82054 0.52997 8.34172C0.490254 8.45157 0.490254 8.57187 0.52997 8.68172C0.974094 9.86023 1.69018 10.9172 2.61997 11.7667Z"></path><path d="M5.99997 8.37672C6.03474 7.89758 6.24082 7.44696 6.58051 7.10726C6.92021 6.76756 7.37083 6.56149 7.84997 6.52672L8.75497 5.61672C8.24785 5.48319 7.71459 5.48493 7.20835 5.62175C6.70211 5.75857 6.24058 6.02571 5.86977 6.39652C5.49896 6.76733 5.23182 7.22886 5.095 7.7351C4.95818 8.24134 4.95644 8.7746 5.08997 9.28172L5.99997 8.37672Z"></path><path d="M15.47 8.34172C14.8966 6.84832 13.899 5.55523 12.6 4.62172L15 2.21672L14.295 1.51172L0.99997 14.8067L1.70497 15.5117L4.25497 12.9617C5.39191 13.6287 6.68199 13.9904 7.99997 14.0117C9.62971 13.9504 11.2058 13.4129 12.5334 12.4657C13.861 11.5184 14.8819 10.2029 15.47 8.68172C15.5097 8.57187 15.5097 8.45157 15.47 8.34172ZM9.99997 8.51172C9.99786 8.86177 9.90392 9.20514 9.72752 9.5075C9.55113 9.80987 9.29846 10.0606 8.99477 10.2347C8.69109 10.4089 8.34702 10.5002 7.99697 10.4997C7.64691 10.4992 7.30312 10.4068 6.99997 10.2317L9.71997 7.51172C9.89972 7.81458 9.99631 8.15955 9.99997 8.51172ZM7.99997 13.0117C6.951 12.9934 5.92192 12.7224 4.99997 12.2217L6.26997 10.9517C6.84764 11.3525 7.54774 11.5377 8.24804 11.475C8.94833 11.4122 9.60434 11.1054 10.1015 10.6083C10.5987 10.1111 10.9054 9.45508 10.9682 8.75478C11.031 8.05449 10.8458 7.35439 10.445 6.77672L11.88 5.34172C13.0273 6.12921 13.9244 7.22943 14.465 8.51172C13.45 11.0467 10.65 13.0117 7.99997 13.0117Z"></path>
+                                          </svg>
+                                        ) : (
+                                          <svg fill="currentColor" aria-hidden="true" width="16" height="17" viewBox="0 0 16 17" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M15.47 8.34172C14.8819 6.82054 13.861 5.50503 12.5334 4.55776C11.2058 3.6105 9.62971 3.07301 7.99997 3.01172C6.37023 3.07301 4.79416 3.6105 3.46657 4.55776C2.13898 5.50503 1.11805 6.82054 0.52997 8.34172C0.490254 8.45157 0.490254 8.57187 0.52997 8.68172C1.11805 10.2029 2.13898 11.5184 3.46657 12.4657C4.79416 13.4129 6.37023 13.9504 7.99997 14.0117C9.62971 13.9504 11.2058 13.4129 12.5334 12.4657C13.861 11.5184 14.8819 10.2029 15.47 8.68172C15.5097 8.57187 15.5097 8.45157 15.47 8.34172ZM7.99997 13.0117C5.34997 13.0117 2.54997 11.0467 1.53497 8.51172C2.54997 5.97672 5.34997 4.01172 7.99997 4.01172C10.65 4.01172 13.45 5.97672 14.465 8.51172C13.45 11.0467 10.65 13.0117 7.99997 13.0117Z"></path>
+                                            <path d="M7.99997 5.51172C7.40663 5.51172 6.82661 5.68767 6.33326 6.01731C5.83991 6.34695 5.45539 6.81549 5.22833 7.36367C5.00127 7.91185 4.94186 8.51505 5.05761 9.09699C5.17337 9.67893 5.45909 10.2135 5.87865 10.633C6.29821 11.0526 6.83276 11.3383 7.4147 11.4541C7.99664 11.5698 8.59984 11.5104 9.14802 11.2834C9.6962 11.0563 10.1647 10.6718 10.4944 10.1784C10.824 9.68508 11 9.10506 11 8.51172C11 7.71607 10.6839 6.95301 10.1213 6.3904C9.55868 5.82779 8.79562 5.51172 7.99997 5.51172ZM7.99997 10.5117C7.60441 10.5117 7.21773 10.3944 6.88883 10.1747C6.55993 9.9549 6.30359 9.64254 6.15221 9.27709C6.00084 8.91163 5.96123 8.5095 6.0384 8.12154C6.11557 7.73358 6.30605 7.37721 6.58576 7.09751C6.86546 6.8178 7.22183 6.62732 7.60979 6.55015C7.99775 6.47298 8.39988 6.51258 8.76534 6.66396C9.13079 6.81533 9.44315 7.07168 9.66291 7.40058C9.88267 7.72948 9.99997 8.11616 9.99997 8.51172C9.99997 9.04215 9.78926 9.55086 9.41418 9.92593C9.03911 10.301 8.5304 10.5117 7.99997 10.5117Z"></path>
+                                          </svg>
+                                        )}
+                                      </button>
                                     </div>
                                   </div>
                                 </td>
-                                <td className="w-px pb-4 pr-4 pt-4 align-top">
-                                  <button onClick={() => handleRemoveEnvVar(idx)} type="button" aria-label="Delete" className="text-red-500 dark:text-[#f0989e] hover:text-white hover:bg-red-600 h-12 py-3 px-3 outline-none flex items-center transition-colors">
+                                <td className="w-px pb-4 pr-4 align-top [tr:first-of-type_>_&]:pt-4">
+                                  <button onClick={() => handleRemoveEnvVar(idx)} type="button" aria-label="Delete" className="text-[16px] bg-transparent text-red-500 dark:text-[#f0989e] hover:bg-red-600 hover:text-white dark:hover:bg-[#f4b3b7] dark:hover:text-[#000] active:bg-red-700 dark:active:bg-[#fad1d3] h-10 py-2.5 px-3 outline-none flex items-center group/button transition-colors">
                                     <svg fill="currentColor" width="16" height="17" viewBox="0 0 16 17" xmlns="http://www.w3.org/2000/svg"><path d="M7 6.66699H6V12.667H7V6.66699Z"></path><path d="M10 6.66699H9V12.667H10V6.66699Z"></path><path d="M2 3.66699V4.66699H3V14.667C3 14.9322 3.10536 15.1866 3.29289 15.3741C3.48043 15.5616 3.73478 15.667 4 15.667H12C12.2652 15.667 12.5196 15.5616 12.7071 15.3741C12.8946 15.1866 13 14.9322 13 14.667V4.66699H14V3.66699H2ZM4 14.667V4.66699H12V14.667H4Z"></path><path d="M10 1.66699H6V2.66699H10V1.66699Z"></path></svg>
                                   </button>
                                 </td>
@@ -338,11 +471,11 @@ const NewServiceConfigure: React.FC = () => {
                       )}
                       
                       <div className="flex-wrap mt-5 flex gap-3">
-                        <button type="button" onClick={handleAddEnvVar} className="text-[14px] text-gray-700 dark:text-[#e3e3e3] hover:text-[#2563eb] hover:border-[#2563eb] border border-solid border-gray-300 dark:border-[#4d4d4d] h-10 py-2.5 px-3 flex items-center transition-colors outline-none focus-visible:border-[#2563eb] focus-visible:ring-1 focus-visible:ring-[#2563eb] bg-transparent">
-                          <div className="inline-flex w-4 h-4 me-1.5">
-                            <svg fill="currentColor" width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M8.5 7.5V4H7.5V7.5H4V8.5H7.5V12H8.5V8.5H12V7.5H8.5Z"></path></svg>
-                          </div>
-                          Add Environment Variable
+                        <button type="button" onClick={handleAddEnvVar} className="text-[16px] text-gray-700 dark:text-[#e3e3e3] hover:bg-gray-50 dark:hover:bg-[#ffffffe6] hover:text-gray-900 dark:hover:text-[#141414] active:bg-gray-100 dark:active:bg-[#fff] border border-solid border-gray-300 dark:border-[#fff6] h-10 py-2.5 px-3 outline-none flex items-center group/button transition-colors">
+                          <div className="inline-flex w-4 h-4 me-1.5"><svg fill="currentColor" width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M8.5 7.5V4H7.5V7.5H4V8.5H7.5V12H8.5V8.5H12V7.5H8.5Z"></path></svg></div>Add Environment Variable
+                        </button>
+                        <button type="button" className="text-[16px] text-gray-700 dark:text-[#e3e3e3] hover:bg-gray-50 dark:hover:bg-[#ffffffe6] hover:text-gray-900 dark:hover:text-[#141414] active:bg-gray-100 dark:active:bg-[#fff] border border-solid border-gray-300 dark:border-[#fff6] h-10 py-2.5 px-3 outline-none flex items-center group/button transition-colors">
+                          <div className="inline-flex w-4 h-4 me-1.5"><svg fill="currentColor" width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M12.85 4.65L9.35 1.15C9.25 1.05 9.15 1 9 1H4C3.45 1 3 1.45 3 2V14C3 14.55 3.45 15 4 15H12C12.55 15 13 14.55 13 14V5C13 4.85 12.95 4.75 12.85 4.65ZM9 2.2L11.8 5H9V2.2ZM12 14H4V2H8V5C8 5.55 8.45 6 9 6H12V14Z"></path><path d="M11 11H5V12H11V11Z"></path><path d="M11 8H5V9H11V8Z"></path></svg></div>Add from .env
                         </button>
                       </div>
                     </div>
@@ -350,38 +483,111 @@ const NewServiceConfigure: React.FC = () => {
                 </div>
               </div>
 
-              {/* Advanced Accordion */}
-              <ul className="space-y-1 mt-8">
-                <li className="border border-solid border-gray-300 dark:border-[#4d4d4d]">
-                  <div className="flex items-center justify-between">
-                    <button onClick={() => setIsAdvancedOpen(!isAdvancedOpen)} type="button" className="w-full flex items-center text-[20px] font-semibold space-x-2 text-left p-4 text-gray-900 dark:text-[#e3e3e3] hover:text-gray-900 dark:hover:text-[#f0f0f0] bg-transparent hover:bg-gray-100 dark:hover:bg-[#ffffff1a] outline-none transition-colors">
-                      <svg fill="currentColor" aria-hidden="true" className={`flex-shrink-0 w-6 h-6 transition-transform ${isAdvancedOpen ? '' : '-rotate-90'}`} width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M8 10.9998L3 5.9998L3.7 5.2998L8 9.5998L12.3 5.2998L13 5.9998L8 10.9998Z"></path></svg>
-                      <span>Advanced</span>
-                    </button>
-                  </div>
-                  {isAdvancedOpen && (
-                    <div className="p-6 md:p-8 bg-transparent border-t border-solid border-gray-300 dark:border-[#4d4d4d]">
-                      <div className="grid grid-cols-1 xl:grid-cols-3 gap-y-4 xl:gap-y-0 xl:gap-x-10">
-                        <div className="col-span-1">
-                          <div className="inline-block text-[18px] font-semibold tracking-[0.16px] text-gray-900 dark:text-[#f0f0f0] mb-2">Secret Files</div>
-                          <div className="space-y-2 text-[16px] leading-[24px] font-normal tracking-[0.16px] text-gray-600 dark:text-[#c7c7c7]">
-                            <div>Store plaintext files containing secret data (such as a <code className="px-1 py-0.5 font-mono text-[14px] bg-gray-200 dark:bg-[#141414] rounded">.env</code> file or a private key).</div>
-                            <div>Access during builds and at runtime from your app's root, or from <code className="px-1 py-0.5 font-mono text-[14px] bg-gray-200 dark:bg-[#141414] rounded">/etc/secrets/&lt;filename&gt;</code>.</div>
-                          </div>
+              {/* Environment Secrets */}
+              <div>
+                <div id="environment-secrets" className="p-6 md:p-8 bg-transparent dark:bg-[#0d0d0d] border border-solid border-gray-300 dark:border-[#4d4d4d] mt-8 scroll-mt-20">
+                  <div className="mb-8">
+                    <div className="flex justify-between">
+                      <div className="flex-1 small:pr-4">
+                        <div className="">
+                          <h4 className="text-gray-900 dark:text-white text-[18px] font-semibold font-['Roobert',sans-serif]">Environment Secrets</h4>
                         </div>
-                        <div className="col-span-2 mt-0">
-                          <button type="button" className="text-[14px] text-gray-700 dark:text-[#e3e3e3] hover:text-[#2563eb] hover:border-[#2563eb] border border-solid border-gray-300 dark:border-[#4d4d4d] h-10 py-2.5 px-3 flex items-center transition-colors outline-none focus-visible:border-[#2563eb] focus-visible:ring-1 focus-visible:ring-[#2563eb] bg-transparent">
-                            <div className="inline-flex w-4 h-4 me-1.5">
-                              <svg fill="currentColor" width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M8.5 7.5V4H7.5V7.5H4V8.5H7.5V12H8.5V8.5H12V7.5H8.5Z"></path></svg>
-                            </div>
-                            Add Secret File
-                          </button>
+                        <div className="text-[16px] leading-[24px] text-gray-600 dark:text-[#c7c7c7] mt-1 max-w-xl font-['Neue_Montreal',sans-serif]">
+                          Set sensitive environment variables (such as passwords, tokens, or private keys) securely. These values are encrypted and injected into your app during builds and at runtime.
                         </div>
                       </div>
                     </div>
-                  )}
-                </li>
-              </ul>
+                  </div>
+                  <div className="text-[16px] leading-[24px] text-gray-900 dark:text-[#f0f0f0] font-['Neue_Montreal',sans-serif]">
+                    <div className="col-span-2 mt-0">
+                      {envSecrets.length > 0 && (
+                        <table className="w-full border border-solid border-gray-300 dark:border-[#4d4d4d]">
+                          <thead className="border-b border-solid border-gray-300 dark:border-[#4d4d4d]">
+                            <tr>
+                              <th scope="col" className="w-1/3 py-3 pl-7 pr-4 text-left font-mono text-[16px] uppercase text-gray-900 dark:text-[#f0f0f0]">Key</th>
+                              <th scope="col" className="py-3 pl-2 pr-4 text-left font-mono text-[16px] uppercase text-gray-900 dark:text-[#f0f0f0]">Value</th>
+                              <th scope="col" className="w-px pr-4"><span className="sr-only">Delete</span></th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {envSecrets.map((envSecret, idx) => (
+                              <tr key={idx}>
+                                <td className="w-1/3 p-4 pt-0 align-top [tr:first-of-type_>_&]:pt-4">
+                                  <div className="flex flex-col">
+                                    <label htmlFor={`env-secret-key-${idx}`} className="inline-block text-[12px] font-medium text-[#f0f0f0] mb-2 sr-only">Key</label>
+                                    <div className="flex relative">
+                                      <input 
+                                        placeholder="NAME_OF_SECRET" 
+                                        id={`env-secret-key-${idx}`} 
+                                        className="h-10 truncate font-mono text-[16px] w-full m-0 py-2.5 px-3 bg-transparent placeholder-gray-400 dark:placeholder-[#8f8f8f] outline-none border border-solid rounded-none appearance-none text-gray-900 dark:text-[#f0f0f0] border-gray-300 dark:border-[#6b6b6b] focus:border-[#2563eb]" 
+                                        type="text" 
+                                        value={envSecret.key} 
+                                        onChange={(e) => handleEnvSecretChange(idx, 'key', e.target.value)} 
+                                      />
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="pb-4 pr-4 align-top [tr:first-of-type_>_&]:pt-4">
+                                  <div className="w-full flex items-start space-x-4 scroll-mt-16 scroll-mb-2">
+                                    <div className="flex flex-col w-full">
+                                      <label htmlFor={`env-secret-value-${idx}`} className="inline-block text-[12px] font-medium text-[#f0f0f0] mb-2 sr-only">Value</label>
+                                      <div className="flex relative">
+                                        <input 
+                                          type={envSecret.isHidden ? "password" : "text"}
+                                          name={`envSecrets.${idx}.value`} 
+                                          placeholder="value" 
+                                          dir="auto" 
+                                          autoComplete="off" 
+                                          spellCheck="false" 
+                                          id={`env-secret-value-${idx}`} 
+                                          className="h-10 font-mono text-[16px] w-full m-0 px-3 bg-transparent placeholder-gray-400 dark:placeholder-[#8f8f8f] outline-none border border-solid rounded-none appearance-none text-gray-900 dark:text-[#f0f0f0] border-gray-300 dark:border-[#6b6b6b] focus:border-[#2563eb] min-h-10 py-2"
+                                          value={envSecret.value}
+                                          onChange={(e) => handleEnvSecretChange(idx, 'value', e.target.value)}
+                                        />
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center space-x-2 justify-start">
+                                      <button type="button" aria-label="Toggle secret visibility" onClick={() => handleToggleEnvSecretVisibility(idx)} className="text-[16px] text-gray-600 dark:text-[#e3e3e3] hover:bg-gray-100 dark:hover:bg-[#ffffff1a] hover:text-gray-900 dark:hover:text-[#f0f0f0] active:bg-gray-200 dark:active:bg-[#fff3] active:text-gray-900 dark:active:text-[#fff] h-10 py-2.5 px-3 outline-none flex items-center group/button transition-colors">
+                                        {envSecret.isHidden ? (
+                                          <svg fill="currentColor" width="16" height="17" viewBox="0 0 16 17" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M2.61997 11.7667L3.33497 11.0567C2.55208 10.3538 1.93696 9.48406 1.53497 8.51172C2.54997 5.97672 5.34997 4.01172 7.99997 4.01172C8.68192 4.02072 9.35769 4.14236 9.99997 4.37172L10.775 3.59172C9.8963 3.22038 8.95382 3.02339 7.99997 3.01172C6.37023 3.07301 4.79416 3.6105 3.46657 4.55776C2.13898 5.50503 1.11805 6.82054 0.52997 8.34172C0.490254 8.45157 0.490254 8.57187 0.52997 8.68172C0.974094 9.86023 1.69018 10.9172 2.61997 11.7667Z"></path><path d="M5.99997 8.37672C6.03474 7.89758 6.24082 7.44696 6.58051 7.10726C6.92021 6.76756 7.37083 6.56149 7.84997 6.52672L8.75497 5.61672C8.24785 5.48319 7.71459 5.48493 7.20835 5.62175C6.70211 5.75857 6.24058 6.02571 5.86977 6.39652C5.49896 6.76733 5.23182 7.22886 5.095 7.7351C4.95818 8.24134 4.95644 8.7746 5.08997 9.28172L5.99997 8.37672Z"></path><path d="M15.47 8.34172C14.8966 6.84832 13.899 5.55523 12.6 4.62172L15 2.21672L14.295 1.51172L0.99997 14.8067L1.70497 15.5117L4.25497 12.9617C5.39191 13.6287 6.68199 13.9904 7.99997 14.0117C9.62971 13.9504 11.2058 13.4129 12.5334 12.4657C13.861 11.5184 14.8819 10.2029 15.47 8.68172C15.5097 8.57187 15.5097 8.45157 15.47 8.34172ZM9.99997 8.51172C9.99786 8.86177 9.90392 9.20514 9.72752 9.5075C9.55113 9.80987 9.29846 10.0606 8.99477 10.2347C8.69109 10.4089 8.34702 10.5002 7.99697 10.4997C7.64691 10.4992 7.30312 10.4068 6.99997 10.2317L9.71997 7.51172C9.89972 7.81458 9.99631 8.15955 9.99997 8.51172ZM7.99997 13.0117C6.951 12.9934 5.92192 12.7224 4.99997 12.2217L6.26997 10.9517C6.84764 11.3525 7.54774 11.5377 8.24804 11.475C8.94833 11.4122 9.60434 11.1054 10.1015 10.6083C10.5987 10.1111 10.9054 9.45508 10.9682 8.75478C11.031 8.05449 10.8458 7.35439 10.445 6.77672L11.88 5.34172C13.0273 6.12921 13.9244 7.22943 14.465 8.51172C13.45 11.0467 10.65 13.0117 7.99997 13.0117Z"></path>
+                                          </svg>
+                                        ) : (
+                                          <svg fill="currentColor" aria-hidden="true" width="16" height="17" viewBox="0 0 16 17" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M15.47 8.34172C14.8819 6.82054 13.861 5.50503 12.5334 4.55776C11.2058 3.6105 9.62971 3.07301 7.99997 3.01172C6.37023 3.07301 4.79416 3.6105 3.46657 4.55776C2.13898 5.50503 1.11805 6.82054 0.52997 8.34172C0.490254 8.45157 0.490254 8.57187 0.52997 8.68172C1.11805 10.2029 2.13898 11.5184 3.46657 12.4657C4.79416 13.4129 6.37023 13.9504 7.99997 14.0117C9.62971 13.9504 11.2058 13.4129 12.5334 12.4657C13.861 11.5184 14.8819 10.2029 15.47 8.68172C15.5097 8.57187 15.5097 8.45157 15.47 8.34172ZM7.99997 13.0117C5.34997 13.0117 2.54997 11.0467 1.53497 8.51172C2.54997 5.97672 5.34997 4.01172 7.99997 4.01172C10.65 4.01172 13.45 5.97672 14.465 8.51172C13.45 11.0467 10.65 13.0117 7.99997 13.0117Z"></path>
+                                            <path d="M7.99997 5.51172C7.40663 5.51172 6.82661 5.68767 6.33326 6.01731C5.83991 6.34695 5.45539 6.81549 5.22833 7.36367C5.00127 7.91185 4.94186 8.51505 5.05761 9.09699C5.17337 9.67893 5.45909 10.2135 5.87865 10.633C6.29821 11.0526 6.83276 11.3383 7.4147 11.4541C7.99664 11.5698 8.59984 11.5104 9.14802 11.2834C9.6962 11.0563 10.1647 10.6718 10.4944 10.1784C10.824 9.68508 11 9.10506 11 8.51172C11 7.71607 10.6839 6.95301 10.1213 6.3904C9.55868 5.82779 8.79562 5.51172 7.99997 5.51172ZM7.99997 10.5117C7.60441 10.5117 7.21773 10.3944 6.88883 10.1747C6.55993 9.9549 6.30359 9.64254 6.15221 9.27709C6.00084 8.91163 5.96123 8.5095 6.0384 8.12154C6.11557 7.73358 6.30605 7.37721 6.58576 7.09751C6.86546 6.8178 7.22183 6.62732 7.60979 6.55015C7.99775 6.47298 8.39988 6.51258 8.76534 6.66396C9.13079 6.81533 9.44315 7.07168 9.66291 7.40058C9.88267 7.72948 9.99997 8.11616 9.99997 8.51172C9.99997 9.04215 9.78926 9.55086 9.41418 9.92593C9.03911 10.301 8.5304 10.5117 7.99997 10.5117Z"></path>
+                                          </svg>
+                                        )}
+                                      </button>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="w-px pb-4 pr-4 align-top [tr:first-of-type_>_&]:pt-4">
+                                  <button onClick={() => handleRemoveEnvSecret(idx)} type="button" aria-label="Delete" className="text-[16px] bg-transparent text-red-500 dark:text-[#f0989e] hover:bg-red-600 hover:text-white dark:hover:bg-[#f4b3b7] dark:hover:text-[#000] active:bg-red-700 dark:active:bg-[#fad1d3] h-10 py-2.5 px-3 outline-none flex items-center group/button transition-colors">
+                                    <svg fill="currentColor" width="16" height="17" viewBox="0 0 16 17" xmlns="http://www.w3.org/2000/svg"><path d="M7 6.66699H6V12.667H7V6.66699Z"></path><path d="M10 6.66699H9V12.667H10V6.66699Z"></path><path d="M2 3.66699V4.66699H3V14.667C3 14.9322 3.10536 15.1866 3.29289 15.3741C3.48043 15.5616 3.73478 15.667 4 15.667H12C12.2652 15.667 12.5196 15.5616 12.7071 15.3741C12.8946 15.1866 13 14.9322 13 14.667V4.66699H14V3.66699H2ZM4 14.667V4.66699H12V14.667H4Z"></path><path d="M10 1.66699H6V2.66699H10V1.66699Z"></path></svg>
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      )}
+                      
+                      <div className="flex-wrap mt-5 flex gap-3">
+                        <button type="button" onClick={handleAddEnvSecret} className="text-[16px] text-gray-700 dark:text-[#e3e3e3] hover:bg-gray-50 dark:hover:bg-[#ffffffe6] hover:text-gray-900 dark:hover:text-[#141414] active:bg-gray-100 dark:active:bg-[#fff] border border-solid border-gray-300 dark:border-[#fff6] h-10 py-2.5 px-3 outline-none flex items-center group/button transition-colors">
+                          <div className="inline-flex w-4 h-4 me-1.5"><svg fill="currentColor" width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M8.5 7.5V4H7.5V7.5H4V8.5H7.5V12H8.5V8.5H12V7.5H8.5Z"></path></svg></div>Add Secret
+                        </button>
+                        <button type="button" className="text-[16px] text-gray-700 dark:text-[#e3e3e3] hover:bg-gray-50 dark:hover:bg-[#ffffffe6] hover:text-gray-900 dark:hover:text-[#141414] active:bg-gray-100 dark:active:bg-[#fff] border border-solid border-gray-300 dark:border-[#fff6] h-10 py-2.5 px-3 outline-none flex items-center group/button transition-colors">
+                          <div className="inline-flex w-4 h-4 me-1.5">
+                            <svg fill="currentColor" width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M8.5 7.5V4H7.5V7.5H4V8.5H7.5V12H8.5V8.5H12V7.5H8.5Z"></path></svg>
+                          </div>
+                          Add Secret File
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
               {error && (
                 <div className="text-red-500 text-[14px]">{error}</div>

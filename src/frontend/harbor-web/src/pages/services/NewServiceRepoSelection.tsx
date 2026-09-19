@@ -6,6 +6,7 @@ const NewServiceRepoSelection: React.FC = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'git' | 'public'>('git');
   const [searchQuery, setSearchQuery] = useState('');
+  const [publicRepoUrl, setPublicRepoUrl] = useState('');
   const [isCredentialsOpen, setIsCredentialsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -48,6 +49,7 @@ const NewServiceRepoSelection: React.FC = () => {
           fullName: r.fullName,
           url: r.htmlUrl,
           defaultBranch: r.defaultBranch,
+          isPrivate: r.private !== undefined ? r.private : r.Private,
           time: r.updatedAt ? new Date(r.updatedAt).toLocaleDateString() : ''
         }));
         setRepos(formatted);
@@ -67,6 +69,40 @@ const NewServiceRepoSelection: React.FC = () => {
     navigate(`/projects/${projectId}/services/new/${serviceType}/configure`, { state: { repo } });
   };
 
+  const handlePublicRepoConnect = () => {
+    if (!publicRepoUrl.trim()) return;
+    
+    let url = publicRepoUrl.trim();
+    if (url.endsWith('/')) {
+      url = url.slice(0, -1);
+    }
+    
+    let owner = 'public';
+    let name = 'repository';
+    try {
+      const urlObj = new URL(url.startsWith('http') ? url : `https://${url}`);
+      const parts = urlObj.pathname.split('/').filter(Boolean);
+      if (parts.length >= 2) {
+        owner = parts[0];
+        name = parts[1];
+      }
+    } catch (e) {
+      // simple fallback
+    }
+    
+    const repo = {
+      id: `public-${Date.now()}`,
+      owner,
+      name,
+      fullName: `${owner}/${name}`,
+      url,
+      defaultBranch: 'main',
+      time: 'Just now'
+    };
+    
+    handleRepoSelect(repo);
+  };
+
   const filteredRepos = repos.filter(repo => repo.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
   const serviceTitle = serviceType === 'static' ? 'Static Site' : 'Web Service';
@@ -82,7 +118,7 @@ const NewServiceRepoSelection: React.FC = () => {
       <div className="grid xl:grid-cols-3 xl:gap-y-0 xl:gap-x-10 grid-cols-1 md:grid-cols-3 gap-y-2 md:gap-y-0">
         <div className="col-span-1">
           <div className="flex items-center">
-            <label className="inline-block text-[18px] font-medium mb-1">Source Code</label>
+            <label className="inline-block text-[18px] font-medium mb-1">GitHub Repository</label>
           </div>
         </div>
         
@@ -92,7 +128,7 @@ const NewServiceRepoSelection: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setActiveTab('git')}
-                className={`flex items-center gap-2 py-3 h-12 px-4 border border-solid -ml-px text-[16px] font-medium transition-colors ${
+                className={`flex items-center gap-2 py-3 h-12 px-4 border border-solid -ml-px text-[16px] font-medium transition-colors outline-none ${
                   activeTab === 'git'
                     ? 'border-[#2563eb] bg-[#2563eb] text-white z-[2]'
                     : 'border-gray-300 dark:border-[#4d4d4d] text-gray-600 dark:text-[#c7c7c7] hover:bg-gray-100 dark:hover:bg-[#ffffff1a] hover:text-gray-900 dark:hover:text-white z-[1]'
@@ -105,7 +141,7 @@ const NewServiceRepoSelection: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setActiveTab('public')}
-                className={`flex items-center gap-2 py-3 h-12 px-4 border border-solid -ml-px text-[16px] font-medium transition-colors ${
+                className={`flex items-center gap-2 py-3 h-12 px-4 border border-solid -ml-px text-[16px] font-medium transition-colors outline-none ${
                   activeTab === 'public'
                     ? 'border-[#2563eb] bg-[#2563eb] text-white z-[2]'
                     : 'border-gray-300 dark:border-[#4d4d4d] text-gray-600 dark:text-[#c7c7c7] hover:bg-gray-100 dark:hover:bg-[#ffffff1a] hover:text-gray-900 dark:hover:text-white z-[1]'
@@ -136,7 +172,7 @@ const NewServiceRepoSelection: React.FC = () => {
                   <div className="relative" ref={dropdownRef}>
                     <button 
                       onClick={() => setIsCredentialsOpen(!isCredentialsOpen)}
-                      className="h-12 py-3 px-4 flex items-center border border-gray-300 dark:border-[#4d4d4d] hover:bg-gray-100 dark:hover:bg-[#ffffff1a] transition-colors text-[16px]">
+                      className="h-12 py-3 px-4 flex items-center border border-gray-300 dark:border-[#4d4d4d] hover:bg-gray-100 dark:hover:bg-[#ffffff1a] transition-colors text-[16px] outline-none">
                       <span className="flex items-center space-x-1 mr-2">
                         <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.285 0 .315.21.69.825.57C20.565 21.795 24 17.31 24 12c0-6.63-5.37-12-12-12z"/></svg>
                       </span>
@@ -148,7 +184,7 @@ const NewServiceRepoSelection: React.FC = () => {
                       <div className="absolute right-0 top-full mt-1 w-[300px] bg-white dark:bg-[#0d0d0d] border border-gray-300 dark:border-[#4d4d4d] shadow-lg z-10 flex flex-col font-sans text-[16px]">
                         <div className="p-4 h-[92px] flex flex-col justify-center">
                           <h6 className="text-[14px] text-gray-500 dark:text-[#b3b3b3] uppercase mb-2" style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace' }}>Connected deployment credentials</h6>
-                          <button className="w-full flex items-center justify-between px-[12px] py-[8px] bg-gray-100 dark:bg-[#272727] hover:bg-gray-200 dark:hover:bg-[#333333] transition-colors rounded-sm group h-[36px]">
+                          <button className="w-full flex items-center justify-between px-[12px] py-[8px] bg-gray-100 dark:bg-[#272727] hover:bg-gray-200 dark:hover:bg-[#333333] transition-colors rounded-sm group h-[36px] outline-none">
                             <div className="flex items-center space-x-2">
                               <svg className="w-4 h-4 text-gray-900 dark:text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.285 0 .315.21.69.825.57C20.565 21.795 24 17.31 24 12c0-6.63-5.37-12-12-12z"/></svg>
                               <span className="text-[14px] leading-[20px] text-gray-900 dark:text-[#e3e3e3]">shanelperera-exe</span>
@@ -172,21 +208,26 @@ const NewServiceRepoSelection: React.FC = () => {
                     <button
                       key={repo.id}
                       onClick={() => handleRepoSelect(repo)}
-                      className="group w-full flex items-center h-12 px-4 py-3 hover:bg-gray-100 dark:hover:bg-[#ffffff1a] transition-colors"
+                      className="group w-full flex items-center h-12 px-4 py-3 hover:bg-gray-100 dark:hover:bg-[#ffffff1a] transition-colors outline-none"
                     >
                       <span className="inline-flex w-5 mr-2">
                         <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.285 0 .315.21.69.825.57C20.565 21.795 24 17.31 24 12c0-6.63-5.37-12-12-12z"/></svg>
                       </span>
-                      <div className="flex space-x-1 items-baseline truncate text-[16px]">
+                      <div className="flex space-x-1 items-center truncate text-[16px]">
                         <span className="truncate">{repo.owner}</span>
                         <span className="text-gray-400 dark:text-[#8f8f8f]">/</span>
+                        {repo.isPrivate && (
+                          <svg fill="currentColor" className="self-center w-3 h-3 text-gray-500 dark:text-[#8f8f8f]" width="16" height="17" viewBox="0 0 16 17" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 7.51172H11V4.51172C11 3.71607 10.6839 2.95301 10.1213 2.3904C9.55871 1.82779 8.79565 1.51172 8 1.51172C7.20435 1.51172 6.44129 1.82779 5.87868 2.3904C5.31607 2.95301 5 3.71607 5 4.51172V7.51172H4C3.73478 7.51172 3.48043 7.61708 3.29289 7.80461C3.10536 7.99215 3 8.2465 3 8.51172V14.5117C3 14.7769 3.10536 15.0313 3.29289 15.2188C3.48043 15.4064 3.73478 15.5117 4 15.5117H12C12.2652 15.5117 12.5196 15.4064 12.7071 15.2188C12.8946 15.0313 13 14.7769 13 14.5117V8.51172C13 8.2465 12.8946 7.99215 12.7071 7.80461C12.5196 7.61708 12.2652 7.51172 12 7.51172ZM6 4.51172C6 3.98129 6.21071 3.47258 6.58579 3.09751C6.96086 2.72243 7.46957 2.51172 8 2.51172C8.53043 2.51172 9.03914 2.72243 9.41421 3.09751C9.78929 3.47258 10 3.98129 10 4.51172V7.51172H6V4.51172ZM12 14.5117H4V8.51172H12V14.5117Z"></path>
+                          </svg>
+                        )}
                         <span className="truncate font-medium">{repo.name}</span>
                       </div>
                       <span className="hidden md:inline-block text-[14px] text-gray-500 dark:text-[#b3b3b3] px-3 text-nowrap">
                         {repo.time}
                       </span>
                       <span className="ml-auto hidden group-hover:inline-block">
-                        <a href={repo.url} target="_blank" rel="noopener noreferrer" className="flex items-center text-[14px] text-[#2563eb] hover:underline" onClick={(e) => e.stopPropagation()}>
+                        <a href={repo.url} target="_blank" rel="noopener noreferrer" className="flex items-center text-[14px] text-[#2563eb] hover:underline outline-none" onClick={(e) => e.stopPropagation()}>
                           View repo
                           <svg className="w-4 h-4 ml-1" fill="currentColor" viewBox="0 0 16 16"><path d="M13 14H3C2.73489 13.9996 2.48075 13.8942 2.29329 13.7067C2.10583 13.5193 2.00036 13.2651 2 13V3C2.00036 2.73489 2.10583 2.48075 2.29329 2.29329C2.48075 2.10583 2.73489 2.00036 3 2H8V3H3V13H13V8H14V13C13.9996 13.2651 13.8942 13.5193 13.7067 13.7067C13.5193 13.8942 13.2651 13.9996 13 14Z"></path><path d="M10 1V2H13.293L9 6.293L9.707 7L14 2.707V6H15V1H10Z"></path></svg>
                         </a>
@@ -202,17 +243,24 @@ const NewServiceRepoSelection: React.FC = () => {
                 </div>
                 <div className="flex items-center">
                   <div className="flex relative w-full">
-                    <svg className="absolute inset-y-0 my-auto w-4 h-4 text-gray-400 dark:text-[#8f8f8f] left-3 pointer-events-none" fill="currentColor" viewBox="0 0 16 16">
-                      <path fillRule="evenodd" clipRule="evenodd" d="M8 0C3.58 0 0 3.58 0 8C0 12.42 3.58 16 8 16C12.42 16 16 12.42 16 8C16 3.58 12.42 0 8 0ZM14.5 8C14.5 9.4 14.05 10.7 13.27 11.79L11.51 9.94C11.83 9.4 12 8.73 12 8C12 6.64 11.3 5.43 10.23 4.74L11.75 2.92C13.38 4.09 14.5 5.91 14.5 8ZM8 2C9.17 2 10.26 2.34 11.16 2.93L9.58 4.82C9.11 4.62 8.57 4.5 8 4.5C6.07 4.5 4.5 6.07 4.5 8C4.5 8.35 4.56 8.68 4.66 9L2.83 10.92C2.31 10.05 2 9.06 2 8C2 4.69 4.69 2 8 2ZM8 14C6.67 14 5.43 13.56 4.41 12.82L6.25 10.89C6.77 11.27 7.36 11.5 8 11.5C10.05 11.5 11.74 9.92 11.96 7.92L13.88 9.94C13.35 11.64 12 13 10.14 13.71L8 14Z" />
+                    <svg className="absolute inset-y-0 my-auto w-4 h-4 text-gray-400 dark:text-[#8f8f8f] left-3 pointer-events-none" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.285 0 .315.21.69.825.57C20.565 21.795 24 17.31 24 12c0-6.63-5.37-12-12-12z"/>
                     </svg>
                     <input
                       placeholder="https://github.com/render-examples/sveltekit-static"
                       className="w-full py-3 px-4 pl-10 h-12 bg-transparent border border-gray-300 dark:border-[#4d4d4d] outline-none focus-visible:border-[#2563eb] focus-visible:ring-1 focus-visible:ring-[#2563eb] text-[16px] rounded-none transition-colors"
+                      value={publicRepoUrl}
+                      onChange={(e) => setPublicRepoUrl(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handlePublicRepoConnect()}
                     />
                   </div>
                 </div>
                 <div className="mt-4 flex justify-end">
-                  <button disabled className="h-12 px-6 py-3 bg-[#2563eb] text-white text-[16px] font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center outline-none hover:bg-[#1d4ed8]">
+                  <button 
+                    disabled={!publicRepoUrl.trim()} 
+                    onClick={handlePublicRepoConnect}
+                    className="h-12 px-6 py-3 bg-[#2563eb] text-white text-[16px] font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center outline-none hover:bg-[#1d4ed8]"
+                  >
                     Connect &rarr;
                   </button>
                 </div>

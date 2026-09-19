@@ -1,8 +1,29 @@
 import { useEffect, useState } from "react";
+import { FaGithubAlt } from "react-icons/fa";
+import { RiLinksFill, RiSaveLine } from "react-icons/ri";
+import { PiPassword, PiEye, PiEyeSlash } from "react-icons/pi";
 import UserAvatar from "../../components/ui/UserAvatar";
 
 const authApiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
+const timeAgo = (dateStr: string) => {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+  
+  if (seconds < 60) return 'just now';
+  let interval = seconds / 31536000;
+  if (interval > 1) return Math.floor(interval) + 'y ago';
+  interval = seconds / 2592000;
+  if (interval > 1) return Math.floor(interval) + 'mo ago';
+  interval = seconds / 86400;
+  if (interval > 1) return Math.floor(interval) + 'd ago';
+  interval = seconds / 3600;
+  if (interval > 1) return Math.floor(interval) + 'h ago';
+  interval = seconds / 60;
+  if (interval > 1) return Math.floor(interval) + 'm ago';
+  return 'just now';
+};
 function GoogleIcon() {
   return (
     <svg width="15" height="15" viewBox="0 0 17 16" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="flex-shrink-0">
@@ -31,13 +52,18 @@ export default function AccountSettings() {
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordError, setPasswordError] = useState('');
   const [passwordNotice, setPasswordNotice] = useState('');
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteConfirmationText, setDeleteConfirmationText] = useState('');
   const [themeDropdownOpen, setThemeDropdownOpen] = useState(false);
   const [logThemeDropdownOpen, setLogThemeDropdownOpen] = useState(false);
   const [loginMethodDropdownOpen, setLoginMethodDropdownOpen] = useState(false);
-  const [credentialDropdownOpen, setCredentialDropdownOpen] = useState(false);
+
+  const [credentialOptionsOpen, setCredentialOptionsOpen] = useState(false);
   const getInitialTheme = () => {
     const saved = localStorage.getItem('harbor_theme');
     return saved === 'light' || saved === 'dark' || saved === 'system' ? saved : 'system';
@@ -138,7 +164,7 @@ export default function AccountSettings() {
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const deploymentCredentials: string[] = profile.loginMethods.includes('github') ? ['GitHub'] : [];
   
-  const [githubAccountData, setGithubAccountData] = useState<{owner: string, count: number} | null>(null);
+  const [githubAccountData, setGithubAccountData] = useState<{owner: string, count: number, repositories?: any[]} | null>(null);
 
   useEffect(() => {
     async function loadGithubData() {
@@ -157,7 +183,8 @@ export default function AccountSettings() {
           const repos = data.data;
           setGithubAccountData({
             owner: repos.length > 0 ? repos[0].owner : 'Connected',
-            count: repos.length
+            count: repos.length,
+            repositories: repos,
           });
         }
       } catch (err) {
@@ -314,7 +341,7 @@ export default function AccountSettings() {
   useEffect(() => {
     const handleScroll = () => {
       const sections = [
-        'profile', 'appearance', 'account-security'
+        'profile', 'appearance', 'account-security', 'delete-account'
       ];
       
       let current = 'profile';
@@ -329,20 +356,31 @@ export default function AccountSettings() {
           }
         }
       }
+      const scrollContainer = document.querySelector('main.overflow-auto') || document.documentElement;
+      
+      const isScrollable = scrollContainer.scrollHeight > scrollContainer.clientHeight;
+      const isAtBottom = isScrollable && Math.round(scrollContainer.scrollTop + scrollContainer.clientHeight) >= scrollContainer.scrollHeight - 10;
+      
+      if (isAtBottom && scrollContainer.scrollTop > 0) {
+        current = sections[sections.length - 1];
+      }
+      
       setActiveSection(current);
     };
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
+    const scrollContainerElement = document.querySelector('main.overflow-auto') || window;
+    scrollContainerElement.addEventListener('scroll', handleScroll, { passive: true });
     // Trigger once on mount
     handleScroll();
     
-    return () => window.removeEventListener('scroll', handleScroll);
+    return () => scrollContainerElement.removeEventListener('scroll', handleScroll);
   }, []);
 
   const navItems = [
     { id: 'profile', label: 'Profile' },
     { id: 'appearance', label: 'Appearance' },
-    { id: 'account-security', label: 'Account Security' }
+    { id: 'account-security', label: 'Account Security' },
+    { id: 'delete-account', label: 'Delete Account' }
   ];
 
   const activeIndex = navItems.findIndex(item => item.id === activeSection);
@@ -363,9 +401,9 @@ export default function AccountSettings() {
             <div className="relative flex-shrink-0 hidden xl:block xl:sticky xl:h-full xl:max-h-[calc(100vh_-_3.5rem)] xl:top-14 custom-scrollbar overflow-y-auto">
               <nav aria-labelledby="_r_3f_">
                 <span id="_r_3f_" className="sr-only">Table of contents</span>
-                <ul className="relative min-w-[11.5rem] border-l border-solid sidecar-border">
+                <ul className="relative min-w-[11.5rem] border-l border-solid border-gray-200 dark:border-white/10">
                   <div 
-                    className="opacity-100 absolute top-0 -left-px w-px h-9 border-l border-solid sidecar-border--active motion-safe:transition motion-safe:duration-300 motion-safe:ease-out-cubic" 
+                    className="opacity-100 absolute top-2 -left-px w-[2px] h-5 bg-blue-600 dark:bg-blue-500 rounded-full motion-safe:transition motion-safe:duration-300 motion-safe:ease-out-cubic" 
                     style={{ transform: `translateY(${indicatorOffset}rem)` }}
                   ></div>
                   {navItems.map(item => {
@@ -408,7 +446,7 @@ export default function AccountSettings() {
                         <div className="grid grid-cols-1 xl:grid-cols-3 gap-y-4 xl:gap-y-0 xl:gap-x-10">
                           <div className="col-span-1">
                             <div className="flex items-center">
-                              <label htmlFor="name" className="inline-block text-lg font-bold text-primary mb-1">User name</label>
+                              <label htmlFor="name" className="inline-block text-gray-900 dark:text-[#f0f0f0] mb-1 text-[18px] font-semibold tracking-[0.16px] normal-case">User name</label>
                             </div>
                           </div>
                           <div className="col-span-2 text-secondary">
@@ -437,8 +475,9 @@ export default function AccountSettings() {
                                       <button type="button" onClick={() => { setIsEditingName(false); setName(currentUsername); }} className="type-interface-01 button-ghost-text hover:button-ghost-background--hover hover:button-ghost-text--hover h-10 py-2.5 px-3 flex items-center border border-solid border-[#6b6b6b]">
                                         Cancel
                                       </button>
-                                      <button type="submit" disabled={isSavingProfile || name.trim() === currentUsername} className="type-interface-01 button-primary-text button-primary-background hover:button-primary-background--hover disabled:opacity-50 disabled:cursor-not-allowed h-10 py-2.5 px-4 flex items-center rounded-none font-medium text-black bg-white">
-                                        Save changes
+                                      <button type="submit" disabled={isSavingProfile || name.trim() === currentUsername} className="type-interface-01 button-primary-text button-primary-background hover:button-primary-background--hover disabled:opacity-50 disabled:cursor-not-allowed h-10 py-2.5 px-4 flex items-center space-x-2 rounded-none font-medium text-black bg-white">
+                                        <RiSaveLine className="w-5 h-5" />
+                                        <span>Save changes</span>
                                       </button>
                                     </div>
                                   ) : (
@@ -456,7 +495,7 @@ export default function AccountSettings() {
                         <div className="grid grid-cols-1 xl:grid-cols-3 gap-y-4 xl:gap-y-0 xl:gap-x-10">
                           <div className="col-span-1">
                             <div className="flex items-center">
-                              <label htmlFor="email" className="inline-block text-lg font-bold text-primary mb-1">Email</label>
+                              <label htmlFor="email" className="inline-block text-gray-900 dark:text-[#f0f0f0] mb-1 text-[18px] font-semibold tracking-[0.16px] normal-case">Email</label>
                             </div>
                           </div>
                           <div className="col-span-2 text-secondary">
@@ -485,8 +524,9 @@ export default function AccountSettings() {
                                       <button type="button" onClick={() => { setIsEditingEmail(false); setEmail(currentEmail); }} className="type-interface-01 button-ghost-text hover:button-ghost-background--hover hover:button-ghost-text--hover h-10 py-2.5 px-3 flex items-center border border-solid border-[#6b6b6b]">
                                         Cancel
                                       </button>
-                                      <button type="submit" disabled={isSavingProfile || email.trim() === currentEmail} className="type-interface-01 button-primary-text button-primary-background hover:button-primary-background--hover disabled:opacity-50 disabled:cursor-not-allowed h-10 py-2.5 px-4 flex items-center rounded-none font-medium text-black bg-white">
-                                        Save changes
+                                      <button type="submit" disabled={isSavingProfile || email.trim() === currentEmail} className="type-interface-01 button-primary-text button-primary-background hover:button-primary-background--hover disabled:opacity-50 disabled:cursor-not-allowed h-10 py-2.5 px-4 flex items-center space-x-2 rounded-none font-medium text-black bg-white">
+                                        <RiSaveLine className="w-5 h-5" />
+                                        <span>Save changes</span>
                                       </button>
                                     </div>
                                   ) : (
@@ -504,7 +544,7 @@ export default function AccountSettings() {
                         <div className="grid grid-cols-1 xl:grid-cols-3 gap-y-4 xl:gap-y-0 xl:gap-x-10">
                           <div className="col-span-1">
                             <div className="flex items-center">
-                              <label htmlFor="user-avatar" className="inline-block text-lg font-bold text-primary mb-1">Avatar</label>
+                              <label htmlFor="user-avatar" className="inline-block text-gray-900 dark:text-[#f0f0f0] mb-1 text-[18px] font-semibold tracking-[0.16px] normal-case">Avatar</label>
                             </div>
                           </div>
                           <div className="col-span-2 text-secondary">
@@ -549,7 +589,7 @@ export default function AccountSettings() {
                         <div className="grid grid-cols-1 xl:grid-cols-3 gap-y-4 xl:gap-y-0 xl:gap-x-10">
                           <div className="col-span-1">
                             <div className="flex items-center">
-                              <label htmlFor="themeSetting" className="inline-block text-lg font-bold text-primary mb-1">Dashboard Theme</label>
+                              <label htmlFor="themeSetting" className="inline-block text-gray-900 dark:text-[#f0f0f0] mb-1 text-[18px] font-semibold tracking-[0.16px] normal-case">Dashboard Theme</label>
                             </div>
                           </div>
                           <div className="col-span-2 text-secondary">
@@ -594,7 +634,7 @@ export default function AccountSettings() {
                                                   setTheme(opt.value);
                                                   setThemeDropdownOpen(false);
                                                 }}
-                                                className="w-full flex items-center px-3 py-2 text-sm text-gray-700 dark:text-[#e3e3e3] hover:bg-[#8ad6ff] hover:text-black dark:hover:bg-[#1a1a1a] dark:hover:text-[#ffffff] transition-colors"
+                                                className="w-full flex items-center px-3 py-2 text-[16px] text-gray-700 dark:text-[#e3e3e3] hover:bg-[#8ad6ff] hover:text-black dark:hover:bg-[#1a1a1a] dark:hover:text-[#ffffff] transition-colors"
                                               >
                                                 {opt.icon}
                                                 <span className="ml-2 flex-1 text-left">{opt.label}</span>
@@ -622,8 +662,9 @@ export default function AccountSettings() {
                                         setThemeDropdownOpen(false); 
                                         localStorage.setItem('harbor_theme', theme);
                                         applyDashboardTheme(theme);
-                                      }} className="type-interface-01 button-primary-text button-primary-background hover:button-primary-background--hover disabled:opacity-50 disabled:cursor-not-allowed h-10 py-2.5 px-4 flex items-center rounded-none font-medium text-black bg-white">
-                                        Save changes
+                                      }} className="type-interface-01 button-primary-text button-primary-background hover:button-primary-background--hover disabled:opacity-50 disabled:cursor-not-allowed h-10 py-2.5 px-4 flex items-center space-x-2 rounded-none font-medium text-black bg-white">
+                                        <RiSaveLine className="w-5 h-5" />
+                                        <span>Save changes</span>
                                       </button>
                                     </div>
                                   ) : (
@@ -641,7 +682,7 @@ export default function AccountSettings() {
                         <div className="grid grid-cols-1 xl:grid-cols-3 gap-y-4 xl:gap-y-0 xl:gap-x-10">
                           <div className="col-span-1">
                             <div className="flex items-center">
-                              <label htmlFor="logThemeSetting" className="inline-block text-lg font-bold text-primary mb-1">Log Explorer Theme</label>
+                              <label htmlFor="logThemeSetting" className="inline-block text-gray-900 dark:text-[#f0f0f0] mb-1 text-[18px] font-semibold tracking-[0.16px] normal-case">Log Explorer Theme</label>
                             </div>
                           </div>
                           <div className="col-span-2 text-secondary">
@@ -676,7 +717,7 @@ export default function AccountSettings() {
                                     </button>
                                     
                                     {isEditingLogTheme && logThemeDropdownOpen && (
-                                      <div className="absolute z-10 w-full mt-1 shadow-menu menu-background border border-solid menu-border outline-none border-t-transparent">
+                                      <div className="absolute z-10 w-full mt-1 bg-white dark:bg-[#0d0d0d] border border-[#6b6b6b] shadow-lg outline-none">
                                         <ul role="listbox" className="list-none p-2 custom-scrollbar max-h-80 overflow-y-auto overscroll-contain">
                                           {logThemeOptions.map((opt) => {
                                             const isActive = logTheme === opt.value;
@@ -689,7 +730,7 @@ export default function AccountSettings() {
                                                       setLogTheme(opt.value);
                                                       setLogThemeDropdownOpen(false);
                                                     }}
-                                                    className={`w-full flex relative type-interface-01 py-2 px-3 whitespace-nowrap focus-visible:outline focus:outline-focus-action outline-2 cursor-pointer hover:menu-item-text--hover hover:menu-item-background--hover ${
+                                                    className={`w-full flex relative type-interface-01 py-2 px-3 whitespace-nowrap focus-visible:outline-none cursor-pointer hover:menu-item-text--hover hover:menu-item-background--hover ${
                                                       isActive ? 'menu-item-text--active menu-item-background--active before:content-[""] before:absolute before:left-0 before:top-0 before:w-0.5 before:h-full before:menu-item-indicator-background' : 'menu-item-text'
                                                     }`}
                                                   >
@@ -725,8 +766,9 @@ export default function AccountSettings() {
                                         setLogThemeDropdownOpen(false);
                                         localStorage.setItem('harbor_log_theme', logTheme);
                                         window.dispatchEvent(new Event('harbor-log-theme-change'));
-                                      }} className="type-interface-01 button-primary-text button-primary-background hover:button-primary-background--hover disabled:opacity-50 disabled:cursor-not-allowed h-10 py-2.5 px-4 flex items-center rounded-none font-medium text-black bg-white">
-                                        Save changes
+                                      }} className="type-interface-01 button-primary-text button-primary-background hover:button-primary-background--hover disabled:opacity-50 disabled:cursor-not-allowed h-10 py-2.5 px-4 flex items-center space-x-2 rounded-none font-medium text-black bg-white">
+                                        <RiSaveLine className="w-5 h-5" />
+                                        <span>Save changes</span>
                                       </button>
                                     </div>
                                   ) : (
@@ -758,25 +800,26 @@ export default function AccountSettings() {
                         </div>
                       </div>
                     </div>
-                    <div className="text-[14px] text-gray-900 dark:text-[#e3e3e3]">
+                    <div className="text-[16px] text-gray-900 dark:text-[#e3e3e3]">
                       <div className="space-y-8 flex-col">
                         
                         <div className="grid grid-cols-1 xl:grid-cols-3 gap-y-4 xl:gap-y-0 xl:gap-x-10 mb-8">
                           <div className="col-span-1">
-                            <label className="inline-block text-lg font-bold text-primary mb-1">Password</label>
-                            <p className="text-[14px] text-gray-500 dark:text-[#a1a1aa]"></p>
+                            <label className="inline-block text-gray-900 dark:text-[#f0f0f0] mb-1 text-[18px] font-semibold tracking-[0.16px] normal-case">Password</label>
+                            <p className="text-[16px] text-gray-600 dark:text-[#c7c7c7] leading-[24px] font-normal tracking-[0.16px] normal-case"></p>
                           </div>
                           <div className="col-span-2">
-                            <button type="button" onClick={() => { setPasswordError(''); setPasswordNotice(''); setIsPasswordModalOpen(true); }} className="text-[14px] font-medium text-gray-900 dark:text-[#e3e3e3] hover:bg-gray-100 dark:hover:bg-[#1a1a1a] border border-solid border-[#6b6b6b] h-10 py-2.5 px-3 flex items-center transition-colors">
-                              {profile.hasPassword ? 'Change password' : 'Create password'}
+                            <button type="button" onClick={() => { setPasswordError(''); setPasswordNotice(''); setIsPasswordModalOpen(true); }} className="text-[16px] font-medium text-gray-900 dark:text-[#e3e3e3] hover:bg-gray-100 dark:hover:bg-white dark:hover:text-black border border-solid border-[#6b6b6b] h-10 py-2.5 px-3 flex items-center space-x-2 transition-colors">
+                              <PiPassword className="w-5 h-5" />
+                              <span>{profile.hasPassword ? 'Change password' : 'Create password'}</span>
                             </button>
                           </div>
                         </div>
 
                         <div className="grid grid-cols-1 xl:grid-cols-3 gap-y-4 xl:gap-y-0 xl:gap-x-10 mb-8">
                           <div>
-                            <label className="inline-block text-lg font-bold text-primary mb-1">Login Methods</label>
-                            <p className="text-[14px] text-gray-500 dark:text-[#a1a1aa]">Use these methods to sign in to your Harbor account.</p>
+                            <label className="inline-block text-gray-900 dark:text-[#f0f0f0] mb-1 text-[18px] font-semibold tracking-[0.16px] normal-case">Login Methods</label>
+                            <p className="text-[16px] text-gray-600 dark:text-[#c7c7c7] leading-[24px] font-normal tracking-[0.16px] normal-case">Use these methods to sign in to your Harbor account.</p>
                           </div>
                           <div className="col-span-2">
                             {profile.loginMethods.length > 0 && (
@@ -785,112 +828,155 @@ export default function AccountSettings() {
                                   <li key={method}>
                                     <div className="border border-solid border-[#6b6b6b] py-1 px-3 grid grid-cols-[max-content_1fr_max-content] items-center gap-2">
                                       <span className="block">{method === 'google' ? <GoogleIcon /> : <GitHubIcon />}</span>
-                                      <span className="text-[14px] leading-[40px] font-medium text-gray-900 dark:text-white">{method === 'google' ? 'Google' : 'GitHub'} ({currentEmail})</span>
+                                      <span className="text-[16px] leading-[40px] font-medium text-gray-900 dark:text-white"><span>{method === 'google' ? 'Google' : 'GitHub'}</span> <span className="text-gray-500 dark:text-[#a1a1aa] text-[14px] ml-1.5 font-normal">{currentEmail}</span></span>
                                     </div>
                                   </li>
                                 ))}
                               </ul>
                             )}
                             
-                            <div className="relative inline-block">
-                              <button type="button" onClick={() => setLoginMethodDropdownOpen(!loginMethodDropdownOpen)} aria-expanded={loginMethodDropdownOpen} className="text-[14px] font-medium text-gray-900 dark:text-[#e3e3e3] hover:bg-gray-100 dark:hover:bg-[#1a1a1a] border border-solid border-[#6b6b6b] h-10 py-2.5 px-3 flex items-center transition-colors">
-                                <span className="me-1.5 flex items-center gap-1">
-                                  {!profile.loginMethods.includes('google') && <span className="block border border-solid border-gray-300 dark:border-[#525252] p-0.5 relative rounded-[0.25rem] bg-white dark:bg-[#1a1a1a]"><GoogleIcon /></span>}
-                                  {!profile.loginMethods.includes('github') && <span className="block border border-solid border-gray-300 dark:border-[#525252] p-0.5 relative rounded-[0.25rem] bg-white dark:bg-[#1a1a1a]">
-                                    <svg width="15" height="15" viewBox="0 0 24 23" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="flex-shrink-0 text-black dark:text-white" aria-label="GitHub"><path fillRule="evenodd" clipRule="evenodd" d="M12.0183 0.405518C5.73469 0.405518 0.655029 5.50047 0.655029 11.8036C0.655029 16.8421 3.90974 21.107 8.42489 22.6165C8.9894 22.73 9.19618 22.3712 9.19618 22.0695C9.19618 21.8052 9.17757 20.8995 9.17757 19.9558C6.01659 20.6352 5.35835 18.597 5.35835 18.597C4.85036 17.2761 4.09768 16.9365 4.09768 16.9365C3.06309 16.2383 4.17304 16.2383 4.17304 16.2383C5.32067 16.3138 5.92286 17.4083 5.92286 17.4083C6.9386 19.1443 8.57538 18.6538 9.23386 18.3518C9.32782 17.6158 9.62904 17.1063 9.94886 16.8233C7.42775 16.5591 4.77523 15.5778 4.77523 11.1996C4.77523 9.95415 5.22647 8.93516 5.94146 8.14266C5.82866 7.85966 5.43348 6.68944 6.05451 5.12321C6.05451 5.12321 7.01396 4.82122 9.17733 6.2932C10.1036 6.0437 11.0587 5.91677 12.0183 5.91571C12.9777 5.91571 13.9558 6.04794 14.8589 6.2932C17.0226 4.82122 17.982 5.12321 17.982 5.12321C18.603 6.68944 18.2076 7.85966 18.0948 8.14266C18.8287 8.93516 19.2613 9.95415 19.2613 11.1996C19.2613 15.5778 16.6088 16.5401 14.0688 16.8233C14.4828 17.1818 14.8401 17.861 14.8401 18.9368C14.8401 20.4653 14.8215 21.692 14.8215 22.0692C14.8215 22.3712 15.0285 22.73 15.5928 22.6167C20.1079 21.1068 23.3626 16.8421 23.3626 11.8036C23.3813 5.50047 18.283 0.405518 12.0183 0.405518Z"></path></svg>
-                                  </span>}
-                                </span>
-                                <span className="me-3">Add login method</span>
-                                <svg fill="currentColor" aria-hidden="true" className={`w-4 h-4 transition-transform ${loginMethodDropdownOpen ? 'rotate-180' : ''}`} viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M8 10.9998L3 5.9998L3.7 5.2998L8 9.5998L12.3 5.2998L13 5.9998L8 10.9998Z"></path></svg>
-                              </button>
-                              
-                              {loginMethodDropdownOpen && (
-                                <div className="min-w-[208px] p-2 bg-white dark:bg-[#0d0d0d] border border-solid border-[#6b6b6b] shadow-lg outline-none absolute z-50 left-0 top-full mt-1">
-                                  {!profile.loginMethods.includes('google') && <button type="button" onClick={() => linkLoginMethod('google')} className="w-full flex relative text-[14px] text-gray-900 dark:text-[#e3e3e3] py-2 px-3 focus-visible:outline-none cursor-pointer hover:bg-gray-100 dark:hover:bg-[#1a1a1a] transition-colors rounded">
-                                    <div className="w-full flex items-center space-x-2.5">
-                                      <span className="block border border-solid border-gray-300 dark:border-[#525252] p-0.5 relative rounded-[0.25rem] bg-white dark:bg-[#1a1a1a]"><GoogleIcon /></span>
-                                      <span className="flex-1 text-left truncate font-medium">Google</span>
-                                    </div>
-                                  </button>}
-                                  {!profile.loginMethods.includes('github') && <button type="button" onClick={() => linkLoginMethod('github')} className="w-full flex relative text-[14px] text-gray-900 dark:text-[#e3e3e3] py-2 px-3 focus-visible:outline-none cursor-pointer hover:bg-gray-100 dark:hover:bg-[#1a1a1a] transition-colors rounded">
-                                    <div className="w-full flex items-center space-x-2.5">
-                                      <span className="block border border-solid border-gray-300 dark:border-[#525252] p-0.5 relative rounded-[0.25rem] bg-white dark:bg-[#1a1a1a]">
-                                        <svg width="15" height="15" viewBox="0 0 24 23" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="flex-shrink-0 text-black dark:text-white" aria-label="GitHub"><path fillRule="evenodd" clipRule="evenodd" d="M12.0183 0.405518C5.73469 0.405518 0.655029 5.50047 0.655029 11.8036C0.655029 16.8421 3.90974 21.107 8.42489 22.6165C8.9894 22.73 9.19618 22.3712 9.19618 22.0695C9.19618 21.8052 9.17757 20.8995 9.17757 19.9558C6.01659 20.6352 5.35835 18.597 5.35835 18.597C4.85036 17.2761 4.09768 16.9365 4.09768 16.9365C3.06309 16.2383 4.17304 16.2383 4.17304 16.2383C5.32067 16.3138 5.92286 17.4083 5.92286 17.4083C6.9386 19.1443 8.57538 18.6538 9.23386 18.3518C9.32782 17.6158 9.62904 17.1063 9.94886 16.8233C7.42775 16.5591 4.77523 15.5778 4.77523 11.1996C4.77523 9.95415 5.22647 8.93516 5.94146 8.14266C5.82866 7.85966 5.43348 6.68944 6.05451 5.12321C6.05451 5.12321 7.01396 4.82122 9.17733 6.2932C10.1036 6.0437 11.0587 5.91677 12.0183 5.91571C12.9777 5.91571 13.9558 6.04794 14.8589 6.2932C17.0226 4.82122 17.982 5.12321 17.982 5.12321C18.603 6.68944 18.2076 7.85966 18.0948 8.14266C18.8287 8.93516 19.2613 9.95415 19.2613 11.1996C19.2613 15.5778 16.6088 16.5401 14.0688 16.8233C14.4828 17.1818 14.8401 17.861 14.8401 18.9368C14.8401 20.4653 14.8215 21.692 14.8215 22.0692C14.8215 22.3712 15.0285 22.73 15.5928 22.6167C20.1079 21.1068 23.3626 16.8421 23.3626 11.8036C23.3813 5.50047 18.283 0.405518 12.0183 0.405518Z"></path></svg>
-                                      </span>
-                                      <span className="flex-1 text-left truncate font-medium">GitHub</span>
-                                    </div>
-                                  </button>}
-                                  {profile.loginMethods.length === 2 && <p className="px-3 py-2 text-sm text-gray-500 dark:text-[#a1a1aa]">All login methods are connected.</p>}
-                                </div>
-                              )}
-                            </div>
+                            {profile.loginMethods.length < 2 ? (
+                              <div className="relative inline-block">
+                                <button type="button" onClick={() => setLoginMethodDropdownOpen(!loginMethodDropdownOpen)} aria-expanded={loginMethodDropdownOpen} className="text-[16px] font-medium text-gray-900 dark:text-[#e3e3e3] hover:bg-gray-100 dark:hover:bg-[#1a1a1a] border border-solid border-[#6b6b6b] h-10 py-2.5 px-3 flex items-center transition-colors">
+                                  <span className="me-1.5 flex items-center gap-1">
+                                    {!profile.loginMethods.includes('google') && <span className="block border border-solid border-gray-300 dark:border-[#525252] p-0.5 relative rounded-[0.25rem] bg-white dark:bg-[#1a1a1a]"><GoogleIcon /></span>}
+                                    {!profile.loginMethods.includes('github') && <span className="block border border-solid border-gray-300 dark:border-[#525252] p-0.5 relative rounded-[0.25rem] bg-white dark:bg-[#1a1a1a]">
+                                      <svg width="15" height="15" viewBox="0 0 24 23" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="flex-shrink-0 text-black dark:text-white" aria-label="GitHub"><path fillRule="evenodd" clipRule="evenodd" d="M12.0183 0.405518C5.73469 0.405518 0.655029 5.50047 0.655029 11.8036C0.655029 16.8421 3.90974 21.107 8.42489 22.6165C8.9894 22.73 9.19618 22.3712 9.19618 22.0695C9.19618 21.8052 9.17757 20.8995 9.17757 19.9558C6.01659 20.6352 5.35835 18.597 5.35835 18.597C4.85036 17.2761 4.09768 16.9365 4.09768 16.9365C3.06309 16.2383 4.17304 16.2383 4.17304 16.2383C5.32067 16.3138 5.92286 17.4083 5.92286 17.4083C6.9386 19.1443 8.57538 18.6538 9.23386 18.3518C9.32782 17.6158 9.62904 17.1063 9.94886 16.8233C7.42775 16.5591 4.77523 15.5778 4.77523 11.1996C4.77523 9.95415 5.22647 8.93516 5.94146 8.14266C5.82866 7.85966 5.43348 6.68944 6.05451 5.12321C6.05451 5.12321 7.01396 4.82122 9.17733 6.2932C10.1036 6.0437 11.0587 5.91677 12.0183 5.91571C12.9777 5.91571 13.9558 6.04794 14.8589 6.2932C17.0226 4.82122 17.982 5.12321 17.982 5.12321C18.603 6.68944 18.2076 7.85966 18.0948 8.14266C18.8287 8.93516 19.2613 9.95415 19.2613 11.1996C19.2613 15.5778 16.6088 16.5401 14.0688 16.8233C14.4828 17.1818 14.8401 17.861 14.8401 18.9368C14.8401 20.4653 14.8215 21.692 14.8215 22.0692C14.8215 22.3712 15.0285 22.73 15.5928 22.6167C20.1079 21.1068 23.3626 16.8421 23.3626 11.8036C23.3813 5.50047 18.283 0.405518 12.0183 0.405518Z"></path></svg>
+                                    </span>}
+                                  </span>
+                                  <span className="me-3">Add login method</span>
+                                  <svg fill="currentColor" aria-hidden="true" className={`w-4 h-4 transition-transform ${loginMethodDropdownOpen ? 'rotate-180' : ''}`} viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M8 10.9998L3 5.9998L3.7 5.2998L8 9.5998L12.3 5.2998L13 5.9998L8 10.9998Z"></path></svg>
+                                </button>
+                                
+                                {loginMethodDropdownOpen && (
+                                  <div className="min-w-[208px] p-2 bg-white dark:bg-[#0d0d0d] border border-solid border-[#6b6b6b] shadow-lg outline-none absolute z-50 left-0 top-full mt-1">
+                                    {!profile.loginMethods.includes('google') && <button type="button" onClick={() => linkLoginMethod('google')} className="w-full flex relative text-[16px] text-gray-900 dark:text-[#e3e3e3] py-2 px-3 focus-visible:outline-none cursor-pointer hover:bg-gray-100 dark:hover:bg-[#1a1a1a] transition-colors rounded">
+                                      <div className="w-full flex items-center space-x-2.5">
+                                        <span className="block border border-solid border-gray-300 dark:border-[#525252] p-0.5 relative rounded-[0.25rem] bg-white dark:bg-[#1a1a1a]"><GoogleIcon /></span>
+                                        <span className="flex-1 text-left truncate font-medium">Google</span>
+                                      </div>
+                                    </button>}
+                                    {!profile.loginMethods.includes('github') && <button type="button" onClick={() => linkLoginMethod('github')} className="w-full flex relative text-[16px] text-gray-900 dark:text-[#e3e3e3] py-2 px-3 focus-visible:outline-none cursor-pointer hover:bg-gray-100 dark:hover:bg-[#1a1a1a] transition-colors rounded">
+                                      <div className="w-full flex items-center space-x-2.5">
+                                        <span className="block border border-solid border-gray-300 dark:border-[#525252] p-0.5 relative rounded-[0.25rem] bg-white dark:bg-[#1a1a1a]">
+                                          <svg width="15" height="15" viewBox="0 0 24 23" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="flex-shrink-0 text-black dark:text-white" aria-label="GitHub"><path fillRule="evenodd" clipRule="evenodd" d="M12.0183 0.405518C5.73469 0.405518 0.655029 5.50047 0.655029 11.8036C0.655029 16.8421 3.90974 21.107 8.42489 22.6165C8.9894 22.73 9.19618 22.3712 9.19618 22.0695C9.19618 21.8052 9.17757 20.8995 9.17757 19.9558C6.01659 20.6352 5.35835 18.597 5.35835 18.597C4.85036 17.2761 4.09768 16.9365 4.09768 16.9365C3.06309 16.2383 4.17304 16.2383 4.17304 16.2383C5.32067 16.3138 5.92286 17.4083 5.92286 17.4083C6.9386 19.1443 8.57538 18.6538 9.23386 18.3518C9.32782 17.6158 9.62904 17.1063 9.94886 16.8233C7.42775 16.5591 4.77523 15.5778 4.77523 11.1996C4.77523 9.95415 5.22647 8.93516 5.94146 8.14266C5.82866 7.85966 5.43348 6.68944 6.05451 5.12321C6.05451 5.12321 7.01396 4.82122 9.17733 6.2932C10.1036 6.0437 11.0587 5.91677 12.0183 5.91571C12.9777 5.91571 13.9558 6.04794 14.8589 6.2932C17.0226 4.82122 17.982 5.12321 17.982 5.12321C18.603 6.68944 18.2076 7.85966 18.0948 8.14266C18.8287 8.93516 19.2613 9.95415 19.2613 11.1996C19.2613 15.5778 16.6088 16.5401 14.0688 16.8233C14.4828 17.1818 14.8401 17.861 14.8401 18.9368C14.8401 20.4653 14.8215 21.692 14.8215 22.0692C14.8215 22.3712 15.0285 22.73 15.5928 22.6167C20.1079 21.1068 23.3626 16.8421 23.3626 11.8036C23.3813 5.50047 18.283 0.405518 12.0183 0.405518Z"></path></svg>
+                                        </span>
+                                        <span className="flex-1 text-left truncate font-medium">GitHub</span>
+                                      </div>
+                                    </button>}
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <p className="flex items-center space-x-2 text-[16px] text-gray-900 dark:text-[#e3e3e3] font-medium">
+                                <RiLinksFill className="w-5 h-5 text-gray-500 dark:text-[#a1a1aa]" />
+                                <span>All login methods are connected.</span>
+                              </p>
+                            )}
                           </div>
                         </div>
 
                         <div className="grid grid-cols-1 xl:grid-cols-3 gap-y-4 xl:gap-y-0 xl:gap-x-10">
                           <div>
-                            <label className="inline-block text-lg font-bold text-primary mb-1">Git Deployment Credentials</label>
-                            <p className="text-[14px] text-gray-500 dark:text-[#a1a1aa]">Credentials are used to detect code changes in your repo and deploy your services.</p>
+                            <label className="inline-block text-gray-900 dark:text-[#f0f0f0] mb-1 text-[18px] font-semibold tracking-[0.16px] normal-case">Git Deployment Credentials</label>
+                            <p className="text-[16px] text-gray-600 dark:text-[#c7c7c7] leading-[24px] font-normal tracking-[0.16px] normal-case">Credentials are used to detect code changes in your repo and deploy your services.</p>
                           </div>
                           <div className="col-span-2">
                             <ul className="space-y-2 mb-4">
                               {deploymentCredentials.length > 0 ? (
                                 deploymentCredentials.map((cred) => (
                               <li key={cred}>
-                                <div className="">
-                                  <details className="group border border-solid border-gray-300 dark:border-[#525252]">
-                                    <summary className="py-2 px-3 flex items-center gap-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-[#1a1a1a] transition-colors list-none [&::-webkit-details-marker]:hidden">
-                                      <svg fill="currentColor" aria-hidden="true" className="group-open:rotate-180 w-4 h-4 transition-transform text-gray-500 dark:text-[#a1a1aa]" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M8 10.9998L3 5.9998L3.7 5.2998L8 9.5998L12.3 5.2998L13 5.9998L8 10.9998Z"></path></svg>
-                                      <span className="block border border-solid border-gray-300 dark:border-[#525252] p-0.5 relative rounded-[0.25rem] bg-white dark:bg-[#1a1a1a]">
-                                        <svg width="15" height="15" viewBox="0 0 24 23" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="flex-shrink-0 text-black dark:text-white" aria-label="GitHub"><path fillRule="evenodd" clipRule="evenodd" d="M12.0183 0.405518C5.73469 0.405518 0.655029 5.50047 0.655029 11.8036C0.655029 16.8421 3.90974 21.107 8.42489 22.6165C8.9894 22.73 9.19618 22.3712 9.19618 22.0695C9.19618 21.8052 9.17757 20.8995 9.17757 19.9558C6.01659 20.6352 5.35835 18.597 5.35835 18.597C4.85036 17.2761 4.09768 16.9365 4.09768 16.9365C3.06309 16.2383 4.17304 16.2383 4.17304 16.2383C5.32067 16.3138 5.92286 17.4083 5.92286 17.4083C6.9386 19.1443 8.57538 18.6538 9.23386 18.3518C9.32782 17.6158 9.62904 17.1063 9.94886 16.8233C7.42775 16.5591 4.77523 15.5778 4.77523 11.1996C4.77523 9.95415 5.22647 8.93516 5.94146 8.14266C5.82866 7.85966 5.43348 6.68944 6.05451 5.12321C6.05451 5.12321 7.01396 4.82122 9.17733 6.2932C10.1036 6.0437 11.0587 5.91677 12.0183 5.91571C12.9777 5.91571 13.9558 6.04794 14.8589 6.2932C17.0226 4.82122 17.982 5.12321 17.982 5.12321C18.603 6.68944 18.2076 7.85966 18.0948 8.14266C18.8287 8.93516 19.2613 9.95415 19.2613 11.1996C19.2613 15.5778 16.6088 16.5401 14.0688 16.8233C14.4828 17.1818 14.8401 17.861 14.8401 18.9368C14.8401 20.4653 14.8215 21.692 14.8215 22.0692C14.8215 22.3712 15.0285 22.73 15.5928 22.6167C20.1079 21.1068 23.3626 16.8421 23.3626 11.8036C23.3813 5.50047 18.283 0.405518 12.0183 0.405518Z"></path></svg>
+                                <div className="grid [grid-template-columns:1fr_auto] [grid-template-rows:auto_1fr] relative">
+                                  <details className="group [grid-column:1/-1] [grid-row:1/3]">
+                                    <summary className="border border-solid border-gray-300 dark:border-[#4d4d4d] py-1 px-3 grid grid-cols-[max-content_max-content_1fr_max-content] items-center gap-2 cursor-pointer text-gray-900 dark:text-[#e3e3e3] hover:text-black dark:hover:text-[#f0f0f0] bg-white dark:bg-[#141414] hover:bg-gray-50 dark:hover:bg-[#1a1a1a] focus-visible:outline-none list-none marker:hidden [&::-webkit-details-marker]:hidden transition-colors">
+                                      <svg fill="currentColor" aria-hidden="true" className="group-open:rotate-180 w-4 h-4 transition-transform" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M8 10.9998L3 5.9998L3.7 5.2998L8 9.5998L12.3 5.2998L13 5.9998L8 10.9998Z"></path></svg>
+                                      <span className="block">
+                                        <svg width="19" height="19" viewBox="0 0 24 23" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="flex-shrink-0 text-black dark:text-white w-4 h-4" aria-label="GitHub"><path fillRule="evenodd" clipRule="evenodd" d="M12.0183 0.405518C5.73469 0.405518 0.655029 5.50047 0.655029 11.8036C0.655029 16.8421 3.90974 21.107 8.42489 22.6165C8.9894 22.73 9.19618 22.3712 9.19618 22.0695C9.19618 21.8052 9.17757 20.8995 9.17757 19.9558C6.01659 20.6352 5.35835 18.597 5.35835 18.597C4.85036 17.2761 4.09768 16.9365 4.09768 16.9365C3.06309 16.2383 4.17304 16.2383 4.17304 16.2383C5.32067 16.3138 5.92286 17.4083 5.92286 17.4083C6.9386 19.1443 8.57538 18.6538 9.23386 18.3518C9.32782 17.6158 9.62904 17.1063 9.94886 16.8233C7.42775 16.5591 4.77523 15.5778 4.77523 11.1996C4.77523 9.95415 5.22647 8.93516 5.94146 8.14266C5.82866 7.85966 5.43348 6.68944 6.05451 5.12321C6.05451 5.12321 7.01396 4.82122 9.17733 6.2932C10.1036 6.0437 11.0587 5.91677 12.0183 5.91571C12.9777 5.91571 13.9558 6.04794 14.8589 6.2932C17.0226 4.82122 17.982 5.12321 17.982 5.12321C18.603 6.68944 18.2076 7.85966 18.0948 8.14266C18.8287 8.93516 19.2613 9.95415 19.2613 11.1996C19.2613 15.5778 16.6088 16.5401 14.0688 16.8233C14.4828 17.1818 14.8401 17.861 14.8401 18.9368C14.8401 20.4653 14.8215 21.692 14.8215 22.0692C14.8215 22.3712 15.0285 22.73 15.5928 22.6167C20.1079 21.1068 23.3626 16.8421 23.3626 11.8036C23.3813 5.50047 18.283 0.405518 12.0183 0.405518Z"></path></svg>
                                       </span>
-                                      <span className={`text-[14px] font-medium text-gray-900 dark:text-white flex-1 ${githubAccountData ? 'font-mono' : ''}`}>{githubAccountData?.owner || 'Loading...'}</span>
-                                      
-                                      <button type="button" className="h-8 w-8 flex items-center justify-center rounded transition-colors text-gray-500 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-[#272727]" onClick={(e) => e.preventDefault()}>
-                                        <span className="sr-only">Options</span>
-                                        <svg fill="currentColor" aria-hidden="true" className="w-4 h-4" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M4 9C4.55228 9 5 8.55228 5 8C5 7.44772 4.55228 7 4 7C3.44772 7 3 7.44772 3 8C3 8.55228 3.44772 9 4 9Z"></path><path d="M8 9C8.55228 9 9 8.55228 9 8C9 7.44772 8.55228 7 8 7C7.44772 7 7 7.44772 7 8C7 8.55228 7.44772 9 8 9Z"></path><path d="M12 9C12.5523 9 13 8.55228 13 8C13 7.44772 12.5523 7 12 7C11.4477 7 11 7.44772 11 8C11 8.55228 11.4477 9 12 9Z"></path></svg>
-                                      </button>
+                                      <span className="text-[16px] [line-height:2.5rem] font-medium text-gray-900 dark:text-white">{githubAccountData?.owner || 'Loading...'}</span>
                                     </summary>
-                                    <div className="border-t border-solid border-gray-300 dark:border-[#525252] p-4 pl-10 bg-gray-50 dark:bg-[#090909]">
-                                      <h6 className="text-[12px] text-gray-500 dark:text-[#a1a1aa]">
-                                        {githubAccountData ? `${githubAccountData.count} repositories found` : 'Loading repositories...'}
-                                      </h6>
+                                    <div className="border-x border-b border-solid border-gray-300 dark:border-[#4d4d4d] pt-3 pr-3 pb-3 pl-9 [max-height:14.25rem] [overflow:auto] bg-gray-50 dark:bg-[#0d0d0d]">
+                                      <h6 className="text-[12px] font-medium text-gray-500 dark:text-[#b3b3b3]">Repositories you have access to</h6>
+                                      <ul className="-mb-1 mt-2">
+                                        {githubAccountData?.repositories?.map((repo) => (
+                                          <li key={repo.id}>
+                                            <a rel="noopener noreferrer" className="group p-1 cursor-pointer focus-visible:outline-none text-gray-900 dark:text-[#f0f0f0] hover:text-[#2563eb] dark:hover:text-[#60a5fa] active:text-[#93c5fd] no-underline flex items-center h-9 px-3 py-2 text-[14px] -ml-3 hover:!bg-transparent" target="_blank" href={repo.htmlUrl || '#'}>
+                                              <span className="flex flex-row space-x-1 items-center truncate">
+                                                <span className="truncate group-hover:underline">{repo.owner}</span>
+                                                <span className="text-gray-500 dark:text-[#b3b3b3]">/</span>
+                                                <span className="truncate group-hover:underline">{repo.name}</span>
+                                              </span>
+                                              {(repo.private || repo.Private) && (
+                                                <svg fill="currentColor" className="w-3 h-3 text-gray-500 dark:text-[#b3b3b3] mx-1" width="16" height="17" viewBox="0 0 16 17" xmlns="http://www.w3.org/2000/svg"><path d="M12 7.51172H11V4.51172C11 3.71607 10.6839 2.95301 10.1213 2.3904C9.55871 1.82779 8.79565 1.51172 8 1.51172C7.20435 1.51172 6.44129 1.82779 5.87868 2.3904C5.31607 2.95301 5 3.71607 5 4.51172V7.51172H4C3.73478 7.51172 3.48043 7.61708 3.29289 7.80461C3.10536 7.99215 3 8.2465 3 8.51172V14.5117C3 14.7769 3.10536 15.0313 3.29289 15.2188C3.48043 15.4064 3.73478 15.5117 4 15.5117H12C12.2652 15.5117 12.5196 15.4064 12.7071 15.2188C12.8946 15.0313 13 14.7769 13 14.5117V8.51172C13 8.2465 12.8946 7.99215 12.7071 7.80461C12.5196 7.61708 12.2652 7.51172 12 7.51172ZM6 4.51172C6 3.98129 6.21071 3.47258 6.58579 3.09751C6.96086 2.72243 7.46957 2.51172 8 2.51172C8.53043 2.51172 9.03914 2.72243 9.41421 3.09751C9.78929 3.47258 10 3.98129 10 4.51172V7.51172H6V4.51172ZM4 8.51172H12V14.5117H4V8.51172Z"></path></svg>
+                                              )}
+                                              {!(repo.private || repo.Private) && (
+                                                <svg fill="currentColor" className="w-3 h-3 text-gray-500 dark:text-[#b3b3b3] mx-1" width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M8 1.51172C4.41828 1.51172 1.51172 4.41828 1.51172 8C1.51172 11.5817 4.41828 14.4883 8 14.4883C11.5817 14.4883 14.4883 11.5817 14.4883 8C14.4883 4.41828 11.5817 1.51172 8 1.51172ZM0.511719 8C0.511719 3.86602 3.86602 0.511719 8 0.511719C12.134 0.511719 15.4883 3.86602 15.4883 8C15.4883 12.134 12.134 15.4883 8 15.4883C3.86602 15.4883 0.511719 12.134 0.511719 8Z"></path></svg>
+                                              )}
+                                              <span className="hidden md:inline-block text-[12px] text-gray-500 dark:text-[#b3b3b3] px-2 text-nowrap ml-auto">
+                                                <time dateTime={repo.updatedAt}>{repo.updatedAt ? timeAgo(repo.updatedAt) : ''}</time>
+                                              </span>
+                                            </a>
+                                          </li>
+                                        ))}
+                                      </ul>
                                     </div>
                                   </details>
+                                  
+                                  <div className="[grid-column:-2/-1] [grid-row:1/1] justify-self-end border border-solid border-transparent py-1 px-3 flex relative items-center">
+                                    <button type="button" aria-expanded={credentialOptionsOpen} aria-haspopup="menu" onClick={() => setCredentialOptionsOpen(!credentialOptionsOpen)} className="text-gray-500 dark:text-[#e3e3e3] hover:bg-gray-100 dark:hover:bg-[#ffffff1a] hover:text-gray-900 dark:hover:text-[#f0f0f0] active:bg-gray-200 dark:active:bg-[#fff3] active:text-gray-900 dark:active:text-[#fff] h-10 py-2.5 px-3 focus-visible:outline-none flex items-center group/button transition-colors rounded">
+                                      <span className="sr-only">Options</span>
+                                      <svg fill="currentColor" aria-hidden="true" className="w-4 h-4" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M4 9C4.55228 9 5 8.55228 5 8C5 7.44772 4.55228 7 4 7C3.44772 7 3 7.44772 3 8C3 8.55228 3.44772 9 4 9Z"></path><path d="M8 9C8.55228 9 9 8.55228 9 8C9 7.44772 8.55228 7 8 7C7.44772 7 7 7.44772 7 8C7 8.55228 7.44772 9 8 9Z"></path><path d="M12 9C12.5523 9 13 8.55228 13 8C13 7.44772 12.5523 7 12 7C11.4477 7 11 7.44772 11 8C11 8.55228 11.4477 9 12 9Z"></path></svg>
+                                    </button>
+                                    
+                                    {credentialOptionsOpen && (
+                                      <div className="min-w-[208px] p-4 bg-white dark:bg-[#0d0d0d] shadow-lg border border-solid border-gray-200 dark:border-[#4d4d4d] outline-none absolute z-50 top-full right-0 mt-1">
+                                        <button type="button" onClick={() => { setCredentialOptionsOpen(false); window.open('https://github.com/settings/installations', '_blank'); }} className="w-full flex relative text-[14px] text-gray-900 dark:text-[#e3e3e3] py-2 px-3 whitespace-nowrap focus-visible:outline-none cursor-pointer hover:bg-gray-100 dark:hover:bg-[#272727] transition-colors rounded">
+                                          <div className="w-full flex items-center space-x-2.5">
+                                            <svg fill="currentColor" className="w-4 h-4 shrink-0" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M13 14H3C2.73489 13.9996 2.48075 13.8942 2.29329 13.7067C2.10583 13.5193 2.00036 13.2651 2 13V3C2.00036 2.73489 2.10583 2.48075 2.29329 2.29329C2.48075 2.10583 2.73489 2.00036 3 2H8V3H3V13H13V8H14V13C13.9996 13.2651 13.8942 13.5193 13.7067 13.7067C13.5193 13.8942 13.2651 13.9996 13 14Z"></path><path d="M10 1V2H13.293L9 6.293L9.707 7L14 2.707V6H15V1H10Z"></path></svg>
+                                            <span className="flex-1 text-left truncate">Configure on GitHub</span>
+                                          </div>
+                                        </button>
+                                        <button type="button" onClick={() => { setCredentialOptionsOpen(false); alert("Disconnect functionality to be implemented"); }} className="w-full flex relative text-[14px] text-red-600 dark:text-[#f4b3b7] py-2 px-3 whitespace-nowrap focus-visible:outline-none cursor-pointer hover:bg-red-50 dark:hover:bg-[#390508] hover:text-red-700 dark:hover:text-[#fce9ea] transition-colors rounded">
+                                          <div className="w-full flex items-center space-x-2.5">
+                                            <svg fill="currentColor" className="w-4 h-4 shrink-0" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M2.49892 1.79373L1.79194 2.50096L3.4999 4.20832L4.20688 3.50109L2.49892 1.79373Z"></path><path d="M12.4979 11.789L11.7907 12.496L13.4981 14.2039L14.2053 13.4969L12.4979 11.789Z"></path><path d="M6.5 1H5.5V3H6.5V1Z"></path><path d="M3 5.5H1V6.5H3V5.5Z"></path><path d="M15 9.5H13V10.5H15V9.5Z"></path><path d="M10.5 13H9.5V15H10.5V13Z"></path><path d="M8.29 10.535L6.435 12.395C6.24918 12.5808 6.02858 12.7282 5.78579 12.8288C5.54301 12.9294 5.28279 12.9811 5.02 12.9811C4.75721 12.9811 4.49699 12.9294 4.25421 12.8288C4.01142 12.7282 3.79082 12.5808 3.605 12.395C3.22972 12.0197 3.01889 11.5107 3.01889 10.98C3.01889 10.4493 3.22972 9.94028 3.605 9.565L5.465 7.705L4.755 7L2.9 8.86C2.61533 9.13707 2.38853 9.46792 2.23275 9.83334C2.07697 10.1988 1.99531 10.5915 1.99252 10.9887C1.98973 11.386 2.06586 11.7798 2.21649 12.1474C2.36712 12.515 2.58925 12.849 2.87 13.13C3.15032 13.408 3.48277 13.628 3.84828 13.7773C4.21379 13.9266 4.60518 14.0023 5 14C5.40168 14.0004 5.79944 13.921 6.17023 13.7665C6.54101 13.612 6.87743 13.3855 7.16 13.1L9 11.245L8.29 10.535Z"></path><path d="M7.705 5.465L9.565 3.605C9.75082 3.41918 9.97142 3.27178 10.2142 3.17121C10.457 3.07065 10.7172 3.01889 10.98 3.01889C11.2428 3.01889 11.503 3.07065 11.7458 3.17121C11.9886 3.27178 12.2092 3.41918 12.395 3.605C12.5808 3.79082 12.7282 4.01142 12.8288 4.25421C12.9294 4.49699 12.9811 4.75721 12.9811 5.02C12.9811 5.28279 12.9294 5.54301 12.8288 5.78579C12.7282 6.02858 12.5808 6.24918 12.395 6.435L10.535 8.295L11.245 9L13.1 7.14C13.3847 6.86293 13.6115 6.53208 13.7673 6.16666C13.923 5.80123 14.0047 5.40851 14.0075 5.01127C14.0103 4.61404 13.9341 4.2202 13.7835 3.85262C13.6329 3.48505 13.4107 3.15104 13.13 2.87C12.8497 2.59196 12.5172 2.37198 12.1517 2.22269C11.7862 2.07339 11.3948 1.99772 11 2C10.5983 1.99961 10.2006 2.07897 9.82977 2.23346C9.45899 2.38795 9.12257 2.61451 8.84 2.9L7 4.755L7.705 5.465Z"></path></svg>
+                                            <span className="flex-1 text-left truncate">Disconnect credential</span>
+                                          </div>
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
                               </li>
                                 ))
                               ) : (
-                                <li className="border border-dashed border-gray-300 dark:border-[#525252] py-3 px-3 text-[14px] text-gray-500 dark:text-[#a1a1aa]">
+                                <li className="border border-dashed border-gray-300 dark:border-[#525252] py-3 px-3 text-[16px] text-gray-600 dark:text-[#c7c7c7] leading-[24px] font-normal tracking-[0.16px] normal-case">
                                   No Git deployment credentials configured.
                                 </li>
                               )}
                             </ul>
                             
-                            <div className="relative inline-block">
-                              <button type="button" onClick={() => setCredentialDropdownOpen(!credentialDropdownOpen)} aria-expanded={credentialDropdownOpen} className="text-[14px] font-medium text-gray-900 dark:text-[#e3e3e3] hover:bg-gray-100 dark:hover:bg-[#1a1a1a] border border-solid border-[#6b6b6b] h-10 py-2.5 px-3 flex items-center transition-colors">
-                                <span className="me-1.5 flex items-center">
-                                  <span className="block border border-solid border-gray-300 dark:border-[#525252] p-0.5 relative rounded-[0.25rem] bg-white dark:bg-[#1a1a1a]">
-                                    <svg width="15" height="15" viewBox="0 0 24 23" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="flex-shrink-0 text-black dark:text-white" aria-label="GitHub"><path fillRule="evenodd" clipRule="evenodd" d="M12.0183 0.405518C5.73469 0.405518 0.655029 5.50047 0.655029 11.8036C0.655029 16.8421 3.90974 21.107 8.42489 22.6165C8.9894 22.73 9.19618 22.3712 9.19618 22.0695C9.19618 21.8052 9.17757 20.8995 9.17757 19.9558C6.01659 20.6352 5.35835 18.597 5.35835 18.597C4.85036 17.2761 4.09768 16.9365 4.09768 16.9365C3.06309 16.2383 4.17304 16.2383 4.17304 16.2383C5.32067 16.3138 5.92286 17.4083 5.92286 17.4083C6.9386 19.1443 8.57538 18.6538 9.23386 18.3518C9.32782 17.6158 9.62904 17.1063 9.94886 16.8233C7.42775 16.5591 4.77523 15.5778 4.77523 11.1996C4.77523 9.95415 5.22647 8.93516 5.94146 8.14266C5.82866 7.85966 5.43348 6.68944 6.05451 5.12321C6.05451 5.12321 7.01396 4.82122 9.17733 6.2932C10.1036 6.0437 11.0587 5.91677 12.0183 5.91571C12.9777 5.91571 13.9558 6.04794 14.8589 6.2932C17.0226 4.82122 17.982 5.12321 17.982 5.12321C18.603 6.68944 18.2076 7.85966 18.0948 8.14266C18.8287 8.93516 19.2613 9.95415 19.2613 11.1996C19.2613 15.5778 16.6088 16.5401 14.0688 16.8233C14.4828 17.1818 14.8401 17.861 14.8401 18.9368C14.8401 20.4653 14.8215 21.692 14.8215 22.0692C14.8215 22.3712 15.0285 22.73 15.5928 22.6167C20.1079 21.1068 23.3626 16.8421 23.3626 11.8036C23.3813 5.50047 18.283 0.405518 12.0183 0.405518Z"></path></svg>
+                            {deploymentCredentials.length > 0 ? (
+                              <div className="flex items-center text-[16px] text-gray-900 dark:text-[#e3e3e3] font-medium space-x-2.5">
+                                <FaGithubAlt className="w-5 h-5 text-gray-900 dark:text-white" />
+                                <span>Already Connected to GitHub</span>
+                                <RiLinksFill className="w-5 h-5 text-gray-500 dark:text-[#a1a1aa]" />
+                              </div>
+                            ) : (
+                              <div className="relative inline-block">
+                                <button 
+                                  type="button" 
+                                  onClick={() => void linkLoginMethod('github')}
+                                  className="text-[16px] font-medium text-gray-900 dark:text-[#e3e3e3] hover:bg-gray-100 dark:hover:bg-[#1a1a1a] border border-solid border-gray-300 dark:border-[#4d4d4d] h-10 py-2.5 px-3 flex items-center transition-colors outline-none rounded"
+                                >
+                                  <span className="me-1.5 flex items-center">
+                                    <span className="block border border-solid border-gray-300 dark:border-[#525252] p-0.5 relative rounded-[0.25rem] bg-white dark:bg-[#1a1a1a]">
+                                      <svg width="15" height="15" viewBox="0 0 24 23" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="flex-shrink-0 text-black dark:text-white" aria-label="GitHub"><path fillRule="evenodd" clipRule="evenodd" d="M12.0183 0.405518C5.73469 0.405518 0.655029 5.50047 0.655029 11.8036C0.655029 16.8421 3.90974 21.107 8.42489 22.6165C8.9894 22.73 9.19618 22.3712 9.19618 22.0695C9.19618 21.8052 9.17757 20.8995 9.17757 19.9558C6.01659 20.6352 5.35835 18.597 5.35835 18.597C4.85036 17.2761 4.09768 16.9365 4.09768 16.9365C3.06309 16.2383 4.17304 16.2383 4.17304 16.2383C5.32067 16.3138 5.92286 17.4083 5.92286 17.4083C6.9386 19.1443 8.57538 18.6538 9.23386 18.3518C9.32782 17.6158 9.62904 17.1063 9.94886 16.8233C7.42775 16.5591 4.77523 15.5778 4.77523 11.1996C4.77523 9.95415 5.22647 8.93516 5.94146 8.14266C5.82866 7.85966 5.43348 6.68944 6.05451 5.12321C6.05451 5.12321 7.01396 4.82122 9.17733 6.2932C10.1036 6.0437 11.0587 5.91677 12.0183 5.91571C12.9777 5.91571 13.9558 6.04794 14.8589 6.2932C17.0226 4.82122 17.982 5.12321 17.982 5.12321C18.603 6.68944 18.2076 7.85966 18.0948 8.14266C18.8287 8.93516 19.2613 9.95415 19.2613 11.1996C19.2613 15.5778 16.6088 16.5401 14.0688 16.8233C14.4828 17.1818 14.8401 17.861 14.8401 18.9368C14.8401 20.4653 14.8215 21.692 14.8215 22.0692C14.8215 22.3712 15.0285 22.73 15.5928 22.6167C20.1079 21.1068 23.3626 16.8421 23.3626 11.8036C23.3813 5.50047 18.283 0.405518 12.0183 0.405518Z"></path></svg>
+                                    </span>
                                   </span>
-                                </span>
-                                <span className="me-3">Add credential</span>
-                                <svg fill="currentColor" aria-hidden="true" className={`w-4 h-4 transition-transform ${credentialDropdownOpen ? 'rotate-180' : ''}`} viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M8 10.9998L3 5.9998L3.7 5.2998L8 9.5998L12.3 5.2998L13 5.9998L8 10.9998Z"></path></svg>
-                              </button>
-                              
-                              {credentialDropdownOpen && (
-                                <div className="min-w-[208px] p-2 bg-white dark:bg-[#0d0d0d] border border-solid border-[#6b6b6b] shadow-lg outline-none absolute z-50 left-0 top-full mt-1">
-                                  <button type="button" onClick={() => { setCredentialDropdownOpen(false); void linkLoginMethod('github'); }} className="w-full flex relative text-[14px] text-gray-900 dark:text-[#e3e3e3] py-2 px-3 focus-visible:outline-none cursor-pointer hover:bg-gray-100 dark:hover:bg-[#1a1a1a] transition-colors rounded">
-                                    <div className="w-full flex items-center space-x-2.5">
-                                      <span className="block border border-solid border-gray-300 dark:border-[#525252] p-0.5 relative rounded-[0.25rem] bg-white dark:bg-[#1a1a1a]">
-                                        <svg width="15" height="15" viewBox="0 0 24 23" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="flex-shrink-0 text-black dark:text-white" aria-label="GitHub"><path fillRule="evenodd" clipRule="evenodd" d="M12.0183 0.405518C5.73469 0.405518 0.655029 5.50047 0.655029 11.8036C0.655029 16.8421 3.90974 21.107 8.42489 22.6165C8.9894 22.73 9.19618 22.3712 9.19618 22.0695C9.19618 21.8052 9.17757 20.8995 9.17757 19.9558C6.01659 20.6352 5.35835 18.597 5.35835 18.597C4.85036 17.2761 4.09768 16.9365 4.09768 16.9365C3.06309 16.2383 4.17304 16.2383 4.17304 16.2383C5.32067 16.3138 5.92286 17.4083 5.92286 17.4083C6.9386 19.1443 8.57538 18.6538 9.23386 18.3518C9.32782 17.6158 9.62904 17.1063 9.94886 16.8233C7.42775 16.5591 4.77523 15.5778 4.77523 11.1996C4.77523 9.95415 5.22647 8.93516 5.94146 8.14266C5.82866 7.85966 5.43348 6.68944 6.05451 5.12321C6.05451 5.12321 7.01396 4.82122 9.17733 6.2932C10.1036 6.0437 11.0587 5.91677 12.0183 5.91571C12.9777 5.91571 13.9558 6.04794 14.8589 6.2932C17.0226 4.82122 17.982 5.12321 17.982 5.12321C18.603 6.68944 18.2076 7.85966 18.0948 8.14266C18.8287 8.93516 19.2613 9.95415 19.2613 11.1996C19.2613 15.5778 16.6088 16.5401 14.0688 16.8233C14.4828 17.1818 14.8401 17.861 14.8401 18.9368C14.8401 20.4653 14.8215 21.692 14.8215 22.0692C14.8215 22.3712 15.0285 22.73 15.5928 22.6167C20.1079 21.1068 23.3626 16.8421 23.3626 11.8036C23.3813 5.50047 18.283 0.405518 12.0183 0.405518Z"></path></svg>
-                                      </span>
-                                      <span className="flex-1 text-left truncate font-medium">GitHub</span>
-                                    </div>
-                                  </button>
-                                </div>
-                              )}
-                            </div>
+                                  <span>Connect GitHub</span>
+                                </button>
+                              </div>
+                            )}
                           </div>
                         </div>
 
@@ -898,6 +984,13 @@ export default function AccountSettings() {
                     </div>
                   </div>
                 </div>
+              </div>
+
+              <div id="delete-account" className="scroll-mt-24 xl:scroll-mt-20 mt-12 pt-8">
+                <button type="button" onClick={() => setIsDeleteModalOpen(true)} className="type-interface-01 bg-[#e23642] hover:bg-[#c0222d] text-white transition-colors h-10 py-2.5 px-3 flex items-center group/button">
+                  <div className="inline-flex w-4 h-4 me-1.5"><svg fill="currentColor" width="16" height="17" viewBox="0 0 16 17" xmlns="http://www.w3.org/2000/svg"><path d="M7 6.66699H6V12.667H7V6.66699Z"></path><path d="M10 6.66699H9V12.667H10V6.66699Z"></path><path d="M2 3.66699V4.66699H3V14.667C3 14.9322 3.10536 15.1866 3.29289 15.3741C3.48043 15.5616 3.73478 15.667 4 15.667H12C12.2652 15.667 12.5196 15.5616 12.7071 15.3741C12.8946 15.1866 13 14.9322 13 14.667V4.66699H14V3.66699H2ZM4 14.667V4.66699H12V14.667H4Z"></path><path d="M10 1.66699H6V2.66699H10V1.66699Z"></path></svg></div>
+                  Delete Harbor Account
+                </button>
               </div>
 
               </div>
@@ -909,25 +1002,140 @@ export default function AccountSettings() {
           <div role="dialog" aria-modal="true" aria-labelledby="change-password-title" className="w-full max-w-md border border-gray-300 bg-white p-6 shadow-xl dark:border-[#525252] dark:bg-[#0d0d0d]">
             <div className="mb-6 flex items-start justify-between gap-4">
               <div>
-                <h2 id="change-password-title" className="text-xl font-medium text-gray-900 dark:text-white">{profile.hasPassword ? 'Change password' : 'Create password'}</h2>
-                <p className="mt-1 text-sm text-gray-500 dark:text-[#a1a1aa]">Create a new password for your Harbor account.</p>
+                <h2 id="change-password-title" className="flex items-center space-x-2 text-[24px] font-medium text-gray-900 dark:text-white">
+                  <PiPassword className="w-6 h-6" />
+                  <span>{profile.hasPassword ? 'Change password' : 'Create password'}</span>
+                </h2>
+                <p className="mt-1 text-[16px] text-gray-600 dark:text-[#c7c7c7] leading-[24px] font-normal tracking-[0.16px] normal-case">Create a new password for your Harbor account.</p>
               </div>
               <button type="button" aria-label="Close change password dialog" disabled={isChangingPassword} onClick={() => setIsPasswordModalOpen(false)} className="text-2xl leading-none text-gray-500 hover:text-gray-900 disabled:opacity-50 dark:hover:text-white">&times;</button>
             </div>
             <form onSubmit={changePassword} className="space-y-4">
               <div>
-                <label htmlFor="new-password" className="mb-1 block text-sm font-medium text-gray-900 dark:text-white">New password</label>
-                <input id="new-password" type="password" autoComplete="new-password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} className="h-10 w-full border border-gray-300 bg-transparent px-3 text-gray-900 outline-none focus:border-[#2563eb] focus:ring-1 focus:ring-[#2563eb] dark:border-[#525252] dark:text-white" />
+                <label htmlFor="new-password" className="mb-1 block text-[16px] font-medium text-gray-900 dark:text-white">New password</label>
+                <div className="relative">
+                  <input id="new-password" type={showPassword ? "text" : "password"} autoComplete="new-password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} className="h-10 w-full border border-gray-300 bg-transparent px-3 pr-10 text-[16px] text-gray-900 outline-none focus:border-[#2563eb] focus:ring-1 focus:ring-[#2563eb] dark:border-[#525252] dark:text-white" />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 focus:outline-none">
+                    {showPassword ? <PiEyeSlash className="h-5 w-5" /> : <PiEye className="h-5 w-5" />}
+                  </button>
+                </div>
+                {newPassword.length > 0 && (() => {
+                  const criteria = [
+                    { label: '8+ characters', met: newPassword.length >= 8 },
+                    { label: 'Number', met: /\d/.test(newPassword) },
+                    { label: 'Uppercase letter', met: /[A-Z]/.test(newPassword) },
+                    { label: 'Special character', met: /[^A-Za-z0-9]/.test(newPassword) }
+                  ];
+                  const strength = criteria.filter(c => c.met).length;
+                  return (
+                    <div className="flex flex-col space-y-2 mt-2">
+                      <div className="flex space-x-1.5 h-1">
+                        {[1, 2, 3, 4].map(level => (
+                          <div
+                            key={level}
+                            className={`flex-1 rounded-full transition-colors duration-300 ${
+                              strength >= level
+                                ? (strength < 2 ? 'bg-red-500' : strength < 3 ? 'bg-yellow-500' : strength < 4 ? 'bg-blue-500' : 'bg-green-500')
+                                : 'bg-gray-200 dark:bg-[#333]'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                      <div className="grid grid-cols-2 gap-y-1.5 gap-x-2 text-[14px] pt-1">
+                        {criteria.map((c, i) => (
+                          <div key={i} className={`flex items-center space-x-2 ${c.met ? 'text-green-600 dark:text-green-500' : 'text-gray-500 dark:text-[#8f8f8f]'}`}>
+                            <div className={`flex items-center justify-center w-3.5 h-3.5 border flex-shrink-0 transition-colors duration-300 ${c.met ? 'bg-transparent border-green-600 dark:border-green-500 text-green-600 dark:text-green-500' : 'bg-transparent border-gray-400 dark:border-gray-500 text-gray-400 dark:text-gray-500'}`}>
+                              {c.met ? (
+                                <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3.5}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                </svg>
+                              ) : (
+                                <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3.5}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              )}
+                            </div>
+                            <span className="truncate">{c.label}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
               <div>
-                <label htmlFor="confirm-password" className="mb-1 block text-sm font-medium text-gray-900 dark:text-white">Confirm password</label>
-                <input id="confirm-password" type="password" autoComplete="new-password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} className="h-10 w-full border border-gray-300 bg-transparent px-3 text-gray-900 outline-none focus:border-[#2563eb] focus:ring-1 focus:ring-[#2563eb] dark:border-[#525252] dark:text-white" />
+                <label htmlFor="confirm-password" className="mb-1 block text-[16px] font-medium text-gray-900 dark:text-white">Confirm password</label>
+                <div className="relative">
+                  <input id="confirm-password" type={showConfirmPassword ? "text" : "password"} autoComplete="new-password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} className="h-10 w-full border border-gray-300 bg-transparent px-3 pr-10 text-[16px] text-gray-900 outline-none focus:border-[#2563eb] focus:ring-1 focus:ring-[#2563eb] dark:border-[#525252] dark:text-white" />
+                  <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 focus:outline-none">
+                    {showConfirmPassword ? <PiEyeSlash className="h-5 w-5" /> : <PiEye className="h-5 w-5" />}
+                  </button>
+                </div>
               </div>
-              {passwordError && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{passwordError}</p>}
-              {passwordNotice && <p role="status" className="text-sm text-green-600 dark:text-green-400">{passwordNotice}</p>}
+              {passwordError && <p role="alert" className="text-[16px] text-red-600 dark:text-red-400">{passwordError}</p>}
+              {passwordNotice && <p role="status" className="text-[16px] text-green-600 dark:text-green-400">{passwordNotice}</p>}
               <div className="flex justify-end gap-3 pt-2">
-                <button type="button" disabled={isChangingPassword} onClick={() => setIsPasswordModalOpen(false)} className="h-10 border border-[#6b6b6b] px-3 text-sm text-gray-900 disabled:opacity-50 dark:text-white">Cancel</button>
-                <button type="submit" disabled={isChangingPassword || !newPassword || !confirmPassword} className="h-10 bg-white px-4 text-sm font-medium text-black disabled:cursor-not-allowed disabled:opacity-50">{isChangingPassword ? 'Saving...' : profile.hasPassword ? 'Change password' : 'Create password'}</button>
+                <button type="button" disabled={isChangingPassword} onClick={() => setIsPasswordModalOpen(false)} className="h-10 border border-[#6b6b6b] px-3 text-[16px] text-gray-900 disabled:opacity-50 dark:text-white">Cancel</button>
+                <button type="submit" disabled={isChangingPassword || !newPassword || !confirmPassword} className="h-10 bg-white px-4 text-[16px] font-medium text-black disabled:cursor-not-allowed disabled:opacity-50">{isChangingPassword ? 'Saving...' : profile.hasPassword ? 'Change password' : 'Create password'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      
+      {isDeleteModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 px-4" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) { setIsDeleteModalOpen(false); setDeleteConfirmationText(''); } }}>
+          <div className="inline-block w-full text-left align-middle transform page-primary bg-white dark:bg-[#0d0d0d] shadow-lg border border-solid modal-border max-w-xl">
+            <form onSubmit={(e) => { e.preventDefault(); alert("Account deletion not yet implemented"); setIsDeleteModalOpen(false); setDeleteConfirmationText(''); }}>
+              <div className="flex flex-col gap-2 items-start border-solid border-b modal-border p-6 relative">
+                <div className="w-full">
+                  <h1 className="text-[28px] leading-[32px] font-medium text-strong mb-1 font-['Roobert',sans-serif]">Delete Harbor Account</h1>
+                </div>
+                <button type="button" aria-label="Close modal" onClick={() => { setIsDeleteModalOpen(false); setDeleteConfirmationText(''); }} className="flex p-0 w-4 h-4 text-gray-500 hover:text-gray-900 dark:text-[#8f8f8f] dark:hover:text-white absolute right-3 top-3">
+                  <svg fill="currentColor" aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M12 4.7L11.3 4L8 7.3L4.7 4L4 4.7L7.3 8L4 11.3L4.7 12L8 8.7L11.3 12L12 11.3L8.7 8L12 4.7Z"></path></svg>
+                </button>
+              </div>
+              
+              <div className="text-[16px] leading-relaxed text-primary p-6 space-y-4 font-normal">
+                <div>This will delete all existing services, databases, data, Projects, and environment groups in your account.</div>
+                <div>Deleting your account can <span className="font-semibold text-strong">NOT</span> be reversed.</div>
+                <div>Type <span className="font-semibold text-[16px] status-critical-text">sudo delete my account</span> in the text box below and click the delete button.</div>
+                
+                <div className="flex flex-col">
+                  <div className="flex relative">
+                    <input 
+                      autoComplete="off" 
+                      spellCheck="false" 
+                      id="delete-confirm-input" 
+                      className="h-10 w-full border border-gray-300 bg-transparent px-3 text-[16px] text-gray-900 outline-none focus:border-[#2563eb] focus:ring-1 focus:ring-[#2563eb] dark:border-[#525252] dark:text-white transition-colors" 
+                      type="text" 
+                      value={deleteConfirmationText} 
+                      onChange={(e) => setDeleteConfirmationText(e.target.value)} 
+                      name="confirm" 
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              <div className="w-full flex justify-start space-x-2 p-6 border-solid border-t modal-border">
+                <button 
+                  type="submit" 
+                  disabled={deleteConfirmationText !== 'sudo delete my account'} 
+                  className={`type-interface-01 text-[16px] h-10 py-2.5 px-3 flex items-center group/button transition-colors ${
+                    deleteConfirmationText === 'sudo delete my account'
+                      ? 'bg-[#e23642] hover:bg-[#c0222d] text-white cursor-pointer'
+                      : 'bg-[#e23642] text-white opacity-30 cursor-not-allowed'
+                  }`}
+                >
+                  Delete Harbor Account
+                </button>
+                <button 
+                  type="button" 
+                  onClick={() => { setIsDeleteModalOpen(false); setDeleteConfirmationText(''); }} 
+                  className="type-interface-01 text-[16px] text-gray-900 bg-white hover:bg-gray-100 dark:bg-[#1a1a1a] dark:text-[#e3e3e3] dark:hover:bg-[#272727] border border-solid border-gray-300 dark:border-[#4d4d4d] h-10 py-2.5 px-3 flex items-center group/button transition-colors"
+                >
+                  Cancel
+                </button>
               </div>
             </form>
           </div>

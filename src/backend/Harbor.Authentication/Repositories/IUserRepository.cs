@@ -20,5 +20,9 @@ namespace Harbor.Authentication.Repositories
         Task<User?> GetByExternalIdentityAsync(string provider, string providerUserId);
         Task AddExternalIdentityAsync(int userId, string provider, string providerUserId, string? providerEmail, string? accessToken = null);
         Task<string?> GetExternalAccessTokenAsync(int userId, string provider);
+        Task<UserPreferences> GetPreferencesAsync(int userId);
+        Task<UserPreferences> UpsertPreferencesAsync(int userId, string dashboardTheme, string logTheme);
+        Task<bool> RemoveExternalIdentityAsync(int userId, string provider);
+        Task<bool> DeleteAccountAsync(int userId);
     }
 }

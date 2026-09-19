@@ -77,10 +77,7 @@ namespace Harbor.Authentication.Controllers
         [HttpPut("password")]
         public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
         {
-            if (!int.TryParse(User.FindFirstValue("userId"), out var userId))
-            {
-                return Unauthorized();
-            }
+            if (!TryGetUserId(out var userId)) return Unauthorized();
 
             var (success, error) = await _authService.ChangePasswordAsync(userId, request);
             if (!success)
@@ -95,10 +92,7 @@ namespace Harbor.Authentication.Controllers
         [HttpGet("me")]
         public async Task<IActionResult> GetProfile()
         {
-            if (!int.TryParse(User.FindFirstValue("userId"), out var userId))
-            {
-                return Unauthorized();
-            }
+            if (!TryGetUserId(out var userId)) return Unauthorized();
 
             var (success, error, data) = await _authService.GetProfileAsync(userId);
             if (!success)
@@ -113,10 +107,7 @@ namespace Harbor.Authentication.Controllers
         [HttpPut("me")]
         public async Task<IActionResult> UpdateProfile([FromBody] ProfileRequest request)
         {
-            if (!int.TryParse(User.FindFirstValue("userId"), out var userId))
-            {
-                return Unauthorized();
-            }
+            if (!TryGetUserId(out var userId)) return Unauthorized();
 
             var (success, error, data) = await _authService.UpdateProfileAsync(userId, request);
             if (!success)
@@ -125,6 +116,21 @@ namespace Harbor.Authentication.Controllers
             }
 
             return Ok(new ApiResponse<ProfileResponse> { Data = data });
+        }
+
+        [Authorize]
+        [HttpPut("preferences")]
+        public async Task<IActionResult> UpdatePreferences([FromBody] AccountPreferencesRequest request)
+        {
+            if (!TryGetUserId(out var userId)) return Unauthorized();
+
+            var (success, error, data) = await _authService.UpdatePreferencesAsync(userId, request);
+            if (!success)
+            {
+                return Problem(detail: error, statusCode: StatusCodes.Status400BadRequest, title: "Bad Request");
+            }
+
+            return Ok(new ApiResponse<AccountPreferencesResponse> { Data = data });
         }
 
         [AllowAnonymous]
@@ -195,7 +201,7 @@ namespace Harbor.Authentication.Controllers
         [HttpPost("external/{provider}/link")]
         public async Task<IActionResult> LinkExternalLogin(string provider)
         {
-            if (!int.TryParse(User.FindFirstValue("userId"), out var userId)) return Unauthorized();
+            if (!TryGetUserId(out var userId)) return Unauthorized();
             var scheme = provider.ToLowerInvariant() switch
             {
                 "google" => "Google",
@@ -208,6 +214,36 @@ namespace Harbor.Authentication.Controllers
             linkIdentity.AddClaim(new Claim("userId", userId.ToString()));
             await HttpContext.SignInAsync("ExternalLink", new ClaimsPrincipal(linkIdentity), new AuthenticationProperties { IsPersistent = false });
             return Ok(new { url = $"/api/auth/external/{provider.ToLowerInvariant()}/link/start" });
+        }
+
+        [Authorize]
+        [HttpDelete("external/{provider}")]
+        public async Task<IActionResult> UnlinkExternalLogin(string provider)
+        {
+            if (!TryGetUserId(out var userId)) return Unauthorized();
+
+            var (success, error, data) = await _authService.UnlinkExternalLoginAsync(userId, provider);
+            if (!success)
+            {
+                return Problem(detail: error, statusCode: StatusCodes.Status400BadRequest, title: "Bad Request");
+            }
+
+            return Ok(new ApiResponse<ProfileResponse> { Data = data });
+        }
+
+        [Authorize]
+        [HttpDelete("me")]
+        public async Task<IActionResult> DeleteAccount()
+        {
+            if (!TryGetUserId(out var userId)) return Unauthorized();
+
+            var (success, error) = await _authService.DeleteAccountAsync(userId);
+            if (!success)
+            {
+                return Problem(detail: error, statusCode: StatusCodes.Status400BadRequest, title: "Bad Request");
+            }
+
+            return Ok(new MessageResponse { Message = "Account deleted successfully." });
         }
 
         [AllowAnonymous]
@@ -228,6 +264,11 @@ namespace Harbor.Authentication.Controllers
         {
             var frontendUrl = Environment.GetEnvironmentVariable("FRONTEND_URL") ?? "http://localhost:5173";
             return new RedirectResult($"{frontendUrl.TrimEnd('/')}/oauth/callback?{query}");
+        }
+
+        private bool TryGetUserId(out int userId)
+        {
+            return int.TryParse(User.FindFirstValue("userId"), out userId);
         }
     }
 }

@@ -322,5 +322,139 @@ namespace Harbor.Authentication.Repositories
             }
             return null;
         }
+
+        public async Task<UserPreferences> GetPreferencesAsync(int userId)
+        {
+            using var connection = _dbFactory.CreateConnection();
+            await connection.OpenAsync();
+
+            using var command = connection.CreateCommand();
+            command.CommandText =
+                "SELECT \"UserId\", \"DashboardTheme\", \"LogTheme\", \"UpdatedAt\" " +
+                "FROM \"UserPreferences\" WHERE \"UserId\" = @userId LIMIT 1";
+            command.Parameters.AddWithValue("userId", userId);
+
+            using var reader = await command.ExecuteReaderAsync();
+            if (await reader.ReadAsync())
+            {
+                return new UserPreferences
+                {
+                    UserId = reader.GetInt32(0),
+                    DashboardTheme = reader.GetString(1),
+                    LogTheme = reader.GetString(2),
+                    UpdatedAt = reader.GetDateTime(3)
+                };
+            }
+
+            return new UserPreferences { UserId = userId };
+        }
+
+        public async Task<UserPreferences> UpsertPreferencesAsync(int userId, string dashboardTheme, string logTheme)
+        {
+            using var connection = _dbFactory.CreateConnection();
+            await connection.OpenAsync();
+
+            using var command = connection.CreateCommand();
+            command.CommandText =
+                "INSERT INTO \"UserPreferences\" (\"UserId\", \"DashboardTheme\", \"LogTheme\", \"UpdatedAt\") " +
+                "VALUES (@userId, @dashboardTheme, @logTheme, CURRENT_TIMESTAMP) " +
+                "ON CONFLICT (\"UserId\") DO UPDATE SET " +
+                "\"DashboardTheme\" = EXCLUDED.\"DashboardTheme\", " +
+                "\"LogTheme\" = EXCLUDED.\"LogTheme\", " +
+                "\"UpdatedAt\" = CURRENT_TIMESTAMP " +
+                "RETURNING \"UserId\", \"DashboardTheme\", \"LogTheme\", \"UpdatedAt\"";
+            command.Parameters.AddWithValue("userId", userId);
+            command.Parameters.AddWithValue("dashboardTheme", dashboardTheme);
+            command.Parameters.AddWithValue("logTheme", logTheme);
+
+            using var reader = await command.ExecuteReaderAsync();
+            await reader.ReadAsync();
+            return new UserPreferences
+            {
+                UserId = reader.GetInt32(0),
+                DashboardTheme = reader.GetString(1),
+                LogTheme = reader.GetString(2),
+                UpdatedAt = reader.GetDateTime(3)
+            };
+        }
+
+        public async Task<bool> RemoveExternalIdentityAsync(int userId, string provider)
+        {
+            using var connection = _dbFactory.CreateConnection();
+            await connection.OpenAsync();
+            await using var transaction = await connection.BeginTransactionAsync();
+
+            using var deleteCommand = connection.CreateCommand();
+            deleteCommand.Transaction = transaction;
+            deleteCommand.CommandText = "DELETE FROM \"ExternalIdentities\" WHERE \"UserId\" = @userId AND \"Provider\" = @provider";
+            deleteCommand.Parameters.AddWithValue("userId", userId);
+            deleteCommand.Parameters.AddWithValue("provider", provider);
+            var deleted = await deleteCommand.ExecuteNonQueryAsync();
+
+            using var legacyCommand = connection.CreateCommand();
+            legacyCommand.Transaction = transaction;
+            legacyCommand.CommandText =
+                "UPDATE \"Users\" SET \"ExternalLoginMethods\" = array_to_string(" +
+                "ARRAY(SELECT value FROM unnest(string_to_array(\"ExternalLoginMethods\", ',')) value WHERE trim(value) <> '' AND value <> @provider), ',') " +
+                "WHERE \"Id\" = @userId";
+            legacyCommand.Parameters.AddWithValue("userId", userId);
+            legacyCommand.Parameters.AddWithValue("provider", provider);
+            await legacyCommand.ExecuteNonQueryAsync();
+
+            await transaction.CommitAsync();
+            return deleted > 0;
+        }
+
+        public async Task<bool> DeleteAccountAsync(int userId)
+        {
+            using var connection = _dbFactory.CreateConnection();
+            await connection.OpenAsync();
+            await using var transaction = await connection.BeginTransactionAsync();
+
+            var hasProjects = await TableExistsAsync(connection, transaction, "Projects");
+            var hasEnvironments = await TableExistsAsync(connection, transaction, "Environments");
+            var hasDeployments = await TableExistsAsync(connection, transaction, "Deployments");
+
+            if (hasDeployments)
+            {
+                await ExecuteNonQueryAsync(connection, transaction, "DELETE FROM \"Deployments\" WHERE \"OwnerId\" = @userId", userId);
+            }
+
+            if (hasProjects && hasEnvironments)
+            {
+                await ExecuteNonQueryAsync(
+                    connection,
+                    transaction,
+                    "DELETE FROM \"Environments\" e USING \"Projects\" p WHERE e.\"ProjectId\" = p.\"Id\" AND p.\"OwnerId\" = @userId",
+                    userId);
+            }
+
+            if (hasProjects)
+            {
+                await ExecuteNonQueryAsync(connection, transaction, "DELETE FROM \"Projects\" WHERE \"OwnerId\" = @userId", userId);
+            }
+
+            var deletedUsers = await ExecuteNonQueryAsync(connection, transaction, "DELETE FROM \"Users\" WHERE \"Id\" = @userId", userId);
+            await transaction.CommitAsync();
+            return deletedUsers > 0;
+        }
+
+        private static async Task<bool> TableExistsAsync(NpgsqlConnection connection, NpgsqlTransaction transaction, string tableName)
+        {
+            using var command = connection.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandText = "SELECT to_regclass(@tableName) IS NOT NULL";
+            command.Parameters.AddWithValue("tableName", $"public.\"{tableName}\"");
+            return (bool?)await command.ExecuteScalarAsync() ?? false;
+        }
+
+        private static async Task<int> ExecuteNonQueryAsync(NpgsqlConnection connection, NpgsqlTransaction transaction, string commandText, int userId)
+        {
+            using var command = connection.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandText = commandText;
+            command.Parameters.AddWithValue("userId", userId);
+            return await command.ExecuteNonQueryAsync();
+        }
     }
 }

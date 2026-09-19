@@ -9,5 +9,6 @@ namespace Harbor.Authentication.DTOs
         public string? AvatarSvg { get; set; }
         public string[] LoginMethods { get; set; } = Array.Empty<string>();
         public bool HasPassword { get; set; }
+        public AccountPreferencesResponse Preferences { get; set; } = new();
     }
 }

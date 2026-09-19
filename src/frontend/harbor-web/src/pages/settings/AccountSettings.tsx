@@ -1,10 +1,21 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { useNavigate } from "react-router-dom";
 import { FaGithubAlt } from "react-icons/fa";
 import { RiLinksFill, RiSaveLine } from "react-icons/ri";
 import { PiPassword, PiEye, PiEyeSlash } from "react-icons/pi";
 import UserAvatar from "../../components/ui/UserAvatar";
+import { clearAuthSession } from "../../services/authSession";
 
 const authApiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+type ThemePreference = 'system' | 'light' | 'dark';
+type LogThemePreference = 'match-dashboard' | 'light' | 'dark';
+
+const providerLabels: Record<string, string> = {
+  google: 'Google',
+  github: 'GitHub',
+};
+
+const providerDisplayName = (provider: string) => providerLabels[provider.toLowerCase()] ?? provider;
 
 const timeAgo = (dateStr: string) => {
   const date = new Date(dateStr);
@@ -44,6 +55,7 @@ function GitHubIcon() {
 }
 
 export default function AccountSettings() {
+  const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState('profile');
   const [isEditingName, setIsEditingName] = useState(false);
   const [isEditingEmail, setIsEditingEmail] = useState(false);
@@ -59,22 +71,32 @@ export default function AccountSettings() {
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deleteConfirmationText, setDeleteConfirmationText] = useState('');
+  const [deleteError, setDeleteError] = useState('');
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [themeDropdownOpen, setThemeDropdownOpen] = useState(false);
   const [logThemeDropdownOpen, setLogThemeDropdownOpen] = useState(false);
   const [loginMethodDropdownOpen, setLoginMethodDropdownOpen] = useState(false);
 
   const [credentialOptionsOpen, setCredentialOptionsOpen] = useState(false);
-  const getInitialTheme = () => {
+  const getInitialTheme = (): ThemePreference => {
     const saved = localStorage.getItem('harbor_theme');
     return saved === 'light' || saved === 'dark' || saved === 'system' ? saved : 'system';
   };
   const [theme, setTheme] = useState(getInitialTheme());
   const [savedTheme, setSavedTheme] = useState(getInitialTheme());
-  const getInitialLogTheme = () => localStorage.getItem('harbor_log_theme') ?? 'match-dashboard';
+  const getInitialLogTheme = (): LogThemePreference => {
+    const saved = localStorage.getItem('harbor_log_theme');
+    return saved === 'light' || saved === 'dark' || saved === 'match-dashboard' ? saved : 'match-dashboard';
+  };
   const [logTheme, setLogTheme] = useState(getInitialLogTheme);
   const [savedLogTheme, setSavedLogTheme] = useState(getInitialLogTheme);
+  const [preferencesError, setPreferencesError] = useState('');
+  const [isSavingPreferences, setIsSavingPreferences] = useState(false);
+  const [securityError, setSecurityError] = useState('');
+  const [securityNotice, setSecurityNotice] = useState('');
+  const [disconnectingProvider, setDisconnectingProvider] = useState('');
 
-  function applyDashboardTheme(selectedTheme: string) {
+  function applyDashboardTheme(selectedTheme: ThemePreference) {
     const shouldUseDark = selectedTheme === 'dark' || (
       selectedTheme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches
     );
@@ -85,7 +107,7 @@ export default function AccountSettings() {
     applyDashboardTheme(theme);
   }, [theme]);
 
-  const themeOptions = [
+  const themeOptions: Array<{ value: ThemePreference; label: string; icon: ReactNode }> = [
     {
       value: 'system',
       label: 'System',
@@ -125,7 +147,7 @@ export default function AccountSettings() {
     },
   ];
 
-  const logThemeOptions = [
+  const logThemeOptions: Array<{ value: LogThemePreference; label: string; icon: ReactNode }> = [
     {
       value: 'match-dashboard',
       label: 'Match Dashboard (Default)',
@@ -135,8 +157,8 @@ export default function AccountSettings() {
         </svg>
       ),
     },
-    themeOptions[1],
-    themeOptions[2],
+    { ...themeOptions[1], value: 'light' },
+    { ...themeOptions[2], value: 'dark' },
   ];
 
   
@@ -152,6 +174,10 @@ export default function AccountSettings() {
     avatarSvg: string | null;
     loginMethods: string[];
     hasPassword: boolean;
+    preferences?: {
+      dashboardTheme: ThemePreference;
+      logTheme: LogThemePreference;
+    };
   }>({
     username: storedUser.username ?? '',
     email: storedUser.email ?? '',
@@ -159,16 +185,19 @@ export default function AccountSettings() {
     avatarSvg: storedUser.avatarSvg ?? null,
     loginMethods: Array.isArray(storedUser.loginMethods) ? storedUser.loginMethods : [],
     hasPassword: storedUser.hasPassword === true,
+    preferences: storedUser.preferences,
   });
   const [profileError, setProfileError] = useState('');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
-  const deploymentCredentials: string[] = profile.loginMethods.includes('github') ? ['GitHub'] : [];
+  const connectedProviders = profile.loginMethods.map((method) => method.toLowerCase());
+  const isProviderConnected = (provider: string) => connectedProviders.includes(provider.toLowerCase());
+  const hasGithubDeploymentCredential = connectedProviders.includes('github');
   
   const [githubAccountData, setGithubAccountData] = useState<{owner: string, count: number, repositories?: any[]} | null>(null);
 
   useEffect(() => {
     async function loadGithubData() {
-      if (!profile.loginMethods.includes('github')) return;
+      if (!isProviderConnected('github')) return;
       
       const token = localStorage.getItem('harbor_token');
       if (!token) return;
@@ -203,15 +232,25 @@ export default function AccountSettings() {
 
   async function linkLoginMethod(provider: string) {
     const token = localStorage.getItem('harbor_token');
-    if (!token) return;
+    if (!token) {
+      setSecurityError('You must be signed in to connect a login method.');
+      return;
+    }
 
-    const response = await fetch(`${authApiBase}/auth/external/${provider}/link`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const data = await response.json().catch(() => ({}));
-    if (response.ok && data.url) {
+    setSecurityError('');
+    try {
+      const response = await fetch(`${authApiBase}/auth/external/${provider}/link`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.url) {
+        throw new Error(data?.detail || data?.message || `Unable to connect ${providerDisplayName(provider)}.`);
+      }
+
       window.location.assign(`${authApiBase}${data.url.replace('/api', '')}`);
+    } catch (error) {
+      setSecurityError(error instanceof Error ? error.message : `Unable to connect ${providerDisplayName(provider)}.`);
     }
   }
 
@@ -233,6 +272,18 @@ export default function AccountSettings() {
         setProfile(nextProfile);
         setName(nextProfile.username);
         setEmail(nextProfile.email);
+        if (nextProfile.preferences) {
+          const nextTheme = nextProfile.preferences.dashboardTheme as ThemePreference;
+          const nextLogTheme = nextProfile.preferences.logTheme as LogThemePreference;
+          setTheme(nextTheme);
+          setSavedTheme(nextTheme);
+          setLogTheme(nextLogTheme);
+          setSavedLogTheme(nextLogTheme);
+          localStorage.setItem('harbor_theme', nextTheme);
+          localStorage.setItem('harbor_log_theme', nextLogTheme);
+          applyDashboardTheme(nextTheme);
+          window.dispatchEvent(new Event('harbor-log-theme-change'));
+        }
         localStorage.setItem('harbor_user', JSON.stringify(nextProfile));
         window.dispatchEvent(new Event('storage'));
       } catch (error) {
@@ -335,6 +386,128 @@ export default function AccountSettings() {
       setPasswordError(error instanceof Error ? error.message : 'Unable to change password.');
     } finally {
       setIsChangingPassword(false);
+    }
+  }
+
+  async function savePreferences(nextTheme = theme, nextLogTheme = logTheme) {
+    const token = localStorage.getItem('harbor_token');
+    if (!token) {
+      setPreferencesError('You must be signed in to update preferences.');
+      return;
+    }
+
+    setPreferencesError('');
+    setIsSavingPreferences(true);
+    try {
+      const response = await fetch(`${authApiBase}/auth/preferences`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ dashboardTheme: nextTheme, logTheme: nextLogTheme }),
+      });
+      const responseData = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(responseData?.detail || responseData?.message || 'Unable to save preferences.');
+      }
+
+      const preferences = responseData.data;
+      const savedDashboardTheme = preferences.dashboardTheme as ThemePreference;
+      const savedExplorerTheme = preferences.logTheme as LogThemePreference;
+      setTheme(savedDashboardTheme);
+      setSavedTheme(savedDashboardTheme);
+      setLogTheme(savedExplorerTheme);
+      setSavedLogTheme(savedExplorerTheme);
+      setIsEditingTheme(false);
+      setIsEditingLogTheme(false);
+      setThemeDropdownOpen(false);
+      setLogThemeDropdownOpen(false);
+      localStorage.setItem('harbor_theme', savedDashboardTheme);
+      localStorage.setItem('harbor_log_theme', savedExplorerTheme);
+      applyDashboardTheme(savedDashboardTheme);
+      window.dispatchEvent(new Event('harbor-log-theme-change'));
+      setProfile((current) => {
+        const nextProfile = { ...current, preferences };
+        localStorage.setItem('harbor_user', JSON.stringify(nextProfile));
+        window.dispatchEvent(new Event('storage'));
+        return nextProfile;
+      });
+    } catch (error) {
+      setPreferencesError(error instanceof Error ? error.message : 'Unable to save preferences.');
+    } finally {
+      setIsSavingPreferences(false);
+    }
+  }
+
+  async function disconnectLoginMethod(provider: string) {
+    const token = localStorage.getItem('harbor_token');
+    if (!token) {
+      setSecurityError('You must be signed in to disconnect a login method.');
+      return;
+    }
+
+    const normalizedProvider = provider.toLowerCase();
+    setSecurityError('');
+    setSecurityNotice('');
+    setDisconnectingProvider(normalizedProvider);
+    try {
+      const response = await fetch(`${authApiBase}/auth/external/${normalizedProvider}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const responseData = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(responseData?.detail || responseData?.message || `Unable to disconnect ${providerDisplayName(provider)}.`);
+      }
+
+      const nextProfile = responseData.data;
+      setProfile(nextProfile);
+      setName(nextProfile.username);
+      setEmail(nextProfile.email);
+      if (normalizedProvider === 'github') setGithubAccountData(null);
+      localStorage.setItem('harbor_user', JSON.stringify(nextProfile));
+      window.dispatchEvent(new Event('storage'));
+      setSecurityNotice(`${providerDisplayName(provider)} disconnected.`);
+    } catch (error) {
+      setSecurityError(error instanceof Error ? error.message : `Unable to disconnect ${providerDisplayName(provider)}.`);
+    } finally {
+      setDisconnectingProvider('');
+      setCredentialOptionsOpen(false);
+      setLoginMethodDropdownOpen(false);
+    }
+  }
+
+  async function deleteAccount(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (deleteConfirmationText !== 'sudo delete my account') return;
+
+    const token = localStorage.getItem('harbor_token');
+    if (!token) {
+      setDeleteError('You must be signed in to delete your account.');
+      return;
+    }
+
+    setDeleteError('');
+    setIsDeletingAccount(true);
+    try {
+      const response = await fetch(`${authApiBase}/auth/me`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const responseData = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(responseData?.detail || responseData?.message || 'Unable to delete your account.');
+      }
+
+      clearAuthSession();
+      localStorage.removeItem('harbor_theme');
+      localStorage.removeItem('harbor_log_theme');
+      navigate('/login', { replace: true });
+    } catch (error) {
+      setDeleteError(error instanceof Error ? error.message : 'Unable to delete your account.');
+    } finally {
+      setIsDeletingAccount(false);
     }
   }
 
@@ -580,6 +753,9 @@ export default function AccountSettings() {
                         <div className="flex-1 small:pr-4">
                           <div className="">
                             <h2 className="text-[24px] font-[500] leading-[28px] tracking-[-0.24px] text-strong" style={{ fontFamily: 'Roobert, sans-serif' }}>Appearance</h2>
+                            {preferencesError && (
+                              <p role="alert" className="mt-2 text-sm text-red-600 dark:text-red-400">{preferencesError}</p>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -655,16 +831,12 @@ export default function AccountSettings() {
                                       <button type="button" onClick={() => { setIsEditingTheme(false); setTheme(savedTheme); setThemeDropdownOpen(false); }} className="type-interface-01 button-ghost-text hover:button-ghost-background--hover hover:button-ghost-text--hover h-10 py-2.5 px-3 flex items-center border border-solid border-[#6b6b6b]">
                                         Cancel
                                       </button>
-                                      <button type="submit" disabled={theme === savedTheme} onClick={(e) => { 
+                                      <button type="submit" disabled={isSavingPreferences || theme === savedTheme} onClick={(e) => {
                                         e.preventDefault(); 
-                                        setSavedTheme(theme); 
-                                        setIsEditingTheme(false); 
-                                        setThemeDropdownOpen(false); 
-                                        localStorage.setItem('harbor_theme', theme);
-                                        applyDashboardTheme(theme);
+                                        void savePreferences(theme as ThemePreference, savedLogTheme as LogThemePreference);
                                       }} className="type-interface-01 button-primary-text button-primary-background hover:button-primary-background--hover disabled:opacity-50 disabled:cursor-not-allowed h-10 py-2.5 px-4 flex items-center space-x-2 rounded-none font-medium text-black bg-white">
                                         <RiSaveLine className="w-5 h-5" />
-                                        <span>Save changes</span>
+                                        <span>{isSavingPreferences ? 'Saving...' : 'Save changes'}</span>
                                       </button>
                                     </div>
                                   ) : (
@@ -759,16 +931,12 @@ export default function AccountSettings() {
                                       <button type="button" onClick={() => { setIsEditingLogTheme(false); setLogTheme(savedLogTheme); setLogThemeDropdownOpen(false); }} className="type-interface-01 button-ghost-text hover:button-ghost-background--hover hover:button-ghost-text--hover h-10 py-2.5 px-3 flex items-center border border-solid border-[#6b6b6b]">
                                         Cancel
                                       </button>
-                                      <button type="submit" disabled={logTheme === savedLogTheme} onClick={(e) => {
+                                      <button type="submit" disabled={isSavingPreferences || logTheme === savedLogTheme} onClick={(e) => {
                                         e.preventDefault();
-                                        setSavedLogTheme(logTheme);
-                                        setIsEditingLogTheme(false);
-                                        setLogThemeDropdownOpen(false);
-                                        localStorage.setItem('harbor_log_theme', logTheme);
-                                        window.dispatchEvent(new Event('harbor-log-theme-change'));
+                                        void savePreferences(savedTheme as ThemePreference, logTheme as LogThemePreference);
                                       }} className="type-interface-01 button-primary-text button-primary-background hover:button-primary-background--hover disabled:opacity-50 disabled:cursor-not-allowed h-10 py-2.5 px-4 flex items-center space-x-2 rounded-none font-medium text-black bg-white">
                                         <RiSaveLine className="w-5 h-5" />
-                                        <span>Save changes</span>
+                                        <span>{isSavingPreferences ? 'Saving...' : 'Save changes'}</span>
                                       </button>
                                     </div>
                                   ) : (
@@ -796,6 +964,12 @@ export default function AccountSettings() {
                         <div className="flex-1 small:pr-4">
                           <div className="">
                             <h2 className="text-[24px] font-[500] leading-[28px] tracking-[-0.24px] text-strong" style={{ fontFamily: 'Roobert, sans-serif' }}>Account Security</h2>
+                            {securityError && (
+                              <p role="alert" className="mt-2 text-sm text-red-600 dark:text-red-400">{securityError}</p>
+                            )}
+                            {securityNotice && (
+                              <p role="status" className="mt-2 text-sm text-green-600 dark:text-green-400">{securityNotice}</p>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -828,7 +1002,15 @@ export default function AccountSettings() {
                                   <li key={method}>
                                     <div className="border border-solid border-[#6b6b6b] py-1 px-3 grid grid-cols-[max-content_1fr_max-content] items-center gap-2">
                                       <span className="block">{method === 'google' ? <GoogleIcon /> : <GitHubIcon />}</span>
-                                      <span className="text-[16px] leading-[40px] font-medium text-gray-900 dark:text-white"><span>{method === 'google' ? 'Google' : 'GitHub'}</span> <span className="text-gray-500 dark:text-[#a1a1aa] text-[14px] ml-1.5 font-normal">{currentEmail}</span></span>
+                                      <span className="text-[16px] leading-[40px] font-medium text-gray-900 dark:text-white"><span>{providerDisplayName(method)}</span> <span className="text-gray-500 dark:text-[#a1a1aa] text-[14px] ml-1.5 font-normal">{currentEmail}</span></span>
+                                      <button
+                                        type="button"
+                                        disabled={disconnectingProvider === method.toLowerCase()}
+                                        onClick={() => void disconnectLoginMethod(method)}
+                                        className="text-[14px] text-red-600 dark:text-[#f4b3b7] hover:bg-red-50 dark:hover:bg-[#390508] disabled:opacity-50 disabled:cursor-not-allowed h-8 px-2 transition-colors"
+                                      >
+                                        {disconnectingProvider === method.toLowerCase() ? 'Disconnecting...' : 'Disconnect'}
+                                      </button>
                                     </div>
                                   </li>
                                 ))}
@@ -839,8 +1021,8 @@ export default function AccountSettings() {
                               <div className="relative inline-block">
                                 <button type="button" onClick={() => setLoginMethodDropdownOpen(!loginMethodDropdownOpen)} aria-expanded={loginMethodDropdownOpen} className="text-[16px] font-medium text-gray-900 dark:text-[#e3e3e3] hover:bg-gray-100 dark:hover:bg-[#1a1a1a] border border-solid border-[#6b6b6b] h-10 py-2.5 px-3 flex items-center transition-colors">
                                   <span className="me-1.5 flex items-center gap-1">
-                                    {!profile.loginMethods.includes('google') && <span className="block border border-solid border-gray-300 dark:border-[#525252] p-0.5 relative rounded-[0.25rem] bg-white dark:bg-[#1a1a1a]"><GoogleIcon /></span>}
-                                    {!profile.loginMethods.includes('github') && <span className="block border border-solid border-gray-300 dark:border-[#525252] p-0.5 relative rounded-[0.25rem] bg-white dark:bg-[#1a1a1a]">
+                                    {!isProviderConnected('google') && <span className="block border border-solid border-gray-300 dark:border-[#525252] p-0.5 relative rounded-[0.25rem] bg-white dark:bg-[#1a1a1a]"><GoogleIcon /></span>}
+                                    {!isProviderConnected('github') && <span className="block border border-solid border-gray-300 dark:border-[#525252] p-0.5 relative rounded-[0.25rem] bg-white dark:bg-[#1a1a1a]">
                                       <svg width="15" height="15" viewBox="0 0 24 23" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="flex-shrink-0 text-black dark:text-white" aria-label="GitHub"><path fillRule="evenodd" clipRule="evenodd" d="M12.0183 0.405518C5.73469 0.405518 0.655029 5.50047 0.655029 11.8036C0.655029 16.8421 3.90974 21.107 8.42489 22.6165C8.9894 22.73 9.19618 22.3712 9.19618 22.0695C9.19618 21.8052 9.17757 20.8995 9.17757 19.9558C6.01659 20.6352 5.35835 18.597 5.35835 18.597C4.85036 17.2761 4.09768 16.9365 4.09768 16.9365C3.06309 16.2383 4.17304 16.2383 4.17304 16.2383C5.32067 16.3138 5.92286 17.4083 5.92286 17.4083C6.9386 19.1443 8.57538 18.6538 9.23386 18.3518C9.32782 17.6158 9.62904 17.1063 9.94886 16.8233C7.42775 16.5591 4.77523 15.5778 4.77523 11.1996C4.77523 9.95415 5.22647 8.93516 5.94146 8.14266C5.82866 7.85966 5.43348 6.68944 6.05451 5.12321C6.05451 5.12321 7.01396 4.82122 9.17733 6.2932C10.1036 6.0437 11.0587 5.91677 12.0183 5.91571C12.9777 5.91571 13.9558 6.04794 14.8589 6.2932C17.0226 4.82122 17.982 5.12321 17.982 5.12321C18.603 6.68944 18.2076 7.85966 18.0948 8.14266C18.8287 8.93516 19.2613 9.95415 19.2613 11.1996C19.2613 15.5778 16.6088 16.5401 14.0688 16.8233C14.4828 17.1818 14.8401 17.861 14.8401 18.9368C14.8401 20.4653 14.8215 21.692 14.8215 22.0692C14.8215 22.3712 15.0285 22.73 15.5928 22.6167C20.1079 21.1068 23.3626 16.8421 23.3626 11.8036C23.3813 5.50047 18.283 0.405518 12.0183 0.405518Z"></path></svg>
                                     </span>}
                                   </span>
@@ -850,13 +1032,13 @@ export default function AccountSettings() {
                                 
                                 {loginMethodDropdownOpen && (
                                   <div className="min-w-[208px] p-2 bg-white dark:bg-[#0d0d0d] border border-solid border-[#6b6b6b] shadow-lg outline-none absolute z-50 left-0 top-full mt-1">
-                                    {!profile.loginMethods.includes('google') && <button type="button" onClick={() => linkLoginMethod('google')} className="w-full flex relative text-[16px] text-gray-900 dark:text-[#e3e3e3] py-2 px-3 focus-visible:outline-none cursor-pointer hover:bg-gray-100 dark:hover:bg-[#1a1a1a] transition-colors rounded">
+                                    {!isProviderConnected('google') && <button type="button" onClick={() => void linkLoginMethod('google')} className="w-full flex relative text-[16px] text-gray-900 dark:text-[#e3e3e3] py-2 px-3 focus-visible:outline-none cursor-pointer hover:bg-gray-100 dark:hover:bg-[#1a1a1a] transition-colors rounded">
                                       <div className="w-full flex items-center space-x-2.5">
                                         <span className="block border border-solid border-gray-300 dark:border-[#525252] p-0.5 relative rounded-[0.25rem] bg-white dark:bg-[#1a1a1a]"><GoogleIcon /></span>
                                         <span className="flex-1 text-left truncate font-medium">Google</span>
                                       </div>
                                     </button>}
-                                    {!profile.loginMethods.includes('github') && <button type="button" onClick={() => linkLoginMethod('github')} className="w-full flex relative text-[16px] text-gray-900 dark:text-[#e3e3e3] py-2 px-3 focus-visible:outline-none cursor-pointer hover:bg-gray-100 dark:hover:bg-[#1a1a1a] transition-colors rounded">
+                                    {!isProviderConnected('github') && <button type="button" onClick={() => void linkLoginMethod('github')} className="w-full flex relative text-[16px] text-gray-900 dark:text-[#e3e3e3] py-2 px-3 focus-visible:outline-none cursor-pointer hover:bg-gray-100 dark:hover:bg-[#1a1a1a] transition-colors rounded">
                                       <div className="w-full flex items-center space-x-2.5">
                                         <span className="block border border-solid border-gray-300 dark:border-[#525252] p-0.5 relative rounded-[0.25rem] bg-white dark:bg-[#1a1a1a]">
                                           <svg width="15" height="15" viewBox="0 0 24 23" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="flex-shrink-0 text-black dark:text-white" aria-label="GitHub"><path fillRule="evenodd" clipRule="evenodd" d="M12.0183 0.405518C5.73469 0.405518 0.655029 5.50047 0.655029 11.8036C0.655029 16.8421 3.90974 21.107 8.42489 22.6165C8.9894 22.73 9.19618 22.3712 9.19618 22.0695C9.19618 21.8052 9.17757 20.8995 9.17757 19.9558C6.01659 20.6352 5.35835 18.597 5.35835 18.597C4.85036 17.2761 4.09768 16.9365 4.09768 16.9365C3.06309 16.2383 4.17304 16.2383 4.17304 16.2383C5.32067 16.3138 5.92286 17.4083 5.92286 17.4083C6.9386 19.1443 8.57538 18.6538 9.23386 18.3518C9.32782 17.6158 9.62904 17.1063 9.94886 16.8233C7.42775 16.5591 4.77523 15.5778 4.77523 11.1996C4.77523 9.95415 5.22647 8.93516 5.94146 8.14266C5.82866 7.85966 5.43348 6.68944 6.05451 5.12321C6.05451 5.12321 7.01396 4.82122 9.17733 6.2932C10.1036 6.0437 11.0587 5.91677 12.0183 5.91571C12.9777 5.91571 13.9558 6.04794 14.8589 6.2932C17.0226 4.82122 17.982 5.12321 17.982 5.12321C18.603 6.68944 18.2076 7.85966 18.0948 8.14266C18.8287 8.93516 19.2613 9.95415 19.2613 11.1996C19.2613 15.5778 16.6088 16.5401 14.0688 16.8233C14.4828 17.1818 14.8401 17.861 14.8401 18.9368C14.8401 20.4653 14.8215 21.692 14.8215 22.0692C14.8215 22.3712 15.0285 22.73 15.5928 22.6167C20.1079 21.1068 23.3626 16.8421 23.3626 11.8036C23.3813 5.50047 18.283 0.405518 12.0183 0.405518Z"></path></svg>
@@ -883,9 +1065,8 @@ export default function AccountSettings() {
                           </div>
                           <div className="col-span-2">
                             <ul className="space-y-2 mb-4">
-                              {deploymentCredentials.length > 0 ? (
-                                deploymentCredentials.map((cred) => (
-                              <li key={cred}>
+                              {hasGithubDeploymentCredential ? (
+                              <li key="github">
                                 <div className="grid [grid-template-columns:1fr_auto] [grid-template-rows:auto_1fr] relative">
                                   <details className="group [grid-column:1/-1] [grid-row:1/3]">
                                     <summary className="border border-solid border-gray-300 dark:border-[#4d4d4d] py-1 px-3 grid grid-cols-[max-content_max-content_1fr_max-content] items-center gap-2 cursor-pointer text-gray-900 dark:text-[#e3e3e3] hover:text-black dark:hover:text-[#f0f0f0] bg-white dark:bg-[#141414] hover:bg-gray-50 dark:hover:bg-[#1a1a1a] focus-visible:outline-none list-none marker:hidden [&::-webkit-details-marker]:hidden transition-colors">
@@ -936,10 +1117,10 @@ export default function AccountSettings() {
                                             <span className="flex-1 text-left truncate">Configure on GitHub</span>
                                           </div>
                                         </button>
-                                        <button type="button" onClick={() => { setCredentialOptionsOpen(false); alert("Disconnect functionality to be implemented"); }} className="w-full flex relative text-[14px] text-red-600 dark:text-[#f4b3b7] py-2 px-3 whitespace-nowrap focus-visible:outline-none cursor-pointer hover:bg-red-50 dark:hover:bg-[#390508] hover:text-red-700 dark:hover:text-[#fce9ea] transition-colors rounded">
+                                        <button type="button" disabled={disconnectingProvider === 'github'} onClick={() => void disconnectLoginMethod('github')} className="w-full flex relative text-[14px] text-red-600 dark:text-[#f4b3b7] py-2 px-3 whitespace-nowrap focus-visible:outline-none cursor-pointer hover:bg-red-50 dark:hover:bg-[#390508] hover:text-red-700 dark:hover:text-[#fce9ea] disabled:opacity-50 disabled:cursor-not-allowed transition-colors rounded">
                                           <div className="w-full flex items-center space-x-2.5">
                                             <svg fill="currentColor" className="w-4 h-4 shrink-0" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M2.49892 1.79373L1.79194 2.50096L3.4999 4.20832L4.20688 3.50109L2.49892 1.79373Z"></path><path d="M12.4979 11.789L11.7907 12.496L13.4981 14.2039L14.2053 13.4969L12.4979 11.789Z"></path><path d="M6.5 1H5.5V3H6.5V1Z"></path><path d="M3 5.5H1V6.5H3V5.5Z"></path><path d="M15 9.5H13V10.5H15V9.5Z"></path><path d="M10.5 13H9.5V15H10.5V13Z"></path><path d="M8.29 10.535L6.435 12.395C6.24918 12.5808 6.02858 12.7282 5.78579 12.8288C5.54301 12.9294 5.28279 12.9811 5.02 12.9811C4.75721 12.9811 4.49699 12.9294 4.25421 12.8288C4.01142 12.7282 3.79082 12.5808 3.605 12.395C3.22972 12.0197 3.01889 11.5107 3.01889 10.98C3.01889 10.4493 3.22972 9.94028 3.605 9.565L5.465 7.705L4.755 7L2.9 8.86C2.61533 9.13707 2.38853 9.46792 2.23275 9.83334C2.07697 10.1988 1.99531 10.5915 1.99252 10.9887C1.98973 11.386 2.06586 11.7798 2.21649 12.1474C2.36712 12.515 2.58925 12.849 2.87 13.13C3.15032 13.408 3.48277 13.628 3.84828 13.7773C4.21379 13.9266 4.60518 14.0023 5 14C5.40168 14.0004 5.79944 13.921 6.17023 13.7665C6.54101 13.612 6.87743 13.3855 7.16 13.1L9 11.245L8.29 10.535Z"></path><path d="M7.705 5.465L9.565 3.605C9.75082 3.41918 9.97142 3.27178 10.2142 3.17121C10.457 3.07065 10.7172 3.01889 10.98 3.01889C11.2428 3.01889 11.503 3.07065 11.7458 3.17121C11.9886 3.27178 12.2092 3.41918 12.395 3.605C12.5808 3.79082 12.7282 4.01142 12.8288 4.25421C12.9294 4.49699 12.9811 4.75721 12.9811 5.02C12.9811 5.28279 12.9294 5.54301 12.8288 5.78579C12.7282 6.02858 12.5808 6.24918 12.395 6.435L10.535 8.295L11.245 9L13.1 7.14C13.3847 6.86293 13.6115 6.53208 13.7673 6.16666C13.923 5.80123 14.0047 5.40851 14.0075 5.01127C14.0103 4.61404 13.9341 4.2202 13.7835 3.85262C13.6329 3.48505 13.4107 3.15104 13.13 2.87C12.8497 2.59196 12.5172 2.37198 12.1517 2.22269C11.7862 2.07339 11.3948 1.99772 11 2C10.5983 1.99961 10.2006 2.07897 9.82977 2.23346C9.45899 2.38795 9.12257 2.61451 8.84 2.9L7 4.755L7.705 5.465Z"></path></svg>
-                                            <span className="flex-1 text-left truncate">Disconnect credential</span>
+                                            <span className="flex-1 text-left truncate">{disconnectingProvider === 'github' ? 'Disconnecting...' : 'Disconnect credential'}</span>
                                           </div>
                                         </button>
                                       </div>
@@ -947,7 +1128,6 @@ export default function AccountSettings() {
                                   </div>
                                 </div>
                               </li>
-                                ))
                               ) : (
                                 <li className="border border-dashed border-gray-300 dark:border-[#525252] py-3 px-3 text-[16px] text-gray-600 dark:text-[#c7c7c7] leading-[24px] font-normal tracking-[0.16px] normal-case">
                                   No Git deployment credentials configured.
@@ -955,7 +1135,7 @@ export default function AccountSettings() {
                               )}
                             </ul>
                             
-                            {deploymentCredentials.length > 0 ? (
+                            {hasGithubDeploymentCredential ? (
                               <div className="flex items-center text-[16px] text-gray-900 dark:text-[#e3e3e3] font-medium space-x-2.5">
                                 <FaGithubAlt className="w-5 h-5 text-gray-900 dark:text-white" />
                                 <span>Already Connected to GitHub</span>
@@ -1086,7 +1266,7 @@ export default function AccountSettings() {
       {isDeleteModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 px-4" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) { setIsDeleteModalOpen(false); setDeleteConfirmationText(''); } }}>
           <div className="inline-block w-full text-left align-middle transform page-primary bg-white dark:bg-[#0d0d0d] shadow-lg border border-solid modal-border max-w-xl">
-            <form onSubmit={(e) => { e.preventDefault(); alert("Account deletion not yet implemented"); setIsDeleteModalOpen(false); setDeleteConfirmationText(''); }}>
+            <form onSubmit={deleteAccount}>
               <div className="flex flex-col gap-2 items-start border-solid border-b modal-border p-6 relative">
                 <div className="w-full">
                   <h1 className="text-[28px] leading-[32px] font-medium text-strong mb-1 font-['Roobert',sans-serif]">Delete Harbor Account</h1>
@@ -1100,6 +1280,9 @@ export default function AccountSettings() {
                 <div>This will delete all existing services, databases, data, Projects, and environment groups in your account.</div>
                 <div>Deleting your account can <span className="font-semibold text-strong">NOT</span> be reversed.</div>
                 <div>Type <span className="font-semibold text-[16px] status-critical-text">sudo delete my account</span> in the text box below and click the delete button.</div>
+                {deleteError && (
+                  <p role="alert" className="text-[16px] text-red-600 dark:text-red-400">{deleteError}</p>
+                )}
                 
                 <div className="flex flex-col">
                   <div className="flex relative">
@@ -1120,19 +1303,20 @@ export default function AccountSettings() {
               <div className="w-full flex justify-start space-x-2 p-6 border-solid border-t modal-border">
                 <button 
                   type="submit" 
-                  disabled={deleteConfirmationText !== 'sudo delete my account'} 
+                  disabled={isDeletingAccount || deleteConfirmationText !== 'sudo delete my account'}
                   className={`type-interface-01 text-[16px] h-10 py-2.5 px-3 flex items-center group/button transition-colors ${
-                    deleteConfirmationText === 'sudo delete my account'
+                    deleteConfirmationText === 'sudo delete my account' && !isDeletingAccount
                       ? 'bg-[#e23642] hover:bg-[#c0222d] text-white cursor-pointer'
                       : 'bg-[#e23642] text-white opacity-30 cursor-not-allowed'
                   }`}
                 >
-                  Delete Harbor Account
+                  {isDeletingAccount ? 'Deleting...' : 'Delete Harbor Account'}
                 </button>
                 <button 
                   type="button" 
+                  disabled={isDeletingAccount}
                   onClick={() => { setIsDeleteModalOpen(false); setDeleteConfirmationText(''); }} 
-                  className="type-interface-01 text-[16px] text-gray-900 bg-white hover:bg-gray-100 dark:bg-[#1a1a1a] dark:text-[#e3e3e3] dark:hover:bg-[#272727] border border-solid border-gray-300 dark:border-[#4d4d4d] h-10 py-2.5 px-3 flex items-center group/button transition-colors"
+                  className="type-interface-01 text-[16px] text-gray-900 bg-white hover:bg-gray-100 dark:bg-[#1a1a1a] dark:text-[#e3e3e3] dark:hover:bg-[#272727] border border-solid border-gray-300 dark:border-[#4d4d4d] h-10 py-2.5 px-3 flex items-center group/button disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   Cancel
                 </button>

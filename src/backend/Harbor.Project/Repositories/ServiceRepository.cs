@@ -19,13 +19,15 @@ namespace Harbor.Project.Repositories
 
             using var command = connection.CreateCommand();
             command.CommandText =
-                "INSERT INTO \"Services\" (\"ProjectId\", \"Name\", \"Type\", \"RepositoryUrl\", \"CreatedAt\") " +
-                "VALUES (@projectId, @name, @type, @repositoryUrl, @createdAt) " +
+                "INSERT INTO \"Services\" (\"ProjectId\", \"Name\", \"Type\", \"RepositoryUrl\", \"RepositoryName\", \"RepositoryBranch\", \"CreatedAt\") " +
+                "VALUES (@projectId, @name, @type, @repositoryUrl, @repositoryName, @repositoryBranch, @createdAt) " +
                 "RETURNING \"Id\";";
             command.Parameters.AddWithValue("projectId", service.ProjectId);
             command.Parameters.AddWithValue("name", service.Name);
             command.Parameters.AddWithValue("type", service.Type);
             command.Parameters.AddWithValue("repositoryUrl", service.RepositoryUrl ?? (object)DBNull.Value);
+            command.Parameters.AddWithValue("repositoryName", service.RepositoryName ?? (object)DBNull.Value);
+            command.Parameters.AddWithValue("repositoryBranch", service.RepositoryBranch ?? (object)DBNull.Value);
             command.Parameters.AddWithValue("createdAt", DateTime.UtcNow);
 
             var result = await command.ExecuteScalarAsync();
@@ -39,7 +41,7 @@ namespace Harbor.Project.Repositories
 
             using var command = connection.CreateCommand();
             command.CommandText =
-                "SELECT \"Id\", \"ProjectId\", \"Name\", \"Type\", \"RepositoryUrl\", \"CreatedAt\" " +
+                "SELECT \"Id\", \"ProjectId\", \"Name\", \"Type\", \"RepositoryUrl\", \"RepositoryName\", \"RepositoryBranch\", \"CreatedAt\" " +
                 "FROM \"Services\" WHERE \"Id\" = @id";
             command.Parameters.AddWithValue("id", id);
 
@@ -53,7 +55,9 @@ namespace Harbor.Project.Repositories
                     Name = reader.GetString(2),
                     Type = reader.GetString(3),
                     RepositoryUrl = reader.IsDBNull(4) ? null : reader.GetString(4),
-                    CreatedAt = reader.GetDateTime(5)
+                    RepositoryName = reader.IsDBNull(5) ? null : reader.GetString(5),
+                    RepositoryBranch = reader.IsDBNull(6) ? null : reader.GetString(6),
+                    CreatedAt = reader.GetDateTime(7)
                 };
             }
 
@@ -67,7 +71,7 @@ namespace Harbor.Project.Repositories
 
             using var command = connection.CreateCommand();
             command.CommandText =
-                "SELECT \"Id\", \"ProjectId\", \"Name\", \"Type\", \"RepositoryUrl\", \"CreatedAt\" " +
+                "SELECT \"Id\", \"ProjectId\", \"Name\", \"Type\", \"RepositoryUrl\", \"RepositoryName\", \"RepositoryBranch\", \"CreatedAt\" " +
                 "FROM \"Services\" WHERE \"ProjectId\" = @projectId ORDER BY \"CreatedAt\" DESC";
             command.Parameters.AddWithValue("projectId", projectId);
 
@@ -82,7 +86,9 @@ namespace Harbor.Project.Repositories
                     Name = reader.GetString(2),
                     Type = reader.GetString(3),
                     RepositoryUrl = reader.IsDBNull(4) ? null : reader.GetString(4),
-                    CreatedAt = reader.GetDateTime(5)
+                    RepositoryName = reader.IsDBNull(5) ? null : reader.GetString(5),
+                    RepositoryBranch = reader.IsDBNull(6) ? null : reader.GetString(6),
+                    CreatedAt = reader.GetDateTime(7)
                 });
             }
 

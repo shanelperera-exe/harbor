@@ -1,4 +1,4 @@
-import { Outlet, useNavigate } from 'react-router-dom';
+import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import DashboardHeader from './DashboardHeader';
 import SideNav from './SideNav';
 
@@ -9,6 +9,8 @@ import { clearAuthSession, isTokenExpired } from '../../services/authSession';
 export default function DashboardLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const hideSideNav = location.pathname.includes('/services/new');
 
   useEffect(() => {
     const checkSession = () => {
@@ -30,10 +32,12 @@ export default function DashboardLayout() {
         onToggleMobileMenu={() => setMobileMenuOpen(!mobileMenuOpen)} 
       />
       <div className="flex flex-row flex-grow overflow-hidden relative">
-        <SideNav 
-          mobileOpen={mobileMenuOpen} 
-          onClose={() => setMobileMenuOpen(false)} 
-        />
+        {!hideSideNav && (
+          <SideNav 
+            mobileOpen={mobileMenuOpen} 
+            onClose={() => setMobileMenuOpen(false)} 
+          />
+        )}
         <main className="flex-grow overflow-auto relative">
           <Outlet />
         </main>

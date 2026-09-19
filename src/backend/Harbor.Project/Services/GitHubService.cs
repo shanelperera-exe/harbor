@@ -11,11 +11,15 @@ namespace Harbor.Project.Services
 
     public class GitHubRepository
     {
+        public long Id { get; set; }
         public string Name { get; set; } = string.Empty;
         public string FullName { get; set; } = string.Empty;
+        public string Owner { get; set; } = string.Empty;
         public string HtmlUrl { get; set; } = string.Empty;
         public string CloneUrl { get; set; } = string.Empty;
         public bool Private { get; set; }
+        public string DefaultBranch { get; set; } = string.Empty;
+        public DateTime? UpdatedAt { get; set; }
     }
 
     public class GitHubBranch
@@ -53,13 +57,18 @@ namespace Harbor.Project.Services
 
             foreach (var element in document.RootElement.EnumerateArray())
             {
+                var ownerElement = element.GetProperty("owner");
                 repos.Add(new GitHubRepository
                 {
+                    Id = element.GetProperty("id").GetInt64(),
                     Name = element.GetProperty("name").GetString() ?? string.Empty,
                     FullName = element.GetProperty("full_name").GetString() ?? string.Empty,
+                    Owner = ownerElement.GetProperty("login").GetString() ?? string.Empty,
                     HtmlUrl = element.GetProperty("html_url").GetString() ?? string.Empty,
                     CloneUrl = element.GetProperty("clone_url").GetString() ?? string.Empty,
-                    Private = element.GetProperty("private").GetBoolean()
+                    Private = element.GetProperty("private").GetBoolean(),
+                    DefaultBranch = element.TryGetProperty("default_branch", out var db) ? db.GetString() ?? "main" : "main",
+                    UpdatedAt = element.TryGetProperty("updated_at", out var ua) && ua.ValueKind != JsonValueKind.Null ? ua.GetDateTime() : null
                 });
             }
 

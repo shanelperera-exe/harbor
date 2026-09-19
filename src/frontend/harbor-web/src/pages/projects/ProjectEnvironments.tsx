@@ -159,13 +159,13 @@ export default function ProjectEnvironments() {
                     <p className="text-[15px] text-gray-600 dark:text-[#e3e3e3]">Kickstart your environment by creating a new service.</p>
                   </div>
                   <div className="inline-flex flex-wrap gap-2">
-                    <button 
-                      type="button" 
+                    <Link 
+                      to={`/projects/${projectId}/services/new`}
                       className="flex items-center gap-1.5 h-10 px-4 bg-gray-900 dark:bg-white hover:bg-gray-800 dark:hover:bg-[#e3e3e3] text-white dark:text-black font-medium transition-colors"
                     >
                       <Plus className="w-4 h-4" />
                       Create new service
-                    </button>
+                    </Link>
                   </div>
                 </div>
               </div>

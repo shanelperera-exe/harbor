@@ -6,7 +6,7 @@ using Harbor.Project.Services;
 namespace Harbor.Project.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/projects/githubintegration")]
     [Authorize]
     public class GitHubIntegrationController : ControllerBase
     {

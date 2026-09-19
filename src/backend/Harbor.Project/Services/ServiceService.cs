@@ -30,7 +30,9 @@ namespace Harbor.Project.Services
                 ProjectId = projectId,
                 Name = request.Name.Trim(),
                 Type = request.Type.Trim(),
-                RepositoryUrl = request.RepositoryUrl?.Trim()
+                RepositoryUrl = request.RepositoryUrl?.Trim(),
+                RepositoryName = request.RepositoryName?.Trim(),
+                RepositoryBranch = request.RepositoryBranch?.Trim()
             };
 
             var id = await _serviceRepository.CreateAsync(serviceEntity);
@@ -71,6 +73,8 @@ namespace Harbor.Project.Services
             Name = s.Name,
             Type = s.Type,
             RepositoryUrl = s.RepositoryUrl,
+            RepositoryName = s.RepositoryName,
+            RepositoryBranch = s.RepositoryBranch,
             CreatedAt = s.CreatedAt
         };
     }

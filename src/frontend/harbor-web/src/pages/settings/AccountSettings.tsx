@@ -136,8 +136,37 @@ export default function AccountSettings() {
   });
   const [profileError, setProfileError] = useState('');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
-  const deploymentCredentials: string[] = [];
+  const deploymentCredentials: string[] = profile.loginMethods.includes('github') ? ['GitHub'] : [];
+  
+  const [githubAccountData, setGithubAccountData] = useState<{owner: string, count: number} | null>(null);
 
+  useEffect(() => {
+    async function loadGithubData() {
+      if (!profile.loginMethods.includes('github')) return;
+      
+      const token = localStorage.getItem('harbor_token');
+      if (!token) return;
+      
+      try {
+        const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+        const response = await fetch(`${apiBase}/projects/githubintegration/repositories`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await response.json().catch(() => ({}));
+        if (response.ok && data.data) {
+          const repos = data.data;
+          setGithubAccountData({
+            owner: repos.length > 0 ? repos[0].owner : 'Connected',
+            count: repos.length
+          });
+        }
+      } catch (err) {
+        console.error('Failed to load github data', err);
+      }
+    }
+    
+    void loadGithubData();
+  }, [profile.loginMethods]);
   const currentUsername: string = profile.username;
   const currentEmail: string = profile.email;
   const avatarSvg: string | null = profile.avatarSvg;
@@ -806,7 +835,8 @@ export default function AccountSettings() {
                           <div className="col-span-2">
                             <ul className="space-y-2 mb-4">
                               {deploymentCredentials.length > 0 ? (
-                              <li>
+                                deploymentCredentials.map((cred) => (
+                              <li key={cred}>
                                 <div className="">
                                   <details className="group border border-solid border-gray-300 dark:border-[#525252]">
                                     <summary className="py-2 px-3 flex items-center gap-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-[#1a1a1a] transition-colors list-none [&::-webkit-details-marker]:hidden">
@@ -814,7 +844,7 @@ export default function AccountSettings() {
                                       <span className="block border border-solid border-gray-300 dark:border-[#525252] p-0.5 relative rounded-[0.25rem] bg-white dark:bg-[#1a1a1a]">
                                         <svg width="15" height="15" viewBox="0 0 24 23" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="flex-shrink-0 text-black dark:text-white" aria-label="GitHub"><path fillRule="evenodd" clipRule="evenodd" d="M12.0183 0.405518C5.73469 0.405518 0.655029 5.50047 0.655029 11.8036C0.655029 16.8421 3.90974 21.107 8.42489 22.6165C8.9894 22.73 9.19618 22.3712 9.19618 22.0695C9.19618 21.8052 9.17757 20.8995 9.17757 19.9558C6.01659 20.6352 5.35835 18.597 5.35835 18.597C4.85036 17.2761 4.09768 16.9365 4.09768 16.9365C3.06309 16.2383 4.17304 16.2383 4.17304 16.2383C5.32067 16.3138 5.92286 17.4083 5.92286 17.4083C6.9386 19.1443 8.57538 18.6538 9.23386 18.3518C9.32782 17.6158 9.62904 17.1063 9.94886 16.8233C7.42775 16.5591 4.77523 15.5778 4.77523 11.1996C4.77523 9.95415 5.22647 8.93516 5.94146 8.14266C5.82866 7.85966 5.43348 6.68944 6.05451 5.12321C6.05451 5.12321 7.01396 4.82122 9.17733 6.2932C10.1036 6.0437 11.0587 5.91677 12.0183 5.91571C12.9777 5.91571 13.9558 6.04794 14.8589 6.2932C17.0226 4.82122 17.982 5.12321 17.982 5.12321C18.603 6.68944 18.2076 7.85966 18.0948 8.14266C18.8287 8.93516 19.2613 9.95415 19.2613 11.1996C19.2613 15.5778 16.6088 16.5401 14.0688 16.8233C14.4828 17.1818 14.8401 17.861 14.8401 18.9368C14.8401 20.4653 14.8215 21.692 14.8215 22.0692C14.8215 22.3712 15.0285 22.73 15.5928 22.6167C20.1079 21.1068 23.3626 16.8421 23.3626 11.8036C23.3813 5.50047 18.283 0.405518 12.0183 0.405518Z"></path></svg>
                                       </span>
-                                      <span className="text-[14px] font-medium text-gray-900 dark:text-white flex-1">{currentUsername}</span>
+                                      <span className={`text-[14px] font-medium text-gray-900 dark:text-white flex-1 ${githubAccountData ? 'font-mono' : ''}`}>{githubAccountData?.owner || 'Loading...'}</span>
                                       
                                       <button type="button" className="h-8 w-8 flex items-center justify-center rounded transition-colors text-gray-500 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-[#272727]" onClick={(e) => e.preventDefault()}>
                                         <span className="sr-only">Options</span>
@@ -822,11 +852,14 @@ export default function AccountSettings() {
                                       </button>
                                     </summary>
                                     <div className="border-t border-solid border-gray-300 dark:border-[#525252] p-4 pl-10 bg-gray-50 dark:bg-[#090909]">
-                                      <h6 className="text-[12px] text-gray-500 dark:text-[#a1a1aa]">No repositories found.</h6>
+                                      <h6 className="text-[12px] text-gray-500 dark:text-[#a1a1aa]">
+                                        {githubAccountData ? `${githubAccountData.count} repositories found` : 'Loading repositories...'}
+                                      </h6>
                                     </div>
                                   </details>
                                 </div>
                               </li>
+                                ))
                               ) : (
                                 <li className="border border-dashed border-gray-300 dark:border-[#525252] py-3 px-3 text-[14px] text-gray-500 dark:text-[#a1a1aa]">
                                   No Git deployment credentials configured.
@@ -847,7 +880,7 @@ export default function AccountSettings() {
                               
                               {credentialDropdownOpen && (
                                 <div className="min-w-[208px] p-2 bg-white dark:bg-[#0d0d0d] border border-solid border-[#6b6b6b] shadow-lg outline-none absolute z-50 left-0 top-full mt-1">
-                                  <button type="button" onClick={() => setCredentialDropdownOpen(false)} className="w-full flex relative text-[14px] text-gray-900 dark:text-[#e3e3e3] py-2 px-3 focus-visible:outline-none cursor-pointer hover:bg-gray-100 dark:hover:bg-[#1a1a1a] transition-colors rounded">
+                                  <button type="button" onClick={() => { setCredentialDropdownOpen(false); void linkLoginMethod('github'); }} className="w-full flex relative text-[14px] text-gray-900 dark:text-[#e3e3e3] py-2 px-3 focus-visible:outline-none cursor-pointer hover:bg-gray-100 dark:hover:bg-[#1a1a1a] transition-colors rounded">
                                     <div className="w-full flex items-center space-x-2.5">
                                       <span className="block border border-solid border-gray-300 dark:border-[#525252] p-0.5 relative rounded-[0.25rem] bg-white dark:bg-[#1a1a1a]">
                                         <svg width="15" height="15" viewBox="0 0 24 23" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="flex-shrink-0 text-black dark:text-white" aria-label="GitHub"><path fillRule="evenodd" clipRule="evenodd" d="M12.0183 0.405518C5.73469 0.405518 0.655029 5.50047 0.655029 11.8036C0.655029 16.8421 3.90974 21.107 8.42489 22.6165C8.9894 22.73 9.19618 22.3712 9.19618 22.0695C9.19618 21.8052 9.17757 20.8995 9.17757 19.9558C6.01659 20.6352 5.35835 18.597 5.35835 18.597C4.85036 17.2761 4.09768 16.9365 4.09768 16.9365C3.06309 16.2383 4.17304 16.2383 4.17304 16.2383C5.32067 16.3138 5.92286 17.4083 5.92286 17.4083C6.9386 19.1443 8.57538 18.6538 9.23386 18.3518C9.32782 17.6158 9.62904 17.1063 9.94886 16.8233C7.42775 16.5591 4.77523 15.5778 4.77523 11.1996C4.77523 9.95415 5.22647 8.93516 5.94146 8.14266C5.82866 7.85966 5.43348 6.68944 6.05451 5.12321C6.05451 5.12321 7.01396 4.82122 9.17733 6.2932C10.1036 6.0437 11.0587 5.91677 12.0183 5.91571C12.9777 5.91571 13.9558 6.04794 14.8589 6.2932C17.0226 4.82122 17.982 5.12321 17.982 5.12321C18.603 6.68944 18.2076 7.85966 18.0948 8.14266C18.8287 8.93516 19.2613 9.95415 19.2613 11.1996C19.2613 15.5778 16.6088 16.5401 14.0688 16.8233C14.4828 17.1818 14.8401 17.861 14.8401 18.9368C14.8401 20.4653 14.8215 21.692 14.8215 22.0692C14.8215 22.3712 15.0285 22.73 15.5928 22.6167C20.1079 21.1068 23.3626 16.8421 23.3626 11.8036C23.3813 5.50047 18.283 0.405518 12.0183 0.405518Z"></path></svg>

@@ -15,7 +15,7 @@ namespace Harbor.Project.Services
         public TokenService(HttpClient httpClient, IConfiguration configuration)
         {
             _httpClient = httpClient;
-            _authServiceUrl = configuration["AuthServiceUrl"] ?? "http://harbor-authentication:5000"; // Assuming docker network name
+            _authServiceUrl = configuration["AuthServiceUrl"] ?? "http://authentication-service:8080"; // Assuming docker network name
         }
 
         public async Task<string?> GetGitHubTokenAsync(int userId)

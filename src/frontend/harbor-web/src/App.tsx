@@ -11,13 +11,14 @@ import CreateProject from './pages/projects/CreateProject';
 import ProjectSettings from './pages/projects/ProjectSettings';
 import Deployments from './pages/deployments/Deployments';
 import ProjectEnvironments from './pages/projects/ProjectEnvironments';
-import EnvironmentConfiguration from './pages/projects/EnvironmentConfiguration';
+import EnvironmentSettings from './pages/projects/EnvironmentSettings';
 import Environments from './pages/environments/Environments';
 import AccountSettings from './pages/settings/AccountSettings';
 import ExternalAuthCallback from './pages/auth/ExternalAuthCallback';
 import NewService from './pages/services/NewService';
 import NewServiceRepoSelection from './pages/services/NewServiceRepoSelection';
 import NewServiceConfigure from './pages/services/NewServiceConfigure';
+import ServiceDetails from './pages/services/ServiceDetails';
 
 function App() {
   return (
@@ -38,7 +39,9 @@ function App() {
         <Route path=":projectId/services/new/:serviceType" element={<NewServiceRepoSelection />} />
         <Route path=":projectId/services/new/:serviceType/configure" element={<NewServiceConfigure />} />
         <Route path=":id/environments" element={<ProjectEnvironments />} />
-        <Route path=":id/environments/:environmentId/configure" element={<EnvironmentConfiguration />} />
+        <Route path=":projectId/environments/:envId/settings" element={<EnvironmentSettings />} />
+        <Route path=":projectId/services/:serviceId/*" element={<ServiceDetails />} />
+
       </Route>
       <Route path="/environments" element={<DashboardLayout />}>
         <Route index element={<Environments />} />

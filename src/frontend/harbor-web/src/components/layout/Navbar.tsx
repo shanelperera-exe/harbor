@@ -13,7 +13,7 @@ export default function Navbar() {
   const isLoggedIn = !!localStorage.getItem('harbor_token');
 
   return (
-    <nav className="w-full bg-white dark:bg-[#0b0b0b] text-[15px] lg:text-[16px] leading-[112%] text-gray-900 dark:text-white pl-4 lg:pl-6 flex items-stretch justify-between border-b border-gray-300 dark:border-[#525252] h-[47px] lg:h-[66px] transition-colors duration-300">
+    <nav className="w-full bg-white dark:bg-[oklch(0.21_0.03_263.45)] text-[15px] lg:text-[16px] leading-[112%] text-gray-900 dark:text-white pl-4 lg:pl-6 flex items-stretch justify-between border-b border-gray-300 dark:border-[#525252] h-[47px] lg:h-[66px] transition-colors duration-300">
       {/* Left side */}
       <div className="flex items-center lg:gap-8">
         {/* Mobile menu button */}

@@ -91,7 +91,7 @@ const services = [
 
 export default function CreateService() {
   return (
-    <div className="w-full h-full p-8 lg:px-24 xl:px-48 text-gray-900 dark:text-white overflow-y-auto bg-white dark:bg-[#090909] transition-colors duration-300">
+    <div className="w-full h-full p-8 lg:px-24 xl:px-48 text-gray-900 dark:text-white overflow-y-auto bg-white dark:bg-[oklch(0.21_0.03_263.45)] transition-colors duration-300">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-semibold">
           Create a new <span className="text-gray-500 dark:text-gray-400 transition-colors duration-300">Service</span>
@@ -106,13 +106,13 @@ export default function CreateService() {
 
       <div className="flex justify-between items-center border-b border-solid border-gray-300 dark:border-[#525252] pb-4 mb-8 text-[15px] transition-colors duration-300">
         <div className="flex items-center space-x-2 text-gray-600 dark:text-gray-300 transition-colors duration-300">
-          <span className="flex items-center justify-center w-5 h-5 rounded-none bg-blue-600 dark:bg-blue-600 text-white text-[12px] font-medium transition-colors duration-300">1</span>
+          <span className="flex items-center justify-center w-5 h-5 rounded-sm bg-blue-600 dark:bg-blue-600 text-white text-[12px] font-medium transition-colors duration-300">1</span>
           <span className="font-medium text-gray-900 dark:text-white transition-colors duration-300">Choose service</span>
           <span className="text-gray-400 dark:text-gray-600 transition-colors duration-300">&gt;</span>
-          <span className="flex items-center justify-center w-5 h-5 rounded-none border border-gray-300 dark:border-[#525252] dark:border-gray-600 text-gray-500 dark:text-gray-400 text-[12px] font-medium transition-colors duration-300">2</span>
+          <span className="flex items-center justify-center w-5 h-5 rounded-sm border border-gray-300 dark:border-[#525252] dark:border-gray-600 text-gray-500 dark:text-gray-400 text-[12px] font-medium transition-colors duration-300">2</span>
           <span>Configure</span>
           <span className="text-gray-400 dark:text-gray-600 transition-colors duration-300">&gt;</span>
-          <span className="flex items-center justify-center w-5 h-5 rounded-none border border-gray-300 dark:border-[#525252] dark:border-gray-600 text-gray-500 dark:text-gray-400 text-[12px] font-medium transition-colors duration-300">3</span>
+          <span className="flex items-center justify-center w-5 h-5 rounded-sm border border-gray-300 dark:border-[#525252] dark:border-gray-600 text-gray-500 dark:text-gray-400 text-[12px] font-medium transition-colors duration-300">3</span>
           <span>Deploy</span>
         </div>
         <div>
@@ -124,7 +124,7 @@ export default function CreateService() {
         {services.map((service) => (
           <button
             key={service.id}
-            className="flex flex-col text-left p-5 rounded-none border border-solid border-gray-300 dark:border-[#525252] hover:border-gray-400 dark:hover:border-gray-400 transition-colors bg-white dark:bg-[#111111] group"
+            className="flex flex-col text-left p-5 rounded-sm border border-solid border-gray-300 dark:border-[#525252] hover:border-gray-400 dark:hover:border-gray-400 transition-colors bg-white dark:bg-[oklch(0.21_0.03_263.45)] group"
           >
             <div className="flex items-center space-x-2 mb-2">
               <div className="text-gray-600 dark:text-gray-300 transition-colors duration-300">

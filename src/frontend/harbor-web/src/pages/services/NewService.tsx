@@ -6,7 +6,7 @@ const NewService: React.FC = () => {
   const [activeService, setActiveService] = useState('Service');
 
   return (
-    <div className="w-full bg-white dark:bg-[#0d0d0d] text-gray-900 dark:text-[#f0f0f0]" style={{
+    <div className="w-full bg-white dark:bg-[oklch(0.21_0.03_263.45)] text-gray-900 dark:text-[#f0f0f0]" style={{
       WebkitTextSizeAdjust: "100%",
       tabSize: 4,
       fontFeatureSettings: "normal",
@@ -33,7 +33,7 @@ const NewService: React.FC = () => {
           <div className="w-full max-w-[1920px] mx-auto px-4 md:px-5 mb-20">
             <ul className="grid grid-flow-row gap-6 md:grid-cols-2 lg:grid-cols-4">
               <li className="flex" data-item-title="Static Site" onMouseEnter={() => setActiveService('Static Site')} onMouseLeave={() => setActiveService('Service')}>
-                <div className="w-full h-[201px] bg-white dark:bg-transparent border border-solid border-gray-900 dark:border-[#4d4d4d] p-6 flex-1 flex flex-col justify-between space-y-3">
+                <div className="w-full h-[201px] bg-white dark:bg-transparent border border-solid border-gray-900 dark:border-[#4d4d4d] p-6 flex-1 flex flex-col justify-between space-y-3 rounded-sm">
                   <div className="flex-1 space-y-3">
                     <div className="flex items-start space-x-2 text-gray-900 dark:text-white">
                       <div className="shrink-0 mt-1">
@@ -63,7 +63,7 @@ const NewService: React.FC = () => {
                 </div>
               </li>
               <li className="flex" data-item-title="Web Service" onMouseEnter={() => setActiveService('Web Service')} onMouseLeave={() => setActiveService('Service')}>
-                <div className="w-full h-[201px] bg-white dark:bg-transparent border border-solid border-gray-900 dark:border-[#4d4d4d] p-6 flex-1 flex flex-col justify-between space-y-3">
+                <div className="w-full h-[201px] bg-white dark:bg-transparent border border-solid border-gray-900 dark:border-[#4d4d4d] p-6 flex-1 flex flex-col justify-between space-y-3 rounded-sm">
                   <div className="flex-1 space-y-3">
                     <div className="flex items-start space-x-2 text-gray-900 dark:text-white">
                       <div className="shrink-0 mt-1">

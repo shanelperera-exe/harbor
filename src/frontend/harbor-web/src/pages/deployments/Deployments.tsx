@@ -38,7 +38,7 @@ export default function Deployments() {
     }
   }
 
-  return <div className="w-full h-full p-8 lg:px-16 xl:px-24 text-gray-900 dark:text-white overflow-y-auto bg-white dark:bg-[#090909]">
+  return <div className="w-full h-full p-8 lg:px-16 xl:px-24 text-gray-900 dark:text-white overflow-y-auto bg-white dark:bg-[oklch(0.21_0.03_263.45)]">
     <div className="flex flex-wrap justify-between items-center gap-4 mb-8">
       <div><h1 className="text-3xl font-semibold">Deployments</h1><p className="mt-1 text-gray-500 dark:text-gray-400">Review previous releases and their execution output.</p></div>
       <label className="text-sm">Status <select value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }} className="ml-2 border border-gray-300 dark:border-[#525252] bg-transparent p-2" aria-label="Filter deployment status">{statuses.map((value) => <option className="text-black" key={value} value={value}>{value || 'All statuses'}</option>)}</select></label>

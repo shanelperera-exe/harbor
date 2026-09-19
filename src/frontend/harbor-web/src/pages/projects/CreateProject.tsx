@@ -41,7 +41,7 @@ export default function CreateProject() {
   }
 
   return (
-    <div className="w-full h-full p-8 lg:px-24 xl:px-48 text-gray-900 dark:text-white overflow-y-auto bg-white dark:bg-[#090909] transition-colors duration-300">
+    <div className="w-full h-full p-8 lg:px-24 xl:px-48 text-gray-900 dark:text-white overflow-y-auto bg-white dark:bg-[oklch(0.21_0.03_263.45)] transition-colors duration-300">
       <h1 className="text-3xl font-semibold mb-8">
         Create a new <span className="text-gray-500 dark:text-gray-400">Project</span>
       </h1>

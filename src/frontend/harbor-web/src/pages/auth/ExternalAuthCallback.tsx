@@ -31,7 +31,7 @@ export default function ExternalAuthCallback() {
   }, [navigate, searchParams]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-white px-5 text-center dark:bg-[#090909]">
+    <div className="flex min-h-screen items-center justify-center bg-white px-5 text-center dark:bg-[oklch(0.21_0.03_263.45)]">
       {error ? (
         <div>
           <p className="text-red-600 dark:text-red-400">{error}</p>

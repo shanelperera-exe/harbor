@@ -128,7 +128,7 @@ const NewServiceRepoSelection: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setActiveTab('git')}
-                className={`flex items-center gap-2 py-3 h-12 px-4 border border-solid -ml-px text-[16px] font-medium transition-colors outline-none ${
+                className={`flex items-center gap-2 py-3 h-12 px-4 border border-solid -ml-px text-[16px] font-medium transition-colors outline-none rounded-sm ${
                   activeTab === 'git'
                     ? 'border-[#2563eb] bg-[#2563eb] text-white z-[2]'
                     : 'border-gray-300 dark:border-[#4d4d4d] text-gray-600 dark:text-[#c7c7c7] hover:bg-gray-100 dark:hover:bg-[#ffffff1a] hover:text-gray-900 dark:hover:text-white z-[1]'
@@ -141,7 +141,7 @@ const NewServiceRepoSelection: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setActiveTab('public')}
-                className={`flex items-center gap-2 py-3 h-12 px-4 border border-solid -ml-px text-[16px] font-medium transition-colors outline-none ${
+                className={`flex items-center gap-2 py-3 h-12 px-4 border border-solid -ml-px text-[16px] font-medium transition-colors outline-none rounded-sm ${
                   activeTab === 'public'
                     ? 'border-[#2563eb] bg-[#2563eb] text-white z-[2]'
                     : 'border-gray-300 dark:border-[#4d4d4d] text-gray-600 dark:text-[#c7c7c7] hover:bg-gray-100 dark:hover:bg-[#ffffff1a] hover:text-gray-900 dark:hover:text-white z-[1]'
@@ -165,14 +165,14 @@ const NewServiceRepoSelection: React.FC = () => {
                         placeholder="Search"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full py-3 px-4 pl-10 h-12 bg-transparent border border-gray-300 dark:border-[#4d4d4d] outline-none focus-visible:border-[#2563eb] focus-visible:ring-1 focus-visible:ring-[#2563eb] text-[16px] rounded-none transition-colors"
+                        className="w-full py-3 px-4 pl-10 h-12 bg-transparent border border-gray-300 dark:border-[#4d4d4d] outline-none focus-visible:border-[#2563eb] focus-visible:ring-1 focus-visible:ring-[#2563eb] text-[16px] rounded-sm transition-colors"
                       />
                     </div>
                   </div>
                   <div className="relative" ref={dropdownRef}>
                     <button 
                       onClick={() => setIsCredentialsOpen(!isCredentialsOpen)}
-                      className="h-12 py-3 px-4 flex items-center border border-gray-300 dark:border-[#4d4d4d] hover:bg-gray-100 dark:hover:bg-[#ffffff1a] transition-colors text-[16px] outline-none">
+                      className="h-12 py-3 px-4 flex items-center border border-gray-300 dark:border-[#4d4d4d] hover:bg-gray-100 dark:hover:bg-[#ffffff1a] transition-colors text-[16px] outline-none rounded-sm">
                       <span className="flex items-center space-x-1 mr-2">
                         <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.285 0 .315.21.69.825.57C20.565 21.795 24 17.31 24 12c0-6.63-5.37-12-12-12z"/></svg>
                       </span>
@@ -181,7 +181,7 @@ const NewServiceRepoSelection: React.FC = () => {
                     </button>
 
                     {isCredentialsOpen && (
-                      <div className="absolute right-0 top-full mt-1 w-[300px] bg-white dark:bg-[#0d0d0d] border border-gray-300 dark:border-[#4d4d4d] shadow-lg z-10 flex flex-col font-sans text-[16px]">
+                      <div className="absolute right-0 top-full mt-1 w-[300px] bg-white dark:bg-[oklch(0.21_0.03_263.45)] border border-gray-300 dark:border-[#4d4d4d] rounded-sm shadow-lg z-10 flex flex-col font-sans text-[16px]">
                         <div className="p-4 h-[92px] flex flex-col justify-center">
                           <h6 className="text-[14px] text-gray-500 dark:text-[#b3b3b3] uppercase mb-2" style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace' }}>Connected deployment credentials</h6>
                           <button className="w-full flex items-center justify-between px-[12px] py-[8px] bg-gray-100 dark:bg-[#272727] hover:bg-gray-200 dark:hover:bg-[#333333] transition-colors rounded-sm group h-[36px] outline-none">
@@ -198,7 +198,7 @@ const NewServiceRepoSelection: React.FC = () => {
                   </div>
                 </div>
                 
-                <div className="mt-2 border border-gray-300 dark:border-[#4d4d4d] h-[244px] overflow-y-auto custom-scrollbar">
+                <div className="mt-2 border border-gray-300 dark:border-[#4d4d4d] h-[244px] overflow-y-auto custom-scrollbar rounded-sm">
                   {loadingRepos && <div className="p-3 text-[14px] text-gray-500">Loading repositories...</div>}
                   {repoError && <div className="p-3 text-[14px] text-red-500">{repoError}</div>}
                   {!loadingRepos && filteredRepos.length === 0 && !repoError && (
@@ -248,7 +248,7 @@ const NewServiceRepoSelection: React.FC = () => {
                     </svg>
                     <input
                       placeholder="https://github.com/render-examples/sveltekit-static"
-                      className="w-full py-3 px-4 pl-10 h-12 bg-transparent border border-gray-300 dark:border-[#4d4d4d] outline-none focus-visible:border-[#2563eb] focus-visible:ring-1 focus-visible:ring-[#2563eb] text-[16px] rounded-none transition-colors"
+                      className="w-full py-3 px-4 pl-10 h-12 bg-transparent border border-gray-300 dark:border-[#4d4d4d] outline-none focus-visible:border-[#2563eb] focus-visible:ring-1 focus-visible:ring-[#2563eb] text-[16px] rounded-sm transition-colors"
                       value={publicRepoUrl}
                       onChange={(e) => setPublicRepoUrl(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handlePublicRepoConnect()}
@@ -259,7 +259,7 @@ const NewServiceRepoSelection: React.FC = () => {
                   <button 
                     disabled={!publicRepoUrl.trim()} 
                     onClick={handlePublicRepoConnect}
-                    className="h-12 px-6 py-3 bg-[#2563eb] text-white text-[16px] font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center outline-none hover:bg-[#1d4ed8]"
+                    className="h-12 px-6 py-3 bg-[#2563eb] text-white text-[16px] font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center outline-none hover:bg-[#1d4ed8] rounded-sm"
                   >
                     Connect &rarr;
                   </button>

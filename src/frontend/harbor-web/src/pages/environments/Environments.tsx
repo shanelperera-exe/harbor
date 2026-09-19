@@ -16,7 +16,7 @@ export default function Environments() {
   }, []);
 
   return (
-    <div className="w-full h-full p-8 lg:px-24 xl:px-48 text-gray-900 dark:text-white overflow-y-auto bg-white dark:bg-[#090909] transition-colors duration-300">
+    <div className="w-full h-full p-8 lg:px-24 xl:px-48 text-gray-900 dark:text-white overflow-y-auto bg-white dark:bg-[oklch(0.21_0.03_263.45)] transition-colors duration-300">
       <h1 className="text-3xl font-semibold">Environments</h1>
       <p className="text-gray-500 dark:text-gray-400 mt-2 max-w-xl">
         Environments belong to a project. Pick a project to view or configure its deployment targets.
@@ -38,7 +38,7 @@ export default function Environments() {
             <Link
               key={project.id}
               to={`/projects/${project.id}/environments`}
-              className="flex items-center justify-between p-5 border border-gray-300 dark:border-[#525252] bg-white dark:bg-[#111111] hover:bg-gray-50 dark:hover:bg-[#151515] transition-colors"
+              className="flex items-center justify-between p-5 border border-gray-300 dark:border-[#525252] bg-white dark:bg-[oklch(0.21_0.03_263.45)] hover:bg-gray-50 dark:hover:bg-[#151515] transition-colors"
             >
               <div className="min-w-0">
                 <p className="text-lg font-medium truncate" title={project.name}>{project.name}</p>

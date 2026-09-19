@@ -4459,3 +4459,26 @@ VIEW REPORTS
 ## HARBOR IN ONE FINAL SENTENCE
 
 > **Harbor is a centralized, secure deployment management and visibility platform that connects development teams to their GitHub-based CI/CD workflows, allowing authorized users to manage projects and environments, initiate and monitor deployments, inspect deployment logs and history, and understand deployment activity through a single interface.**
+
+---
+
+# 181. MULTI-SERVICE ARCHITECTURE (ARCHITECTURAL DECISION)
+
+**Core Decision**: A single project in Harbor can consist of multiple **Services** (e.g., frontend, backend, database). 
+
+Services are conceptually located inside Harbor Projects. Instead of a project being a single monolithic deployment unit, a project acts as a logical grouping for one or more services. 
+
+Environments within a project then act as the target where these services are deployed and run. This architectural decision enables Harbor to seamlessly support microservice architectures and multi-component applications under a unified project umbrella.
+
+**Updated Conceptual Flow:**
+```text
+HARBOR
+  |
+  +--> Projects
+         |
+         +--> Services (Frontend, Backend, etc.)
+         |
+         +--> Environments (Development, Staging, Production)
+                |
+                +--> Deployments (of Services into Environments)
+```

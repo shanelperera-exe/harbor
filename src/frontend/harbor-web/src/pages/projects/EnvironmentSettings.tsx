@@ -1,15 +1,16 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { getProject, updateProject, archiveProject, type Project } from '../../services/projectService';
-import { getEnvironments, type DeploymentEnvironment } from '../../services/environmentService';
+import { useNavigate, useParams, Link } from 'react-router-dom';
+import { getProject, type Project } from '../../services/projectService';
+import { getEnvironments, updateEnvironment, removeEnvironment, type DeploymentEnvironment } from '../../services/environmentService';
 
-export default function ProjectSettings() {
+export default function EnvironmentSettings() {
   const navigate = useNavigate();
-  const { id } = useParams<{ id: string }>();
-  const projectId = Number(id);
+  const { projectId: projectIdStr, envId: envIdStr } = useParams<{ projectId: string, envId: string }>();
+  const projectId = Number(projectIdStr);
+  const envId = Number(envIdStr);
 
   const [project, setProject] = useState<Project | null>(null);
-  const [environments, setEnvironments] = useState<DeploymentEnvironment[]>([]);
+  const [environment, setEnvironment] = useState<DeploymentEnvironment | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeSection, setActiveSection] = useState('name');
 
@@ -23,7 +24,7 @@ export default function ProjectSettings() {
   const [isArchiving, setIsArchiving] = useState(false);
 
   useEffect(() => {
-    if (!Number.isFinite(projectId)) {
+    if (!Number.isFinite(projectId) || !Number.isFinite(envId)) {
       setIsLoading(false);
       return;
     }
@@ -31,19 +32,20 @@ export default function ProjectSettings() {
       getProject(projectId),
       getEnvironments(projectId),
     ])
-      .then(([found, envs]) => {
-        if (found) {
-          setProject(found);
-          setName(found.name);
+      .then(([foundProject, envs]) => {
+        if (foundProject) setProject(foundProject);
+        const foundEnv = envs.find(e => e.id === envId);
+        if (foundEnv) {
+          setEnvironment(foundEnv);
+          setName(foundEnv.name);
         }
-        setEnvironments(envs);
       })
       .finally(() => setIsLoading(false));
-  }, [projectId]);
+  }, [projectId, envId]);
 
   useEffect(() => {
     const handleScroll = () => {
-      const sections = ['name', 'delete-project'];
+      const sections = ['name', 'delete-environment'];
       let current = 'name';
       for (const section of sections) {
         const element = document.getElementById(section);
@@ -70,15 +72,14 @@ export default function ProjectSettings() {
 
   async function handleSaveName(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!name.trim() || !project || name === project.name) return;
+    if (!name.trim() || !environment || name === environment.name) return;
     setIsSubmitting(true);
     try {
-      await updateProject(projectId, {
+      await updateEnvironment(projectId, envId, {
         name: name.trim(),
-        description: project.description ?? undefined,
-        repositoryUrl: project.repositoryUrl ?? undefined,
+        type: environment.type,
       });
-      setProject({ ...project, name: name.trim() });
+      setEnvironment({ ...environment, name: name.trim() });
       setIsEditing(false);
     } catch (err) {
       console.error(err);
@@ -89,13 +90,13 @@ export default function ProjectSettings() {
 
   async function handleConfirmDelete(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!project) return;
-    const expected = 'delete project ' + project.name;
+    if (!environment) return;
+    const expected = `sudo delete environment ${environment.name}`;
     if (deleteConfirmText !== expected) return;
     setIsArchiving(true);
     try {
-      await archiveProject(projectId);
-      navigate('/projects');
+      await removeEnvironment(projectId, envId);
+      navigate(`/projects/${projectId}/environments`);
     } catch (err) {
       console.error(err);
       setIsArchiving(false);
@@ -116,18 +117,18 @@ export default function ProjectSettings() {
     return <div className="p-12 text-[#b3b3b3]">Loading...</div>;
   }
 
-  if (!project) {
-    return <div className="p-12 text-red-400">Project not found</div>;
+  if (!project || !environment) {
+    return <div className="p-12 text-red-400">Environment not found</div>;
   }
 
   const navItems = [
     { id: 'name', label: 'Name' },
-    { id: 'delete-project', label: 'Delete Project' }
+    { id: 'delete-environment', label: 'Delete Environment' }
   ];
 
   const activeIndex = navItems.findIndex(item => item.id === activeSection);
   const indicatorOffset = Math.max(0, activeIndex) * 2.25;
-  const deleteConfirmExpected = 'delete project ' + project.name;
+  const deleteConfirmExpected = `sudo delete environment ${environment.name}`;
   const isDeleteConfirmed = deleteConfirmText === deleteConfirmExpected;
 
   return (
@@ -137,11 +138,11 @@ export default function ProjectSettings() {
           <div className="my-6 md:my-12 flex justify-between">
             <div className="">
               <div className="">
-                <h1 className="text-strong" style={{ fontFamily: 'Roobert, sans-serif', fontSize: '32px', fontWeight: 500, lineHeight: '36px', letterSpacing: '-0.32px', WebkitFontSmoothing: 'antialiased' }}>Project settings</h1>
+                <h1 className="text-strong" style={{ fontFamily: 'Roobert, sans-serif', fontSize: '32px', fontWeight: 500, lineHeight: '36px', letterSpacing: '-0.32px', WebkitFontSmoothing: 'antialiased' }}>Environment settings</h1>
               </div>
             </div>
           </div>
-          <div className="flex flex-row-reverse gap-8">
+          <div className="flex flex-col xl:flex-row-reverse gap-8">
             <div className="relative flex-shrink-0 hidden xl:block xl:sticky xl:h-full xl:max-h-[calc(100vh_-_3.5rem)] xl:top-14 custom-scrollbar overflow-y-auto">
               <nav aria-labelledby="_r_v_">
                 <span id="_r_v_" className="sr-only">Table of contents</span>
@@ -177,16 +178,16 @@ export default function ProjectSettings() {
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1">
                           <div className="">
-                            <h4 className="text-strong" style={{ fontFamily: 'Roobert, sans-serif', fontSize: '20px', fontWeight: 600, lineHeight: '28px', letterSpacing: '-0.2px' }}>Project Name</h4>
+                            <h4 className="text-strong" style={{ fontFamily: 'Roobert, sans-serif', fontSize: '20px', fontWeight: 600, lineHeight: '28px', letterSpacing: '-0.2px' }}>Name</h4>
                           </div>
-                          <div className="type-body-02 text-secondary mt-1 max-w-xl">A unique name for your project</div>
+                          <div className="type-body-02 text-secondary mt-1 max-w-xl">A unique name for your environment</div>
                         </div>
                         {!isEditing && (
                           <div className="flex-shrink-0">
                             <button
                               type="button"
                               onClick={() => setIsEditing(true)}
-                              className="type-interface-01 bg-white text-black hover:bg-gray-100 active:bg-gray-200 border border-solid border-gray-300 dark:border-[#525252] h-8 py-1.5 px-2 flex items-center group/button"
+                              className="type-interface-01 bg-white text-black hover:bg-gray-100 active:bg-gray-200 border border-solid border-gray-300 dark:border-[#525252] h-8 py-1.5 px-2 flex items-center group/button rounded-sm"
                             >
                               <div className="inline-flex w-4 h-4 me-1.5">
                                 <svg fill="currentColor" width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
@@ -203,11 +204,11 @@ export default function ProjectSettings() {
                     <div className="type-body-02 text-primary">
                       <form noValidate onSubmit={handleSaveName}>
                         <div className="max-w-[35rem]">
-                          <label htmlFor="edit-project-name-field" className="sr-only">Project name</label>
+                          <label htmlFor="edit-environment-name-field" className="sr-only">Environment name</label>
                           <div className="flex flex-col">
                             <div className="flex relative">
                               <input
-                                id="edit-project-name-field"
+                                id="edit-environment-name-field"
                                 className={'h-10 truncate type-interface-01 w-full m-0 py-2.5 px-3 border border-solid rounded-sm appearance-none transition-colors ' + (isEditing ? 'input-background input-text border-gray-300 dark:border-[#525252] hover:border-gray-400 dark:hover:border-[#6b6b6b]' : 'input-background--readonly input-text--readonly border-gray-300 dark:border-[#525252] caret-transparent outline-none')}
                                 type="text"
                                 name="name"
@@ -223,15 +224,15 @@ export default function ProjectSettings() {
                             <div className="inline-flex flex-wrap gap-4">
                               <button
                                 type="button"
-                                onClick={() => { setName(project.name); setIsEditing(false); }}
-                                className="type-interface-01 button-secondary-text hover:button-secondary-background--hover hover:button-secondary-text--hover active:button-secondary-background--active active:button-secondary-text--hover--active border border-solid button-secondary-border h-10 py-2.5 px-3 flex items-center group/button"
+                                onClick={() => { setName(environment.name); setIsEditing(false); }}
+                                className="type-interface-01 button-secondary-text hover:button-secondary-background--hover hover:button-secondary-text--hover active:button-secondary-background--active active:button-secondary-text--hover--active border border-solid button-secondary-border h-10 py-2.5 px-3 flex items-center group/button rounded-sm"
                               >
                                 Cancel
                               </button>
                               <button
                                 type="submit"
-                                disabled={isSubmitting || name === project.name || !name.trim()}
-                                className={'type-interface-01 h-10 py-2.5 px-4 flex items-center group/button transition-colors cursor-pointer disabled:cursor-not-allowed ' + (isSubmitting || name === project.name || !name.trim() ? 'bg-gray-200 dark:bg-[#272727] text-gray-400 dark:text-[#4d4d4d]' : 'bg-white text-black hover:bg-gray-100 dark:hover:bg-[#e0e0e0]')}
+                                disabled={isSubmitting || name === environment.name || !name.trim()}
+                                className={'type-interface-01 h-10 py-2.5 px-4 flex items-center group/button transition-colors cursor-pointer rounded-sm disabled:cursor-not-allowed ' + (isSubmitting || name === environment.name || !name.trim() ? 'bg-gray-200 dark:bg-[#272727] text-gray-400 dark:text-[#4d4d4d]' : 'bg-[#2563eb] text-white hover:bg-[#1d4ed8] dark:hover:bg-[#1e40af]')}
                               >
                                 {isSubmitting ? 'Saving...' : 'Save'}
                               </button>
@@ -244,17 +245,17 @@ export default function ProjectSettings() {
                 </div>
               </div>
 
-              {/* Delete Project Section */}
-              <div data-id="delete-project" className="scroll-mt-24 xl:scroll-mt-20">
+              {/* Delete Environment Section */}
+              <div data-id="delete-environment" className="scroll-mt-24 xl:scroll-mt-20">
                 <div>
-                  <div id="delete-project" className="p-6 md:p-8 page-primary border border-solid border-gray-300 dark:border-[#525252] scroll-mt-20">
+                  <div id="delete-environment" className="p-6 md:p-8 page-primary border border-solid border-gray-300 dark:border-[#525252] scroll-mt-20">
                     <div className="mb-8">
                       <div className="flex justify-between">
                         <div className="flex-1 small:pr-4">
                           <div className="">
-                            <h4 className="text-strong" style={{ fontFamily: 'Roobert, sans-serif', fontSize: '20px', fontWeight: 600, lineHeight: '28px', letterSpacing: '-0.2px' }}>Delete Project</h4>
+                            <h4 className="text-strong" style={{ fontFamily: 'Roobert, sans-serif', fontSize: '20px', fontWeight: 600, lineHeight: '28px', letterSpacing: '-0.2px' }}>Delete Environment</h4>
                           </div>
-                          <div className="type-body-02 text-secondary mt-1 max-w-xl">The project, including all environments and services, will be permanently deleted. This action cannot be undone.</div>
+                          <div className="type-body-02 text-secondary mt-1 max-w-xl">This environment, including its services, will be permanently deleted. This action cannot be undone.</div>
                         </div>
                       </div>
                     </div>
@@ -262,7 +263,7 @@ export default function ProjectSettings() {
                       <button
                         type="button"
                         onClick={openDeleteModal}
-                        className="type-interface-01 bg-[#e23642] text-white hover:bg-[#c0222d] active:bg-[#a01d27] h-10 py-2.5 px-3 flex items-center group/button transition-colors"
+                        className="type-interface-01 bg-[#e23642] text-white hover:bg-[#c0222d] active:bg-[#a01d27] h-10 py-2.5 px-3 flex items-center group/button transition-colors rounded-sm"
                       >
                         <div className="inline-flex w-4 h-4 me-1.5">
                           <svg fill="currentColor" width="16" height="17" viewBox="0 0 16 17" xmlns="http://www.w3.org/2000/svg">
@@ -272,7 +273,7 @@ export default function ProjectSettings() {
                             <path d="M10 1.66699H6V2.66699H10V1.66699Z"></path>
                           </svg>
                         </div>
-                        Delete project
+                        Delete environment
                       </button>
                     </div>
                   </div>
@@ -287,14 +288,14 @@ export default function ProjectSettings() {
       {showDeleteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" aria-modal="true" role="dialog">
           <div className="absolute inset-0 bg-black/80" onClick={closeDeleteModal} />
-          <div className="relative inline-block w-full my-8 text-left align-middle bg-white dark:bg-[oklch(0.21_0.03_263.45)] shadow-lg border border-solid border-gray-300 dark:border-[#525252] max-w-2xl">
+          <div className="relative inline-block w-full my-8 text-left align-middle bg-white dark:bg-[oklch(0.21_0.03_263.45)] shadow-lg border border-solid border-gray-300 dark:border-[#525252] max-w-xl rounded-sm">
             {/* Modal Header */}
             <div className="flex flex-col gap-2 items-start border-solid border-b border-gray-300 dark:border-[#525252] p-6 relative">
               <div className="w-full">
-                <h1 className="text-strong" style={{ fontFamily: 'Roobert, sans-serif', fontSize: '32px', fontWeight: 500, lineHeight: '36px', letterSpacing: '-0.32px', WebkitFontSmoothing: 'antialiased' }}>Delete Project</h1>
+                <h1 className="type-heading-05 text-strong mb-1" style={{ fontSize: '24px', fontWeight: 500 }}>Delete environment</h1>
               </div>
               <button
-                className="flex p-0 w-5 h-5 items-center justify-center button-compact-icon hover:button-compact-icon--hover active:button-compact-icon--active button-compact-background hover:button-compact-background--hover absolute right-3 top-3"
+                className="flex p-0 w-5 h-5 items-center justify-center button-compact-icon hover:button-compact-icon--hover active:button-compact-icon--active button-compact-background hover:button-compact-background--hover absolute right-3 top-3 text-[#b3b3b3] hover:text-white"
                 type="button"
                 aria-label="Close modal"
                 onClick={closeDeleteModal}
@@ -307,39 +308,12 @@ export default function ProjectSettings() {
 
             {/* Modal Body */}
             <form noValidate id="confirm-delete" onSubmit={handleConfirmDelete}>
-              <div className="type-body-02 text-primary p-6 space-y-4 break-words">
-                <p>
-                  This project <span className="font-semibold">{project.name}</span> will be{' '}
-                  <span className="font-semibold">permanently</span> deleted, along with all of its
-                  environments and services. To keep any services, please move them out of the project first.
-                </p>
-
-                {environments.length > 0 && (
-                  <ul className="border border-solid border-gray-300 dark:border-[#525252] custom-scrollbar max-h-[12.5rem] overflow-y-auto">
-                    {environments.map((env) => (
-                      <li key={env.id}>
-                        <div className="w-full border-b border-solid border-gray-300 dark:border-[#525252] last:border-b-0 p-3">
-                          <div className="flex items-center">
-                            <svg fill="currentColor" className="w-4 h-4 flex-shrink-0 mr-2 text-faint" width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
-                              <path d="M8.75 2.45L8 2L7.25 2.45L6.75 1.6L7.5 1.15C7.65 1.05 7.8 1 8 1C8.2 1 8.35 1.05 8.5 1.15L9.25 1.6L8.75 2.45Z"></path>
-                              <path d="M3 6H2V4.95C2 4.6 2.2 4.25 2.5 4.1L3.25 3.65L3.75 4.5L3 4.95V6Z"></path>
-                              <path d="M3 7H2V9H3V7Z"></path>
-                              <path d="M3.25 12.35L2.5 11.9C2.2 11.7 2 11.4 2 11.05V10H3V11.05L3.75 11.5L3.25 12.35Z"></path>
-                              <path d="M12.6 12.45L12.1 11.6L13 11.1V10H14V11.05C14 11.4 13.8 11.75 13.5 11.9L12.6 12.45Z"></path>
-                              <path d="M14 7H13V9H14V7Z"></path>
-                              <path d="M14 6H13V4.95L12.1 4.45L12.6 3.6L13.5 4.1C13.8 4.3 14 4.6 14 4.95V6Z"></path>
-                            </svg>
-                            <span className="flex items-center gap-2">
-                              <span title={env.name} className="type-heading-01 text-primary truncate">{env.name}</span>
-                              <span className="type-body-01 text-faint">0 services</span>
-                            </span>
-                          </div>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-
+              <div className="type-body-02 text-primary p-6 space-y-4 break-words text-[15px]">
+                <div className="flex gap-3 flex-col">
+                  <p>
+                    This environment will be <span className="font-semibold">permanently</span> deleted, along with all of its services. To keep any services, please move them out of the environment first.
+                  </p>
+                </div>
                 <div>
                   Type{' '}
                   <pre translate="no" lang="en" className="inline">
@@ -356,12 +330,11 @@ export default function ProjectSettings() {
                         id="sudo-command"
                         autoComplete="off"
                         spellCheck={false}
-                        className="h-10 truncate type-interface-01 w-full m-0 py-2.5 px-3 input-background placeholder:input-text--placeholder border border-solid border-gray-300 dark:border-[#525252] rounded-sm appearance-none input-text outline-none"
+                        className="h-10 truncate type-interface-01 w-full m-0 py-2.5 px-3 input-background placeholder:input-text--placeholder border border-solid border-gray-300 dark:border-[#525252] rounded-sm appearance-none input-text outline-none focus:border-[#2563eb]"
                         type="text"
                         name="sudoCommand"
                         value={deleteConfirmText}
                         onChange={(e) => setDeleteConfirmText(e.target.value)}
-                        placeholder={deleteConfirmExpected}
                       />
                     </div>
                   </div>
@@ -374,14 +347,14 @@ export default function ProjectSettings() {
                   type="submit"
                   data-testid="confirm-delete-button"
                   disabled={!isDeleteConfirmed || isArchiving}
-                  className={'type-interface-01 h-10 py-2.5 px-3 flex items-center group/button transition-colors ' + (isDeleteConfirmed && !isArchiving ? 'bg-[#e23642] text-white hover:bg-[#c0222d] cursor-pointer' : 'bg-[#fad1d3] text-[#c0222d] cursor-not-allowed')}
+                  className={'type-interface-01 h-10 py-2.5 px-3 flex items-center group/button transition-colors rounded-sm ' + (isDeleteConfirmed && !isArchiving ? 'bg-[#e23642] text-white hover:bg-[#c0222d] cursor-pointer' : 'bg-[#fad1d3] dark:bg-[#390508] text-[#c0222d] dark:text-[#af1d27] cursor-not-allowed')}
                 >
-                  {isArchiving ? 'Deleting...' : 'Delete project'}
+                  {isArchiving ? 'Deleting...' : 'Delete environment'}
                 </button>
                 <button
                   type="button"
                   onClick={closeDeleteModal}
-                  className="type-interface-01 button-secondary-text hover:button-secondary-background--hover hover:button-secondary-text--hover active:button-secondary-background--active active:button-secondary-text--hover--active border border-solid button-secondary-border h-10 py-2.5 px-3 flex items-center group/button"
+                  className="type-interface-01 button-secondary-text hover:button-secondary-background--hover hover:button-secondary-text--hover active:button-secondary-background--active active:button-secondary-text--hover--active border border-solid border-gray-300 dark:border-[#525252] h-10 py-2.5 px-3 flex items-center group/button rounded-sm text-[#e3e3e3] hover:text-white hover:bg-[#ffffff1a]"
                 >
                   Cancel
                 </button>

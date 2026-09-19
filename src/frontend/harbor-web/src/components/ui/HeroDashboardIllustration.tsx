@@ -60,7 +60,7 @@ function ServiceCard({
 
   return (
     <div
-      className={`border border-[#272727] bg-[#0d0d0d] transition-all duration-700 ${
+      className={`border border-[#272727] bg-[oklch(0.21_0.03_263.45)] transition-all duration-700 ${
         visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
       }`}
     >

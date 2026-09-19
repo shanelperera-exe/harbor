@@ -65,7 +65,7 @@ export default function Projects() {
   }
 
   return (
-    <main className="w-full max-w-[1920px] mx-auto px-4 md:px-12 mb-20 overflow-y-auto bg-white dark:bg-[#090909] min-h-full">
+    <main className="w-full max-w-[1920px] mx-auto px-4 md:px-12 mb-20 overflow-y-auto bg-white dark:bg-[oklch(0.21_0.03_263.45)] min-h-full">
 
       {/* Page header */}
       <div className="my-12 flex flex-col lg:flex-row lg:items-center justify-between gap-y-4">
@@ -104,7 +104,7 @@ export default function Projects() {
                   <Link
                     to={`/projects/${project.id}/environments`}
                     data-testid="project-environments-link"
-                    className="w-full border border-gray-300 dark:border-[#525252] p-4 text-gray-900 dark:text-[#f0f0f0] cursor-pointer
+                    className="w-full border border-gray-300 dark:border-[#525252] p-4 text-gray-900 dark:text-[#f0f0f0] cursor-pointer rounded-sm
                                transition-colors duration-150
                                hover:border-[#3b82f6] hover:bg-gray-50 dark:hover:bg-[#0f2d4a]
                                active:border-[#3b82f6] active:bg-gray-50 dark:active:bg-[#0f2d4a]
@@ -137,7 +137,7 @@ export default function Projects() {
                   type="button"
                   onClick={() => setIsModalOpen(true)}
                   data-testid="new-project-btn"
-                  className="w-full border border-dashed border-gray-300 dark:border-[#525252] p-4 flex items-center justify-center py-8 relative cursor-pointer hover:border-[#3b82f6] transition-colors duration-150 group bg-transparent"
+                  className="w-full border border-dashed border-gray-300 dark:border-[#525252] p-4 flex items-center justify-center py-8 relative cursor-pointer hover:border-[#3b82f6] transition-colors duration-150 group bg-transparent rounded-sm"
                 >
                   <div className="inline-flex items-center gap-1.5 text-[18px] font-medium text-gray-600 dark:text-[#f0f0f0] group-hover:text-[#3b82f6] transition-colors">
                     <Plus className="w-4 h-4" />
@@ -154,7 +154,7 @@ export default function Projects() {
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
           {/* Modal Container */}
-          <div className="inline-block w-full text-left align-middle bg-white dark:bg-[#090909] shadow-2xl border border-gray-300 dark:border-[#525252] max-w-xl relative">
+          <div className="inline-block w-full text-left align-middle bg-white dark:bg-[oklch(0.21_0.03_263.45)] shadow-2xl border border-gray-300 dark:border-[#525252] max-w-xl relative rounded-sm">
             <form onSubmit={handleCreateProject} noValidate>
               
               {/* Header */}
@@ -225,14 +225,14 @@ export default function Projects() {
                 <button 
                   type="submit" 
                   disabled={isCreating || !newProjectName.trim()}
-                  className="h-10 px-4 bg-[#2563eb] hover:bg-[#1d4ed8] dark:bg-[#272727] dark:hover:bg-[#333] text-white font-medium border border-transparent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="h-10 px-4 bg-[#2563eb] hover:bg-[#1d4ed8] dark:bg-[#272727] dark:hover:bg-[#333] text-white font-medium border border-transparent transition-colors disabled:opacity-50 disabled:cursor-not-allowed rounded-sm"
                 >
                   {isCreating ? 'Creating...' : 'Create a project'}
                 </button>
                 <button 
                   type="button" 
                   onClick={() => setIsModalOpen(false)}
-                  className="h-10 px-4 bg-transparent hover:bg-gray-100 dark:hover:bg-[#1a1a1a] text-gray-900 dark:text-white font-medium border border-gray-300 dark:border-[#525252] transition-colors"
+                  className="h-10 px-4 bg-transparent hover:bg-gray-100 dark:hover:bg-[#1a1a1a] text-gray-900 dark:text-white font-medium border border-gray-300 dark:border-[#525252] transition-colors rounded-sm"
                 >
                   Cancel
                 </button>

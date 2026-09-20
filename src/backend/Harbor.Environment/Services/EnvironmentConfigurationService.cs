@@ -17,12 +17,12 @@ public class EnvironmentConfigurationService(
     private const int MaxProviderLength = 50;
 
     public async Task<(bool Success, string? Error, bool Forbidden, EnvironmentConfigurationResponse? Data)> GetAsync(
-        int projectId, int environmentId, int userId, bool isAdmin)
+        string projectId, int environmentId, int userId, bool isAdmin)
     {
         var access = await AuthorizeAsync(projectId, userId, isAdmin);
         if (!access.Success) return (false, access.Error, access.Forbidden, null);
 
-        var environment = await environmentRepository.GetByIdAsync(environmentId, projectId);
+        var environment = await environmentRepository.GetByIdAsync(environmentId, access.ProjectId);
         if (environment is null || !environment.IsActive) return (false, "Environment not found or inactive.", false, null);
 
         var items = await configurationRepository.GetByEnvironmentIdAsync(environmentId);
@@ -30,12 +30,12 @@ public class EnvironmentConfigurationService(
     }
 
     public async Task<(bool Success, string? Error, bool Forbidden, EnvironmentConfigurationResponse? Data)> ConfigureAsync(
-        int projectId, int environmentId, ConfigureEnvironmentRequest request, int userId, bool isAdmin)
+        string projectId, int environmentId, ConfigureEnvironmentRequest request, int userId, bool isAdmin)
     {
         var access = await AuthorizeAsync(projectId, userId, isAdmin);
         if (!access.Success) return (false, access.Error, access.Forbidden, null);
 
-        var environment = await environmentRepository.GetByIdAsync(environmentId, projectId);
+        var environment = await environmentRepository.GetByIdAsync(environmentId, access.ProjectId);
         if (environment is null || !environment.IsActive) return (false, "Environment not found or inactive.", false, null);
 
         // --- Validate deployment information ---
@@ -103,7 +103,7 @@ public class EnvironmentConfigurationService(
         }
 
         await configurationRepository.ReplaceAllAsync(environmentId, itemsToSave);
-        await environmentRepository.UpdateDeploymentInfoAsync(environmentId, projectId, deploymentUrl, provider);
+        await environmentRepository.UpdateDeploymentInfoAsync(environmentId, access.ProjectId, deploymentUrl, provider);
 
         // Log only keys/metadata — never values, secret or otherwise.
         logger.LogInformation(
@@ -131,12 +131,12 @@ public class EnvironmentConfigurationService(
         return null;
     }
 
-    private async Task<(bool Success, string? Error, bool Forbidden)> AuthorizeAsync(int projectId, int userId, bool isAdmin)
+    private async Task<(bool Success, string? Error, bool Forbidden, int ProjectId)> AuthorizeAsync(string projectId, int userId, bool isAdmin)
     {
         var access = await environmentRepository.GetProjectAccessAsync(projectId);
-        if (!access.Exists || access.IsArchived) return (false, "Project not found or archived.", false);
-        if (!isAdmin && access.OwnerId != userId) return (false, "You do not have permission to manage this project's environments.", true);
-        return (true, null, false);
+        if (!access.Exists || access.IsArchived) return (false, "Project not found or archived.", false, 0);
+        if (!isAdmin && access.OwnerId != userId) return (false, "You do not have permission to manage this project's environments.", true, 0);
+        return (true, null, false, access.Id);
     }
 
     private static EnvironmentConfigurationResponse ToResponse(EnvironmentEntity environment, List<EnvironmentConfigurationEntity> items) => new()

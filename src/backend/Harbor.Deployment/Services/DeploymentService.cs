@@ -13,7 +13,7 @@ public class DeploymentService(IDeploymentRepository repository) : IDeploymentSe
     {
         var page = Math.Max(1, query.Page);
         var pageSize = Math.Clamp(query.PageSize, 1, MaxPageSize);
-        var (items, totalCount) = await repository.GetHistoryAsync(ownerId, query.ProjectId, query.Status?.Trim(), (page - 1) * pageSize, pageSize);
+        var (items, totalCount) = await repository.GetHistoryAsync(ownerId, query.ServiceId, query.Status?.Trim(), (page - 1) * pageSize, pageSize);
         return new DeploymentListResponse { Items = items.Select(ToResponse).ToList(), Page = page, PageSize = pageSize, TotalCount = totalCount };
     }
 
@@ -22,17 +22,17 @@ public class DeploymentService(IDeploymentRepository repository) : IDeploymentSe
         var deployment = await repository.GetByIdAsync(id, ownerId);
         if (deployment is null) return null;
         var logs = await repository.GetLogsAsync(id);
-        return new DeploymentDetailsResponse { Id = deployment.Id, ProjectId = deployment.ProjectId, Environment = deployment.Environment, Version = deployment.Version, CommitSha = deployment.CommitSha, Status = deployment.Status, StartedAt = deployment.StartedAt, CompletedAt = deployment.CompletedAt, FailureReason = string.Equals(deployment.Status, "Failed", StringComparison.OrdinalIgnoreCase) ? deployment.FailureReason : null, Logs = logs.Select(log => new DeploymentLogResponse { Timestamp = log.Timestamp, Level = log.Level, Message = log.Message }).ToList() };
+        return new DeploymentDetailsResponse { Id = deployment.Id, ServiceId = deployment.ServiceId, Environment = deployment.Environment, Version = deployment.Version, CommitSha = deployment.CommitSha, Status = deployment.Status, StartedAt = deployment.StartedAt, CompletedAt = deployment.CompletedAt, FailureReason = string.Equals(deployment.Status, "Failed", StringComparison.OrdinalIgnoreCase) ? deployment.FailureReason : null, Logs = logs.Select(log => new DeploymentLogResponse { Timestamp = log.Timestamp, Level = log.Level, Message = log.Message }).ToList() };
     }
 
     public async Task<(bool Success, string? Error, int? DeploymentId)> CreateAsync(CreateDeploymentRequest request, int ownerId, bool isAdmin)
     {
-        var projectAccess = await repository.GetProjectAccessAsync(request.ProjectId);
-        if (!projectAccess.Exists) return (false, "Project not found.", null);
-        if (projectAccess.IsArchived) return (false, "Project is archived.", null);
-        if (!isAdmin && projectAccess.OwnerId != ownerId) return (false, "You do not have permission to deploy this project.", null);
+        var serviceAccess = await repository.GetServiceAccessAsync(request.ServiceId);
+        if (!serviceAccess.Exists) return (false, "Service not found.", null);
+        if (serviceAccess.IsArchived) return (false, "Project is archived.", null);
+        if (!isAdmin && serviceAccess.OwnerId != ownerId) return (false, "You do not have permission to deploy this service.", null);
 
-        var environment = await repository.GetEnvironmentByNameAsync(request.ProjectId, request.Environment.Trim());
+        var environment = await repository.GetEnvironmentByNameAsync(serviceAccess.ProjectId, request.Environment.Trim());
         if (environment is null || !environment.Value.IsActive) return (false, "The selected environment is not valid for this project.", null);
         if (!ValidEnvironmentTypes.Contains(environment.Value.Type)) return (false, "The selected environment type is not supported.", null);
 
@@ -40,7 +40,8 @@ public class DeploymentService(IDeploymentRepository repository) : IDeploymentSe
 
         var deployment = new DeploymentEntity
         {
-            ProjectId = request.ProjectId,
+            PublicId = Harbor.Common.Utilities.IdGenerator.DeploymentId(),
+            ServiceId = serviceAccess.RealServiceId,
             OwnerId = ownerId,
             Environment = request.Environment.Trim(),
             Version = request.Version.Trim(),
@@ -53,5 +54,5 @@ public class DeploymentService(IDeploymentRepository repository) : IDeploymentSe
         return (true, null, deploymentId);
     }
 
-    private static DeploymentResponse ToResponse(DeploymentEntity deployment) => new() { Id = deployment.Id, ProjectId = deployment.ProjectId, Environment = deployment.Environment, Version = deployment.Version, CommitSha = deployment.CommitSha, Status = deployment.Status, StartedAt = deployment.StartedAt, CompletedAt = deployment.CompletedAt };
+    private static DeploymentResponse ToResponse(DeploymentEntity deployment) => new() { Id = deployment.Id, PublicId = string.IsNullOrEmpty(deployment.PublicId) ? deployment.Id.ToString() : deployment.PublicId, ServiceId = deployment.ServiceId, Environment = deployment.Environment, Version = deployment.Version, CommitSha = deployment.CommitSha, Status = deployment.Status, StartedAt = deployment.StartedAt, CompletedAt = deployment.CompletedAt };
 }

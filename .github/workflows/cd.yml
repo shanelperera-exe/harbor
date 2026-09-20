@@ -74,6 +74,65 @@ jobs:
             ENVIRONMENT_SECRETS_KEY=${{ secrets.ENVIRONMENT_SECRETS_KEY }}
             GITHUB_TOKEN=${{ secrets.GH_TOKEN }}
             GITHUB_WEBHOOK_SECRET=${{ secrets.GH_WEBHOOK_SECRET }}
+            GOOGLE_CLIENT_ID=${{ vars.GOOGLE_CLIENT_ID }}
+            GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
+            GITHUB_CLIENT_ID=${{ vars.GITHUB_CLIENT_ID }}
+            GITHUB_CLIENT_SECRET=${{ secrets.GITHUB_CLIENT_SECRET }}
+            FRONTEND_URL=${{ vars.FRONTEND_URL }}
+            API_GATEWAY_URL=${{ vars.API_GATEWAY_URL }}
+
+      - name: Apply backend runtime configuration
+        env:
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          ENVIRONMENT_SECRETS_KEY: ${{ secrets.ENVIRONMENT_SECRETS_KEY }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GH_WEBHOOK_SECRET: ${{ secrets.GH_WEBHOOK_SECRET }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GITHUB_CLIENT_SECRET: ${{ secrets.GITHUB_CLIENT_SECRET }}
+        run: |
+          for attempt in 1 2 3; do
+            if az containerapp update \
+              --name "${{ matrix.service }}" \
+              --resource-group "${{ env.RESOURCE_GROUP }}" \
+              --set-env-vars \
+                "POSTGRES_SERVER=${{ vars.POSTGRES_SERVER }}" \
+                "POSTGRES_PORT=${{ vars.POSTGRES_PORT }}" \
+                "POSTGRES_DATABASE=${{ vars.POSTGRES_DATABASE }}" \
+                "POSTGRES_USER=${{ vars.POSTGRES_USER }}" \
+                "POSTGRES_PASSWORD=$POSTGRES_PASSWORD" \
+                "POSTGRES_SSL_MODE=Require" \
+                "JWT_SECRET=$JWT_SECRET" \
+                "JWT_ISSUER=${{ vars.JWT_ISSUER }}" \
+                "JWT_AUDIENCE=${{ vars.JWT_AUDIENCE }}" \
+                "ADMIN_EMAIL=${{ vars.ADMIN_EMAIL }}" \
+                "ADMIN_PASSWORD=$ADMIN_PASSWORD" \
+                "KAFKA_BOOTSTRAP_SERVERS=${{ vars.KAFKA_BOOTSTRAP_SERVERS }}" \
+                "KAFKA_DEPLOYMENT_TOPIC=${{ vars.KAFKA_DEPLOYMENT_TOPIC }}" \
+                "SMTP_HOST=${{ vars.SMTP_HOST }}" \
+                "SMTP_PORT=${{ vars.SMTP_PORT }}" \
+                "SMTP_USERNAME=${{ vars.SMTP_USERNAME }}" \
+                "SMTP_PASSWORD=$SMTP_PASSWORD" \
+                "SMTP_FROM_NAME=${{ vars.SMTP_FROM_NAME }}" \
+                "SMTP_FROM_EMAIL=${{ vars.SMTP_FROM_EMAIL }}" \
+                "ENVIRONMENT_SECRETS_KEY=$ENVIRONMENT_SECRETS_KEY" \
+                "GITHUB_TOKEN=$GH_TOKEN" \
+                "GITHUB_WEBHOOK_SECRET=$GH_WEBHOOK_SECRET" \
+                "GOOGLE_CLIENT_ID=${{ vars.GOOGLE_CLIENT_ID }}" \
+                "GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET" \
+                "GITHUB_CLIENT_ID=${{ vars.GH_CLIENT_ID }}" \
+                "GITHUB_CLIENT_SECRET=$GH_CLIENT_SECRET" \
+                "FRONTEND_URL=${{ vars.FRONTEND_URL }}" \
+                "API_GATEWAY_URL=${{ vars.API_GATEWAY_URL }}" \
+                "ALLOWED_ORIGINS=${{ vars.ALLOWED_ORIGINS }}"; then
+              exit 0
+            fi
+            echo "Azure Container Apps update failed (attempt $attempt/3); retrying..."
+            sleep 15
+          done
+          exit 1
 
   deploy-frontends:
     name: Deploy Frontend UIs
@@ -96,21 +155,30 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+      - name: Log in to ACR
+        run: docker login ${{ env.ACR_LOGIN_SERVER }} -u ${{ secrets.ACR_USERNAME }} -p ${{ secrets.ACR_PASSWORD }}
+
+      - name: Build and Push Frontend Image
+        run: |
+          docker build \
+            --build-arg VITE_API_BASE_URL=${{ vars.API_GATEWAY_URL }}/api \
+            -f ${{ matrix.dockerfile }} \
+            -t ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.service }}:${{ github.sha }} \
+            .
+          docker push ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.service }}:${{ github.sha }}
+
       - name: Deploy to Azure Container Apps
         uses: azure/container-apps-deploy-action@v1
         with:
-          appSourcePath: ${{ github.workspace }}
           registryUrl: ${{ env.ACR_LOGIN_SERVER }}
           registryUsername: ${{ secrets.ACR_USERNAME }}
           registryPassword: ${{ secrets.ACR_PASSWORD }}
           containerAppName: ${{ matrix.service }}
           resourceGroup: ${{ env.RESOURCE_GROUP }}
           containerAppEnvironment: ${{ env.ACA_ENVIRONMENT }}
-          imageToBuild: ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.service }}:${{ github.sha }}
-          dockerfilePath: ${{ matrix.dockerfile }}
+          imageToDeploy: ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.service }}:${{ github.sha }}
           ingress: external
           targetPort: 80
-          buildArguments: "VITE_API_BASE_URL=${{ vars.API_GATEWAY_URL }}"
 
   deploy-api-gateway:
     name: Deploy API Gateway
@@ -129,7 +197,7 @@ jobs:
       - name: Get ACA Environment Domain
         id: get-domain
         run: |
-          DOMAIN=$(az containerapp env show -n ${{ env.ACA_ENVIRONMENT }} -g ${{ env.RESOURCE_GROUP }} --query properties.defaultDomain -o tsv)
+          DOMAIN=$(az containerapp env show -n ${{ env.ACA_ENVIRONMENT }} -g ${{ env.RESOURCE_GROUP }} --query properties.defaultDomain -o tsv | tr -d '[:space:]')
           echo "DOMAIN=$DOMAIN" >> $GITHUB_ENV
 
       - name: Deploy API Gateway to ACA
@@ -146,9 +214,26 @@ jobs:
           dockerfilePath: src/backend/Harbor.ApiGateway/Dockerfile
           ingress: external
           targetPort: 8080
-          environmentVariables: |
-            ReverseProxy__Clusters__authCluster__Destinations__destination1__Address=https://harbor-auth-api.internal.${{ env.DOMAIN }}
-            ReverseProxy__Clusters__projectCluster__Destinations__destination1__Address=https://harbor-project-api.internal.${{ env.DOMAIN }}
-            ReverseProxy__Clusters__environmentCluster__Destinations__destination1__Address=https://harbor-env-api.internal.${{ env.DOMAIN }}
-            ReverseProxy__Clusters__deploymentCluster__Destinations__destination1__Address=https://harbor-deploy-api.internal.${{ env.DOMAIN }}
-            ReverseProxy__Clusters__reportingCluster__Destinations__destination1__Address=https://harbor-report-api.internal.${{ env.DOMAIN }}
+
+      - name: Configure API Gateway environment variables
+        run: |
+          for attempt in 1 2 3; do
+            if az containerapp update \
+              --name harbor-api-gateway \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --set-env-vars \
+                "ReverseProxy__Clusters__authCluster__Destinations__destination1__Address=https://harbor-auth-api.internal.${{ env.DOMAIN }}" \
+                "ReverseProxy__Clusters__projectCluster__Destinations__destination1__Address=https://harbor-project-api.internal.${{ env.DOMAIN }}" \
+                "ReverseProxy__Clusters__environmentCluster__Destinations__destination1__Address=https://harbor-env-api.internal.${{ env.DOMAIN }}" \
+                "ReverseProxy__Clusters__deploymentCluster__Destinations__destination1__Address=https://harbor-deploy-api.internal.${{ env.DOMAIN }}" \
+                "ReverseProxy__Clusters__reportingCluster__Destinations__destination1__Address=https://harbor-report-api.internal.${{ env.DOMAIN }}" \
+                "ALLOWED_ORIGINS=${{ vars.ALLOWED_ORIGINS }}"; then
+              exit 0
+            fi
+            echo "Azure API Gateway update failed (attempt $attempt/3); retrying..."
+            sleep 15
+          done
+          exit 1
+
+
+

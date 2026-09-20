@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 
 // ─── Sparkline chart component ────────────────────────────────────────────────
-function Sparkline({ color = '#8a05ff', delay = 0 }: { color?: string; delay?: number }) {
+function Sparkline({ color = '#2563eb', delay = 0 }: { color?: string; delay?: number }) {
   const [offset, setOffset] = useState(0);
   const pathRef = useRef<SVGPathElement>(null);
 
@@ -60,7 +60,7 @@ function ServiceCard({
 
   return (
     <div
-      className={`border border-[#272727] bg-[#0d0d0d] transition-all duration-700 ${
+      className={`border border-[#272727] bg-[oklch(0.21_0.03_263.45)] transition-all duration-700 ${
         visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
       }`}
     >
@@ -89,7 +89,7 @@ function ServiceCard({
           >
             <div className="text-[8px] text-[#858585] uppercase tracking-widest mb-1">{m.label}</div>
             <div className="h-5">
-              <Sparkline color={m.color || '#8a05ff'} delay={i * 200 + delay} />
+              <Sparkline color={m.color || '#2563eb'} delay={i * 200 + delay} />
             </div>
           </div>
         ))}
@@ -214,8 +214,8 @@ export default function HeroDashboardIllustration() {
               name="app-backend"
               status="Available"
               metrics={[
-                { label: 'Memory', color: '#8a05ff' },
-                { label: 'CPU', color: '#8a05ff' },
+                { label: 'Memory', color: '#2563eb' },
+                { label: 'CPU', color: '#2563eb' },
                 { label: 'Instances' },
                 { label: 'Requests' },
               ]}
@@ -230,8 +230,8 @@ export default function HeroDashboardIllustration() {
               }
               name="app-backend"
               metrics={[
-                { label: 'Memory', color: '#8a05ff' },
-                { label: 'CPU', color: '#8a05ff' },
+                { label: 'Memory', color: '#2563eb' },
+                { label: 'CPU', color: '#2563eb' },
                 { label: 'Instances' },
                 { label: 'Requests' },
               ]}
@@ -248,8 +248,8 @@ export default function HeroDashboardIllustration() {
               name="app-database"
               status="Available"
               metrics={[
-                { label: 'Memory', color: '#8a05ff' },
-                { label: 'CPU', color: '#8a05ff' },
+                { label: 'Memory', color: '#2563eb' },
+                { label: 'CPU', color: '#2563eb' },
                 { label: 'Storage' },
                 { label: 'Connections' },
               ]}
@@ -264,7 +264,7 @@ export default function HeroDashboardIllustration() {
               }
               name="app-frontend"
               metrics={[
-                { label: 'Bandwidth', color: '#8a05ff' },
+                { label: 'Bandwidth', color: '#2563eb' },
               ]}
               delay={1100}
             />

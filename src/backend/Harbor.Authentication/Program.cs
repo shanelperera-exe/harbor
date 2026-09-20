@@ -1,6 +1,11 @@
 using DotNetEnv;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authentication.OAuth;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.AspNetCore.HttpOverrides;
 using System.Text;
 using Dapper;
 Env.TraversePath().Load();
@@ -9,6 +14,12 @@ var builder = WebApplication.CreateBuilder(args);
 
 
 builder.Services.AddControllers();
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedHost | ForwardedHeaders.XForwardedProto;
+    options.KnownIPNetworks.Clear();
+    options.KnownProxies.Clear();
+});
 
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
 if (allowedOrigins == null || allowedOrigins.Length == 0)
@@ -66,6 +77,16 @@ var jwtIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER") ?? "HarborAuth"
 var jwtAudience = Environment.GetEnvironmentVariable("JWT_AUDIENCE") ?? "HarborClients";
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddCookie("External", options =>
+    {
+        options.ExpireTimeSpan = TimeSpan.FromMinutes(5);
+        options.Cookie.Name = "harbor.external";
+    })
+    .AddCookie("ExternalLink", options =>
+    {
+        options.ExpireTimeSpan = TimeSpan.FromMinutes(5);
+        options.Cookie.Name = "harbor.external-link";
+    })
     .AddJwtBearer(options =>
     {
         options.TokenValidationParameters = new TokenValidationParameters
@@ -80,6 +101,99 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
+var googleClientId = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID");
+var googleClientSecret = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET");
+var publicApiOrigin = Environment.GetEnvironmentVariable("API_GATEWAY_URL") ?? "http://localhost:5000";
+
+static string UsePublicCallbackOrigin(string authorizeUrl, string publicOrigin, PathString callbackPath)
+{
+    var uri = new Uri(authorizeUrl);
+    var query = QueryHelpers.ParseQuery(uri.Query)
+        .ToDictionary(pair => pair.Key, pair => (string?)pair.Value.ToString());
+    query["redirect_uri"] = $"{publicOrigin.TrimEnd('/')}{callbackPath}";
+    return QueryHelpers.AddQueryString(uri.GetLeftPart(UriPartial.Path), query);
+}
+
+if (!string.IsNullOrWhiteSpace(googleClientId) && !string.IsNullOrWhiteSpace(googleClientSecret))
+{
+    builder.Services.AddAuthentication().AddGoogle("Google", options =>
+    {
+        options.ClientId = googleClientId;
+        options.ClientSecret = googleClientSecret;
+        options.SignInScheme = "External";
+        options.CallbackPath = "/api/auth/external/google/callback";
+        options.Events.OnRedirectToAuthorizationEndpoint = context =>
+        {
+            context.Response.Redirect(UsePublicCallbackOrigin(context.RedirectUri, publicApiOrigin, options.CallbackPath));
+            return Task.CompletedTask;
+        };
+        options.Events.OnTicketReceived = context =>
+        {
+            context.ReturnUri = "/api/auth/external/google/complete";
+            return Task.CompletedTask;
+        };
+    });
+}
+
+var githubClientId = Environment.GetEnvironmentVariable("GITHUB_CLIENT_ID");
+var githubClientSecret = Environment.GetEnvironmentVariable("GITHUB_CLIENT_SECRET");
+if (!string.IsNullOrWhiteSpace(githubClientId) && !string.IsNullOrWhiteSpace(githubClientSecret))
+{
+    builder.Services.AddAuthentication().AddOAuth("GitHub", options =>
+    {
+        options.ClientId = githubClientId;
+        options.ClientSecret = githubClientSecret;
+        options.SignInScheme = "External";
+        options.CallbackPath = "/api/auth/external/github/callback";
+        options.AuthorizationEndpoint = "https://github.com/login/oauth/authorize";
+        options.TokenEndpoint = "https://github.com/login/oauth/access_token";
+        options.UserInformationEndpoint = "https://api.github.com/user";
+        options.SaveTokens = true;
+        options.Scope.Add("user:email");
+        options.Scope.Add("repo");
+        options.Events.OnRedirectToAuthorizationEndpoint = context =>
+        {
+            context.Response.Redirect(UsePublicCallbackOrigin(context.RedirectUri, publicApiOrigin, options.CallbackPath));
+            return Task.CompletedTask;
+        };
+        options.ClaimActions.MapJsonKey(System.Security.Claims.ClaimTypes.NameIdentifier, "id");
+        options.ClaimActions.MapJsonKey(System.Security.Claims.ClaimTypes.Name, "login");
+        options.ClaimActions.MapJsonKey(System.Security.Claims.ClaimTypes.Email, "email");
+        options.Events.OnCreatingTicket = async context =>
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, context.Options.UserInformationEndpoint);
+            request.Headers.Accept.ParseAdd("application/json");
+            request.Headers.UserAgent.ParseAdd("Harbor");
+            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", context.AccessToken);
+            using var response = await context.Backchannel.SendAsync(request, context.HttpContext.RequestAborted);
+            response.EnsureSuccessStatusCode();
+            using var user = System.Text.Json.JsonDocument.Parse(await response.Content.ReadAsStringAsync(context.HttpContext.RequestAborted));
+            context.RunClaimActions(user.RootElement);
+
+            if (!context.Identity!.Claims.Any(claim => claim.Type == System.Security.Claims.ClaimTypes.Email))
+            {
+                using var emailsRequest = new HttpRequestMessage(HttpMethod.Get, "https://api.github.com/user/emails");
+                emailsRequest.Headers.Accept.ParseAdd("application/json");
+                emailsRequest.Headers.UserAgent.ParseAdd("Harbor");
+                emailsRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", context.AccessToken);
+                using var emailsResponse = await context.Backchannel.SendAsync(emailsRequest, context.HttpContext.RequestAborted);
+                emailsResponse.EnsureSuccessStatusCode();
+                using var emails = System.Text.Json.JsonDocument.Parse(await emailsResponse.Content.ReadAsStringAsync(context.HttpContext.RequestAborted));
+                var primaryEmail = emails.RootElement.EnumerateArray().FirstOrDefault(email => email.GetProperty("primary").GetBoolean() && email.GetProperty("verified").GetBoolean());
+                if (primaryEmail.ValueKind != System.Text.Json.JsonValueKind.Undefined)
+                {
+                    context.Identity.AddClaim(new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Email, primaryEmail.GetProperty("email").GetString()!));
+                }
+            }
+        };
+        options.Events.OnTicketReceived = context =>
+        {
+            context.ReturnUri = "/api/auth/external/github/complete";
+            return Task.CompletedTask;
+        };
+    });
+}
+
 builder.Services.AddAuthorization();
 
 
@@ -88,6 +202,7 @@ builder.Services.AddScoped<Harbor.Authentication.Repositories.IUserRepository, H
 builder.Services.AddScoped<Harbor.Authentication.Services.IAuthService, Harbor.Authentication.Services.AuthService>();
 builder.Services.AddScoped<Harbor.Authentication.Services.IJwtService, Harbor.Authentication.Services.JwtService>();
 builder.Services.AddScoped<Harbor.Authentication.Services.IEmailService, Harbor.Authentication.Services.EmailService>();
+builder.Services.AddScoped<Harbor.Authentication.Services.IExternalAuthService, Harbor.Authentication.Services.ExternalAuthService>();
 
 var app = builder.Build();
 
@@ -132,6 +247,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("DefaultPolicy");
+app.UseForwardedHeaders();
 app.UseHttpsRedirection();
 
 app.UseAuthentication();

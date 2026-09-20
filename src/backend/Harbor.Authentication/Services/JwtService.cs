@@ -19,7 +19,7 @@ namespace Harbor.Authentication.Services
                        ?? throw new InvalidOperationException("JWT_SECRET is not configured.");
             _issuer = Environment.GetEnvironmentVariable("JWT_ISSUER") ?? "HarborAuth";
             _audience = Environment.GetEnvironmentVariable("JWT_AUDIENCE") ?? "HarborClients";
-            _expiryMinutes = int.TryParse(Environment.GetEnvironmentVariable("JWT_EXPIRY_MINUTES"), out var m) ? m : 60;
+            _expiryMinutes = int.TryParse(Environment.GetEnvironmentVariable("JWT_EXPIRY_MINUTES"), out var m) ? m : 480;
         }
 
         public (string Token, DateTime ExpiresAt) GenerateToken(User user)

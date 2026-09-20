@@ -21,7 +21,7 @@ namespace Harbor.E2ETests.Pages
 
         public void NavigateTo(int projectId)
         {
-            _driver.Navigate().GoToUrl($"http://localhost:8080/projects/{projectId}/edit");
+            _driver.Navigate().GoToUrl($"http://localhost:5173/projects/{projectId}/edit");
         }
 
         public void SetName(string name)

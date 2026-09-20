@@ -11,9 +11,10 @@ public class EnvironmentRepository(DbConnectionFactory dbFactory) : IEnvironment
         await connection.OpenAsync();
         await using var command = connection.CreateCommand();
 
-        command.CommandText = "INSERT INTO \"Environments\" (\"ProjectId\", \"Name\", \"Type\", \"CreatedAt\", \"IsActive\") " +
-                              "VALUES (@projectId, @name, @type, @createdAt, TRUE) RETURNING \"Id\";";
+        command.CommandText = "INSERT INTO \"Environments\" (\"PublicId\", \"ProjectId\", \"Name\", \"Type\", \"CreatedAt\", \"IsActive\") " +
+                              "VALUES (@publicId, @projectId, @name, @type, @createdAt, TRUE) RETURNING \"Id\";";
 
+        command.Parameters.AddWithValue("publicId", environment.PublicId);
         command.Parameters.AddWithValue("projectId", environment.ProjectId);
         command.Parameters.AddWithValue("name", environment.Name);
         command.Parameters.AddWithValue("type", environment.Type);
@@ -28,7 +29,7 @@ public class EnvironmentRepository(DbConnectionFactory dbFactory) : IEnvironment
         await connection.OpenAsync();
         await using var command = connection.CreateCommand();
 
-        command.CommandText = "SELECT \"Id\", \"ProjectId\", \"Name\", \"Type\", \"CreatedAt\", \"IsActive\", \"DeactivatedAt\", \"DeploymentUrl\", \"Provider\" FROM \"Environments\" " +
+        command.CommandText = "SELECT \"Id\", \"PublicId\", \"ProjectId\", \"Name\", \"Type\", \"CreatedAt\", \"IsActive\", \"DeactivatedAt\", \"DeploymentUrl\", \"Provider\" FROM \"Environments\" " +
                               "WHERE \"ProjectId\" = @projectId AND \"IsActive\" = TRUE ORDER BY \"CreatedAt\";";
 
         command.Parameters.AddWithValue("projectId", projectId);
@@ -42,14 +43,15 @@ public class EnvironmentRepository(DbConnectionFactory dbFactory) : IEnvironment
             environments.Add(new EnvironmentEntity
             {
                 Id = reader.GetInt32(0),
-                ProjectId = reader.GetInt32(1),
-                Name = reader.GetString(2),
-                Type = reader.GetString(3),
-                CreatedAt = reader.GetDateTime(4),
-                IsActive = reader.GetBoolean(5),
-                DeactivatedAt = reader.IsDBNull(6) ? null : reader.GetDateTime(6),
-                DeploymentUrl = reader.IsDBNull(7) ? null : reader.GetString(7),
-                Provider = reader.IsDBNull(8) ? null : reader.GetString(8)
+                PublicId = reader.IsDBNull(1) ? string.Empty : reader.GetString(1),
+                ProjectId = reader.GetInt32(2),
+                Name = reader.GetString(3),
+                Type = reader.GetString(4),
+                CreatedAt = reader.GetDateTime(5),
+                IsActive = reader.GetBoolean(6),
+                DeactivatedAt = reader.IsDBNull(7) ? null : reader.GetDateTime(7),
+                DeploymentUrl = reader.IsDBNull(8) ? null : reader.GetString(8),
+                Provider = reader.IsDBNull(9) ? null : reader.GetString(9)
             });
         }
 
@@ -62,7 +64,7 @@ public class EnvironmentRepository(DbConnectionFactory dbFactory) : IEnvironment
         await connection.OpenAsync();
         await using var command = connection.CreateCommand();
 
-        command.CommandText = "SELECT \"Id\", \"ProjectId\", \"Name\", \"Type\", \"CreatedAt\", \"IsActive\", \"DeactivatedAt\", \"DeploymentUrl\", \"Provider\" " +
+        command.CommandText = "SELECT \"Id\", \"PublicId\", \"ProjectId\", \"Name\", \"Type\", \"CreatedAt\", \"IsActive\", \"DeactivatedAt\", \"DeploymentUrl\", \"Provider\" " +
                               "FROM \"Environments\" WHERE \"Id\" = @environmentId AND \"ProjectId\" = @projectId;";
 
         command.Parameters.AddWithValue("environmentId", environmentId);
@@ -74,14 +76,15 @@ public class EnvironmentRepository(DbConnectionFactory dbFactory) : IEnvironment
             ? new EnvironmentEntity
             {
                 Id = reader.GetInt32(0),
-                ProjectId = reader.GetInt32(1),
-                Name = reader.GetString(2),
-                Type = reader.GetString(3),
-                CreatedAt = reader.GetDateTime(4),
-                IsActive = reader.GetBoolean(5),
-                DeactivatedAt = reader.IsDBNull(6) ? null : reader.GetDateTime(6),
-                DeploymentUrl = reader.IsDBNull(7) ? null : reader.GetString(7),
-                Provider = reader.IsDBNull(8) ? null : reader.GetString(8)
+                PublicId = reader.IsDBNull(1) ? string.Empty : reader.GetString(1),
+                ProjectId = reader.GetInt32(2),
+                Name = reader.GetString(3),
+                Type = reader.GetString(4),
+                CreatedAt = reader.GetDateTime(5),
+                IsActive = reader.GetBoolean(6),
+                DeactivatedAt = reader.IsDBNull(7) ? null : reader.GetDateTime(7),
+                DeploymentUrl = reader.IsDBNull(8) ? null : reader.GetString(8),
+                Provider = reader.IsDBNull(9) ? null : reader.GetString(9)
             }
             : null;
     }
@@ -142,7 +145,15 @@ public class EnvironmentRepository(DbConnectionFactory dbFactory) : IEnvironment
         if (!Convert.ToBoolean(await command.ExecuteScalarAsync()))
             return false;
 
-        command.CommandText = "SELECT EXISTS (SELECT 1 FROM \"Deployments\" WHERE \"ProjectId\" = @projectId AND \"Environment\" = @environmentName);";
+        command.CommandText = """
+            SELECT EXISTS (
+                SELECT 1
+                FROM "Deployments" d
+                JOIN "Services" s ON s."Id" = d."ServiceId"
+                WHERE s."ProjectId" = @projectId
+                  AND d."Environment" = @environmentName
+            );
+            """;
 
         command.Parameters.AddWithValue("projectId", projectId);
         command.Parameters.AddWithValue("environmentName", environmentName);
@@ -150,21 +161,29 @@ public class EnvironmentRepository(DbConnectionFactory dbFactory) : IEnvironment
         return Convert.ToBoolean(await command.ExecuteScalarAsync());
     }
 
-    public async Task<(bool Exists, int OwnerId, bool IsArchived)> GetProjectAccessAsync(int projectId)
+    public async Task<(bool Exists, int Id, int OwnerId, bool IsArchived)> GetProjectAccessAsync(string projectId)
     {
         await using var connection = dbFactory.CreateConnection();
         await connection.OpenAsync();
         await using var command = connection.CreateCommand();
 
-        command.CommandText = "SELECT \"OwnerId\", \"IsArchived\" FROM \"Projects\" WHERE \"Id\" = @projectId;";
-
-        command.Parameters.AddWithValue("projectId", projectId);
+        if (int.TryParse(projectId, out var parsedId))
+        {
+            command.CommandText = "SELECT \"Id\", \"OwnerId\", \"IsArchived\" FROM \"Projects\" WHERE \"Id\" = @id OR \"PublicId\" = @publicId;";
+            command.Parameters.AddWithValue("id", parsedId);
+        }
+        else
+        {
+            command.CommandText = "SELECT \"Id\", \"OwnerId\", \"IsArchived\" FROM \"Projects\" WHERE \"PublicId\" = @publicId;";
+        }
+        
+        command.Parameters.AddWithValue("publicId", projectId);
 
         await using var reader = await command.ExecuteReaderAsync();
 
         return await reader.ReadAsync()
-            ? (true, reader.GetInt32(0), reader.GetBoolean(1))
-            : (false, 0, false);
+            ? (true, reader.GetInt32(0), reader.GetInt32(1), reader.GetBoolean(2))
+            : (false, 0, 0, false);
     }
 
     public async Task<bool> TypeExistsForProjectAsync(int projectId, string type, int? excludeEnvironmentId = null)

@@ -103,6 +103,10 @@ builder.Services.AddAuthorization();
 builder.Services.AddSingleton<Harbor.Project.Data.DbConnectionFactory>();
 builder.Services.AddScoped<Harbor.Project.Repositories.IProjectRepository, Harbor.Project.Repositories.ProjectRepository>();
 builder.Services.AddScoped<Harbor.Project.Services.IProjectService, Harbor.Project.Services.ProjectService>();
+builder.Services.AddScoped<Harbor.Project.Repositories.IServiceRepository, Harbor.Project.Repositories.ServiceRepository>();
+builder.Services.AddScoped<Harbor.Project.Services.IServiceService, Harbor.Project.Services.ServiceService>();
+builder.Services.AddHttpClient<Harbor.Project.Services.ITokenService, Harbor.Project.Services.TokenService>();
+builder.Services.AddHttpClient<Harbor.Project.Services.IGitHubService, Harbor.Project.Services.GitHubService>();
 
 var app = builder.Build();
 

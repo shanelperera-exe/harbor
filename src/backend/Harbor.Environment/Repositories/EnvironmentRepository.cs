@@ -140,23 +140,59 @@ public class EnvironmentRepository(DbConnectionFactory dbFactory) : IEnvironment
         await connection.OpenAsync();
         await using var command = connection.CreateCommand();
 
-        command.CommandText = "SELECT to_regclass('\"Deployments\"') IS NOT NULL;";
+        command.CommandText = """
+            SELECT
+                to_regclass('"Deployments"') IS NOT NULL
+                AND EXISTS (
+                    SELECT 1
+                    FROM information_schema.columns
+                    WHERE table_name = 'Deployments'
+                      AND column_name = 'ProjectId'
+                ),
+                to_regclass('"Deployments"') IS NOT NULL
+                AND to_regclass('"Services"') IS NOT NULL
+                AND EXISTS (
+                    SELECT 1
+                    FROM information_schema.columns
+                    WHERE table_name = 'Deployments'
+                      AND column_name = 'ServiceId'
+                );
+            """;
 
-        if (!Convert.ToBoolean(await command.ExecuteScalarAsync()))
+        await using var schemaReader = await command.ExecuteReaderAsync();
+        if (!await schemaReader.ReadAsync())
             return false;
 
-        command.CommandText = """
-            SELECT EXISTS (
-                SELECT 1
-                FROM "Deployments" d
-                JOIN "Services" s ON s."Id" = d."ServiceId"
-                WHERE s."ProjectId" = @projectId
-                  AND d."Environment" = @environmentName
-            );
-            """;
+        var hasLegacyProjectId = schemaReader.GetBoolean(0);
+        var hasServiceId = schemaReader.GetBoolean(1);
+        await schemaReader.CloseAsync();
 
         command.Parameters.AddWithValue("projectId", projectId);
         command.Parameters.AddWithValue("environmentName", environmentName);
+
+        command.CommandText = hasServiceId
+            ? """
+              SELECT EXISTS (
+                  SELECT 1
+                  FROM "Deployments" d
+                  JOIN "Services" s ON s."Id" = d."ServiceId"
+                  WHERE s."ProjectId" = @projectId
+                    AND d."Environment" = @environmentName
+              );
+              """
+            : hasLegacyProjectId
+                ? """
+                  SELECT EXISTS (
+                      SELECT 1
+                      FROM "Deployments"
+                      WHERE "ProjectId" = @projectId
+                        AND "Environment" = @environmentName
+                  );
+                  """
+                : null;
+
+        if (command.CommandText is null)
+            return false;
 
         return Convert.ToBoolean(await command.ExecuteScalarAsync());
     }

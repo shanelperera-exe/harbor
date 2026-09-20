@@ -79,9 +79,14 @@ namespace Harbor.Authentication.Repositories
 
             using var command = connection.CreateCommand();
             command.CommandText =
-                "INSERT INTO \"Users\" (\"Username\", \"Email\", \"PasswordHash\", \"Role\", \"AvatarSvg\", \"HasPassword\", \"CreatedAt\") " +
-                "VALUES (@username, @email, @passwordHash, @role, @avatarSvg, @hasPassword, @createdAt) " +
+                "INSERT INTO \"Users\" (\"PublicId\", \"Username\", \"Email\", \"PasswordHash\", \"Role\", \"AvatarSvg\", \"HasPassword\", \"CreatedAt\") " +
+                "VALUES (@publicId, @username, @email, @passwordHash, @role, @avatarSvg, @hasPassword, @createdAt) " +
                 "RETURNING \"Id\";";
+            command.Parameters.AddWithValue(
+                "publicId",
+                string.IsNullOrWhiteSpace(user.PublicId)
+                    ? Harbor.Common.Utilities.IdGenerator.UserId()
+                    : user.PublicId);
             command.Parameters.AddWithValue("username", user.Username);
             command.Parameters.AddWithValue("email", user.Email);
             command.Parameters.AddWithValue("passwordHash", user.PasswordHash);

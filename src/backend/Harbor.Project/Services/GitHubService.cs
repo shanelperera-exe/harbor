@@ -7,6 +7,7 @@ namespace Harbor.Project.Services
     {
         Task<List<GitHubRepository>> GetRepositoriesAsync(string token);
         Task<List<GitHubBranch>> GetBranchesAsync(string token, string owner, string repo);
+        Task<List<GitHubCommit>> GetCommitsAsync(string token, string owner, string repo, string branch);
     }
 
     public class GitHubRepository
@@ -26,6 +27,14 @@ namespace Harbor.Project.Services
     {
         public string Name { get; set; } = string.Empty;
         public string CommitSha { get; set; } = string.Empty;
+    }
+
+    public class GitHubCommit
+    {
+        public string Sha { get; set; } = string.Empty;
+        public string Message { get; set; } = string.Empty;
+        public string AuthorName { get; set; } = string.Empty;
+        public DateTime? Date { get; set; }
     }
 
     public class GitHubService : IGitHubService
@@ -101,6 +110,38 @@ namespace Harbor.Project.Services
             }
 
             return branches;
+        }
+
+        public async Task<List<GitHubCommit>> GetCommitsAsync(string token, string owner, string repo, string branch)
+        {
+            var request = new HttpRequestMessage(HttpMethod.Get, $"repos/{owner}/{repo}/commits?sha={branch}&per_page=100");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+            var response = await _httpClient.SendAsync(request);
+            if (!response.IsSuccessStatusCode)
+            {
+                return new List<GitHubCommit>();
+            }
+
+            var content = await response.Content.ReadAsStringAsync();
+            using var document = JsonDocument.Parse(content);
+            var commits = new List<GitHubCommit>();
+
+            foreach (var element in document.RootElement.EnumerateArray())
+            {
+                var commitInfo = element.GetProperty("commit");
+                var authorInfo = commitInfo.GetProperty("author");
+                
+                commits.Add(new GitHubCommit
+                {
+                    Sha = element.GetProperty("sha").GetString() ?? string.Empty,
+                    Message = commitInfo.GetProperty("message").GetString() ?? string.Empty,
+                    AuthorName = authorInfo.GetProperty("name").GetString() ?? string.Empty,
+                    Date = authorInfo.TryGetProperty("date", out var d) && d.ValueKind != JsonValueKind.Null ? d.GetDateTime() : null
+                });
+            }
+
+            return commits;
         }
     }
 }

@@ -55,7 +55,7 @@ export default function PasswordReset() {
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className={`h-10 w-full bg-transparent border ${errors.email ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-[#525252] focus:border-[#2563eb] dark:focus:border-[#2563eb] focus:ring-[#2563eb] dark:focus:ring-[#2563eb]'} text-black dark:text-[#f0f0f0] pl-10 pr-3 focus:outline-none focus:ring-1 transition-colors placeholder:text-gray-400 dark:placeholder:text-[#8f8f8f]`}
+                      className={`h-10 w-full rounded-sm bg-transparent border ${errors.email ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-[#525252] focus:border-[#2563eb] dark:focus:border-[#2563eb] focus:ring-[#2563eb] dark:focus:ring-[#2563eb]'} text-black dark:text-[#f0f0f0] pl-10 pr-3 focus:outline-none focus:ring-1 transition-colors placeholder:text-gray-400 dark:placeholder:text-[#8f8f8f]`}
                       placeholder="your@email.com"
                     />
                   </div>
@@ -64,7 +64,7 @@ export default function PasswordReset() {
 
                 <button
                   type="submit"
-                  className="group relative h-10 w-full bg-black dark:bg-white text-white dark:text-black font-medium text-[16px] hover:text-white transition-colors duration-300 overflow-hidden flex items-center justify-center mt-4"
+                  className="group relative h-10 w-full rounded-sm bg-black dark:bg-white text-white dark:text-black font-medium text-[16px] hover:text-white transition-colors duration-300 overflow-hidden flex items-center justify-center mt-4"
                 >
                   <div className="absolute inset-0 w-full h-full bg-[#2563eb] origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-out z-[0]"></div>
                   <span className="relative z-[1]">Reset Password</span>

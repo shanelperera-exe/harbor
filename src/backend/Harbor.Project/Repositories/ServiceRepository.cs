@@ -19,8 +19,8 @@ namespace Harbor.Project.Repositories
 
             using var command = connection.CreateCommand();
             command.CommandText =
-                "INSERT INTO \"Services\" (\"ProjectId\", \"Name\", \"Type\", \"RepositoryUrl\", \"RepositoryName\", \"RepositoryBranch\", \"CreatedAt\") " +
-                "VALUES (@projectId, @name, @type, @repositoryUrl, @repositoryName, @repositoryBranch, @createdAt) " +
+                "INSERT INTO \"Services\" (\"ProjectId\", \"Name\", \"Type\", \"RepositoryUrl\", \"RepositoryName\", \"RepositoryBranch\", \"RepositoryCommit\", \"CreatedAt\") " +
+                "VALUES (@projectId, @name, @type, @repositoryUrl, @repositoryName, @repositoryBranch, @repositoryCommit, @createdAt) " +
                 "RETURNING \"Id\";";
             command.Parameters.AddWithValue("projectId", service.ProjectId);
             command.Parameters.AddWithValue("name", service.Name);
@@ -28,6 +28,7 @@ namespace Harbor.Project.Repositories
             command.Parameters.AddWithValue("repositoryUrl", service.RepositoryUrl ?? (object)DBNull.Value);
             command.Parameters.AddWithValue("repositoryName", service.RepositoryName ?? (object)DBNull.Value);
             command.Parameters.AddWithValue("repositoryBranch", service.RepositoryBranch ?? (object)DBNull.Value);
+            command.Parameters.AddWithValue("repositoryCommit", service.RepositoryCommit ?? (object)DBNull.Value);
             command.Parameters.AddWithValue("createdAt", DateTime.UtcNow);
 
             var result = await command.ExecuteScalarAsync();
@@ -41,7 +42,7 @@ namespace Harbor.Project.Repositories
 
             using var command = connection.CreateCommand();
             command.CommandText =
-                "SELECT \"Id\", \"ProjectId\", \"Name\", \"Type\", \"RepositoryUrl\", \"RepositoryName\", \"RepositoryBranch\", \"CreatedAt\" " +
+                "SELECT \"Id\", \"ProjectId\", \"Name\", \"Type\", \"RepositoryUrl\", \"RepositoryName\", \"RepositoryBranch\", \"RepositoryCommit\", \"CreatedAt\" " +
                 "FROM \"Services\" WHERE \"Id\" = @id";
             command.Parameters.AddWithValue("id", id);
 
@@ -57,7 +58,8 @@ namespace Harbor.Project.Repositories
                     RepositoryUrl = reader.IsDBNull(4) ? null : reader.GetString(4),
                     RepositoryName = reader.IsDBNull(5) ? null : reader.GetString(5),
                     RepositoryBranch = reader.IsDBNull(6) ? null : reader.GetString(6),
-                    CreatedAt = reader.GetDateTime(7)
+                    RepositoryCommit = reader.IsDBNull(7) ? null : reader.GetString(7),
+                    CreatedAt = reader.GetDateTime(8)
                 };
             }
 
@@ -71,7 +73,7 @@ namespace Harbor.Project.Repositories
 
             using var command = connection.CreateCommand();
             command.CommandText =
-                "SELECT \"Id\", \"ProjectId\", \"Name\", \"Type\", \"RepositoryUrl\", \"RepositoryName\", \"RepositoryBranch\", \"CreatedAt\" " +
+                "SELECT \"Id\", \"ProjectId\", \"Name\", \"Type\", \"RepositoryUrl\", \"RepositoryName\", \"RepositoryBranch\", \"RepositoryCommit\", \"CreatedAt\" " +
                 "FROM \"Services\" WHERE \"ProjectId\" = @projectId ORDER BY \"CreatedAt\" DESC";
             command.Parameters.AddWithValue("projectId", projectId);
 
@@ -88,7 +90,8 @@ namespace Harbor.Project.Repositories
                     RepositoryUrl = reader.IsDBNull(4) ? null : reader.GetString(4),
                     RepositoryName = reader.IsDBNull(5) ? null : reader.GetString(5),
                     RepositoryBranch = reader.IsDBNull(6) ? null : reader.GetString(6),
-                    CreatedAt = reader.GetDateTime(7)
+                    RepositoryCommit = reader.IsDBNull(7) ? null : reader.GetString(7),
+                    CreatedAt = reader.GetDateTime(8)
                 });
             }
 

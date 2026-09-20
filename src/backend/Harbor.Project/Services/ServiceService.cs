@@ -25,6 +25,14 @@ namespace Harbor.Project.Services
             if (string.IsNullOrWhiteSpace(request.Name)) return (false, "Service name is required.", null);
             if (string.IsNullOrWhiteSpace(request.Type)) return (false, "Service type is required.", null);
 
+            // Validation: Scenario 3 - Missing version
+            if (!string.IsNullOrWhiteSpace(request.RepositoryUrl) &&
+                string.IsNullOrWhiteSpace(request.RepositoryBranch) &&
+                string.IsNullOrWhiteSpace(request.RepositoryCommit))
+            {
+                return (false, "A version reference (branch or commit) is required for deployed services.", null);
+            }
+
             var serviceEntity = new ServiceEntity
             {
                 ProjectId = projectId,
@@ -32,7 +40,8 @@ namespace Harbor.Project.Services
                 Type = request.Type.Trim(),
                 RepositoryUrl = request.RepositoryUrl?.Trim(),
                 RepositoryName = request.RepositoryName?.Trim(),
-                RepositoryBranch = request.RepositoryBranch?.Trim()
+                RepositoryBranch = request.RepositoryBranch?.Trim(),
+                RepositoryCommit = request.RepositoryCommit?.Trim()
             };
 
             var id = await _serviceRepository.CreateAsync(serviceEntity);
@@ -75,6 +84,7 @@ namespace Harbor.Project.Services
             RepositoryUrl = s.RepositoryUrl,
             RepositoryName = s.RepositoryName,
             RepositoryBranch = s.RepositoryBranch,
+            RepositoryCommit = s.RepositoryCommit,
             CreatedAt = s.CreatedAt
         };
     }

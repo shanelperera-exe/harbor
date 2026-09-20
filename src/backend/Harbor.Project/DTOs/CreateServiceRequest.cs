@@ -7,5 +7,6 @@ namespace Harbor.Project.DTOs
         public string? RepositoryUrl { get; set; }
         public string? RepositoryName { get; set; }
         public string? RepositoryBranch { get; set; }
+        public string? RepositoryCommit { get; set; }
     }
 }

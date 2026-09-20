@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams, Link } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { getProject, type Project } from '../../services/projectService';
 import { getEnvironments, updateEnvironment, removeEnvironment, type DeploymentEnvironment } from '../../services/environmentService';
 

@@ -89,7 +89,7 @@ body {
   min-width: 320px;
   min-height: 100vh;
   background-color: #ffffff;
-  color: oklch(0.21_0.03_263.45);
+  color: oklch(0.21 0.03 263.45);
 }
 
 html.dark body {
@@ -133,12 +133,12 @@ html.dark body {
 }
 
 html.dark ::-webkit-scrollbar-track {
-  background: oklch(0.21_0.03_263.45); /* Dark mode track */
+  background: oklch(0.21 0.03 263.45); /* Dark mode track */
 }
 
 html.dark ::-webkit-scrollbar-thumb {
   background-color: #525252; /* Dark mode thumb */
-  border: 3px solid oklch(0.21_0.03_263.45);
+  border: 3px solid oklch(0.21 0.03 263.45);
   border-radius: 10px;
 }
 

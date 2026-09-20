@@ -54,5 +54,23 @@ namespace Harbor.Project.Controllers
             var branches = await _gitHubService.GetBranchesAsync(token, owner, repo);
             return Ok(new { Data = branches });
         }
+
+        [HttpGet("repositories/{owner}/{repo}/branches/{branch}/commits")]
+        public async Task<IActionResult> GetCommits(string owner, string repo, string branch)
+        {
+            if (!int.TryParse(User.FindFirstValue("userId"), out var userId))
+            {
+                return Unauthorized();
+            }
+
+            var token = await _tokenService.GetGitHubTokenAsync(userId);
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                return BadRequest(new { message = "GitHub account not connected or token missing." });
+            }
+
+            var commits = await _gitHubService.GetCommitsAsync(token, owner, repo, branch);
+            return Ok(new { Data = commits });
+        }
     }
 }

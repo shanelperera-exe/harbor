@@ -52,7 +52,7 @@ export async function getDeploymentDetails(id: number): Promise<DeploymentDetail
 }
 
 export interface CreateDeploymentRequest {
-  projectId: number;
+  serviceId: number;
   environment: string;
   version: string;
   commitSha?: string | null;

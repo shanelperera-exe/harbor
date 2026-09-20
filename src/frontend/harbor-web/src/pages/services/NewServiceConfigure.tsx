@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { GoGitCommit } from 'react-icons/go';
 import { getProject } from '../../services/projectService';
+import { getEnvironments, type DeploymentEnvironment } from '../../services/environmentService';
+import { createDeployment } from '../../services/deploymentService';
 
 const NewServiceConfigure: React.FC = () => {
   const { projectId, serviceType } = useParams<{ projectId: string, serviceType: string }>();
@@ -33,12 +35,18 @@ const NewServiceConfigure: React.FC = () => {
   const [branchDropdownOpen, setBranchDropdownOpen] = useState(false);
   const [commitDropdownOpen, setCommitDropdownOpen] = useState(false);
 
+  // Environments
+  const [environments, setEnvironments] = useState<DeploymentEnvironment[]>([]);
+  const [selectedEnvironment, setSelectedEnvironment] = useState('');
+  const [envDropdownOpen, setEnvDropdownOpen] = useState(false);
+  const [isFetchingEnvironments, setIsFetchingEnvironments] = useState(false);
+
   useEffect(() => {
     if (!repo) {
       navigate(`/projects/${projectId}/services/new/${serviceType}`);
     }
     
-    // Fetch project name
+    // Fetch project name and environments in parallel
     const fetchProject = async () => {
       try {
         const project = await getProject(Number(projectId));
@@ -51,8 +59,24 @@ const NewServiceConfigure: React.FC = () => {
         setProjectName(`Project ${projectId}`);
       }
     };
+    const fetchEnvironments = async () => {
+      setIsFetchingEnvironments(true);
+      try {
+        const envs = await getEnvironments(Number(projectId));
+        const active = envs.filter(e => e.isActive);
+        setEnvironments(active);
+        if (active.length > 0) {
+          setSelectedEnvironment(active[0].name);
+        }
+      } catch (e) {
+        console.error('Failed to fetch environments', e);
+      } finally {
+        setIsFetchingEnvironments(false);
+      }
+    };
     if (projectId) {
       fetchProject();
+      fetchEnvironments();
     }
   }, [repo, navigate, projectId, serviceType]);
 
@@ -151,6 +175,10 @@ const NewServiceConfigure: React.FC = () => {
       setError('Name and Branch are required.');
       return;
     }
+    if (!selectedEnvironment) {
+      setError('Please select an environment to deploy to.');
+      return;
+    }
 
     const token = localStorage.getItem('harbor_token');
     if (!token) {
@@ -162,6 +190,7 @@ const NewServiceConfigure: React.FC = () => {
     setError('');
 
     try {
+      // Step 1: Create the service record
       const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
       const response = await fetch(`${apiBase}/projects/${projectId}/services`, {
         method: 'POST',
@@ -190,7 +219,26 @@ const NewServiceConfigure: React.FC = () => {
         throw new Error(data?.detail || data?.message || data?.title || 'Failed to create service.');
       }
 
-      navigate(`/projects/${projectId}/settings`); 
+      const newServiceId: number = data?.data?.id;
+
+      // Step 2: Create the deployment record
+      const version = deployType === 'commit' && commit
+        ? commit.substring(0, 7)
+        : branch.trim();
+
+      try {
+        await createDeployment({
+          serviceId: newServiceId,
+          environment: selectedEnvironment,
+          version,
+          commitSha: deployType === 'commit' ? commit.trim() : undefined,
+        });
+      } catch (deployErr: any) {
+        // Deployment record creation failed — service already exists, log and continue
+        console.error('Deployment record creation failed:', deployErr?.message);
+      }
+
+      navigate(`/projects/${projectId}/services/${newServiceId}`);
     } catch (err: any) {
       setError(err.message);
       setIsDeploying(false);
@@ -283,6 +331,7 @@ const NewServiceConfigure: React.FC = () => {
                 <div className="col-span-2">
                   <div className="flex flex-col lg:flex-row w-full gap-y-2 justify-between items-stretch">
                     
+                    {/* Project name (read-only) */}
                     <div className="group flex-1 lg:min-w-[10rem] lg:max-w-[60%]">
                       <div className="relative">
                         <button type="button" disabled className="text-[16px] w-full m-0 py-2.5 px-3 bg-transparent border border-solid border-gray-300 dark:border-[#3a3a3a] rounded-sm appearance-none cursor-not-allowed text-gray-900 dark:text-[#f0f0f0] h-12 text-left flex items-center">
@@ -301,17 +350,56 @@ const NewServiceConfigure: React.FC = () => {
                       <span aria-hidden="true" className="mx-4 text-[#4d4d4d] text-[16px] select-none">/</span>
                     </span>
 
+                    {/* Environment picker */}
                     <div className="group flex-1 lg:min-w-[10rem] lg:max-w-[60%]">
                       <div className="relative">
-                        <button type="button" disabled className="text-[16px] w-full m-0 py-2.5 px-3 bg-transparent border border-solid border-gray-300 dark:border-[#3a3a3a] rounded-sm appearance-none cursor-not-allowed text-gray-900 dark:text-[#f0f0f0] h-12 text-left flex items-center">
-                          <span className="flex flex-1 items-center min-w-0 pr-6">
-                            <span className="inline-flex mr-2 text-gray-500 dark:text-[#8f8f8f]">
-                              <svg fill="currentColor" className="w-4 h-4" width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M5.72573 2.18206L4.21915 3.07246L4.72795 3.93336L6.23453 3.04296L5.72573 2.18206Z"></path><path d="M3 6H2V4.95C2 4.6 2.2 4.25 2.5 4.1L3.25 3.65L3.75 4.5L3 4.95V6Z"></path><path d="M3 7H2V9H3V7Z"></path><path d="M3.25 12.35L2.5 11.9C2.2 11.7 2 11.4 2 11.05V10H3V11.05L3.75 11.5L3.25 12.35Z"></path><path d="M4.72447 12.0523L4.21577 12.9132L5.72235 13.8034L6.23105 12.9425L4.72447 12.0523Z"></path><path d="M8.75 13.55L8 14L7.25 13.55L6.75 14.4L7.5 14.85C7.65 14.95 7.85 15 8 15C8.2 15 8.35 14.95 8.5 14.85L9.25 14.4L8.75 13.55Z"></path><path d="M11.2676 12.063L9.76107 12.9534L10.2699 13.8143L11.7764 12.9239L11.2676 12.063Z"></path><path d="M12.6 12.45L12.1 11.6L13 11.1V10H14V11.05C14 11.4 13.8 11.75 13.5 11.9L12.6 12.45Z"></path><path d="M14 7H13V9H14V7Z"></path><path d="M14 6H13V4.95L12.1 4.45L12.6 3.6L13.5 4.1C13.8 4.3 14 4.6 14 4.95V6Z"></path><path d="M10.2343 2.15943L9.72561 3.02033L11.2322 3.91055L11.7409 3.04965L10.2343 2.15943Z"></path><path d="M8.75 2.45L8 2L7.25 2.45L6.75 1.6L7.5 1.15C7.65 1.05 7.8 1 8 1C8.2 1 8.35 1.05 8.5 1.15L9.25 1.6L8.75 2.45Z"></path></svg>
-                            </span>
-                            <span className="w-full truncate">Production</span>
+                        <button
+                          type="button"
+                          onClick={() => setEnvDropdownOpen(o => !o)}
+                          disabled={isFetchingEnvironments}
+                          className="text-[16px] w-full m-0 py-2.5 px-3 bg-transparent border border-solid border-gray-300 dark:border-[#6b6b6b] rounded-sm text-gray-900 dark:text-[#f0f0f0] hover:border-gray-400 dark:hover:border-[#b3b3b3] h-12 text-left flex items-center transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                          <span className="inline-flex mr-2 text-gray-500 dark:text-[#8f8f8f]">
+                            <svg fill="currentColor" className="w-4 h-4" width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M5.72573 2.18206L4.21915 3.07246L4.72795 3.93336L6.23453 3.04296L5.72573 2.18206Z"></path><path d="M3 6H2V4.95C2 4.6 2.2 4.25 2.5 4.1L3.25 3.65L3.75 4.5L3 4.95V6Z"></path><path d="M3 7H2V9H3V7Z"></path><path d="M3.25 12.35L2.5 11.9C2.2 11.7 2 11.4 2 11.05V10H3V11.05L3.75 11.5L3.25 12.35Z"></path><path d="M4.72447 12.0523L4.21577 12.9132L5.72235 13.8034L6.23105 12.9425L4.72447 12.0523Z"></path><path d="M8.75 13.55L8 14L7.25 13.55L6.75 14.4L7.5 14.85C7.65 14.95 7.85 15 8 15C8.2 15 8.35 14.95 8.5 14.85L9.25 14.4L8.75 13.55Z"></path><path d="M11.2676 12.063L9.76107 12.9534L10.2699 13.8143L11.7764 12.9239L11.2676 12.063Z"></path><path d="M12.6 12.45L12.1 11.6L13 11.1V10H14V11.05C14 11.4 13.8 11.75 13.5 11.9L12.6 12.45Z"></path><path d="M14 7H13V9H14V7Z"></path><path d="M14 6H13V4.95L12.1 4.45L12.6 3.6L13.5 4.1C13.8 4.3 14 4.6 14 4.95V6Z"></path><path d="M10.2343 2.15943L9.72561 3.02033L11.2322 3.91055L11.7409 3.04965L10.2343 2.15943Z"></path><path d="M8.75 2.45L8 2L7.25 2.45L6.75 1.6L7.5 1.15C7.65 1.05 7.8 1 8 1C8.2 1 8.35 1.05 8.5 1.15L9.25 1.6L8.75 2.45Z"></path></svg>
                           </span>
-                          <svg fill="currentColor" aria-hidden="true" className="absolute top-0 bottom-0 my-auto right-3 text-gray-400" width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M8 10.9998L3 5.9998L3.7 5.2998L8 9.5998L12.3 5.2998L13 5.9998L8 10.9998Z"></path></svg>
+                          <span className="flex-1 truncate">
+                            {isFetchingEnvironments
+                              ? 'Loading…'
+                              : environments.length === 0
+                                ? 'No environments'
+                                : (selectedEnvironment || 'Select environment')}
+                          </span>
+                          <svg fill="currentColor" aria-hidden="true" className="ml-2 shrink-0 text-gray-400" width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M8 10.9998L3 5.9998L3.7 5.2998L8 9.5998L12.3 5.2998L13 5.9998L8 10.9998Z"></path></svg>
                         </button>
+
+                        {envDropdownOpen && !isFetchingEnvironments && (
+                          <div className="absolute z-50 mt-1 w-full bg-white dark:bg-[oklch(0.26_0.03_263.45)] border border-solid border-gray-200 dark:border-[#3a3a3a] rounded-sm shadow-lg max-h-48 overflow-y-auto">
+                            {environments.length === 0 ? (
+                              <div className="px-4 py-3 text-[14px] text-gray-500 dark:text-[#8f8f8f]">
+                                No active environments. <Link to={`/projects/${projectId}/environments`} className="text-[#2563eb] hover:underline" onClick={() => setEnvDropdownOpen(false)}>Create one first.</Link>
+                              </div>
+                            ) : (
+                              environments.map(env => (
+                                <button
+                                  key={env.id}
+                                  type="button"
+                                  onClick={() => { setSelectedEnvironment(env.name); setEnvDropdownOpen(false); }}
+                                  className={`w-full text-left flex items-center px-3 py-2.5 text-[15px] hover:bg-gray-50 dark:hover:bg-[oklch(0.32_0.03_263.45)] transition-colors ${
+                                    selectedEnvironment === env.name
+                                      ? 'text-[#2563eb] dark:text-[#60a5fa] bg-blue-50 dark:bg-[#1e2d45]'
+                                      : 'text-gray-900 dark:text-[#f0f0f0]'
+                                  }`}
+                                >
+                                  <span className="truncate">{env.name}</span>
+                                  <span className="ml-2 text-[12px] text-gray-400 dark:text-[#8f8f8f]">{env.type}</span>
+                                  {selectedEnvironment === env.name && (
+                                    <svg fill="currentColor" className="ml-auto w-3.5 h-3.5 shrink-0 text-[#2563eb]" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M6.5 11.5L2.5 7.5L3.5 6.5L6.5 9.5L12.5 3.5L13.5 4.5L6.5 11.5Z"/></svg>
+                                  )}
+                                </button>
+                              ))
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>

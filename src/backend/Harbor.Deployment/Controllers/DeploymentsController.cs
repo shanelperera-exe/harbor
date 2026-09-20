@@ -2,6 +2,9 @@ using Harbor.Deployment.DTOs;
 using Harbor.Deployment.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 
 namespace Harbor.Deployment.Controllers;
 
@@ -63,12 +66,45 @@ public class DeploymentsController(IDeploymentService deploymentService) : Contr
             Environment = request.Environment,
             Version = request.Version,
             CommitSha = request.CommitSha,
-            Status = "Pending",
-            StartedAt = DateTime.UtcNow
+            Status = result.Status,
+            StartedAt = DateTime.UtcNow,
+            FailureReason = result.Error
         };
 
+        if (result.Status == "Failed")
+            return StatusCode(StatusCodes.Status502BadGateway, response);
         return StatusCode(StatusCodes.Status201Created, response);
     }
 
+    [AllowAnonymous]
+    [HttpPost("{id:int}/status")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> UpdateStatus(int id)
+    {
+        var secret = Environment.GetEnvironmentVariable("GITHUB_WEBHOOK_SECRET");
+        if (string.IsNullOrWhiteSpace(secret)) return Unauthorized();
+        var signature = Request.Headers["X-Harbor-Signature"].ToString();
+        using var reader = new StreamReader(Request.Body);
+        var payload = await reader.ReadToEndAsync();
+        using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(secret));
+        var expected = Convert.ToHexString(hmac.ComputeHash(Encoding.UTF8.GetBytes(payload))).ToLowerInvariant();
+        if (!CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(signature), Encoding.UTF8.GetBytes(expected)))
+            return Unauthorized();
+        var request = JsonSerializer.Deserialize<DeploymentStatusCallback>(payload);
+        if (request is null) return BadRequest("A status payload is required.");
+        if (!new[] { "Running", "Succeeded", "Failed" }.Contains(request.Status, StringComparer.OrdinalIgnoreCase))
+            return BadRequest("Status must be Running, Succeeded, or Failed.");
+        return await deploymentService.UpdateStatusAsync(id, request.Status, request.FailureReason)
+            ? NoContent()
+            : NotFound();
+    }
+
     private int? GetUserId() => int.TryParse(User.FindFirst("userId")?.Value, out var id) ? id : null;
+}
+
+public sealed class DeploymentStatusCallback
+{
+    public string Status { get; init; } = string.Empty;
+    public string? FailureReason { get; init; }
 }

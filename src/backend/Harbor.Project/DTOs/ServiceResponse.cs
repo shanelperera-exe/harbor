@@ -11,6 +11,7 @@ namespace Harbor.Project.DTOs
         public string? RepositoryName { get; set; }
         public string? RepositoryBranch { get; set; }
         public string? RepositoryCommit { get; set; }
+        public string? WorkflowFile { get; set; }
         public DateTime CreatedAt { get; set; }
     }
 }

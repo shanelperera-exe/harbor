@@ -24,8 +24,8 @@ namespace Harbor.Project.Repositories
 
             using var command = connection.CreateCommand();
             command.CommandText =
-                "INSERT INTO \"Services\" (\"PublicId\", \"ProjectId\", \"Name\", \"Type\", \"RepositoryUrl\", \"RepositoryName\", \"RepositoryBranch\", \"RepositoryCommit\", \"CreatedAt\") " +
-                "VALUES (@publicId, @projectId, @name, @type, @repositoryUrl, @repositoryName, @repositoryBranch, @repositoryCommit, @createdAt) " +
+                "INSERT INTO \"Services\" (\"PublicId\", \"ProjectId\", \"Name\", \"Type\", \"RepositoryUrl\", \"RepositoryName\", \"RepositoryBranch\", \"RepositoryCommit\", \"WorkflowFile\", \"CreatedAt\") " +
+                "VALUES (@publicId, @projectId, @name, @type, @repositoryUrl, @repositoryName, @repositoryBranch, @repositoryCommit, @workflowFile, @createdAt) " +
                 "RETURNING \"Id\";";
             command.Parameters.AddWithValue("publicId", service.PublicId);
             command.Parameters.AddWithValue("projectId", service.ProjectId);
@@ -35,6 +35,7 @@ namespace Harbor.Project.Repositories
             command.Parameters.AddWithValue("repositoryName", service.RepositoryName ?? (object)DBNull.Value);
             command.Parameters.AddWithValue("repositoryBranch", service.RepositoryBranch ?? (object)DBNull.Value);
             command.Parameters.AddWithValue("repositoryCommit", service.RepositoryCommit ?? (object)DBNull.Value);
+            command.Parameters.AddWithValue("workflowFile", service.WorkflowFile ?? (object)DBNull.Value);
             command.Parameters.AddWithValue("createdAt", DateTime.UtcNow);
 
             var result = await command.ExecuteScalarAsync();
@@ -48,7 +49,7 @@ namespace Harbor.Project.Repositories
 
             using var command = connection.CreateCommand();
             command.CommandText =
-                "SELECT \"Id\", \"PublicId\", \"ProjectId\", \"Name\", \"Type\", \"RepositoryUrl\", \"RepositoryName\", \"RepositoryBranch\", \"RepositoryCommit\", \"CreatedAt\" " +
+                "SELECT \"Id\", \"PublicId\", \"ProjectId\", \"Name\", \"Type\", \"RepositoryUrl\", \"RepositoryName\", \"RepositoryBranch\", \"RepositoryCommit\", \"WorkflowFile\", \"CreatedAt\" " +
                 "FROM \"Services\" WHERE \"Id\" = @id";
             command.Parameters.AddWithValue("id", id);
 
@@ -70,7 +71,7 @@ namespace Harbor.Project.Repositories
             if (int.TryParse(identifier, out var id))
             {
                 command.CommandText =
-                    "SELECT \"Id\", \"PublicId\", \"ProjectId\", \"Name\", \"Type\", \"RepositoryUrl\", \"RepositoryName\", \"RepositoryBranch\", \"RepositoryCommit\", \"CreatedAt\" " +
+                    "SELECT \"Id\", \"PublicId\", \"ProjectId\", \"Name\", \"Type\", \"RepositoryUrl\", \"RepositoryName\", \"RepositoryBranch\", \"RepositoryCommit\", \"WorkflowFile\", \"CreatedAt\" " +
                     "FROM \"Services\" WHERE \"Id\" = @id OR \"PublicId\" = @identifier";
                 command.Parameters.AddWithValue("id", id);
                 command.Parameters.AddWithValue("identifier", identifier);
@@ -78,7 +79,7 @@ namespace Harbor.Project.Repositories
             else
             {
                 command.CommandText =
-                    "SELECT \"Id\", \"PublicId\", \"ProjectId\", \"Name\", \"Type\", \"RepositoryUrl\", \"RepositoryName\", \"RepositoryBranch\", \"RepositoryCommit\", \"CreatedAt\" " +
+                    "SELECT \"Id\", \"PublicId\", \"ProjectId\", \"Name\", \"Type\", \"RepositoryUrl\", \"RepositoryName\", \"RepositoryBranch\", \"RepositoryCommit\", \"WorkflowFile\", \"CreatedAt\" " +
                     "FROM \"Services\" WHERE \"PublicId\" = @identifier";
                 command.Parameters.AddWithValue("identifier", identifier);
             }
@@ -99,7 +100,7 @@ namespace Harbor.Project.Repositories
 
             using var command = connection.CreateCommand();
             command.CommandText =
-                "SELECT \"Id\", \"PublicId\", \"ProjectId\", \"Name\", \"Type\", \"RepositoryUrl\", \"RepositoryName\", \"RepositoryBranch\", \"RepositoryCommit\", \"CreatedAt\" " +
+                "SELECT \"Id\", \"PublicId\", \"ProjectId\", \"Name\", \"Type\", \"RepositoryUrl\", \"RepositoryName\", \"RepositoryBranch\", \"RepositoryCommit\", \"WorkflowFile\", \"CreatedAt\" " +
                 "FROM \"Services\" WHERE \"ProjectId\" = @projectId ORDER BY \"CreatedAt\" DESC";
             command.Parameters.AddWithValue("projectId", projectId);
 
@@ -139,7 +140,8 @@ namespace Harbor.Project.Repositories
                 RepositoryName = reader.IsDBNull(6) ? null : reader.GetString(6),
                 RepositoryBranch = reader.IsDBNull(7) ? null : reader.GetString(7),
                 RepositoryCommit = reader.IsDBNull(8) ? null : reader.GetString(8),
-                CreatedAt = reader.GetDateTime(9)
+                WorkflowFile = reader.IsDBNull(9) ? null : reader.GetString(9),
+                CreatedAt = reader.GetDateTime(10)
             };
         }
     }

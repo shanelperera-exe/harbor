@@ -59,6 +59,7 @@ export interface CreateDeploymentRequest {
   environment: string;
   version: string;
   commitSha?: string | null;
+  branch?: string | null;
 }
 
 export async function createDeployment(request: CreateDeploymentRequest): Promise<Deployment> {

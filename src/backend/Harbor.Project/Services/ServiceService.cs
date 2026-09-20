@@ -41,7 +41,8 @@ namespace Harbor.Project.Services
                 RepositoryUrl = request.RepositoryUrl?.Trim(),
                 RepositoryName = request.RepositoryName?.Trim(),
                 RepositoryBranch = request.RepositoryBranch?.Trim(),
-                RepositoryCommit = request.RepositoryCommit?.Trim()
+                RepositoryCommit = request.RepositoryCommit?.Trim(),
+                WorkflowFile = string.IsNullOrWhiteSpace(request.WorkflowFile) ? "deploy.yml" : request.WorkflowFile.Trim()
             };
 
             var id = await _serviceRepository.CreateAsync(serviceEntity);
@@ -98,6 +99,7 @@ namespace Harbor.Project.Services
             RepositoryName = s.RepositoryName,
             RepositoryBranch = s.RepositoryBranch,
             RepositoryCommit = s.RepositoryCommit,
+            WorkflowFile = s.WorkflowFile,
             CreatedAt = s.CreatedAt
         };
     }

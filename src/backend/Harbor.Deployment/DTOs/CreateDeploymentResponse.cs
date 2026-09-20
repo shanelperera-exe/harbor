@@ -11,4 +11,5 @@ public class CreateDeploymentResponse
     public string? CommitSha { get; init; }
     public string Status { get; init; } = string.Empty;
     public DateTime StartedAt { get; init; }
+    public string? FailureReason { get; init; }
 }

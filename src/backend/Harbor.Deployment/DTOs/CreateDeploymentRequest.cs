@@ -6,4 +6,5 @@ public class CreateDeploymentRequest
     public string Environment { get; init; } = string.Empty;
     public string Version { get; init; } = string.Empty;
     public string? CommitSha { get; init; }
+    public string? Branch { get; init; }
 }

@@ -6,6 +6,9 @@ namespace Harbor.Deployment.Repositories;
 
 public class DeploymentRepository(DbConnectionFactory dbFactory) : IDeploymentRepository
 {
+    public Task<(IReadOnlyList<DeploymentEntity> Items, int TotalCount)> GetHistoryAsync(int ownerId, int serviceId, string? status, int skip, int take) =>
+        GetHistoryAsync(ownerId, serviceId.ToString(), status, skip, take);
+
     public async Task<(IReadOnlyList<DeploymentEntity> Items, int TotalCount)> GetHistoryAsync(int ownerId, string? serviceId, string? status, int skip, int take)
     {
         await using var connection = dbFactory.CreateConnection();
@@ -35,7 +38,7 @@ public class DeploymentRepository(DbConnectionFactory dbFactory) : IDeploymentRe
         var total = Convert.ToInt32(await count.ExecuteScalarAsync());
 
         await using var command = connection.CreateCommand();
-        command.CommandText = $"SELECT \"Id\", \"PublicId\", \"ServiceId\", \"OwnerId\", \"Environment\", \"Version\", \"CommitSha\", \"Status\", \"StartedAt\", \"CompletedAt\", \"FailureReason\" FROM \"Deployments\" {filter} ORDER BY \"StartedAt\" DESC, \"Id\" DESC OFFSET @skip LIMIT @take";
+        command.CommandText = $"SELECT \"Id\", \"PublicId\", \"ServiceId\", \"OwnerId\", \"Environment\", \"Version\", \"CommitSha\", \"Status\", \"StartedAt\", \"CompletedAt\", \"FailureReason\", \"WorkflowFile\", \"WorkflowRef\", \"TriggerError\" FROM \"Deployments\" {filter} ORDER BY \"StartedAt\" DESC, \"Id\" DESC OFFSET @skip LIMIT @take";
         AddFilters(command, ownerId, serviceId, status);
         command.Parameters.AddWithValue("skip", skip);
         command.Parameters.AddWithValue("take", take);
@@ -47,7 +50,7 @@ public class DeploymentRepository(DbConnectionFactory dbFactory) : IDeploymentRe
         await using var connection = dbFactory.CreateConnection();
         await connection.OpenAsync();
         await using var command = connection.CreateCommand();
-        command.CommandText = "SELECT \"Id\", \"PublicId\", \"ServiceId\", \"OwnerId\", \"Environment\", \"Version\", \"CommitSha\", \"Status\", \"StartedAt\", \"CompletedAt\", \"FailureReason\" FROM \"Deployments\" WHERE \"Id\" = @id AND \"OwnerId\" = @ownerId";
+        command.CommandText = "SELECT \"Id\", \"PublicId\", \"ServiceId\", \"OwnerId\", \"Environment\", \"Version\", \"CommitSha\", \"Status\", \"StartedAt\", \"CompletedAt\", \"FailureReason\", \"WorkflowFile\", \"WorkflowRef\", \"TriggerError\" FROM \"Deployments\" WHERE \"Id\" = @id AND \"OwnerId\" = @ownerId";
         command.Parameters.AddWithValue("id", id);
         command.Parameters.AddWithValue("ownerId", ownerId);
         return (await ReadDeploymentsAsync(command)).SingleOrDefault();
@@ -72,7 +75,7 @@ public class DeploymentRepository(DbConnectionFactory dbFactory) : IDeploymentRe
         await using var connection = dbFactory.CreateConnection();
         await connection.OpenAsync();
         await using var command = connection.CreateCommand();
-        command.CommandText = "INSERT INTO \"Deployments\" (\"PublicId\", \"ServiceId\", \"OwnerId\", \"Environment\", \"Version\", \"CommitSha\", \"Status\", \"StartedAt\") VALUES (@publicId, @serviceId, @ownerId, @environment, @version, @commitSha, @status, @startedAt) RETURNING \"Id\";";
+        command.CommandText = "INSERT INTO \"Deployments\" (\"PublicId\", \"ServiceId\", \"OwnerId\", \"Environment\", \"Version\", \"CommitSha\", \"Status\", \"StartedAt\", \"WorkflowFile\", \"WorkflowRef\") VALUES (@publicId, @serviceId, @ownerId, @environment, @version, @commitSha, @status, @startedAt, @workflowFile, @workflowRef) RETURNING \"Id\";";
         command.Parameters.AddWithValue("publicId", publicId);
         command.Parameters.AddWithValue("serviceId", deployment.ServiceId);
         command.Parameters.AddWithValue("ownerId", deployment.OwnerId);
@@ -81,7 +84,42 @@ public class DeploymentRepository(DbConnectionFactory dbFactory) : IDeploymentRe
         command.Parameters.AddWithValue("commitSha", (object?)deployment.CommitSha ?? DBNull.Value);
         command.Parameters.AddWithValue("status", deployment.Status);
         command.Parameters.AddWithValue("startedAt", deployment.StartedAt);
+        command.Parameters.AddWithValue("workflowFile", (object?)deployment.WorkflowFile ?? DBNull.Value);
+        command.Parameters.AddWithValue("workflowRef", (object?)deployment.WorkflowRef ?? DBNull.Value);
         return Convert.ToInt32(await command.ExecuteScalarAsync());
+    }
+
+    public async Task<bool> UpdateTriggerResultAsync(int deploymentId, string status, string? failureReason, string? triggerError)
+    {
+        await using var connection = dbFactory.CreateConnection();
+        await connection.OpenAsync();
+        await using var command = connection.CreateCommand();
+        command.CommandText = "UPDATE \"Deployments\" SET \"Status\" = @status, \"FailureReason\" = @failureReason, \"TriggerError\" = @triggerError, \"CompletedAt\" = CASE WHEN @status IN ('Failed', 'Succeeded') THEN now() ELSE \"CompletedAt\" END WHERE \"Id\" = @id";
+        command.Parameters.AddWithValue("id", deploymentId);
+        command.Parameters.AddWithValue("status", status);
+        command.Parameters.AddWithValue("failureReason", (object?)failureReason ?? DBNull.Value);
+        command.Parameters.AddWithValue("triggerError", (object?)triggerError ?? DBNull.Value);
+        return await command.ExecuteNonQueryAsync() == 1;
+    }
+
+    public async Task<string?> GetRepositoryNameAsync(int serviceId)
+    {
+        await using var connection = dbFactory.CreateConnection();
+        await connection.OpenAsync();
+        await using var command = connection.CreateCommand();
+        command.CommandText = "SELECT \"RepositoryName\" FROM \"Services\" WHERE \"Id\" = @serviceId";
+        command.Parameters.AddWithValue("serviceId", serviceId);
+        return await command.ExecuteScalarAsync() as string;
+    }
+
+    public async Task<string?> GetWorkflowFileAsync(int serviceId)
+    {
+        await using var connection = dbFactory.CreateConnection();
+        await connection.OpenAsync();
+        await using var command = connection.CreateCommand();
+        command.CommandText = "SELECT \"WorkflowFile\" FROM \"Services\" WHERE \"Id\" = @serviceId";
+        command.Parameters.AddWithValue("serviceId", serviceId);
+        return await command.ExecuteScalarAsync() as string;
     }
 
     public async Task<(bool Exists, int OwnerId, bool IsArchived, int ProjectId, int RealServiceId)> GetServiceAccessAsync(string serviceIdOrPublicId)
@@ -139,7 +177,7 @@ public class DeploymentRepository(DbConnectionFactory dbFactory) : IDeploymentRe
     {
         var result = new List<DeploymentEntity>();
         await using var reader = await command.ExecuteReaderAsync();
-        while (await reader.ReadAsync()) result.Add(new DeploymentEntity { Id = reader.GetInt32(0), PublicId = reader.IsDBNull(1) ? string.Empty : reader.GetString(1), ServiceId = reader.GetInt32(2), OwnerId = reader.GetInt32(3), Environment = reader.GetString(4), Version = reader.GetString(5), CommitSha = reader.IsDBNull(6) ? null : reader.GetString(6), Status = reader.GetString(7), StartedAt = reader.GetDateTime(8), CompletedAt = reader.IsDBNull(9) ? null : reader.GetDateTime(9), FailureReason = reader.IsDBNull(10) ? null : reader.GetString(10) });
+        while (await reader.ReadAsync()) result.Add(new DeploymentEntity { Id = reader.GetInt32(0), PublicId = reader.IsDBNull(1) ? string.Empty : reader.GetString(1), ServiceId = reader.GetInt32(2), OwnerId = reader.GetInt32(3), Environment = reader.GetString(4), Version = reader.GetString(5), CommitSha = reader.IsDBNull(6) ? null : reader.GetString(6), Status = reader.GetString(7), StartedAt = reader.GetDateTime(8), CompletedAt = reader.IsDBNull(9) ? null : reader.GetDateTime(9), FailureReason = reader.IsDBNull(10) ? null : reader.GetString(10), WorkflowFile = reader.IsDBNull(11) ? null : reader.GetString(11), WorkflowRef = reader.IsDBNull(12) ? null : reader.GetString(12), TriggerError = reader.IsDBNull(13) ? null : reader.GetString(13) });
         return result;
     }
 }

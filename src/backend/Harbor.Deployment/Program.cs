@@ -77,6 +77,19 @@ builder.Services.AddAuthorization();
 builder.Services.AddSingleton<DbConnectionFactory>();
 builder.Services.AddScoped<IDeploymentRepository, DeploymentRepository>();
 builder.Services.AddScoped<IDeploymentService, DeploymentService>();
+builder.Services.Configure<GitHubActionsOptions>(options =>
+{
+    options.Token = builder.Configuration["GITHUB_TOKEN"] ?? string.Empty;
+    options.ApiBaseUrl = builder.Configuration["GITHUB_API_BASE_URL"] ?? "https://api.github.com/";
+    options.DefaultWorkflowFile = builder.Configuration["GITHUB_ACTIONS_WORKFLOW"] ?? "deploy.yml";
+});
+builder.Services.AddHttpClient<IGitHubActionsClient, GitHubActionsClient>((services, client) =>
+{
+    var options = services.GetRequiredService<Microsoft.Extensions.Options.IOptions<GitHubActionsOptions>>().Value;
+    client.BaseAddress = new Uri(options.ApiBaseUrl);
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("Harbor-Deployment-Service");
+    client.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
+});
 
 var app = builder.Build();
 DatabaseInitializer.Initialize(app.Configuration);

@@ -13,6 +13,7 @@ const NewServiceConfigure: React.FC = () => {
 
   const [name, setName] = useState(repo?.name || '');
   const [branch, setBranch] = useState(repo?.defaultBranch || 'main');
+  const [workflowFile, setWorkflowFile] = useState('deploy.yml');
   const [rootDir, setRootDir] = useState('');
   const [buildCommand, setBuildCommand] = useState('npm run build');
   const [publishDir, setPublishDir] = useState('dist');
@@ -46,6 +47,7 @@ const NewServiceConfigure: React.FC = () => {
       navigate(`/projects/${projectId}/services/new/${serviceType}`);
     }
     
+    if (!projectId) return;
     // Fetch project name and environments in parallel
     const fetchProject = async () => {
       try {
@@ -205,6 +207,7 @@ const NewServiceConfigure: React.FC = () => {
           repositoryName: repo.fullName,
           repositoryBranch: branch.trim(),
           repositoryCommit: deployType === 'commit' ? commit.trim() : undefined,
+          workflowFile: workflowFile.trim() || 'deploy.yml',
           rootDir: rootDir.trim(),
           buildCommand: buildCommand.trim(),
           publishDir: serviceType === 'static' ? publishDir.trim() : undefined,
@@ -232,6 +235,7 @@ const NewServiceConfigure: React.FC = () => {
           environment: selectedEnvironment,
           version,
           commitSha: deployType === 'commit' ? commit.trim() : undefined,
+          branch: deployType === 'branch' ? branch.trim() : undefined,
         });
       } catch (deployErr: any) {
         // Deployment record creation failed — service already exists, log and continue
@@ -581,6 +585,17 @@ const NewServiceConfigure: React.FC = () => {
                       </div>
                     </div>
                   </div>
+                </div>
+              </div>
+
+              {/* Build Command */}
+              <div className="grid grid-cols-1 xl:grid-cols-3 gap-y-4 xl:gap-y-0 xl:gap-x-10">
+                <div>
+                  <label htmlFor="workflowFile" className="inline-block text-gray-900 dark:text-[#f0f0f0] mb-1 text-[18px] font-semibold">GitHub Actions workflow</label>
+                  <p className="text-gray-600 dark:text-[#c7c7c7]">The workflow file in .github/workflows that accepts workflow_dispatch.</p>
+                </div>
+                <div className="col-span-2">
+                  <input id="workflowFile" className="h-12 text-[16px] w-full py-2.5 px-3 bg-transparent border border-gray-300 dark:border-[#6b6b6b] rounded-sm text-gray-900 dark:text-[#f0f0f0]" value={workflowFile} onChange={e => setWorkflowFile(e.target.value)} placeholder="deploy.yml" />
                 </div>
               </div>
 

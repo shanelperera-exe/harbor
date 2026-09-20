@@ -1,11 +1,25 @@
 using Harbor.Deployment.DTOs;
 using Harbor.Deployment.Models;
 using Harbor.Deployment.Repositories;
+using Microsoft.Extensions.Options;
 
 namespace Harbor.Deployment.Services;
 
-public class DeploymentService(IDeploymentRepository repository) : IDeploymentService
+public class DeploymentService : IDeploymentService
 {
+    private readonly IDeploymentRepository repository;
+    private readonly IGitHubActionsClient gitHubActionsClient;
+    private readonly IOptions<GitHubActionsOptions> options;
+
+    public DeploymentService(
+        IDeploymentRepository repository,
+        IGitHubActionsClient? gitHubActionsClient = null,
+        IOptions<GitHubActionsOptions>? options = null)
+    {
+        this.repository = repository;
+        this.gitHubActionsClient = gitHubActionsClient ?? new DisabledGitHubActionsClient();
+        this.options = options ?? Microsoft.Extensions.Options.Options.Create(new GitHubActionsOptions());
+    }
     private const int MaxPageSize = 100;
     private static readonly string[] ValidEnvironmentTypes = ["Development", "Staging", "Production"];
 
@@ -17,26 +31,38 @@ public class DeploymentService(IDeploymentRepository repository) : IDeploymentSe
         return new DeploymentListResponse { Items = items.Select(ToResponse).ToList(), Page = page, PageSize = pageSize, TotalCount = totalCount };
     }
 
+    internal sealed class DisabledGitHubActionsClient : IGitHubActionsClient
+    {
+        public Task<WorkflowDispatchResult> DispatchAsync(WorkflowDispatchRequest request, CancellationToken cancellationToken = default) =>
+            Task.FromResult(new WorkflowDispatchResult(false, "GitHub Actions is not configured."));
+    }
+
     public async Task<DeploymentDetailsResponse?> GetDetailsAsync(int id, int ownerId)
     {
         var deployment = await repository.GetByIdAsync(id, ownerId);
         if (deployment is null) return null;
         var logs = await repository.GetLogsAsync(id);
-        return new DeploymentDetailsResponse { Id = deployment.Id, ServiceId = deployment.ServiceId, Environment = deployment.Environment, Version = deployment.Version, CommitSha = deployment.CommitSha, Status = deployment.Status, StartedAt = deployment.StartedAt, CompletedAt = deployment.CompletedAt, FailureReason = string.Equals(deployment.Status, "Failed", StringComparison.OrdinalIgnoreCase) ? deployment.FailureReason : null, Logs = logs.Select(log => new DeploymentLogResponse { Timestamp = log.Timestamp, Level = log.Level, Message = log.Message }).ToList() };
+        return new DeploymentDetailsResponse { Id = deployment.Id, ServiceId = deployment.ServiceId, Environment = deployment.Environment, Version = deployment.Version, CommitSha = deployment.CommitSha, Status = deployment.Status, StartedAt = deployment.StartedAt, CompletedAt = deployment.CompletedAt, WorkflowFile = deployment.WorkflowFile, WorkflowRef = deployment.WorkflowRef, FailureReason = string.Equals(deployment.Status, "Failed", StringComparison.OrdinalIgnoreCase) ? deployment.FailureReason : null, TriggerError = deployment.TriggerError, Logs = logs.Select(log => new DeploymentLogResponse { Timestamp = log.Timestamp, Level = log.Level, Message = log.Message }).ToList() };
     }
 
-    public async Task<(bool Success, string? Error, int? DeploymentId)> CreateAsync(CreateDeploymentRequest request, int ownerId, bool isAdmin)
+    public async Task<(bool Success, string? Error, int? DeploymentId, string Status)> CreateAsync(CreateDeploymentRequest request, int ownerId, bool isAdmin)
     {
+        if (string.IsNullOrWhiteSpace(request.ServiceId)) return (false, "Service is required.", null, "Failed");
         var serviceAccess = await repository.GetServiceAccessAsync(request.ServiceId);
-        if (!serviceAccess.Exists) return (false, "Service not found.", null);
-        if (serviceAccess.IsArchived) return (false, "Project is archived.", null);
-        if (!isAdmin && serviceAccess.OwnerId != ownerId) return (false, "You do not have permission to deploy this service.", null);
+        if (!serviceAccess.Exists) return (false, "Service not found.", null, "Failed");
+        if (serviceAccess.IsArchived) return (false, "Project is archived.", null, "Failed");
+        if (!isAdmin && serviceAccess.OwnerId != ownerId) return (false, "You do not have permission to deploy this service.", null, "Failed");
 
         var environment = await repository.GetEnvironmentByNameAsync(serviceAccess.ProjectId, request.Environment.Trim());
-        if (environment is null || !environment.Value.IsActive) return (false, "The selected environment is not valid for this project.", null);
-        if (!ValidEnvironmentTypes.Contains(environment.Value.Type)) return (false, "The selected environment type is not supported.", null);
+        if (environment is null || !environment.Value.IsActive) return (false, "The selected environment is not valid for this project.", null, "Failed");
+        if (!ValidEnvironmentTypes.Contains(environment.Value.Type)) return (false, "The selected environment type is not supported.", null, "Failed");
 
-        if (string.IsNullOrWhiteSpace(request.Version)) return (false, "Version is required.", null);
+        if (string.IsNullOrWhiteSpace(request.Version)) return (false, "Version is required.", null, "Failed");
+        var workflowFile = await repository.GetWorkflowFileAsync(serviceAccess.RealServiceId) ?? options.Value.DefaultWorkflowFile;
+        var workflowRef = string.IsNullOrWhiteSpace(request.CommitSha) ? request.Branch?.Trim() : request.CommitSha.Trim();
+        if (string.IsNullOrWhiteSpace(workflowRef)) return (false, "A branch or commit is required.", null, "Failed");
+        var repositoryName = await repository.GetRepositoryNameAsync(serviceAccess.RealServiceId);
+        if (string.IsNullOrWhiteSpace(repositoryName) || !repositoryName.Contains('/')) return (false, "The service does not have a valid GitHub repository configured.", null, "Failed");
 
         var deployment = new DeploymentEntity
         {
@@ -47,12 +73,34 @@ public class DeploymentService(IDeploymentRepository repository) : IDeploymentSe
             Version = request.Version.Trim(),
             CommitSha = request.CommitSha?.Trim(),
             Status = "Pending",
+            WorkflowFile = workflowFile,
+            WorkflowRef = workflowRef,
             StartedAt = DateTime.UtcNow
         };
 
         var deploymentId = await repository.CreateAsync(deployment);
-        return (true, null, deploymentId);
+        var parts = repositoryName.Split('/', 2);
+        var result = await gitHubActionsClient.DispatchAsync(new WorkflowDispatchRequest(parts[0], parts[1], workflowFile, workflowRef, new Dictionary<string, string>
+        {
+            ["environment"] = deployment.Environment,
+            ["project"] = serviceAccess.ProjectId.ToString(),
+            ["service"] = serviceAccess.RealServiceId.ToString(),
+            ["deployment_id"] = deploymentId.ToString(),
+            ["version"] = deployment.Version,
+            ["commit_sha"] = deployment.CommitSha ?? string.Empty
+        }));
+        if (!result.Succeeded)
+        {
+            await repository.UpdateTriggerResultAsync(deploymentId, "Failed", result.Error, result.Error);
+            return (true, result.Error, deploymentId, "Failed");
+        }
+
+        await repository.UpdateTriggerResultAsync(deploymentId, "Running", null, null);
+        return (true, null, deploymentId, "Running");
     }
 
-    private static DeploymentResponse ToResponse(DeploymentEntity deployment) => new() { Id = deployment.Id, PublicId = string.IsNullOrEmpty(deployment.PublicId) ? deployment.Id.ToString() : deployment.PublicId, ServiceId = deployment.ServiceId, Environment = deployment.Environment, Version = deployment.Version, CommitSha = deployment.CommitSha, Status = deployment.Status, StartedAt = deployment.StartedAt, CompletedAt = deployment.CompletedAt };
+    public Task<bool> UpdateStatusAsync(int deploymentId, string status, string? failureReason) =>
+        repository.UpdateTriggerResultAsync(deploymentId, status, failureReason, null);
+
+    private static DeploymentResponse ToResponse(DeploymentEntity deployment) => new() { Id = deployment.Id, PublicId = string.IsNullOrEmpty(deployment.PublicId) ? deployment.Id.ToString() : deployment.PublicId, ServiceId = deployment.ServiceId, Environment = deployment.Environment, Version = deployment.Version, CommitSha = deployment.CommitSha, Status = deployment.Status, StartedAt = deployment.StartedAt, CompletedAt = deployment.CompletedAt, WorkflowFile = deployment.WorkflowFile, WorkflowRef = deployment.WorkflowRef };
 }

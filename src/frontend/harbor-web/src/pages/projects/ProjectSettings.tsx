@@ -6,7 +6,7 @@ import { getEnvironments, type DeploymentEnvironment } from '../../services/envi
 export default function ProjectSettings() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const projectId = Number(id);
+  const projectId = id as string;
 
   const [project, setProject] = useState<Project | null>(null);
   const [environments, setEnvironments] = useState<DeploymentEnvironment[]>([]);
@@ -23,7 +23,7 @@ export default function ProjectSettings() {
   const [isArchiving, setIsArchiving] = useState(false);
 
   useEffect(() => {
-    if (!Number.isFinite(projectId)) {
+    if (!projectId) {
       setIsLoading(false);
       return;
     }

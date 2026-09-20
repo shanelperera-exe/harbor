@@ -470,11 +470,11 @@ A user must not be able to access protected functionality without authentication
 
 ---
 
-# 13. PROJECT / APPLICATION
+# 13. PROJECT / APPLICATION & SERVICES
 
-A Project represents an application managed by Harbor.
+A Project represents an application or system managed by Harbor.
 
-A project is associated with a GitHub repository.
+Each Project can contain one or more **Services** (e.g., Web Service, Background Worker, Static Site), allowing teams to define granular service types, link specific GitHub repositories, and manage service configurations.
 
 Conceptually:
 
@@ -483,20 +483,25 @@ Project
 - id
 - name
 - description
-- repository
-- repository owner/organization where required
-- default branch
 - createdBy
 - createdAt
 - updatedAt
+- Services[]
+  - id
+  - projectId
+  - serviceName
+  - serviceType (e.g., Web Service, Worker, Static Site)
+  - repository (owner/name)
+  - defaultBranch
+  - createdAt
 ```
 
-A project is the parent context for:
+A project and its underlying services serve as the parent context for:
 
 * environments
-* deployments
+* deployment definitions & target services
 * deployment history
-* reports
+* reporting and status metrics
 
 ---
 
@@ -535,9 +540,9 @@ A deployment should not target an unrelated environment.
 
 # 15. DEPLOYMENT
 
-A Deployment represents an attempt to deploy a project/version to an environment.
+A Deployment represents an attempt to deploy a project/service/version to an environment.
 
-This is one of Harbor's most important domain objects.
+This is one of Harbor's most important domain objects. With the US-13 Select Branch/Commit feature, users can interactively select target branches and specific commit SHA hashes fetched directly via GitHub integration proxies when triggering a deployment.
 
 Conceptually:
 
@@ -545,9 +550,11 @@ Conceptually:
 Deployment
 - id
 - projectId
+- serviceId
 - environmentId
 - version
-- branch/ref
+- branch (selected ref/branch name)
+- commitHash (selected commit SHA)
 - status
 - triggeredBy
 - workflow/run identifier
@@ -558,7 +565,7 @@ Deployment
 
 A deployment answers:
 
-> What was deployed, where, by whom, when, and what happened?
+> What was deployed (which service, branch, and commit SHA), where, by whom, when, and what happened?
 
 ---
 
@@ -690,7 +697,10 @@ The dashboard should prioritize useful information over visual decoration.
 
 Harbor requires authentication.
 
-Authentication determines who the user is.
+Authentication determines who the user is. Harbor supports multiple authentication methods:
+* **Local Password Authentication** (email and BCrypt-hashed password)
+* **Google OAuth 2.0**
+* **GitHub OAuth 2.0**
 
 Typical flow:
 
@@ -698,21 +708,33 @@ Typical flow:
 User
  |
  v
-Login
+Login (Local Credentials OR External Provider: Google / GitHub)
  |
  v
-Authentication Service
+Authentication Service (Harbor.Authentication)
  |
- +--> Valid
+ +--> External OAuth Provider (Google / GitHub) Callback & Token Exchange
  |      |
  |      v
- |   Authenticated Session/Token
+ |   Map External Identity / Provision User
  |
- +--> Invalid
+ +--> Valid Credentials / Valid OAuth Response
+ |      |
+ |      v
+ |   Authenticated Session (JWT Token Issued)
+ |
+ +--> Invalid Credentials / Unconfigured OAuth Scheme
         |
         v
-    Authentication Error
+    Authentication Error (400/401/403)
 ```
+
+### Authentication Method Management & Disconnection Options
+
+Users can manage their connected authentication methods under Account Settings:
+* **Link Additional Methods**: Users authenticated with local credentials can link Google or GitHub OAuth, and users authenticated via OAuth can set a local password or link additional OAuth providers.
+* **Unlink / Disconnect Methods**: Users can disconnect external login methods or delete local password credentials (`DELETE /api/auth/me/auth-methods/{provider}`).
+* **Security Safeguard**: The system strictly enforces a safeguard preventing users from unlinking their last remaining login method to ensure accounts are never locked out.
 
 Protected resources must require authentication.
 
@@ -931,22 +953,18 @@ and is associated with:
 
 ---
 
-# 29. GITHUB
+# 29. GITHUB & GITHUB API PROXY INTEGRATION
 
-GitHub is Harbor's source-control integration.
+GitHub is Harbor's primary source-control and CI/CD integration provider.
 
-Harbor may use GitHub APIs to:
+Harbor provides a dedicated **GitHub Integration API Proxy** implemented inside `Harbor.Project` (`GitHubIntegrationController` + `GitHubService`):
 
-* identify repositories
-* retrieve repository information
-* associate projects with repositories
-* interact with workflows
-* retrieve workflow information
-* retrieve workflow status
-* retrieve relevant logs
-* support deployment operations
+* **Inter-Service Token Fetching**: When an authenticated user requests GitHub data, `Harbor.Project` uses `TokenService` to communicate internally with `Harbor.Authentication` (`/api/internal/users/{userId}/tokens/github`) to retrieve the user's stored GitHub OAuth access token.
+* **Repository Proxy**: `GET /api/projects/githubintegration/repositories` fetches the list of repositories accessible to the user's connected GitHub account.
+* **Branches Proxy**: `GET /api/projects/githubintegration/branches?owner={owner}&repo={repo}` retrieves active branches for a repository.
+* **Commits Proxy**: `GET /api/projects/githubintegration/commits?owner={owner}&repo={repo}&branch={branch}` fetches recent commit history (message, SHA, author, date) for a specific branch.
 
-The exact API usage must follow the approved implementation.
+These proxy endpoints are used directly by the frontend during **Service Creation** and when **Triggering Deployments** (US-13 Select Branch/Commit feature).
 
 ---
 
@@ -1193,29 +1211,47 @@ Every API endpoint should:
 Conceptually:
 
 ```text
-POST   /auth/login
+-- Authentication & Identity --
+POST   /api/auth/register
+POST   /api/auth/login
+GET    /api/auth/external/google
+GET    /api/auth/external/google/callback
+GET    /api/auth/external/google/complete
+GET    /api/auth/external/github
+GET    /api/auth/external/github/callback
+GET    /api/auth/external/github/complete
+GET    /api/auth/me/auth-methods
+DELETE /api/auth/me/auth-methods/:provider
 
-GET    /projects
-POST   /projects
-GET    /projects/:id
-PUT    /projects/:id
-DELETE /projects/:id
+-- Projects & Services --
+GET    /api/projects
+POST   /api/projects
+GET    /api/projects/:id
+PUT    /api/projects/:id
+DELETE /api/projects/:id
+GET    /api/projects/:id/services
+POST   /api/projects/:id/services
 
-GET    /projects/:id/environments
-POST   /projects/:id/environments
+-- GitHub API Proxy --
+GET    /api/projects/githubintegration/repositories
+GET    /api/projects/githubintegration/branches?owner=:owner&repo=:repo
+GET    /api/projects/githubintegration/commits?owner=:owner&repo=:repo&branch=:branch
 
-GET    /deployments
-POST   /deployments
-GET    /deployments/:id
+-- Environments --
+GET    /api/projects/:id/environments
+POST   /api/projects/:id/environments
 
-GET    /deployments/:id/logs
+-- Deployments & Branch/Commit Selection --
+GET    /api/deployments
+POST   /api/deployments (Payload includes branch & commitHash selection)
+GET    /api/deployments/:id
+GET    /api/deployments/:id/logs
 
-GET    /reports/deployments
+-- Reporting --
+GET    /api/reports/deployments
 ```
 
-These are conceptual examples.
-
-Do not automatically create these exact endpoints if the repository already has a defined API structure.
+These reflect the established API structure and microservices capabilities.
 
 ---
 

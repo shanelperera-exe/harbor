@@ -102,7 +102,7 @@ export default function Projects() {
               {projects.map((project) => (
                 <li key={project.id} className="grid items-stretch" data-testid="project-card">
                   <Link
-                    to={`/projects/${project.id}/environments`}
+                    to={`/projects/${project.publicId || project.id}/environments`}
                     data-testid="project-environments-link"
                     className="w-full border border-gray-300 dark:border-[#525252] p-4 text-gray-900 dark:text-[#f0f0f0] cursor-pointer rounded-sm
                                transition-colors duration-150

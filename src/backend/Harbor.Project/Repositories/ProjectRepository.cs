@@ -14,14 +14,20 @@ namespace Harbor.Project.Repositories
 
         public async Task<int> CreateAsync(ProjectEntity project)
         {
+            if (string.IsNullOrEmpty(project.PublicId))
+            {
+                project.PublicId = Harbor.Common.Utilities.IdGenerator.ProjectId();
+            }
+
             using var connection = _dbFactory.CreateConnection();
             await connection.OpenAsync();
 
             using var command = connection.CreateCommand();
             command.CommandText =
-                "INSERT INTO \"Projects\" (\"Name\", \"Description\", \"OwnerId\", \"CreatedAt\") " +
-                "VALUES (@name, @description, @ownerId, @createdAt) " +
+                "INSERT INTO \"Projects\" (\"PublicId\", \"Name\", \"Description\", \"OwnerId\", \"CreatedAt\") " +
+                "VALUES (@publicId, @name, @description, @ownerId, @createdAt) " +
                 "RETURNING \"Id\";";
+            command.Parameters.AddWithValue("publicId", project.PublicId);
             command.Parameters.AddWithValue("name", project.Name);
             command.Parameters.AddWithValue("description", project.Description ?? (object)DBNull.Value);
             command.Parameters.AddWithValue("ownerId", project.OwnerId);
@@ -53,10 +59,38 @@ namespace Harbor.Project.Repositories
 
             using var command = connection.CreateCommand();
             command.CommandText =
-                "SELECT \"Id\", \"Name\", \"Description\", \"OwnerId\", \"CreatedAt\", " +
+                "SELECT \"Id\", \"PublicId\", \"Name\", \"Description\", \"OwnerId\", \"CreatedAt\", " +
                 "\"IsArchived\", \"ArchivedAt\", \"UpdatedAt\" " +
                 "FROM \"Projects\" WHERE \"Id\" = @id";
             command.Parameters.AddWithValue("id", id);
+
+            var projects = await ReadProjectsAsync(command);
+            return projects.FirstOrDefault();
+        }
+
+        public async Task<ProjectEntity?> GetByIdOrPublicIdAsync(string identifier)
+        {
+            using var connection = _dbFactory.CreateConnection();
+            await connection.OpenAsync();
+
+            using var command = connection.CreateCommand();
+            if (int.TryParse(identifier, out var id))
+            {
+                command.CommandText =
+                    "SELECT \"Id\", \"PublicId\", \"Name\", \"Description\", \"OwnerId\", \"CreatedAt\", " +
+                    "\"IsArchived\", \"ArchivedAt\", \"UpdatedAt\" " +
+                    "FROM \"Projects\" WHERE \"Id\" = @id OR \"PublicId\" = @identifier";
+                command.Parameters.AddWithValue("id", id);
+                command.Parameters.AddWithValue("identifier", identifier);
+            }
+            else
+            {
+                command.CommandText =
+                    "SELECT \"Id\", \"PublicId\", \"Name\", \"Description\", \"OwnerId\", \"CreatedAt\", " +
+                    "\"IsArchived\", \"ArchivedAt\", \"UpdatedAt\" " +
+                    "FROM \"Projects\" WHERE \"PublicId\" = @identifier";
+                command.Parameters.AddWithValue("identifier", identifier);
+            }
 
             var projects = await ReadProjectsAsync(command);
             return projects.FirstOrDefault();
@@ -69,7 +103,7 @@ namespace Harbor.Project.Repositories
 
             using var command = connection.CreateCommand();
             command.CommandText =
-                "SELECT \"Id\", \"Name\", \"Description\", \"OwnerId\", \"CreatedAt\", " +
+                "SELECT \"Id\", \"PublicId\", \"Name\", \"Description\", \"OwnerId\", \"CreatedAt\", " +
                 "\"IsArchived\", \"ArchivedAt\", \"UpdatedAt\" " +
                 "FROM \"Projects\" WHERE \"OwnerId\" = @ownerId AND \"IsArchived\" = FALSE ORDER BY \"CreatedAt\" DESC";
             command.Parameters.AddWithValue("ownerId", ownerId);
@@ -84,7 +118,7 @@ namespace Harbor.Project.Repositories
 
             using var command = connection.CreateCommand();
             command.CommandText =
-                "SELECT \"Id\", \"Name\", \"Description\", \"OwnerId\", \"CreatedAt\", " +
+                "SELECT \"Id\", \"PublicId\", \"Name\", \"Description\", \"OwnerId\", \"CreatedAt\", " +
                 "\"IsArchived\", \"ArchivedAt\", \"UpdatedAt\" " +
                 "FROM \"Projects\" WHERE \"IsArchived\" = FALSE ORDER BY \"CreatedAt\" DESC";
 
@@ -135,13 +169,14 @@ namespace Harbor.Project.Repositories
                 projects.Add(new ProjectEntity
                 {
                     Id = reader.GetInt32(0),
-                    Name = reader.GetString(1),
-                    Description = reader.IsDBNull(2) ? null : reader.GetString(2),
-                    OwnerId = reader.GetInt32(3),
-                    CreatedAt = reader.GetDateTime(4),
-                    IsArchived = reader.GetBoolean(5),
-                    ArchivedAt = reader.IsDBNull(6) ? null : reader.GetDateTime(6),
-                    UpdatedAt = reader.IsDBNull(7) ? null : reader.GetDateTime(7)
+                    PublicId = reader.IsDBNull(1) ? string.Empty : reader.GetString(1),
+                    Name = reader.GetString(2),
+                    Description = reader.IsDBNull(3) ? null : reader.GetString(3),
+                    OwnerId = reader.GetInt32(4),
+                    CreatedAt = reader.GetDateTime(5),
+                    IsArchived = reader.GetBoolean(6),
+                    ArchivedAt = reader.IsDBNull(7) ? null : reader.GetDateTime(7),
+                    UpdatedAt = reader.IsDBNull(8) ? null : reader.GetDateTime(8)
                 });
             }
             return projects;

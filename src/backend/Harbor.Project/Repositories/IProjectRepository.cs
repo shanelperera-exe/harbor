@@ -9,6 +9,7 @@ namespace Harbor.Project.Repositories
         Task<List<ProjectEntity>> GetByOwnerAsync(int ownerId);
         Task<List<ProjectEntity>> GetAllAsync();
         Task<ProjectEntity?> GetByIdAsync(int id);
+        Task<ProjectEntity?> GetByIdOrPublicIdAsync(string identifier);
         Task<bool> UpdateAsync(ProjectEntity project);
         Task<bool> ArchiveAsync(int id, DateTime archivedAt);
     }

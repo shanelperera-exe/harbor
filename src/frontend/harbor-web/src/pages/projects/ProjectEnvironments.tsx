@@ -12,7 +12,7 @@ import { getServices, type Service } from '../../services/serviceService';
 
 export default function ProjectEnvironments() {
   const { id } = useParams();
-  const projectId = Number(id);
+  const projectId = id as string;
   const navigate = useNavigate();
   const [project, setProject] = useState<Project>();
   const [environments, setEnvironments] = useState<DeploymentEnvironment[]>([]);
@@ -20,7 +20,7 @@ export default function ProjectEnvironments() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!Number.isInteger(projectId) || projectId < 1) { 
+    if (!projectId) { 
       setLoading(false); 
       return; 
     }
@@ -198,7 +198,7 @@ export default function ProjectEnvironments() {
                         <tr 
                           key={service.id}
                           className="h-14 hover:bg-[#ffffff1a] transition-colors group cursor-pointer"
-                          onClick={() => navigate(`/projects/${projectId}/services/${service.id}`)}
+                          onClick={() => navigate(`/projects/${projectId}/services/${service.publicId || service.id}`)}
                         >
                           <td className="pl-6 pr-4">
                             <div className="flex items-center gap-3">

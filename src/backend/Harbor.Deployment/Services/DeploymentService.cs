@@ -40,7 +40,8 @@ public class DeploymentService(IDeploymentRepository repository) : IDeploymentSe
 
         var deployment = new DeploymentEntity
         {
-            ServiceId = request.ServiceId,
+            PublicId = Harbor.Common.Utilities.IdGenerator.DeploymentId(),
+            ServiceId = serviceAccess.RealServiceId,
             OwnerId = ownerId,
             Environment = request.Environment.Trim(),
             Version = request.Version.Trim(),
@@ -53,5 +54,5 @@ public class DeploymentService(IDeploymentRepository repository) : IDeploymentSe
         return (true, null, deploymentId);
     }
 
-    private static DeploymentResponse ToResponse(DeploymentEntity deployment) => new() { Id = deployment.Id, ServiceId = deployment.ServiceId, Environment = deployment.Environment, Version = deployment.Version, CommitSha = deployment.CommitSha, Status = deployment.Status, StartedAt = deployment.StartedAt, CompletedAt = deployment.CompletedAt };
+    private static DeploymentResponse ToResponse(DeploymentEntity deployment) => new() { Id = deployment.Id, PublicId = string.IsNullOrEmpty(deployment.PublicId) ? deployment.Id.ToString() : deployment.PublicId, ServiceId = deployment.ServiceId, Environment = deployment.Environment, Version = deployment.Version, CommitSha = deployment.CommitSha, Status = deployment.Status, StartedAt = deployment.StartedAt, CompletedAt = deployment.CompletedAt };
 }

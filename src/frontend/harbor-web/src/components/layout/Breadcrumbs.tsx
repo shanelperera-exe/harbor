@@ -89,9 +89,8 @@ export const Breadcrumbs: React.FC<{ isMobile?: boolean }> = ({ isMobile }) => {
 
   const projectMatch = useMatch('/projects/:id/*');
   const projectMatchAlt = useMatch('/project/:id/*');
-  const projectIdStr = projectMatch?.params.id || projectMatchAlt?.params.id;
-  const projectId = projectIdStr ? parseInt(projectIdStr, 10) : null;
-  const isProjectContext = !!projectId && !isNaN(projectId);
+  const projectId = projectMatch?.params.id || projectMatchAlt?.params.id;
+  const isProjectContext = !!projectId;
 
   const serviceMatch = useMatch('/projects/:projectId/services/:serviceId/*');
   const serviceId = serviceMatch?.params.serviceId;
@@ -180,8 +179,8 @@ export const Breadcrumbs: React.FC<{ isMobile?: boolean }> = ({ isMobile }) => {
       },
       dropdownItems: projects.map(p => ({
         label: p.name,
-        to: `/projects/${p.id}/environments`,
-        selected: p.id === projectId,
+        to: `/projects/${p.publicId || p.id}/environments`,
+        selected: p.publicId === projectId || String(p.id) === String(projectId),
         icon: <IconProjects />
       }))
     });

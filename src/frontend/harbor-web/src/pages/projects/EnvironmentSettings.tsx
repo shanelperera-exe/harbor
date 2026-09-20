@@ -6,8 +6,7 @@ import { getEnvironments, updateEnvironment, removeEnvironment, type DeploymentE
 export default function EnvironmentSettings() {
   const navigate = useNavigate();
   const { projectId: projectIdStr, envId: envIdStr } = useParams<{ projectId: string, envId: string }>();
-  const projectId = Number(projectIdStr);
-  const envId = Number(envIdStr);
+  const projectId = projectIdStr ?? '';
 
   const [project, setProject] = useState<Project | null>(null);
   const [environment, setEnvironment] = useState<DeploymentEnvironment | null>(null);
@@ -24,7 +23,7 @@ export default function EnvironmentSettings() {
   const [isArchiving, setIsArchiving] = useState(false);
 
   useEffect(() => {
-    if (!Number.isFinite(projectId) || !Number.isFinite(envId)) {
+    if (!projectId || !envIdStr) {
       setIsLoading(false);
       return;
     }
@@ -34,14 +33,14 @@ export default function EnvironmentSettings() {
     ])
       .then(([foundProject, envs]) => {
         if (foundProject) setProject(foundProject);
-        const foundEnv = envs.find(e => e.id === envId);
+        const foundEnv = envs.find(e => e.publicId === envIdStr || String(e.id) === envIdStr);
         if (foundEnv) {
           setEnvironment(foundEnv);
           setName(foundEnv.name);
         }
       })
       .finally(() => setIsLoading(false));
-  }, [projectId, envId]);
+  }, [projectId, envIdStr]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -75,7 +74,7 @@ export default function EnvironmentSettings() {
     if (!name.trim() || !environment || name === environment.name) return;
     setIsSubmitting(true);
     try {
-      await updateEnvironment(projectId, envId, {
+      await updateEnvironment(projectId, environment.id, {
         name: name.trim(),
         type: environment.type,
       });
@@ -95,7 +94,7 @@ export default function EnvironmentSettings() {
     if (deleteConfirmText !== expected) return;
     setIsArchiving(true);
     try {
-      await removeEnvironment(projectId, envId);
+      await removeEnvironment(projectId, environment.id);
       navigate(`/projects/${projectId}/environments`);
     } catch (err) {
       console.error(err);

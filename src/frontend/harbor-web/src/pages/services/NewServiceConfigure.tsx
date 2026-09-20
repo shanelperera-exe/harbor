@@ -49,7 +49,7 @@ const NewServiceConfigure: React.FC = () => {
     // Fetch project name and environments in parallel
     const fetchProject = async () => {
       try {
-        const project = await getProject(Number(projectId));
+        const project = await getProject(projectId);
         if (project) {
           setProjectName(project.name);
         } else {
@@ -62,7 +62,7 @@ const NewServiceConfigure: React.FC = () => {
     const fetchEnvironments = async () => {
       setIsFetchingEnvironments(true);
       try {
-        const envs = await getEnvironments(Number(projectId));
+        const envs = await getEnvironments(projectId);
         const active = envs.filter(e => e.isActive);
         setEnvironments(active);
         if (active.length > 0) {
@@ -219,7 +219,7 @@ const NewServiceConfigure: React.FC = () => {
         throw new Error(data?.detail || data?.message || data?.title || 'Failed to create service.');
       }
 
-      const newServiceId: number = data?.data?.id;
+      const newServiceId = data?.data?.publicId || data?.data?.id;
 
       // Step 2: Create the deployment record
       const version = deployType === 'commit' && commit

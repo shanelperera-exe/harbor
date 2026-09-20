@@ -1,5 +1,6 @@
 export interface Service {
   id: number;
+  publicId?: string;
   projectId: number;
   name: string;
   type: string;
@@ -19,7 +20,7 @@ function authHeaders(): HeadersInit {
   };
 }
 
-export async function getServices(projectId: number): Promise<Service[]> {
+export async function getServices(projectId: number | string): Promise<Service[]> {
   const response = await fetch(`${serviceApiBase}/${projectId}/services`, {
     method: 'GET',
     headers: authHeaders(),
@@ -32,4 +33,19 @@ export async function getServices(projectId: number): Promise<Service[]> {
   }
 
   return body.data as Service[];
+}
+
+export async function getService(projectId: number | string, serviceId: number | string): Promise<Service | undefined> {
+  const response = await fetch(`${serviceApiBase}/${projectId}/services/${serviceId}`, {
+    method: 'GET',
+    headers: authHeaders(),
+  });
+
+  if (response.ok) {
+    const body = await response.json().catch(() => ({}));
+    if (body.data) return body.data as Service;
+  }
+
+  const services = await getServices(projectId);
+  return services.find((s) => s.publicId === serviceId || s.id.toString() === serviceId.toString());
 }

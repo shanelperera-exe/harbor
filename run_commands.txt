@@ -1,0 +1,3 @@
+docker compose up --build postgres mailpit api-gateway authentication-service project-service environment-service deployment-service reporting-service
+
+ngrok http --domain=implode-uncorrupt-thickness.ngrok-free.dev 5000

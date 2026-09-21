@@ -48,8 +48,8 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 var jwtSecret = builder.Configuration["JWT_SECRET"] ?? throw new InvalidOperationException("JWT_SECRET is not configured.");
-var jwtIssuer = builder.Configuration["JWT_ISSUER"] ?? "harbor-auth";
-var jwtAudience = builder.Configuration["JWT_AUDIENCE"] ?? "harbor-web";
+var jwtIssuer = builder.Configuration["JWT_ISSUER"] ?? "harbor";
+var jwtAudience = builder.Configuration["JWT_AUDIENCE"] ?? "harbor-api";
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
     options.TokenValidationParameters = new TokenValidationParameters
     {

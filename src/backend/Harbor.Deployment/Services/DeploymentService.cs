@@ -10,15 +10,18 @@ public class DeploymentService : IDeploymentService
     private readonly IDeploymentRepository repository;
     private readonly IGitHubActionsClient gitHubActionsClient;
     private readonly IOptions<GitHubActionsOptions> options;
+    private readonly IInstallationTokenResolver? installationTokenResolver;
 
     public DeploymentService(
         IDeploymentRepository repository,
         IGitHubActionsClient? gitHubActionsClient = null,
-        IOptions<GitHubActionsOptions>? options = null)
+        IOptions<GitHubActionsOptions>? options = null,
+        IInstallationTokenResolver? installationTokenResolver = null)
     {
         this.repository = repository;
         this.gitHubActionsClient = gitHubActionsClient ?? new DisabledGitHubActionsClient();
         this.options = options ?? Microsoft.Extensions.Options.Options.Create(new GitHubActionsOptions());
+        this.installationTokenResolver = installationTokenResolver;
     }
     private const int MaxPageSize = 100;
     private static readonly string[] ValidEnvironmentTypes = ["Development", "Staging", "Production"];
@@ -80,15 +83,22 @@ public class DeploymentService : IDeploymentService
 
         var deploymentId = await repository.CreateAsync(deployment);
         var parts = repositoryName.Split('/', 2);
-        var result = await gitHubActionsClient.DispatchAsync(new WorkflowDispatchRequest(parts[0], parts[1], workflowFile, workflowRef, new Dictionary<string, string>
-        {
-            ["environment"] = deployment.Environment,
-            ["project"] = serviceAccess.ProjectId.ToString(),
-            ["service"] = serviceAccess.RealServiceId.ToString(),
-            ["deployment_id"] = deploymentId.ToString(),
-            ["version"] = deployment.Version,
-            ["commit_sha"] = deployment.CommitSha ?? string.Empty
-        }));
+
+        // Resolve the user's GitHub App installation token for workflow dispatch
+        var installationToken = await installationTokenResolver?.GetInstallationTokenAsync(ownerId);
+        var result = await gitHubActionsClient.DispatchAsync(new WorkflowDispatchRequest(
+            parts[0], parts[1], workflowFile, workflowRef,
+            new Dictionary<string, string>
+            {
+                ["environment"] = deployment.Environment,
+                ["project"] = serviceAccess.ProjectId.ToString(),
+                ["service"] = serviceAccess.RealServiceId.ToString(),
+                ["deployment_id"] = deploymentId.ToString(),
+                ["version"] = deployment.Version,
+                ["commit_sha"] = deployment.CommitSha ?? string.Empty
+            },
+            installationToken));
+
         if (!result.Succeeded)
         {
             await repository.UpdateTriggerResultAsync(deploymentId, "Failed", result.Error, result.Error);

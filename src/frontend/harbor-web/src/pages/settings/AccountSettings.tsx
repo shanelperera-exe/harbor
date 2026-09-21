@@ -174,6 +174,7 @@ export default function AccountSettings() {
     avatarSvg: string | null;
     loginMethods: string[];
     hasPassword: boolean;
+    githubInstallationId?: number | null;
     preferences?: {
       dashboardTheme: ThemePreference;
       logTheme: LogThemePreference;
@@ -185,13 +186,15 @@ export default function AccountSettings() {
     avatarSvg: storedUser.avatarSvg ?? null,
     loginMethods: Array.isArray(storedUser.loginMethods) ? storedUser.loginMethods : [],
     hasPassword: storedUser.hasPassword === true,
+    githubInstallationId: storedUser.githubInstallationId ?? null,
     preferences: storedUser.preferences,
   });
   const [profileError, setProfileError] = useState('');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const connectedProviders = profile.loginMethods.map((method) => method.toLowerCase());
   const isProviderConnected = (provider: string) => connectedProviders.includes(provider.toLowerCase());
-  const hasGithubDeploymentCredential = connectedProviders.includes('github');
+const hasGithubDeploymentCredential = connectedProviders.includes('github');
+  const hasGithubInstallation = profile.githubInstallationId != null;
   
   const [githubAccountData, setGithubAccountData] = useState<{owner: string, count: number, repositories?: any[]} | null>(null);
 
@@ -205,7 +208,10 @@ export default function AccountSettings() {
       try {
         const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
         const response = await fetch(`${apiBase}/projects/githubintegration/repositories`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            'ngrok-skip-browser-warning': 'true',
+          }
         });
         const data = await response.json().catch(() => ({}));
         if (response.ok && data.data) {
@@ -241,14 +247,17 @@ export default function AccountSettings() {
     try {
       const response = await fetch(`${authApiBase}/auth/external/${provider}/link`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'ngrok-skip-browser-warning': 'true',
+        },
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok || !data.url) {
         throw new Error(data?.detail || data?.message || `Unable to connect ${providerDisplayName(provider)}.`);
       }
 
-      window.location.assign(`${authApiBase}${data.url.replace('/api', '')}`);
+      window.location.assign(data.url.startsWith('http') ? data.url : `${authApiBase}${data.url.replace('/api', '')}`);
     } catch (error) {
       setSecurityError(error instanceof Error ? error.message : `Unable to connect ${providerDisplayName(provider)}.`);
     }
@@ -261,7 +270,10 @@ export default function AccountSettings() {
     async function loadProfile() {
       try {
         const response = await fetch(`${authApiBase}/auth/me`, {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            'ngrok-skip-browser-warning': 'true',
+          },
         });
         const responseData = await response.json().catch(() => ({}));
         if (!response.ok) {
@@ -316,6 +328,7 @@ export default function AccountSettings() {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
         },
         body: JSON.stringify({ username: nextUsername, email: nextEmail }),
       });
@@ -366,6 +379,7 @@ export default function AccountSettings() {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
         },
         body: JSON.stringify({ newPassword }),
       });
@@ -404,6 +418,7 @@ export default function AccountSettings() {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
         },
         body: JSON.stringify({ dashboardTheme: nextTheme, logTheme: nextLogTheme }),
       });
@@ -454,7 +469,10 @@ export default function AccountSettings() {
     try {
       const response = await fetch(`${authApiBase}/auth/external/${normalizedProvider}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'ngrok-skip-browser-warning': 'true',
+        },
       });
       const responseData = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -493,7 +511,10 @@ export default function AccountSettings() {
     try {
       const response = await fetch(`${authApiBase}/auth/me`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'ngrok-skip-browser-warning': 'true',
+        },
       });
       const responseData = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -1136,11 +1157,69 @@ export default function AccountSettings() {
                             </ul>
                             
                             {hasGithubDeploymentCredential ? (
-                              <div className="flex items-center text-[16px] text-gray-900 dark:text-[#e3e3e3] font-medium space-x-2.5">
-                                <FaGithubAlt className="w-5 h-5 text-gray-900 dark:text-white" />
-                                <span>Already Connected to GitHub</span>
-                                <RiLinksFill className="w-5 h-5 text-gray-500 dark:text-[#a1a1aa]" />
-                              </div>
+                              hasGithubInstallation ? (
+                                <div className="flex items-center text-[16px] text-gray-900 dark:text-[#e3e3e3] font-medium space-x-2.5">
+                                  <FaGithubAlt className="w-5 h-5 text-gray-900 dark:text-white" />
+                                  <span>GitHub Connected</span>
+                                  <RiLinksFill className="w-5 h-5 text-gray-500 dark:text-[#a1a1aa]" />
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-3">
+                                  <div className="flex items-center text-[16px] text-gray-900 dark:text-[#e3e3e3] font-medium space-x-2.5">
+                                    <FaGithubAlt className="w-5 h-5 text-gray-900 dark:text-white" />
+                                    <span>GitHub Authorized (Install Required)</span>
+                                  </div>
+                                  <a
+                                    href="https://github.com/apps/harbordev/installations/new"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-[16px] font-medium text-white hover:text-gray-300 bg-gray-900 dark:bg-white dark:text-black h-10 py-2.5 px-4 flex items-center transition-colors outline-none rounded-sm"
+                                  >
+                                    <span className="me-1.5 flex items-center">
+                                      <span className="block border border-solid border-gray-300 dark:border-[#525252] p-0.5 relative rounded-[0.25rem] bg-white dark:bg-[#1a1a1a]">
+                                        <svg width="15" height="15" viewBox="0 0 24 23" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="flex-shrink-0 text-black dark:text-white" aria-label="GitHub"><path fillRule="evenodd" clipRule="evenodd" d="M12.0183 0.405518C5.73469 0.405518 0.655029 5.50047 0.655029 11.8036C0.655029 16.8421 3.90974 21.107 8.42489 22.6165C8.9894 22.73 9.19618 22.3712 9.19618 22.0695C9.19618 21.8052 9.17757 20.8995 9.17757 19.9558C6.01659 20.6352 5.35835 18.597 5.35835 18.597C4.85036 17.2761 4.09768 16.9365 4.09768 16.9365C3.06309 16.2383 4.17304 16.2383 4.17304 16.2383C5.32067 16.3138 5.92286 17.4083 5.92286 17.4083C6.9386 19.1443 8.57538 18.6538 9.23386 18.3518C9.32782 17.6158 9.62904 17.1063 9.94886 16.8233C7.42775 16.5591 4.77523 15.5778 4.77523 11.1996C4.77523 9.95415 5.22647 8.93516 5.94146 8.14266C5.82866 7.85966 5.43348 6.68944 6.05451 5.12321C6.05451 5.12321 7.01396 4.82122 9.17733 6.2932C10.1036 6.0437 11.0587 5.91677 12.0183 5.91571C12.9777 5.91571 13.9558 6.04794 14.8589 6.2932C17.0226 4.82122 17.982 5.12321 17.982 5.12321C18.603 6.68944 18.2076 7.85966 18.0948 8.14266C18.8287 8.93516 19.2613 9.95415 19.2613 11.1996C19.2613 15.5778 16.6088 16.5401 14.0688 16.8233C14.4828 17.1818 14.8401 17.861 14.8401 18.9368C14.8401 20.4653 14.8215 21.692 14.8215 22.0692C14.8215 22.3712 15.0285 22.73 15.5928 22.6167C20.1079 21.1068 23.3626 16.8421 23.3626 11.8036C23.3813 5.50047 18.283 0.405518 12.0183 0.405518Z"></path></svg>
+                                      </span>
+                                    </span>
+                                    <span>Install GitHub App</span>
+                                  </a>
+                                  <button
+                                    type="button"
+                                    onClick={async () => {
+                                      const token = localStorage.getItem('harbor_token');
+                                      if (!token) return;
+                                      try {
+                                        const response = await fetch(`${authApiBase}/auth/github/refresh-installation`, {
+                                          method: 'POST',
+                                          headers: {
+                                            Authorization: `Bearer ${token}`,
+                                            'ngrok-skip-browser-warning': 'true',
+                                          },
+                                        });
+                                        const data = await response.json();
+                                        if (response.ok) {
+                                          setProfile(prev => ({ ...prev, githubInstallationId: data.InstallationId }));
+                                          window.dispatchEvent(new Event('storage'));
+                                        } else {
+                                          console.error('Failed to refresh installation:', data);
+                                        }
+                                      } catch (err) {
+                                        console.error('Error refreshing installation:', err);
+                                      }
+                                    }}
+                                    className="text-[16px] font-medium text-white hover:text-gray-300 bg-blue-600 dark:bg-blue-500 h-10 py-2.5 px-4 flex items-center transition-colors outline-none rounded-sm"
+                                  >
+                                    <span className="me-1.5 flex items-center">
+                                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true" className="flex-shrink-0">
+                                        <path d="M23 4v6" />
+                                        <path d="M1 20v-6" />
+                                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10" />
+                                        <path d="M20.49 15a9 9 0 0 0-14.85 3.36L1 14" />
+                                      </svg>
+                                    </span>
+                                    <span>Refresh Installation</span>
+                                  </button>
+                                </div>
+                              )
                             ) : (
                               <div className="relative inline-block">
                                 <button 

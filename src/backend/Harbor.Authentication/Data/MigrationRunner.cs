@@ -59,7 +59,14 @@ public static class MigrationRunner
                 applied_at  TIMESTAMPTZ NOT NULL DEFAULT now()
             );
             """;
-        cmd.ExecuteNonQuery();
+        try
+        {
+            cmd.ExecuteNonQuery();
+        }
+        catch (PostgresException ex) when (ex.SqlState == "23505")
+        {
+            // Another service created the table concurrently; safe to ignore.
+        }
     }
 
     // -------------------------------------------------------------------------

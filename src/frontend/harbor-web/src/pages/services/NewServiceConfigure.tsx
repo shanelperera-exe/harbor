@@ -90,7 +90,10 @@ const NewServiceConfigure: React.FC = () => {
         const token = localStorage.getItem('harbor_token');
         const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
         const res = await fetch(`${apiBase}/projects/githubintegration/repositories/${repo.owner}/${repo.name}/branches`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            'ngrok-skip-browser-warning': 'true',
+          }
         });
         if (res.ok) {
           const data = await res.json();
@@ -113,7 +116,10 @@ const NewServiceConfigure: React.FC = () => {
         const token = localStorage.getItem('harbor_token');
         const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
         const res = await fetch(`${apiBase}/projects/githubintegration/repositories/${repo.owner}/${repo.name}/branches/${branch}/commits`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            'ngrok-skip-browser-warning': 'true',
+          }
         });
         if (res.ok) {
           const data = await res.json();

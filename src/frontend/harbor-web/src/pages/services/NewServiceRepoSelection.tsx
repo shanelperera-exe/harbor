@@ -33,7 +33,10 @@ const NewServiceRepoSelection: React.FC = () => {
       try {
         const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
         const response = await fetch(`${apiBase}/projects/githubintegration/repositories`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            'ngrok-skip-browser-warning': 'true',
+          }
         });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {

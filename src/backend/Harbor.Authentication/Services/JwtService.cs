@@ -15,11 +15,11 @@ namespace Harbor.Authentication.Services
 
         public JwtService(IConfiguration configuration)
         {
-            _secret = Environment.GetEnvironmentVariable("JWT_SECRET")
+            _secret = configuration["JWT_SECRET"]
                        ?? throw new InvalidOperationException("JWT_SECRET is not configured.");
-            _issuer = Environment.GetEnvironmentVariable("JWT_ISSUER") ?? "HarborAuth";
-            _audience = Environment.GetEnvironmentVariable("JWT_AUDIENCE") ?? "HarborClients";
-            _expiryMinutes = int.TryParse(Environment.GetEnvironmentVariable("JWT_EXPIRY_MINUTES"), out var m) ? m : 480;
+            _issuer = configuration["JWT_ISSUER"] ?? "harbor";
+            _audience = configuration["JWT_AUDIENCE"] ?? "harbor-api";
+            _expiryMinutes = int.TryParse(configuration["JWT_EXPIRY_MINUTES"], out var m) ? m : 480;
         }
 
         public (string Token, DateTime ExpiresAt) GenerateToken(User user)

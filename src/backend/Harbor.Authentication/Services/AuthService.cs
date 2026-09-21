@@ -235,6 +235,7 @@ namespace Harbor.Authentication.Services
             var profile = ToProfileResponse(user);
             profile.LoginMethods = await _userRepository.GetExternalLoginMethodsAsync(user.Id);
             profile.HasPassword = await _userRepository.GetHasPasswordAsync(user.Id);
+            profile.GitHubInstallationId = await _userRepository.GetGitHubInstallationAsync(user.Id);
             profile.Preferences = ToPreferencesResponse(await _userRepository.GetPreferencesAsync(user.Id));
             return (true, null, profile);
         }
@@ -272,6 +273,7 @@ namespace Harbor.Authentication.Services
             var updatedProfile = ToProfileResponse(user);
             updatedProfile.LoginMethods = await _userRepository.GetExternalLoginMethodsAsync(user.Id);
             updatedProfile.HasPassword = await _userRepository.GetHasPasswordAsync(user.Id);
+            updatedProfile.GitHubInstallationId = await _userRepository.GetGitHubInstallationAsync(user.Id);
             updatedProfile.Preferences = ToPreferencesResponse(await _userRepository.GetPreferencesAsync(user.Id));
             return (true, null, updatedProfile);
         }
@@ -357,7 +359,8 @@ namespace Harbor.Authentication.Services
             Role = user.Role,
             AvatarSvg = user.AvatarSvg,
             LoginMethods = Array.Empty<string>(),
-            HasPassword = user.HasPassword
+            HasPassword = user.HasPassword,
+            GitHubInstallationId = null
         };
 
         private static AccountPreferencesResponse ToPreferencesResponse(UserPreferences preferences) => new()

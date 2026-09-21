@@ -328,6 +328,33 @@ namespace Harbor.Authentication.Repositories
             return null;
         }
 
+        public async Task SetGitHubInstallationAsync(int userId, long installationId)
+        {
+            using var connection = _dbFactory.CreateConnection();
+            await connection.OpenAsync();
+            using var command = connection.CreateCommand();
+            command.CommandText = "UPDATE \"ExternalIdentities\" SET \"GitHubInstallationId\" = @installationId WHERE \"UserId\" = @userId AND \"Provider\" = 'github'";
+            command.Parameters.AddWithValue("userId", userId);
+            command.Parameters.AddWithValue("installationId", installationId);
+            await command.ExecuteNonQueryAsync();
+        }
+
+        public async Task<long?> GetGitHubInstallationAsync(int userId)
+        {
+            using var connection = _dbFactory.CreateConnection();
+            await connection.OpenAsync();
+            using var command = connection.CreateCommand();
+            command.CommandText = "SELECT \"GitHubInstallationId\" FROM \"ExternalIdentities\" WHERE \"UserId\" = @userId AND \"Provider\" = 'github' LIMIT 1";
+            command.Parameters.AddWithValue("userId", userId);
+
+            using var reader = await command.ExecuteReaderAsync();
+            if (await reader.ReadAsync())
+            {
+                return reader.IsDBNull(0) ? null : reader.GetInt64(0);
+            }
+            return null;
+        }
+
         public async Task<UserPreferences> GetPreferencesAsync(int userId)
         {
             using var connection = _dbFactory.CreateConnection();

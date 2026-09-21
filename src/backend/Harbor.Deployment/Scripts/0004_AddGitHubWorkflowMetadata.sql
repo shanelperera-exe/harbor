@@ -3,5 +3,5 @@ ALTER TABLE "Deployments"
     ADD COLUMN IF NOT EXISTS "WorkflowRef" VARCHAR(200),
     ADD COLUMN IF NOT EXISTS "TriggerError" TEXT;
 
-ALTER TABLE "Services"
+ALTER TABLE IF EXISTS "Services"
     ADD COLUMN IF NOT EXISTS "WorkflowFile" VARCHAR(200);

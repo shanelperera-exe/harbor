@@ -33,7 +33,11 @@ export interface DeploymentHistory {
 
 function headers(): HeadersInit {
   const token = localStorage.getItem('harbor_token');
-  return token ? { Authorization: `Bearer ${token}` } : {};
+  return {
+    'Content-Type': 'application/json',
+    'ngrok-skip-browser-warning': 'true',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
 }
 
 async function readResponse<T>(response: Response, fallback: string): Promise<T> {

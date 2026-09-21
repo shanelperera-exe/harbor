@@ -15,6 +15,7 @@ import EnvironmentSettings from './pages/projects/EnvironmentSettings';
 import Environments from './pages/environments/Environments';
 import AccountSettings from './pages/settings/AccountSettings';
 import ExternalAuthCallback from './pages/auth/ExternalAuthCallback';
+import GitHubAppInstallCallback from './pages/auth/GitHubAppInstallCallback';
 import NewService from './pages/services/NewService';
 import NewServiceRepoSelection from './pages/services/NewServiceRepoSelection';
 import NewServiceConfigure from './pages/services/NewServiceConfigure';
@@ -29,6 +30,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/password-reset" element={<PasswordReset />} />
         <Route path="/oauth/callback" element={<ExternalAuthCallback />} />
+        <Route path="/github/install/callback" element={<GitHubAppInstallCallback />} />
       </Route>
       <Route path="/dashboard" element={<Navigate to="/projects" replace />} />
       <Route path="/projects" element={<DashboardLayout />}>

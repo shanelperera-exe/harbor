@@ -23,6 +23,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\shared\Harbor.Common\Harbor.Common.csproj" />
     <ProjectReference Include="..\..\shared\Harbor.Contracts\Harbor.Contracts.csproj" />
+    <ProjectReference Include="..\..\shared\Harbor.GitHub\Harbor.GitHub.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -19,4 +19,6 @@ public class DeploymentResponse
     public string Status { get; init; } = string.Empty;
     public DateTime StartedAt { get; init; }
     public DateTime? CompletedAt { get; init; }
+    public string? WorkflowFile { get; init; }
+    public string? WorkflowRef { get; init; }
 }

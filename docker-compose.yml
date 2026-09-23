@@ -56,6 +56,7 @@ services:
     environment:
       POSTGRES_SERVER: postgres
       POSTGRES_PORT: 5432
+      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL:-http://authentication-service:8080}
     ports:
       - "5002:8080"
     depends_on:
@@ -86,6 +87,7 @@ services:
     environment:
       POSTGRES_SERVER: postgres
       POSTGRES_PORT: 5432
+      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL:-http://authentication-service:8080}
     ports:
       - "5004:8080"
     depends_on:

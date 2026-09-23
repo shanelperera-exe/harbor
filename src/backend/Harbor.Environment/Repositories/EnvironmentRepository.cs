@@ -105,19 +105,70 @@ public class EnvironmentRepository(DbConnectionFactory dbFactory) : IEnvironment
         return await command.ExecuteNonQueryAsync() > 0;
     }
 
-    public async Task<bool> DeleteAsync(int environmentId, int projectId)
-    {
-        await using var connection = dbFactory.CreateConnection();
-        await connection.OpenAsync();
-        await using var command = connection.CreateCommand();
+public async Task<bool> DeleteAsync(int environmentId, int projectId)
+        {
+            await using var connection = dbFactory.CreateConnection();
+            await connection.OpenAsync();
+            await using var transaction = await connection.BeginTransactionAsync();
+            
+            try
+            {
+                // First delete services associated with this environment
+                await using (var deleteServicesCmd = connection.CreateCommand())
+                {
+                    deleteServicesCmd.Transaction = transaction;
+                    deleteServicesCmd.CommandText = """
+                        DELETE FROM "Services" 
+                        WHERE "ProjectId" = @projectId 
+                        AND "Id" IN (
+                            SELECT s."Id" FROM "Services" s
+                            JOIN "Deployments" d ON d."ServiceId" = s."Id"
+                            WHERE s."ProjectId" = @projectId
+                            AND d."Environment" IN (
+                                SELECT "Name" FROM "Environments" WHERE "Id" = @environmentId AND "ProjectId" = @projectId
+                            )
+                        );
+                        """;
+                    deleteServicesCmd.Parameters.AddWithValue("projectId", projectId);
+                    deleteServicesCmd.Parameters.AddWithValue("environmentId", environmentId);
+                    await deleteServicesCmd.ExecuteNonQueryAsync();
+                }
 
-        command.CommandText = "DELETE FROM \"Environments\" WHERE \"Id\" = @environmentId AND \"ProjectId\" = @projectId AND \"IsActive\" = TRUE;";
+                // Then delete deployments associated with this environment
+                await using (var deleteDeploymentsCmd = connection.CreateCommand())
+                {
+                    deleteDeploymentsCmd.Transaction = transaction;
+                    deleteDeploymentsCmd.CommandText = """
+                        DELETE FROM "Deployments" 
+                        WHERE "ProjectId" = @projectId
+                        AND "Environment" IN (
+                            SELECT "Name" FROM "Environments" WHERE "Id" = @environmentId AND "ProjectId" = @projectId
+                        );
+                        """;
+                    deleteDeploymentsCmd.Parameters.AddWithValue("projectId", projectId);
+                    deleteDeploymentsCmd.Parameters.AddWithValue("environmentId", environmentId);
+                    await deleteDeploymentsCmd.ExecuteNonQueryAsync();
+                }
 
-        command.Parameters.AddWithValue("environmentId", environmentId);
-        command.Parameters.AddWithValue("projectId", projectId);
-
-        return await command.ExecuteNonQueryAsync() > 0;
-    }
+                // Finally delete the environment itself
+                await using (var deleteEnvCmd = connection.CreateCommand())
+                {
+                    deleteEnvCmd.Transaction = transaction;
+                    deleteEnvCmd.CommandText = "DELETE FROM \"Environments\" WHERE \"Id\" = @environmentId AND \"ProjectId\" = @projectId AND \"IsActive\" = TRUE;";
+                    deleteEnvCmd.Parameters.AddWithValue("environmentId", environmentId);
+                    deleteEnvCmd.Parameters.AddWithValue("projectId", projectId);
+                    var rowsAffected = await deleteEnvCmd.ExecuteNonQueryAsync();
+                    
+                    await transaction.CommitAsync();
+                    return rowsAffected > 0;
+                }
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+        }
 
     public async Task<bool> DeactivateAsync(int environmentId, int projectId, DateTime deactivatedAt)
     {

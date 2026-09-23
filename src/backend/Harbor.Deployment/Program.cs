@@ -2,6 +2,7 @@ using DotNetEnv;
 using Harbor.Deployment.Data;
 using Harbor.Deployment.Repositories;
 using Harbor.Deployment.Services;
+using Harbor.GitHub;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
@@ -24,9 +25,9 @@ if (allowedOrigins == null || allowedOrigins.Length == 0)
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("DefaultPolicy", policy =>
-        policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod());
+        policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod().AllowCredentials());
     options.AddDefaultPolicy(policy =>
-        policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod());
+        policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod().AllowCredentials());
 });
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
@@ -60,8 +61,8 @@ builder.Services.AddSwaggerGen(options =>
 
 var jwtSecret = builder.Configuration["JWT_SECRET"]
     ?? throw new InvalidOperationException("JWT_SECRET is not configured.");
-var jwtIssuer = builder.Configuration["JWT_ISSUER"] ?? "harbor-auth";
-var jwtAudience = builder.Configuration["JWT_AUDIENCE"] ?? "harbor-web";
+var jwtIssuer = builder.Configuration["JWT_ISSUER"] ?? "harbor";
+var jwtAudience = builder.Configuration["JWT_AUDIENCE"] ?? "harbor-api";
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options => options.TokenValidationParameters = new TokenValidationParameters
     {
@@ -77,6 +78,28 @@ builder.Services.AddAuthorization();
 builder.Services.AddSingleton<DbConnectionFactory>();
 builder.Services.AddScoped<IDeploymentRepository, DeploymentRepository>();
 builder.Services.AddScoped<IDeploymentService, DeploymentService>();
+builder.Services.AddScoped<IInstallationTokenResolver, InstallationTokenResolver>();
+builder.Services.AddHarborGitHubApp();
+builder.Services.Configure<GitHubActionsOptions>(options =>
+{
+    options.ApiBaseUrl = builder.Configuration["GITHUB_API_BASE_URL"] ?? "https://api.github.com/";
+    options.DefaultWorkflowFile = builder.Configuration["GITHUB_ACTIONS_WORKFLOW"] ?? "deploy.yml";
+    options.AuthServiceClientUrl = builder.Configuration["AUTH_SERVICE_URL"] ?? "http://authentication-service:8080";
+});
+builder.Services.AddHttpClient<IGitHubActionsClient, GitHubActionsClient>((services, client) =>
+{
+    var options = services.GetRequiredService<Microsoft.Extensions.Options.IOptions<GitHubActionsOptions>>().Value;
+    client.BaseAddress = new Uri(options.ApiBaseUrl);
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("Harbor-Deployment-Service");
+    client.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
+});
+builder.Services.AddHttpClient<IInstallationTokenResolver, InstallationTokenResolver>((services, client) =>
+{
+    var options = services.GetRequiredService<Microsoft.Extensions.Options.IOptions<GitHubActionsOptions>>().Value;
+    client.BaseAddress = new Uri(options.AuthServiceClientUrl ?? "http://authentication-service:8080");
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("Harbor-Deployment-Service");
+    client.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
+});
 
 var app = builder.Build();
 DatabaseInitializer.Initialize(app.Configuration);

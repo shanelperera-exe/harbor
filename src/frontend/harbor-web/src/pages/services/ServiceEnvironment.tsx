@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Database, Plus, Trash2, Eye, EyeOff } from 'lucide-react';
+import { Database, Plus, Eye, EyeOff } from 'lucide-react';
 
 export default function ServiceEnvironment() {
   const [showValues, setShowValues] = useState(false);

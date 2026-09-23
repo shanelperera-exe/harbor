@@ -2,7 +2,7 @@ import { useParams } from 'react-router-dom';
 import { Activity } from 'lucide-react';
 
 export default function ServiceMetrics() {
-  const { serviceId } = useParams();
+  useParams();
 
   return (
     <div className="flex flex-col flex-1 w-full max-w-[1920px] mx-auto px-4 md:px-12 mt-8 mb-20">

@@ -72,12 +72,17 @@ jobs:
             SMTP_FROM_NAME=${{ vars.SMTP_FROM_NAME }}
             SMTP_FROM_EMAIL=${{ vars.SMTP_FROM_EMAIL }}
             ENVIRONMENT_SECRETS_KEY=${{ secrets.ENVIRONMENT_SECRETS_KEY }}
-            GITHUB_TOKEN=${{ secrets.GH_TOKEN }}
+            GITHUB_APP_ID=${{ vars.GH_APP_ID }}
+            GITHUB_APP_CLIENT_ID=${{ vars.GH_APP_CLIENT_ID }}
+            GITHUB_APP_CLIENT_SECRET=${{ secrets.GH_APP_CLIENT_SECRET }}
+            GITHUB_APP_PRIVATE_KEY_BASE64=${{ secrets.GH_APP_PRIVATE_KEY_BASE64 }}
+            GITHUB_APP_SLUG=${{ vars.GH_APP_SLUG }}
+            GITHUB_APP_WEBHOOK_SECRET=${{ secrets.GH_APP_WEBHOOK_SECRET }}
             GITHUB_WEBHOOK_SECRET=${{ secrets.GH_WEBHOOK_SECRET }}
+            GITHUB_API_BASE_URL=${{ vars.GH_API_BASE_URL }}
             GOOGLE_CLIENT_ID=${{ vars.GOOGLE_CLIENT_ID }}
             GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
-            GITHUB_CLIENT_ID=${{ vars.GITHUB_CLIENT_ID }}
-            GITHUB_CLIENT_SECRET=${{ secrets.GITHUB_CLIENT_SECRET }}
+            AUTH_SERVICE_URL=${{ vars.API_GATEWAY_URL }}
             FRONTEND_URL=${{ vars.FRONTEND_URL }}
             API_GATEWAY_URL=${{ vars.API_GATEWAY_URL }}
 
@@ -88,10 +93,11 @@ jobs:
           ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
           ENVIRONMENT_SECRETS_KEY: ${{ secrets.ENVIRONMENT_SECRETS_KEY }}
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
           GH_WEBHOOK_SECRET: ${{ secrets.GH_WEBHOOK_SECRET }}
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
-          GITHUB_CLIENT_SECRET: ${{ secrets.GITHUB_CLIENT_SECRET }}
+          GITHUB_APP_CLIENT_SECRET: ${{ secrets.GH_APP_CLIENT_SECRET }}
+          GITHUB_APP_PRIVATE_KEY_BASE64: ${{ secrets.GH_APP_PRIVATE_KEY_BASE64 }}
+          GITHUB_APP_WEBHOOK_SECRET: ${{ secrets.GH_APP_WEBHOOK_SECRET }}
         run: |
           for attempt in 1 2 3; do
             if az containerapp update \
@@ -118,12 +124,17 @@ jobs:
                 "SMTP_FROM_NAME=${{ vars.SMTP_FROM_NAME }}" \
                 "SMTP_FROM_EMAIL=${{ vars.SMTP_FROM_EMAIL }}" \
                 "ENVIRONMENT_SECRETS_KEY=$ENVIRONMENT_SECRETS_KEY" \
-                "GITHUB_TOKEN=$GH_TOKEN" \
+                "GITHUB_APP_ID=${{ vars.GH_APP_ID }}" \
+                "GITHUB_APP_CLIENT_ID=${{ vars.GH_APP_CLIENT_ID }}" \
+                "GITHUB_APP_CLIENT_SECRET=$GITHUB_APP_CLIENT_SECRET" \
+                "GITHUB_APP_PRIVATE_KEY_BASE64=${{ secrets.GH_APP_PRIVATE_KEY_BASE64 }}" \
+                "GITHUB_APP_SLUG=${{ vars.GH_APP_SLUG }}" \
+                "GITHUB_APP_WEBHOOK_SECRET=${{ secrets.GH_APP_WEBHOOK_SECRET }}" \
                 "GITHUB_WEBHOOK_SECRET=$GH_WEBHOOK_SECRET" \
+                "GITHUB_API_BASE_URL=${{ vars.GH_API_BASE_URL }}" \
                 "GOOGLE_CLIENT_ID=${{ vars.GOOGLE_CLIENT_ID }}" \
                 "GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET" \
-                "GITHUB_CLIENT_ID=${{ vars.GH_CLIENT_ID }}" \
-                "GITHUB_CLIENT_SECRET=$GH_CLIENT_SECRET" \
+                "AUTH_SERVICE_URL=${{ vars.API_GATEWAY_URL }}" \
                 "FRONTEND_URL=${{ vars.FRONTEND_URL }}" \
                 "API_GATEWAY_URL=${{ vars.API_GATEWAY_URL }}" \
                 "ALLOWED_ORIGINS=${{ vars.ALLOWED_ORIGINS }}"; then

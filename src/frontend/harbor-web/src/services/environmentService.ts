@@ -48,7 +48,7 @@ export interface ConfigureEnvironmentPayload {
 
 function headers(): HeadersInit {
   const token = localStorage.getItem('harbor_token');
-  return { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+  return { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
 }
 
 async function parse<T>(response: Response, fallback: string): Promise<T> {

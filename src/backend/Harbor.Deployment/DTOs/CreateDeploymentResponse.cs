@@ -11,4 +11,9 @@ public class CreateDeploymentResponse
     public string? CommitSha { get; init; }
     public string Status { get; init; } = string.Empty;
     public DateTime StartedAt { get; init; }
+    public string? FailureReason { get; init; }
+    /// <summary>Set when the CI gate blocked deployment. Frontend should show a "CI is failing — deploy anyway?" prompt.</summary>
+    public string? CiWarning { get; init; }
+    /// <summary>Direct link to the GitHub Actions run for this deployment.</summary>
+    public string? WorkflowRunUrl { get; init; }
 }

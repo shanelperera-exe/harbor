@@ -2,12 +2,16 @@ using DotNetEnv;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Authentication.OAuth;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.AspNetCore.HttpOverrides;
 using System.Text;
 using Dapper;
+using Harbor.GitHub;
+using Harbor.GitHub.Services;
+using Harbor.Authentication.Services;
+using Harbor.Authentication.Models;
+using Harbor.Authentication.Repositories;
 Env.TraversePath().Load();
 
 var builder = WebApplication.CreateBuilder(args);
@@ -32,13 +36,15 @@ builder.Services.AddCors(options =>
     {
         policy.WithOrigins(allowedOrigins)
               .AllowAnyHeader()
-              .AllowAnyMethod();
+              .AllowAnyMethod()
+              .AllowCredentials();
     });
     options.AddDefaultPolicy(policy =>
     {
         policy.WithOrigins(allowedOrigins)
               .AllowAnyHeader()
-              .AllowAnyMethod();
+              .AllowAnyMethod()
+              .AllowCredentials();
     });
 });
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
@@ -72,20 +78,24 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 
-var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET")!;
-var jwtIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER") ?? "HarborAuth";
-var jwtAudience = Environment.GetEnvironmentVariable("JWT_AUDIENCE") ?? "HarborClients";
+var jwtSecret = builder.Configuration["JWT_SECRET"] ?? throw new InvalidOperationException("JWT_SECRET is not configured.");
+var jwtIssuer = builder.Configuration["JWT_ISSUER"] ?? "harbor";
+var jwtAudience = builder.Configuration["JWT_AUDIENCE"] ?? "harbor-api";
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddCookie("External", options =>
     {
         options.ExpireTimeSpan = TimeSpan.FromMinutes(5);
         options.Cookie.Name = "harbor.external";
+        options.Cookie.SameSite = SameSiteMode.None;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
     })
     .AddCookie("ExternalLink", options =>
     {
         options.ExpireTimeSpan = TimeSpan.FromMinutes(5);
         options.Cookie.Name = "harbor.external-link";
+        options.Cookie.SameSite = SameSiteMode.None;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
     })
     .AddJwtBearer(options =>
     {
@@ -135,63 +145,26 @@ if (!string.IsNullOrWhiteSpace(googleClientId) && !string.IsNullOrWhiteSpace(goo
     });
 }
 
-var githubClientId = Environment.GetEnvironmentVariable("GITHUB_CLIENT_ID");
-var githubClientSecret = Environment.GetEnvironmentVariable("GITHUB_CLIENT_SECRET");
-if (!string.IsNullOrWhiteSpace(githubClientId) && !string.IsNullOrWhiteSpace(githubClientSecret))
-{
-    builder.Services.AddAuthentication().AddOAuth("GitHub", options =>
-    {
-        options.ClientId = githubClientId;
-        options.ClientSecret = githubClientSecret;
-        options.SignInScheme = "External";
-        options.CallbackPath = "/api/auth/external/github/callback";
-        options.AuthorizationEndpoint = "https://github.com/login/oauth/authorize";
-        options.TokenEndpoint = "https://github.com/login/oauth/access_token";
-        options.UserInformationEndpoint = "https://api.github.com/user";
-        options.SaveTokens = true;
-        options.Scope.Add("user:email");
-        options.Scope.Add("repo");
-        options.Events.OnRedirectToAuthorizationEndpoint = context =>
-        {
-            context.Response.Redirect(UsePublicCallbackOrigin(context.RedirectUri, publicApiOrigin, options.CallbackPath));
-            return Task.CompletedTask;
-        };
-        options.ClaimActions.MapJsonKey(System.Security.Claims.ClaimTypes.NameIdentifier, "id");
-        options.ClaimActions.MapJsonKey(System.Security.Claims.ClaimTypes.Name, "login");
-        options.ClaimActions.MapJsonKey(System.Security.Claims.ClaimTypes.Email, "email");
-        options.Events.OnCreatingTicket = async context =>
-        {
-            using var request = new HttpRequestMessage(HttpMethod.Get, context.Options.UserInformationEndpoint);
-            request.Headers.Accept.ParseAdd("application/json");
-            request.Headers.UserAgent.ParseAdd("Harbor");
-            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", context.AccessToken);
-            using var response = await context.Backchannel.SendAsync(request, context.HttpContext.RequestAborted);
-            response.EnsureSuccessStatusCode();
-            using var user = System.Text.Json.JsonDocument.Parse(await response.Content.ReadAsStringAsync(context.HttpContext.RequestAborted));
-            context.RunClaimActions(user.RootElement);
+// GitHub App authentication replaces the previous OAuth App flow.
+// One GitHub App handles both user login (user access token) and
+// deployments (installation access token).
+builder.Services.AddHarborGitHubApp();
 
-            if (!context.Identity!.Claims.Any(claim => claim.Type == System.Security.Claims.ClaimTypes.Email))
-            {
-                using var emailsRequest = new HttpRequestMessage(HttpMethod.Get, "https://api.github.com/user/emails");
-                emailsRequest.Headers.Accept.ParseAdd("application/json");
-                emailsRequest.Headers.UserAgent.ParseAdd("Harbor");
-                emailsRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", context.AccessToken);
-                using var emailsResponse = await context.Backchannel.SendAsync(emailsRequest, context.HttpContext.RequestAborted);
-                emailsResponse.EnsureSuccessStatusCode();
-                using var emails = System.Text.Json.JsonDocument.Parse(await emailsResponse.Content.ReadAsStringAsync(context.HttpContext.RequestAborted));
-                var primaryEmail = emails.RootElement.EnumerateArray().FirstOrDefault(email => email.GetProperty("primary").GetBoolean() && email.GetProperty("verified").GetBoolean());
-                if (primaryEmail.ValueKind != System.Text.Json.JsonValueKind.Undefined)
-                {
-                    context.Identity.AddClaim(new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Email, primaryEmail.GetProperty("email").GetString()!));
-                }
-            }
-        };
-        options.Events.OnTicketReceived = context =>
-        {
-            context.ReturnUri = "/api/auth/external/github/complete";
-            return Task.CompletedTask;
-        };
-    });
+builder.Services.AddHttpClient("GitHubAppEmails", client =>
+{
+    client.BaseAddress = new Uri("https://api.github.com/");
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("Harbor");
+    client.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
+});
+
+builder.Services.AddScoped<Harbor.Authentication.Services.IEncryptionService, Harbor.Authentication.Services.EncryptionService>();
+
+// Only register the GitHub App auth service and internal endpoints if the App is configured
+if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("GITHUB_APP_CLIENT_ID"))
+    && !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("GITHUB_APP_CLIENT_SECRET"))
+    && !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("GITHUB_APP_PRIVATE_KEY_BASE64")))
+{
+    builder.Services.AddScoped<Harbor.Authentication.Services.IGitHubAppAuthService, Harbor.Authentication.Services.GitHubAppAuthService>();
 }
 
 builder.Services.AddAuthorization();
@@ -203,6 +176,7 @@ builder.Services.AddScoped<Harbor.Authentication.Services.IAuthService, Harbor.A
 builder.Services.AddScoped<Harbor.Authentication.Services.IJwtService, Harbor.Authentication.Services.JwtService>();
 builder.Services.AddScoped<Harbor.Authentication.Services.IEmailService, Harbor.Authentication.Services.EmailService>();
 builder.Services.AddScoped<Harbor.Authentication.Services.IExternalAuthService, Harbor.Authentication.Services.ExternalAuthService>();
+builder.Services.AddScoped<Harbor.Authentication.Services.IEncryptionService, Harbor.Authentication.Services.EncryptionService>();
 
 var app = builder.Build();
 

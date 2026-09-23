@@ -41,7 +41,8 @@ namespace Harbor.Project.Services
                 RepositoryUrl = request.RepositoryUrl?.Trim(),
                 RepositoryName = request.RepositoryName?.Trim(),
                 RepositoryBranch = request.RepositoryBranch?.Trim(),
-                RepositoryCommit = request.RepositoryCommit?.Trim()
+                RepositoryCommit = request.RepositoryCommit?.Trim(),
+                WorkflowFile = string.IsNullOrWhiteSpace(request.WorkflowFile) ? "deploy.yml" : request.WorkflowFile.Trim()
             };
 
             var id = await _serviceRepository.CreateAsync(serviceEntity);
@@ -87,6 +88,37 @@ namespace Harbor.Project.Services
             return (true, null, ToResponse(service));
         }
 
+        public async Task<(bool Success, string? Error, ServiceResponse? Data)> UpdateAsync(string serviceId, UpdateServiceRequest request, int userId, bool isAdmin)
+        {
+            var service = await _serviceRepository.GetByIdOrPublicIdAsync(serviceId);
+            if (service == null) return (false, "Service not found.", null);
+
+            var project = await _projectRepository.GetByIdAsync(service.ProjectId);
+            if (project == null) return (false, "Project not found.", null);
+            if (!isAdmin && project.OwnerId != userId) return (false, "You do not have permission to update this service.", null);
+
+            if (request.WorkflowFile != null)
+            {
+                service.WorkflowFile = string.IsNullOrWhiteSpace(request.WorkflowFile) ? "deploy.yml" : request.WorkflowFile.Trim();
+            }
+
+            if (request.BuildCommand != null)
+            {
+                service.BuildCommand = string.IsNullOrWhiteSpace(request.BuildCommand) ? null : request.BuildCommand.Trim();
+            }
+
+            if (request.StartCommand != null)
+            {
+                service.StartCommand = string.IsNullOrWhiteSpace(request.StartCommand) ? null : request.StartCommand.Trim();
+            }
+
+            var updated = await _serviceRepository.UpdateAsync(service);
+            if (!updated) return (false, "Failed to update service.", null);
+
+            var updatedService = await _serviceRepository.GetByIdAsync(service.Id);
+            return (true, null, ToResponse(updatedService!));
+        }
+
         private static ServiceResponse ToResponse(ServiceEntity s) => new()
         {
             Id = s.Id,
@@ -98,6 +130,9 @@ namespace Harbor.Project.Services
             RepositoryName = s.RepositoryName,
             RepositoryBranch = s.RepositoryBranch,
             RepositoryCommit = s.RepositoryCommit,
+            WorkflowFile = s.WorkflowFile,
+            BuildCommand = s.BuildCommand,
+            StartCommand = s.StartCommand,
             CreatedAt = s.CreatedAt
         };
     }

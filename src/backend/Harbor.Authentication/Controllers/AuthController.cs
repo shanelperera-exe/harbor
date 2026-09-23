@@ -2,9 +2,13 @@ using Microsoft.AspNetCore.Mvc;
 using Harbor.Authentication.DTOs;
 using Harbor.Authentication.Services;
 using Harbor.Authentication.Responses;
+using Harbor.Authentication.Repositories;
+using Harbor.GitHub.Services;
+using Harbor.GitHub;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authentication;
 using System.Security.Claims;
+using Microsoft.Extensions.Options;
 
 namespace Harbor.Authentication.Controllers
 {
@@ -14,11 +18,28 @@ namespace Harbor.Authentication.Controllers
     {
         private readonly IAuthService _authService;
         private readonly IExternalAuthService? _externalAuthService;
+        private readonly IGitHubAppAuthService? _gitHubAppAuthService;
+        private readonly IUserRepository _userRepository;
+        private readonly IEncryptionService _encryptionService;
+        private readonly IGitHubAppApiClient _appClient;
+        private readonly GitHubAppOptions _appOptions;
 
-        public AuthController(IAuthService authService, IExternalAuthService? externalAuthService = null)
+        public AuthController(
+            IAuthService authService, 
+            IUserRepository userRepository,
+            IEncryptionService encryptionService,
+            IGitHubAppApiClient appClient,
+            IOptions<GitHubAppOptions> appOptions,
+            IExternalAuthService? externalAuthService = null, 
+            IGitHubAppAuthService? gitHubAppAuthService = null)
         {
             _authService = authService;
             _externalAuthService = externalAuthService;
+            _gitHubAppAuthService = gitHubAppAuthService;
+            _userRepository = userRepository;
+            _encryptionService = encryptionService;
+            _appClient = appClient;
+            _appOptions = appOptions.Value;
         }
 
         [HttpPost("register")]
@@ -135,12 +156,32 @@ namespace Harbor.Authentication.Controllers
 
         [AllowAnonymous]
         [HttpGet("external/{provider}")]
-        public IActionResult ExternalLogin(string provider)
+        public async Task<IActionResult> ExternalLogin(string provider)
         {
+            if (provider.Equals("github", StringComparison.OrdinalIgnoreCase))
+            {
+                if (_gitHubAppAuthService == null)
+                {
+                    return Problem(detail: "GitHub login is not configured.", statusCode: StatusCodes.Status503ServiceUnavailable, title: "External login unavailable");
+                }
+
+                var startResponse = await _gitHubAppAuthService.StartAuthFlowAsync();
+                if (startResponse == null)
+                {
+                    return Problem(detail: "GitHub login is not configured.", statusCode: StatusCodes.Status503ServiceUnavailable, title: "External login unavailable");
+                }
+
+                var linkIdentity = new ClaimsIdentity("ExternalLink");
+                linkIdentity.AddClaim(new Claim("github_state", startResponse.State));
+                linkIdentity.AddClaim(new Claim("github_code_verifier", startResponse.CodeVerifier));
+                await HttpContext.SignInAsync("ExternalLink", new ClaimsPrincipal(linkIdentity), new AuthenticationProperties { IsPersistent = false });
+
+                return Redirect(startResponse.RedirectUrl);
+            }
+
             var scheme = provider.ToLowerInvariant() switch
             {
                 "google" => "Google",
-                "github" => "GitHub",
                 _ => null
             };
             if (scheme == null)
@@ -148,9 +189,7 @@ namespace Harbor.Authentication.Controllers
                 return NotFound(new { message = "Unsupported external login provider." });
             }
 
-            var configured = scheme == "Google"
-                ? !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID")) && !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET"))
-                : !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("GITHUB_CLIENT_ID")) && !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("GITHUB_CLIENT_SECRET"));
+            var configured = !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID")) && !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET"));
             if (!configured)
             {
                 return Problem(detail: $"{scheme} login is not configured.", statusCode: StatusCodes.Status503ServiceUnavailable, title: "External login unavailable");
@@ -163,6 +202,11 @@ namespace Harbor.Authentication.Controllers
         [HttpGet("external/{provider}/complete")]
         public async Task<IActionResult> ExternalLoginComplete(string provider)
         {
+            if (provider.Equals("github", StringComparison.OrdinalIgnoreCase))
+            {
+                return await GitHubAppCallback();
+            }
+
             if (_externalAuthService == null)
             {
                 return Problem(detail: "External login is unavailable.", statusCode: StatusCodes.Status503ServiceUnavailable, title: "External login unavailable");
@@ -197,22 +241,86 @@ namespace Harbor.Authentication.Controllers
             return RedirectToFrontend(query);
         }
 
+        [AllowAnonymous]
+        [HttpGet("external/github/callback")]
+        public async Task<IActionResult> GitHubAppCallback(string? code = null, string? state = null, string? error = null)
+        {
+            if (_gitHubAppAuthService == null)
+                return Problem(detail: "GitHub login is not configured.", statusCode: StatusCodes.Status503ServiceUnavailable, title: "External login unavailable");
+
+            if (!string.IsNullOrEmpty(error))
+                return RedirectToFrontend($"error={Uri.EscapeDataString(error)}");
+
+            var linkResult = await HttpContext.AuthenticateAsync("ExternalLink");
+            if (!linkResult.Succeeded || linkResult.Principal == null)
+                return RedirectToFrontend("error=State%20validation%20failed");
+
+            var storedState = linkResult.Principal.FindFirstValue("github_state");
+            var codeVerifier = linkResult.Principal.FindFirstValue("github_code_verifier");
+
+            if (storedState != state)
+            {
+                await HttpContext.SignOutAsync("ExternalLink");
+                return RedirectToFrontend("error=State%20validation%20failed");
+            }
+
+            var isLink = linkResult.Principal.FindFirstValue("is_link") == "true";
+            var linkUserIdStr = linkResult.Principal.FindFirstValue("userId");
+
+            await HttpContext.SignOutAsync("ExternalLink");
+
+            if (isLink && int.TryParse(linkUserIdStr, out var linkUserId))
+            {
+                var (linked, linkError) = await _gitHubAppAuthService.LinkAccountAsync(linkUserId, code ?? string.Empty, state ?? string.Empty, codeVerifier ?? string.Empty);
+                return linked
+                    ? RedirectToFrontend("linked=true")
+                    : RedirectToFrontend($"error={Uri.EscapeDataString(linkError ?? "Unable to link provider.")}");
+            }
+
+            var (success, callbackError, data) = await _gitHubAppAuthService.CompleteAuthFlowAsync(code ?? string.Empty, state ?? string.Empty, codeVerifier ?? string.Empty);
+            if (!success || data == null)
+                return RedirectToFrontend($"error={Uri.EscapeDataString(callbackError ?? "External login failed.")}");
+
+            var query = $"token={Uri.EscapeDataString(data.Token)}&username={Uri.EscapeDataString(data.Username)}&email={Uri.EscapeDataString(data.Email)}&role={Uri.EscapeDataString(data.Role)}&avatarSvg={Uri.EscapeDataString(data.AvatarSvg ?? string.Empty)}";
+            return RedirectToFrontend(query);
+        }
+
         [Authorize]
         [HttpPost("external/{provider}/link")]
         public async Task<IActionResult> LinkExternalLogin(string provider)
         {
             if (!TryGetUserId(out var userId)) return Unauthorized();
+
+            if (provider.Equals("github", StringComparison.OrdinalIgnoreCase))
+            {
+                if (_gitHubAppAuthService == null)
+                    return Problem(detail: "GitHub login is not configured.", statusCode: StatusCodes.Status503ServiceUnavailable, title: "External login unavailable");
+
+                var linkIdentity = new ClaimsIdentity("ExternalLink");
+                linkIdentity.AddClaim(new Claim("userId", userId.ToString()));
+
+                var startResponse = await _gitHubAppAuthService.StartAuthFlowAsync();
+                if (startResponse == null)
+                    return Problem(detail: "GitHub login is not configured.", statusCode: StatusCodes.Status503ServiceUnavailable, title: "External login unavailable");
+
+                linkIdentity.AddClaim(new Claim("github_state", startResponse.State));
+                linkIdentity.AddClaim(new Claim("github_code_verifier", startResponse.CodeVerifier));
+                linkIdentity.AddClaim(new Claim("is_link", "true"));
+
+                await HttpContext.SignInAsync("ExternalLink", new ClaimsPrincipal(linkIdentity), new AuthenticationProperties { IsPersistent = false });
+                return Ok(new { url = startResponse.RedirectUrl });
+            }
+
             var scheme = provider.ToLowerInvariant() switch
             {
                 "google" => "Google",
-                "github" => "GitHub",
                 _ => null
             };
             if (scheme == null) return NotFound(new { message = "Unsupported external login provider." });
 
-            var linkIdentity = new ClaimsIdentity("ExternalLink");
-            linkIdentity.AddClaim(new Claim("userId", userId.ToString()));
-            await HttpContext.SignInAsync("ExternalLink", new ClaimsPrincipal(linkIdentity), new AuthenticationProperties { IsPersistent = false });
+            var linkIdentity2 = new ClaimsIdentity("ExternalLink");
+            linkIdentity2.AddClaim(new Claim("userId", userId.ToString()));
+            await HttpContext.SignInAsync("ExternalLink", new ClaimsPrincipal(linkIdentity2), new AuthenticationProperties { IsPersistent = false });
             return Ok(new { url = $"/api/auth/external/{provider.ToLowerInvariant()}/link/start" });
         }
 
@@ -250,14 +358,41 @@ namespace Harbor.Authentication.Controllers
         [HttpGet("external/{provider}/link/start")]
         public IActionResult StartLinkedExternalLogin(string provider)
         {
+            if (provider.Equals("github", StringComparison.OrdinalIgnoreCase))
+            {
+                return RedirectToFrontend("error=GitHub%20link%20must%20be%20started%20via%20POST");
+            }
+
             var scheme = provider.ToLowerInvariant() switch
             {
                 "google" => "Google",
-                "github" => "GitHub",
                 _ => null
             };
             if (scheme == null) return NotFound(new { message = "Unsupported external login provider." });
             return Challenge(new AuthenticationProperties { RedirectUri = $"/api/auth/external/{provider.ToLowerInvariant()}/complete" }, scheme);
+        }
+
+        [Authorize]
+        [HttpPost("github/refresh-installation")]
+        public async Task<IActionResult> RefreshGitHubInstallation()
+        {
+            if (!TryGetUserId(out var userId)) return Unauthorized();
+
+            // Get user's encrypted GitHub token
+            var accessToken = await _userRepository.GetExternalAccessTokenAsync(userId, "github");
+            if (string.IsNullOrWhiteSpace(accessToken))
+                return NotFound(new { message = "GitHub account not connected." });
+
+            var decrypted = _encryptionService.Decrypt(accessToken);
+
+            // Get user's installation ID from GitHub
+            var installationId = await _appClient.GetUserInstallationIdAsync(decrypted);
+            if (!installationId.HasValue)
+                return NotFound(new { message = "No GitHub App installations found for this user. Please install the Harbor GitHub App on your account or organization." });
+
+            await _userRepository.SetGitHubInstallationAsync(userId, installationId.Value);
+
+            return Ok(new { InstallationId = installationId.Value, Message = "GitHub installation refreshed successfully." });
         }
 
         private static IActionResult RedirectToFrontend(string query)

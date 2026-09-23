@@ -71,7 +71,7 @@ public class DeploymentsControllerTests
     public async Task GetHistory_PassesQueryParametersToService()
     {
         SetUser(userId: 5);
-        var query = new DeploymentHistoryQuery { ServiceId = 13, Status = "Failed", Page = 2, PageSize = 10 };
+        var query = new DeploymentHistoryQuery { ServiceId = "13", Status = "Failed", Page = 2, PageSize = 10 };
         _serviceMock.Setup(s => s.GetHistoryAsync(5, query)).ReturnsAsync(new DeploymentListResponse());
 
         await _controller.GetHistory(query);
@@ -144,7 +144,7 @@ public class DeploymentsControllerTests
     public async Task Create_NoUserIdClaim_ReturnsUnauthorized()
     {
         SetUser(userId: null);
-        var request = new CreateDeploymentRequest { ServiceId = 13, Environment = "production", Version = "1.0.0" };
+        var request = new CreateDeploymentRequest { ServiceId = "13", Environment = "production", Version = "1.0.0" };
 
         var result = await _controller.Create(request);
 
@@ -156,8 +156,8 @@ public class DeploymentsControllerTests
     public async Task Create_ValidRequest_Returns201WithDeploymentDetails()
     {
         SetUser(userId: 7);
-        var request = new CreateDeploymentRequest { ServiceId = 13, Environment = "production", Version = "1.4.0", CommitSha = "abc123" };
-        _serviceMock.Setup(s => s.CreateAsync(request, 7, false)).ReturnsAsync((true, (string?)null, 42));
+        var request = new CreateDeploymentRequest { ServiceId = "13", Environment = "production", Version = "1.4.0", CommitSha = "abc123" };
+        _serviceMock.Setup(s => s.CreateAsync(request, 7, false)).ReturnsAsync((true, (string?)null, (int?)42, "", (string?)null));
 
         var result = await _controller.Create(request);
 
@@ -165,7 +165,7 @@ public class DeploymentsControllerTests
         Assert.Equal(201, created.StatusCode);
         var body = Assert.IsType<CreateDeploymentResponse>(created.Value);
         Assert.Equal(42, body.Id);
-        Assert.Equal(13, body.ServiceId);
+        Assert.Equal("13", body.ServiceId);
         Assert.Equal(7, body.OwnerId);
         Assert.Equal("production", body.Environment);
         Assert.Equal("1.4.0", body.Version);
@@ -176,8 +176,8 @@ public class DeploymentsControllerTests
     public async Task Create_ServiceFailure_Returns400WithProblemDetail()
     {
         SetUser(userId: 7);
-        var request = new CreateDeploymentRequest { ServiceId = 999, Environment = "production", Version = "1.0.0" };
-        _serviceMock.Setup(s => s.CreateAsync(request, 7, false)).ReturnsAsync((false, "Service not found.", (int?)null));
+        var request = new CreateDeploymentRequest { ServiceId = "999", Environment = "production", Version = "1.0.0" };
+        _serviceMock.Setup(s => s.CreateAsync(request, 7, false)).ReturnsAsync((false, "Service not found.", (int?)null, "", (string?)null));
 
         var result = await _controller.Create(request);
 
@@ -189,8 +189,8 @@ public class DeploymentsControllerTests
     public async Task Create_PermissionDenied_Returns400WithProblemDetail()
     {
         SetUser(userId: 99);
-        var request = new CreateDeploymentRequest { ServiceId = 13, Environment = "production", Version = "1.0.0" };
-        _serviceMock.Setup(s => s.CreateAsync(request, 99, false)).ReturnsAsync((false, "You do not have permission to deploy this service.", (int?)null));
+        var request = new CreateDeploymentRequest { ServiceId = "13", Environment = "production", Version = "1.0.0" };
+        _serviceMock.Setup(s => s.CreateAsync(request, 99, false)).ReturnsAsync((false, "You do not have permission to deploy this service.", (int?)null, "", (string?)null));
 
         var result = await _controller.Create(request);
 
@@ -202,8 +202,8 @@ public class DeploymentsControllerTests
     public async Task Create_AdminUser_PassesIsAdminTrueToService()
     {
         SetUser(userId: 99, isAdmin: true);
-        var request = new CreateDeploymentRequest { ServiceId = 13, Environment = "production", Version = "1.0.0" };
-        _serviceMock.Setup(s => s.CreateAsync(request, 99, true)).ReturnsAsync((true, (string?)null, 10));
+        var request = new CreateDeploymentRequest { ServiceId = "13", Environment = "production", Version = "1.0.0" };
+        _serviceMock.Setup(s => s.CreateAsync(request, 99, true)).ReturnsAsync((true, (string?)null, (int?)10, "", (string?)null));
 
         await _controller.Create(request);
 
@@ -214,8 +214,8 @@ public class DeploymentsControllerTests
     public async Task Create_RegularUser_PassesIsAdminFalseToService()
     {
         SetUser(userId: 5);
-        var request = new CreateDeploymentRequest { ServiceId = 13, Environment = "staging", Version = "2.0.0" };
-        _serviceMock.Setup(s => s.CreateAsync(request, 5, false)).ReturnsAsync((true, (string?)null, 7));
+        var request = new CreateDeploymentRequest { ServiceId = "13", Environment = "staging", Version = "2.0.0" };
+        _serviceMock.Setup(s => s.CreateAsync(request, 5, false)).ReturnsAsync((true, (string?)null, (int?)7, "", (string?)null));
 
         await _controller.Create(request);
 
@@ -226,8 +226,8 @@ public class DeploymentsControllerTests
     public async Task Create_ValidRequest_ResponseContainsCommitSha()
     {
         SetUser(userId: 7);
-        var request = new CreateDeploymentRequest { ServiceId = 13, Environment = "production", Version = "1.0.0", CommitSha = "deadbeef" };
-        _serviceMock.Setup(s => s.CreateAsync(request, 7, false)).ReturnsAsync((true, (string?)null, 5));
+        var request = new CreateDeploymentRequest { ServiceId = "13", Environment = "production", Version = "1.0.0", CommitSha = "deadbeef" };
+        _serviceMock.Setup(s => s.CreateAsync(request, 7, false)).ReturnsAsync((true, (string?)null, (int?)5, "", (string?)null));
 
         var result = await _controller.Create(request);
 

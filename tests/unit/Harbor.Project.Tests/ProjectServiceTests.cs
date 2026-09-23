@@ -27,9 +27,7 @@ namespace Harbor.Project.Tests
             var request = new CreateProjectRequest
             {
                 Name = "harbor-api",
-                Description = "Backend API for Harbor",
-                RepositoryUrl = "https://github.com/team/harbor-api"
-            };
+                Description = "Backend API for Harbor",            };
             const int ownerId = 1;
 
             _projectRepositoryMock
@@ -63,9 +61,7 @@ namespace Harbor.Project.Tests
             var request = new CreateProjectRequest
             {
                 Name = "  harbor-api  ",
-                Description = "  some description  ",
-                RepositoryUrl = "  https://github.com/team/harbor-api  "
-            };
+                Description = "  some description  ",            };
 
             _projectRepositoryMock
                 .Setup(r => r.NameExistsForOwnerAsync("harbor-api", 1))
@@ -82,7 +78,7 @@ namespace Harbor.Project.Tests
             Assert.True(success);
             Assert.Equal("harbor-api", data!.Name);
             Assert.Equal("some description", data.Description);
-            Assert.Equal("https://github.com/team/harbor-api", data.RepositoryUrl);
+            
         }
 
         // ---------- CreateAsync: Scenario 3 - Invalid project data ----------
@@ -272,7 +268,7 @@ namespace Harbor.Project.Tests
                 .ReturnsAsync(updated);
 
             // Act
-            var (success, error, forbidden, data) = await _projectService.UpdateAsync(1, request, userId, isAdmin: false);
+            var (success, error, forbidden, data) = await _projectService.UpdateAsync("1", request, userId, isAdmin: false);
 
             // Assert
             Assert.True(success);
@@ -309,7 +305,7 @@ namespace Harbor.Project.Tests
             _projectRepositoryMock.Setup(r => r.UpdateAsync(It.IsAny<ProjectEntity>())).ReturnsAsync(true);
 
             // Act
-            var (success, error, forbidden, data) = await _projectService.UpdateAsync(1, request, userId, isAdmin: false);
+            var (success, error, forbidden, data) = await _projectService.UpdateAsync("1", request, userId, isAdmin: false);
 
             // Assert
             Assert.True(success);
@@ -324,7 +320,7 @@ namespace Harbor.Project.Tests
             var request = new UpdateProjectRequest { Name = "new-name" };
 
             // Act
-            var (success, error, forbidden, data) = await _projectService.UpdateAsync(999, request, userId: 1, isAdmin: false);
+            var (success, error, forbidden, data) = await _projectService.UpdateAsync("999", request, userId: 1, isAdmin: false);
 
             // Assert
             Assert.False(success);
@@ -343,7 +339,7 @@ namespace Harbor.Project.Tests
             var request = new UpdateProjectRequest { Name = "new-name" };
 
             // Act
-            var (success, error, forbidden, data) = await _projectService.UpdateAsync(1, request, userId, isAdmin: false);
+            var (success, error, forbidden, data) = await _projectService.UpdateAsync("1", request, userId, isAdmin: false);
 
             // Assert
             Assert.False(success);
@@ -367,7 +363,7 @@ namespace Harbor.Project.Tests
             var request = new UpdateProjectRequest { Name = name! };
 
             // Act
-            var (success, error, forbidden, data) = await _projectService.UpdateAsync(1, request, userId, isAdmin: false);
+            var (success, error, forbidden, data) = await _projectService.UpdateAsync("1", request, userId, isAdmin: false);
 
             // Assert
             Assert.False(success);
@@ -385,7 +381,7 @@ namespace Harbor.Project.Tests
             var request = new UpdateProjectRequest { Name = "old-name", Description = new string('d', 501) };
 
             // Act
-            var (success, error, forbidden, data) = await _projectService.UpdateAsync(1, request, userId, isAdmin: false);
+            var (success, error, forbidden, data) = await _projectService.UpdateAsync("1", request, userId, isAdmin: false);
 
             // Assert
             Assert.False(success);
@@ -403,7 +399,7 @@ namespace Harbor.Project.Tests
             var request = new UpdateProjectRequest { Name = "taken-name" };
 
             // Act
-            var (success, error, forbidden, data) = await _projectService.UpdateAsync(1, request, userId, isAdmin: false);
+            var (success, error, forbidden, data) = await _projectService.UpdateAsync("1", request, userId, isAdmin: false);
 
             // Assert
             Assert.False(success);
@@ -430,7 +426,7 @@ namespace Harbor.Project.Tests
             var request = new UpdateProjectRequest { Name = "new-name" };
 
             // Act
-            var (success, error, forbidden, data) = await _projectService.UpdateAsync(1, request, adminId, isAdmin: true);
+            var (success, error, forbidden, data) = await _projectService.UpdateAsync("1", request, adminId, isAdmin: true);
 
             // Assert
             Assert.True(success);
@@ -451,7 +447,7 @@ namespace Harbor.Project.Tests
             var request = new UpdateProjectRequest { Name = "new-name" };
 
             // Act
-            var (success, error, forbidden, data) = await _projectService.UpdateAsync(1, request, userId, isAdmin: false);
+            var (success, error, forbidden, data) = await _projectService.UpdateAsync("1", request, userId, isAdmin: false);
 
             // Assert
             Assert.False(success);
@@ -471,7 +467,7 @@ namespace Harbor.Project.Tests
             var request = new UpdateProjectRequest { Name = "new-name" };
 
             // Act: userId 20 does not own this project and is not an Admin
-            var (success, error, forbidden, data) = await _projectService.UpdateAsync(1, request, userId: 20, isAdmin: false);
+            var (success, error, forbidden, data) = await _projectService.UpdateAsync("1", request, userId: 20, isAdmin: false);
 
             // Assert
             Assert.False(success);
@@ -496,7 +492,7 @@ namespace Harbor.Project.Tests
                 .ReturnsAsync(true);
 
             // Act
-            var (success, error, forbidden) = await _projectService.ArchiveAsync(1, userId, isAdmin: false);
+            var (success, error, forbidden) = await _projectService.ArchiveAsync("1", userId, isAdmin: false);
 
             // Assert
             Assert.True(success);
@@ -513,7 +509,7 @@ namespace Harbor.Project.Tests
             _projectRepositoryMock.Setup(r => r.GetByIdAsync(999)).ReturnsAsync((ProjectEntity?)null);
 
             // Act
-            var (success, error, forbidden) = await _projectService.ArchiveAsync(999, userId: 1, isAdmin: false);
+            var (success, error, forbidden) = await _projectService.ArchiveAsync("999", userId: 1, isAdmin: false);
 
             // Assert
             Assert.False(success);
@@ -530,7 +526,7 @@ namespace Harbor.Project.Tests
             _projectRepositoryMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(existing);
 
             // Act
-            var (success, error, forbidden) = await _projectService.ArchiveAsync(1, userId, isAdmin: false);
+            var (success, error, forbidden) = await _projectService.ArchiveAsync("1", userId, isAdmin: false);
 
             // Assert
             Assert.False(success);
@@ -551,7 +547,7 @@ namespace Harbor.Project.Tests
             _projectRepositoryMock.Setup(r => r.ArchiveAsync(1, It.IsAny<DateTime>())).ReturnsAsync(true);
 
             // Act
-            var (success, error, forbidden) = await _projectService.ArchiveAsync(1, adminId, isAdmin: true);
+            var (success, error, forbidden) = await _projectService.ArchiveAsync("1", adminId, isAdmin: true);
 
             // Assert
             Assert.True(success);
@@ -568,7 +564,7 @@ namespace Harbor.Project.Tests
             _projectRepositoryMock.Setup(r => r.ArchiveAsync(1, It.IsAny<DateTime>())).ReturnsAsync(false);
 
             // Act
-            var (success, error, forbidden) = await _projectService.ArchiveAsync(1, userId, isAdmin: false);
+            var (success, error, forbidden) = await _projectService.ArchiveAsync("1", userId, isAdmin: false);
 
             // Assert
             Assert.False(success);
@@ -586,7 +582,7 @@ namespace Harbor.Project.Tests
             _projectRepositoryMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(existing);
 
             // Act: userId 20 does not own this project and is not an Admin
-            var (success, error, forbidden) = await _projectService.ArchiveAsync(1, userId: 20, isAdmin: false);
+            var (success, error, forbidden) = await _projectService.ArchiveAsync("1", userId: 20, isAdmin: false);
 
             // Assert
             Assert.False(success);

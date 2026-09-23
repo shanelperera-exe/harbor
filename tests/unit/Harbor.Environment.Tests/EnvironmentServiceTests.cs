@@ -15,7 +15,7 @@ public class EnvironmentServiceTests
     public EnvironmentServiceTests()
     {
         _service = new EnvironmentService(_repository.Object);
-        _repository.Setup(r => r.GetProjectAccessAsync(10)).ReturnsAsync((true, 5, false));
+        _repository.Setup(r => r.GetProjectAccessAsync("10")).ReturnsAsync((true, 5, 0, false));
         _repository.Setup(r => r.TypeExistsForProjectAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int?>())).ReturnsAsync(false);
         _repository.Setup(r => r.CreateAsync(It.IsAny<EnvironmentEntity>())).ReturnsAsync(42);
     }
@@ -26,7 +26,7 @@ public class EnvironmentServiceTests
     [InlineData("Production")]
     public async Task CreateAsync_SupportedTypeForOwner_CreatesEnvironment(string type)
     {
-        var result = await _service.CreateAsync(10, new CreateEnvironmentRequest { Name = "  primary  ", Type = type }, 5, false);
+        var result = await _service.CreateAsync("10", new CreateEnvironmentRequest { Name = "  primary  ", Type = type }, 5, false);
 
         Assert.True(result.Success);
         Assert.Equal(42, result.Data!.Id);
@@ -38,7 +38,7 @@ public class EnvironmentServiceTests
     [Fact]
     public async Task CreateAsync_UnsupportedType_ReturnsValidationErrorWithoutPersisting()
     {
-        var result = await _service.CreateAsync(10, new CreateEnvironmentRequest { Name = "test", Type = "QA" }, 5, false);
+        var result = await _service.CreateAsync("10", new CreateEnvironmentRequest { Name = "test", Type = "QA" }, 5, false);
 
         Assert.False(result.Success);
         Assert.Equal("Environment type must be Development, Staging, or Production.", result.Error);
@@ -51,7 +51,7 @@ public class EnvironmentServiceTests
     [InlineData("   ")]
     public async Task CreateAsync_MissingName_ReturnsValidationError(string? name)
     {
-        var result = await _service.CreateAsync(10, new CreateEnvironmentRequest { Name = name, Type = "Development" }, 5, false);
+        var result = await _service.CreateAsync("10", new CreateEnvironmentRequest { Name = name, Type = "Development" }, 5, false);
 
         Assert.False(result.Success);
         Assert.Equal("Environment name is required.", result.Error);
@@ -60,7 +60,7 @@ public class EnvironmentServiceTests
     [Fact]
     public async Task CreateAsync_OtherUsersProject_ReturnsForbidden()
     {
-        var result = await _service.CreateAsync(10, new CreateEnvironmentRequest { Name = "test", Type = "Development" }, 6, false);
+        var result = await _service.CreateAsync("10", new CreateEnvironmentRequest { Name = "test", Type = "Development" }, 6, false);
 
         Assert.False(result.Success);
         Assert.True(result.Forbidden);
@@ -72,7 +72,7 @@ public class EnvironmentServiceTests
     {
         _repository.Setup(r => r.GetByProjectIdAsync(10)).ReturnsAsync([new EnvironmentEntity { Id = 1, ProjectId = 10, Name = "production", Type = "Production" }]);
 
-        var result = await _service.GetByProjectAsync(10, 999, true);
+        var result = await _service.GetByProjectAsync("10", 999, true);
 
         Assert.True(result.Success);
         Assert.Single(result.Data!);
@@ -85,7 +85,7 @@ public class EnvironmentServiceTests
         _repository.Setup(r => r.GetByIdAsync(42, 10)).ReturnsAsync(new EnvironmentEntity { Id = 42, ProjectId = 10, Name = "old", Type = "Development", IsActive = true });
         _repository.Setup(r => r.UpdateAsync(It.IsAny<EnvironmentEntity>())).ReturnsAsync(true);
 
-        var result = await _service.UpdateAsync(10, 42, new UpdateEnvironmentRequest { Name = "  primary  ", Type = "Staging" }, 5, false);
+        var result = await _service.UpdateAsync("10", 42, new UpdateEnvironmentRequest { Name = "  primary  ", Type = "Staging" }, 5, false);
 
         Assert.True(result.Success);
         Assert.Equal("primary", result.Data!.Name);
@@ -100,7 +100,7 @@ public class EnvironmentServiceTests
         _repository.Setup(r => r.GetByIdAsync(42, 10)).ReturnsAsync(new EnvironmentEntity { Id = 42, ProjectId = 10, Name = "production", Type = "Production", IsActive = true });
         _repository.Setup(r => r.HasDeploymentHistoryAsync(10, "production")).ReturnsAsync(true);
 
-        var result = await _service.UpdateAsync(10, 42, new UpdateEnvironmentRequest { Name = "live", Type = "Production" }, 5, false);
+        var result = await _service.UpdateAsync("10", 42, new UpdateEnvironmentRequest { Name = "live", Type = "Production" }, 5, false);
 
         Assert.False(result.Success);
         Assert.Contains("cannot be renamed", result.Error!);
@@ -114,7 +114,7 @@ public class EnvironmentServiceTests
         _repository.Setup(r => r.HasDeploymentHistoryAsync(10, "production")).ReturnsAsync(true);
         _repository.Setup(r => r.DeactivateAsync(42, 10, It.IsAny<DateTime>())).ReturnsAsync(true);
 
-        var result = await _service.RemoveAsync(10, 42, 5, false);
+        var result = await _service.RemoveAsync("10", 42, 5, false);
 
         Assert.True(result.Success);
         Assert.True(result.Data!.Deactivated);
@@ -128,7 +128,7 @@ public class EnvironmentServiceTests
         _repository.Setup(r => r.GetByIdAsync(42, 10)).ReturnsAsync(new EnvironmentEntity { Id = 42, ProjectId = 10, Name = "staging", Type = "Staging", IsActive = true });
         _repository.Setup(r => r.DeleteAsync(42, 10)).ReturnsAsync(true);
 
-        var result = await _service.RemoveAsync(10, 42, 5, false);
+        var result = await _service.RemoveAsync("10", 42, 5, false);
 
         Assert.True(result.Success);
         Assert.False(result.Data!.Deactivated);
@@ -138,7 +138,7 @@ public class EnvironmentServiceTests
     [Fact]
     public async Task RemoveAsync_OtherUsersProject_ReturnsForbidden()
     {
-        var result = await _service.RemoveAsync(10, 42, 6, false);
+        var result = await _service.RemoveAsync("10", 42, 6, false);
 
         Assert.False(result.Success);
         Assert.True(result.Forbidden);

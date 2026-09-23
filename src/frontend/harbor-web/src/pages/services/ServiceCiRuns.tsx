@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useParams, useOutletContext } from 'react-router-dom';
+import { useOutletContext } from 'react-router-dom';
 import { XCircle, CheckCircle, Clock, Loader2, RefreshCw, GitCommit, GitBranch } from 'lucide-react';
 import { FaGithub } from 'react-icons/fa';
 import { formatDistanceToNow } from 'date-fns';
-import { getCiRunHistory, type CiRun, type CiRunHistory } from '../../services/deploymentService';
+import { getCiRunHistory, type CiRun } from '../../services/deploymentService';
 
 const POLL_INTERVAL_MS = 5000;
 
@@ -66,7 +66,6 @@ function runDuration(ciRun: CiRun): string {
 }
 
 export default function ServiceCiRuns() {
-  const { serviceId } = useParams();
   const context = useOutletContext<{ service: any; deployRefreshKey: number }>();
   const { service } = context ?? {};
 

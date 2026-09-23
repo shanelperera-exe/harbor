@@ -26,8 +26,8 @@ public class EnvironmentConfigurationServiceTests
             _logger.Object);
 
         // Standard project access: project 1 owned by user 5, not archived
-        _environmentRepository.Setup(r => r.GetProjectAccessAsync(1))
-            .ReturnsAsync((true, 5, false));
+        _environmentRepository.Setup(r => r.GetProjectAccessAsync("1"))
+            .ReturnsAsync((true, 5, 0, false));
 
         // Environment exists and is active
         _environmentRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>(), It.IsAny<int>()))
@@ -67,7 +67,7 @@ public class EnvironmentConfigurationServiceTests
         _configurationRepository.Setup(r => r.GetByEnvironmentIdAsync(42))
             .ReturnsAsync([]);
 
-        var result = await _service.ConfigureAsync(1, 42, request, 5, false);
+        var result = await _service.ConfigureAsync("1", 42, request, 5, false);
 
         Assert.True(result.Success);
         Assert.Null(result.Error);
@@ -96,7 +96,7 @@ public class EnvironmentConfigurationServiceTests
         _configurationRepository.Setup(r => r.GetByEnvironmentIdAsync(42))
             .ReturnsAsync([]);
 
-        var result = await _service.ConfigureAsync(1, 42, request, 999, true);
+        var result = await _service.ConfigureAsync("1", 42, request, 999, true);
 
         Assert.True(result.Success);
     }
@@ -105,7 +105,7 @@ public class EnvironmentConfigurationServiceTests
     public async Task ConfigureAsync_OtherUsersProject_ReturnsForbidden()
     {
         var request = ValidRequest();
-        var result = await _service.ConfigureAsync(1, 42, request, 6, false);
+        var result = await _service.ConfigureAsync("1", 42, request, 6, false);
 
         Assert.False(result.Success);
         Assert.True(result.Forbidden);
@@ -115,11 +115,11 @@ public class EnvironmentConfigurationServiceTests
     [Fact]
     public async Task ConfigureAsync_NonExistentProject_ReturnsError()
     {
-        _environmentRepository.Setup(r => r.GetProjectAccessAsync(999))
-            .ReturnsAsync((false, 0, false));
+        _environmentRepository.Setup(r => r.GetProjectAccessAsync("999"))
+            .ReturnsAsync((false, 0, 0, false));
 
         var request = ValidRequest();
-        var result = await _service.ConfigureAsync(999, 42, request, 5, false);
+        var result = await _service.ConfigureAsync("999", 42, request, 5, false);
 
         Assert.False(result.Success);
         Assert.False(result.Forbidden);
@@ -137,7 +137,7 @@ public class EnvironmentConfigurationServiceTests
             });
 
         var request = ValidRequest();
-        var result = await _service.ConfigureAsync(1, 42, request, 5, false);
+        var result = await _service.ConfigureAsync("1", 42, request, 5, false);
 
         Assert.False(result.Success);
         Assert.Equal("Environment not found or inactive.", result.Error);
@@ -156,7 +156,7 @@ public class EnvironmentConfigurationServiceTests
         var request = ValidRequest();
         request.DeploymentUrl = url;
 
-        var result = await _service.ConfigureAsync(1, 42, request, 5, false);
+        var result = await _service.ConfigureAsync("1", 42, request, 5, false);
 
         Assert.False(result.Success);
         Assert.Equal("Deployment URL is required.", result.Error);
@@ -172,7 +172,7 @@ public class EnvironmentConfigurationServiceTests
         var request = ValidRequest();
         request.DeploymentUrl = url;
 
-        var result = await _service.ConfigureAsync(1, 42, request, 5, false);
+        var result = await _service.ConfigureAsync("1", 42, request, 5, false);
 
         Assert.False(result.Success);
         Assert.Equal("Deployment URL must be a valid absolute http(s) URL.", result.Error);
@@ -187,7 +187,7 @@ public class EnvironmentConfigurationServiceTests
         var request = ValidRequest();
         request.Provider = provider;
 
-        var result = await _service.ConfigureAsync(1, 42, request, 5, false);
+        var result = await _service.ConfigureAsync("1", 42, request, 5, false);
 
         Assert.False(result.Success);
         Assert.Equal("Provider is required.", result.Error);
@@ -199,7 +199,7 @@ public class EnvironmentConfigurationServiceTests
         var request = ValidRequest();
         request.Provider = new string('x', 51);
 
-        var result = await _service.ConfigureAsync(1, 42, request, 5, false);
+        var result = await _service.ConfigureAsync("1", 42, request, 5, false);
 
         Assert.False(result.Success);
         Assert.Equal("Provider cannot exceed 50 characters.", result.Error);
@@ -211,7 +211,7 @@ public class EnvironmentConfigurationServiceTests
         var request = ValidRequest();
         request.Configuration = [new ConfigurationItemRequest { Key = "  ", Value = "val" }];
 
-        var result = await _service.ConfigureAsync(1, 42, request, 5, false);
+        var result = await _service.ConfigureAsync("1", 42, request, 5, false);
 
         Assert.False(result.Success);
         Assert.Equal("Configuration key is required.", result.Error);
@@ -223,7 +223,7 @@ public class EnvironmentConfigurationServiceTests
         var request = ValidRequest();
         request.Configuration = [new ConfigurationItemRequest { Key = "app.name", Value = "" }];
 
-        var result = await _service.ConfigureAsync(1, 42, request, 5, false);
+        var result = await _service.ConfigureAsync("1", 42, request, 5, false);
 
         Assert.False(result.Success);
         Assert.Equal("Configuration 'app.name' requires a value.", result.Error);
@@ -236,7 +236,7 @@ public class EnvironmentConfigurationServiceTests
         request.SecureValues = [new ConfigurationItemRequest { Key = "db.password", Value = "" }];
         _configurationRepository.Setup(r => r.GetByEnvironmentIdAsync(42)).ReturnsAsync([]);
 
-        var result = await _service.ConfigureAsync(1, 42, request, 5, false);
+        var result = await _service.ConfigureAsync("1", 42, request, 5, false);
 
         Assert.False(result.Success);
         Assert.Equal("A value is required for new secure entry 'db.password'.", result.Error);
@@ -253,7 +253,7 @@ public class EnvironmentConfigurationServiceTests
             SecureValues = [new ConfigurationItemRequest { Key = "shared", Value = "s3cret" }]
         };
 
-        var result = await _service.ConfigureAsync(1, 42, request, 5, false);
+        var result = await _service.ConfigureAsync("1", 42, request, 5, false);
 
         Assert.False(result.Success);
         Assert.Equal("Configuration and secure value keys must be unique.", result.Error);
@@ -271,7 +271,7 @@ public class EnvironmentConfigurationServiceTests
         };
         _configurationRepository.Setup(r => r.GetByEnvironmentIdAsync(42)).ReturnsAsync([]);
 
-        var result = await _service.ConfigureAsync(1, 42, request, 5, false);
+        var result = await _service.ConfigureAsync("1", 42, request, 5, false);
 
         Assert.True(result.Success);
         Assert.Empty(result.Data!.Configuration);
@@ -293,7 +293,7 @@ public class EnvironmentConfigurationServiceTests
             .Callback<int, List<EnvironmentConfigurationEntity>>((_, items) => capturedItems = items)
             .Returns(Task.CompletedTask);
 
-        await _service.ConfigureAsync(1, 42, request, 5, false);
+        await _service.ConfigureAsync("1", 42, request, 5, false);
 
         var secretItem = capturedItems!.First(i => i.IsSecret);
         Assert.Equal("db.password", secretItem.Key);
@@ -312,7 +312,7 @@ public class EnvironmentConfigurationServiceTests
             .Callback<int, List<EnvironmentConfigurationEntity>>((_, items) => capturedItems = items)
             .Returns(Task.CompletedTask);
 
-        await _service.ConfigureAsync(1, 42, request, 5, false);
+        await _service.ConfigureAsync("1", 42, request, 5, false);
 
         var plainItem = capturedItems!.First(i => !i.IsSecret);
         Assert.Equal("harbor", plainItem.Value);
@@ -343,7 +343,7 @@ public class EnvironmentConfigurationServiceTests
             .Callback<int, List<EnvironmentConfigurationEntity>>((_, items) => capturedItems = items)
             .Returns(Task.CompletedTask);
 
-        var result = await _service.ConfigureAsync(1, 42, request, 5, false);
+        var result = await _service.ConfigureAsync("1", 42, request, 5, false);
 
         Assert.True(result.Success);
         var secretItem = capturedItems!.First(i => i.IsSecret);
@@ -363,7 +363,7 @@ public class EnvironmentConfigurationServiceTests
             SecureValues = [new ConfigurationItemRequest { Key = "db.password", Value = "" }]
         };
 
-        var result = await _service.ConfigureAsync(1, 42, request, 5, false);
+        var result = await _service.ConfigureAsync("1", 42, request, 5, false);
 
         Assert.False(result.Success);
         Assert.Equal("A value is required for new secure entry 'db.password'.", result.Error);
@@ -387,7 +387,7 @@ public class EnvironmentConfigurationServiceTests
                 }
             ]);
 
-        var result = await _service.GetAsync(1, 42, 5, false);
+        var result = await _service.GetAsync("1", 42, 5, false);
 
         Assert.True(result.Success);
         Assert.Single(result.Data!.Configuration);
@@ -401,7 +401,7 @@ public class EnvironmentConfigurationServiceTests
     [Fact]
     public async Task GetAsync_OtherUsersProject_ReturnsForbidden()
     {
-        var result = await _service.GetAsync(1, 42, 6, false);
+        var result = await _service.GetAsync("1", 42, 6, false);
 
         Assert.False(result.Success);
         Assert.True(result.Forbidden);

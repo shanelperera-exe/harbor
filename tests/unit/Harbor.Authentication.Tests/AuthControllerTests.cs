@@ -4,9 +4,13 @@ using Moq;
 using Xunit;
 using Harbor.Authentication.Controllers;
 using Harbor.Authentication.DTOs;
+using Harbor.Authentication.Repositories;
 using Harbor.Authentication.Responses;
 using Harbor.Authentication.Services;
+using Harbor.GitHub;
+using Harbor.GitHub.Services;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Options;
 
 namespace Harbor.Authentication.Tests
 {
@@ -18,7 +22,12 @@ namespace Harbor.Authentication.Tests
         public AuthControllerTests()
         {
             _authServiceMock = new Mock<IAuthService>();
-            _controller = new AuthController(_authServiceMock.Object);
+            _controller = new AuthController(
+                _authServiceMock.Object,
+                new Mock<IUserRepository>().Object,
+                new Mock<IEncryptionService>().Object,
+                new Mock<IGitHubAppApiClient>().Object,
+                Options.Create(new GitHubAppOptions()));
             // Setup ControllerContext for Problem details mapping
             _controller.ControllerContext = new ControllerContext
             {

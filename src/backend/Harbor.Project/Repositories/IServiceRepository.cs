@@ -9,5 +9,6 @@ namespace Harbor.Project.Repositories
         Task<ServiceEntity?> GetByIdOrPublicIdAsync(string identifier);
         Task<List<ServiceEntity>> GetByProjectIdAsync(int projectId);
         Task<bool> DeleteAsync(int id);
+        Task<bool> UpdateAsync(ServiceEntity service);
     }
 }

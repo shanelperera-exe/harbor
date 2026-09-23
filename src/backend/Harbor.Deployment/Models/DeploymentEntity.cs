@@ -16,4 +16,6 @@ public class DeploymentEntity
     public string? WorkflowFile { get; init; }
     public string? WorkflowRef { get; init; }
     public string? TriggerError { get; init; }
+    public long? WorkflowRunId { get; init; }
+    public string? WorkflowRunUrl { get; init; }
 }

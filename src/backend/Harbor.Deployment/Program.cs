@@ -25,9 +25,9 @@ if (allowedOrigins == null || allowedOrigins.Length == 0)
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("DefaultPolicy", policy =>
-        policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod());
+        policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod().AllowCredentials());
     options.AddDefaultPolicy(policy =>
-        policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod());
+        policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod().AllowCredentials());
 });
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();

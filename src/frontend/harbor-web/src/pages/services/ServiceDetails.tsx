@@ -1,19 +1,281 @@
-import { useState, useEffect } from 'react';
-import { Routes, Route, Navigate, useParams, Link, useLocation, Outlet } from 'react-router-dom';
-import { Copy, Globe, Activity, Terminal, Database, Settings, LayoutGrid } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Routes, Route, Navigate, useParams, Link, useLocation, Outlet, useNavigate } from 'react-router-dom';
+import { Copy, Globe, Activity, Terminal, Database, Settings, LayoutGrid, GitBranch, ChevronDown, X, Rocket, AlertCircle, CheckCircle } from 'lucide-react';
 import { FaGithub } from 'react-icons/fa';
 import ServiceDeploys from './ServiceDeploys';
 import ServiceLogs from './ServiceLogs';
 import ServiceMetrics from './ServiceMetrics';
 import ServiceEnvironment from './ServiceEnvironment';
 import ServiceSettings from './ServiceSettings';
+import ServiceCiRuns from './ServiceCiRuns';
+import { createDeployment, CiGateError } from '../../services/deploymentService';
+import { getEnvironments, type DeploymentEnvironment } from '../../services/environmentService';
 
+// ─── Deploy Modal ────────────────────────────────────────────────────────────
+interface DeployModalProps {
+  service: any;
+  projectId: string;
+  onClose: () => void;
+  onDeployed: () => void;
+}
+
+function DeployModal({ service, projectId, onClose, onDeployed }: DeployModalProps) {
+  const [environments, setEnvironments] = useState<DeploymentEnvironment[]>([]);
+  const [selectedEnv, setSelectedEnv] = useState('');
+  const [branch, setBranch] = useState(service?.repositoryBranch || 'main');
+  const [deploying, setDeploying] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+  const [ciWarning, setCiWarning] = useState<string | null>(null);
+  const overlayRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    getEnvironments(projectId)
+      .then((envs) => {
+        const active = envs.filter((e) => e.isActive);
+        setEnvironments(active);
+        if (active.length > 0) setSelectedEnv(active[0].name);
+      })
+      .catch(() => setError('Could not load environments.'));
+  }, [projectId]);
+
+  // Close on overlay click
+  const handleOverlayClick = (e: React.MouseEvent) => {
+    if (e.target === overlayRef.current) onClose();
+  };
+
+  // Close on Escape
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [onClose]);
+
+  const handleDeploy = async (overrideCiGate = false) => {
+    if (!selectedEnv || !branch.trim()) {
+      setError('Please select an environment and specify a branch or commit.');
+      return;
+    }
+    setDeploying(true);
+    setError('');
+    setCiWarning(null);
+    try {
+      const result = await createDeployment({
+        serviceId: service.publicId || service.id.toString(),
+        environment: selectedEnv,
+        version: branch.trim(),
+        branch: branch.trim(),
+        overrideCiGate,
+      });
+      // 502-equivalent: deployment record created but GitHub rejected the trigger
+      if (result.status === 'Failed') {
+        const triggerErr = (result as any).failureReason || 'GitHub rejected the workflow trigger.';
+        setError(`Deployment created but GitHub could not start the workflow: ${triggerErr}`);
+        setTimeout(() => onDeployed(), 500);
+        return;
+      }
+      setSuccess(true);
+      setTimeout(() => {
+        onDeployed();
+        onClose();
+      }, 1200);
+    } catch (err: unknown) {
+      if (err instanceof CiGateError) {
+        // CI gate blocked — show warning with "Deploy anyway?" option
+        setCiWarning(err.message);
+      } else {
+        setError((err as Error).message);
+      }
+    } finally {
+      setDeploying(false);
+    }
+  };
+
+  return (
+    <div
+      ref={overlayRef}
+      onClick={handleOverlayClick}
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+    >
+      <div className="w-full max-w-md mx-4 bg-[#0d0d0d] border border-[#3a3a3a] rounded-lg shadow-2xl overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#2a2a2a]">
+          <div className="flex items-center gap-2.5">
+            <Rocket className="w-4 h-4 text-[#3b82f6]" />
+            <h2 className="text-[15px] font-semibold text-white">Manual Deploy</h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-[#6b6b6b] hover:text-white transition-colors rounded-sm p-0.5"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="px-5 py-5 space-y-4">
+          {/* Service info */}
+          <div className="flex items-center gap-2 p-3 bg-[#141414] border border-[#2a2a2a] rounded-md">
+            <div className="w-7 h-7 rounded-sm bg-[#1e3a5f] flex items-center justify-center flex-shrink-0">
+              <Globe className="w-3.5 h-3.5 text-[#3b82f6]" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-sm font-medium text-white truncate">{service?.name}</div>
+              {service?.repositoryName && (
+                <div className="text-xs text-[#6b6b6b] flex items-center gap-1 truncate">
+                  <FaGithub className="w-3 h-3 flex-shrink-0" />
+                  {service.repositoryName}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Environment selector */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-[#8f8f8f] uppercase tracking-wider">
+              Environment
+            </label>
+            {environments.length === 0 && !error ? (
+              <div className="h-9 flex items-center px-3 bg-[#141414] border border-[#2a2a2a] rounded-md text-sm text-[#6b6b6b]">
+                Loading environments…
+              </div>
+            ) : (
+              <div className="relative">
+                <select
+                  value={selectedEnv}
+                  onChange={(e) => setSelectedEnv(e.target.value)}
+                  className="w-full h-9 appearance-none bg-[#141414] border border-[#2a2a2a] hover:border-[#3a3a3a] focus:border-[#3b82f6] focus:outline-none rounded-md px-3 pr-8 text-sm text-white transition-colors"
+                >
+                  {environments.map((env) => (
+                    <option key={env.id} value={env.name} className="bg-[#141414]">
+                      {env.name} ({env.type})
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#6b6b6b] pointer-events-none" />
+              </div>
+            )}
+          </div>
+
+          {/* Branch / commit SHA */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-[#8f8f8f] uppercase tracking-wider">
+              Branch or Commit SHA
+            </label>
+            <div className="relative">
+              <GitBranch className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#6b6b6b]" />
+              <input
+                type="text"
+                value={branch}
+                onChange={(e) => setBranch(e.target.value)}
+                placeholder="main, feat/..., or a40f3c2"
+                className="w-full h-9 bg-[#141414] border border-[#2a2a2a] hover:border-[#3a3a3a] focus:border-[#3b82f6] focus:outline-none rounded-md pl-8 pr-3 text-sm text-white placeholder:text-[#4a4a4a] transition-colors font-mono"
+              />
+            </div>
+            <p className="text-[11px] text-[#555]">
+              GitHub Actions will check out this ref when running the workflow.
+            </p>
+          </div>
+
+          {/* Error */}
+          {error && (
+            <div className="flex items-start gap-2 p-3 bg-red-950/40 border border-red-800/50 rounded-md text-sm text-red-400">
+              <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          {/* CI Gate Warning */}
+          {ciWarning && (
+            <div className="p-3 bg-amber-950/40 border border-amber-700/50 rounded-md text-sm text-amber-300 space-y-2">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-amber-400" />
+                <div>
+                  <div className="font-medium text-amber-200 mb-0.5">CI checks are failing</div>
+                  <div className="text-xs text-amber-400">{ciWarning}</div>
+                </div>
+              </div>
+              <div className="flex gap-2 justify-end">
+                <button
+                  onClick={() => setCiWarning(null)}
+                  className="h-7 px-3 text-xs text-amber-400 hover:text-amber-200 border border-amber-700/50 rounded-md transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleDeploy(true)}
+                  disabled={deploying}
+                  className="h-7 px-3 text-xs font-medium bg-amber-700 hover:bg-amber-600 text-white rounded-md transition-colors"
+                >
+                  Deploy anyway
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Success */}
+          {success && (
+            <div className="flex items-center gap-2 p-3 bg-emerald-950/40 border border-emerald-700/50 rounded-md text-sm text-emerald-400">
+              <CheckCircle className="w-4 h-4 flex-shrink-0" />
+              <span>Deployment triggered successfully!</span>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-2.5 px-5 py-4 border-t border-[#2a2a2a] bg-[#0a0a0a]">
+          <button
+            onClick={onClose}
+            className="h-8 px-3.5 text-sm font-medium text-[#8f8f8f] hover:text-white border border-[#2a2a2a] hover:border-[#3a3a3a] rounded-md transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => handleDeploy(false)}
+            disabled={deploying || success || environments.length === 0}
+            className="h-8 px-4 flex items-center gap-2 text-sm font-medium bg-[#2563eb] hover:bg-[#1d4ed8] disabled:bg-[#1a2d4a] disabled:text-[#4a6fa5] text-white rounded-md transition-colors"
+          >
+            {deploying ? (
+              <>
+                <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Triggering…
+              </>
+            ) : success ? (
+              <>
+                <CheckCircle className="w-3.5 h-3.5" />
+                Triggered!
+              </>
+            ) : (
+              <>
+                <Rocket className="w-3.5 h-3.5" />
+                Deploy
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Service Layout ───────────────────────────────────────────────────────────
 function ServiceLayout() {
   const { projectId, serviceId } = useParams();
   const location = useLocation();
-  const [isManualDeployOpen, setIsManualDeployOpen] = useState(false);
+  const navigate = useNavigate();
+  const [isDeployModalOpen, setIsDeployModalOpen] = useState(false);
   const [service, setService] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  // Trigger key incremented to force ServiceDeploys to re-fetch
+  const [deployRefreshKey, setDeployRefreshKey] = useState(0);
+
+  const handleDeployed = () => {
+    setDeployRefreshKey((k) => k + 1);
+    // Ensure we're on the deploys tab
+    if (!location.pathname.includes('/deploys')) {
+      navigate(`deploys`);
+    }
+  };
 
   useEffect(() => {
     const fetchService = async () => {
@@ -22,15 +284,16 @@ function ServiceLayout() {
         const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
         const res = await fetch(`${apiBase}/projects/${projectId}/services/${serviceId}`, {
           headers: {
-            'Authorization': `Bearer ${token}`
-          }
+            'Authorization': `Bearer ${token}`,
+            'ngrok-skip-browser-warning': 'true',
+          },
         });
         if (res.ok) {
           const json = await res.json();
           setService(json.data);
         }
       } catch (err) {
-        console.error("Failed to fetch service:", err);
+        console.error('Failed to fetch service:', err);
       } finally {
         setLoading(false);
       }
@@ -44,6 +307,7 @@ function ServiceLayout() {
 
   const tabs = [
     { name: 'Deploys', path: 'deploys', icon: LayoutGrid },
+    { name: 'CI History', path: 'ci-history', icon: Activity },
     { name: 'Logs', path: 'logs', icon: Terminal },
     { name: 'Metrics', path: 'metrics', icon: Activity },
     { name: 'Environment', path: 'environment', icon: Database },
@@ -60,6 +324,16 @@ function ServiceLayout() {
 
   return (
     <div className="flex flex-col flex-1 w-full max-w-[1920px] mx-auto">
+      {/* Deploy Modal */}
+      {isDeployModalOpen && (
+        <DeployModal
+          service={service}
+          projectId={projectId!}
+          onClose={() => setIsDeployModalOpen(false)}
+          onDeployed={handleDeployed}
+        />
+      )}
+
       {/* Header Area */}
       <div className="pt-8 border-b border-gray-300 dark:border-[#525252]">
         <header className="px-4 md:px-12 space-y-4">
@@ -84,26 +358,14 @@ function ServiceLayout() {
               <button className="h-10 px-4 flex items-center justify-center gap-2 border border-gray-300 dark:border-[#525252] bg-transparent hover:bg-gray-100 dark:hover:bg-[#1a1a1a] text-gray-900 dark:text-white font-medium transition-colors rounded-sm">
                 Connect
               </button>
-              <div className="relative">
-                <button 
-                  onClick={() => setIsManualDeployOpen(!isManualDeployOpen)}
-                  onBlur={() => setTimeout(() => setIsManualDeployOpen(false), 200)}
-                  className="h-10 px-4 flex items-center justify-center gap-2 bg-[#2563eb] hover:bg-[#1d4ed8] dark:bg-[#272727] dark:hover:bg-[#333] text-white font-medium border border-transparent transition-colors rounded-sm"
-                >
-                  Manual Deploy
-                </button>
-                {isManualDeployOpen && (
-                  <div className="z-[9999] outline-none theme dark" style={{ position: 'absolute', right: '0px', top: '100%', marginTop: '4px' }}>
-                    <div className="min-w-[208px] p-4 bg-[#0d0d0d] border border-solid border-[#4d4d4d] shadow-xl outline-none whitespace-nowrap rounded-sm">
-                      <button type="button" className="w-full flex relative text-[15px] text-[#e3e3e3] py-2 px-3 whitespace-nowrap outline-2 cursor-pointer hover:text-[#e3e3e3] hover:bg-[#272727] rounded-sm transition-colors text-left">
-                        <div className="w-full flex items-center space-x-2.5">
-                          <span className="flex-1 truncate">Deploy latest commit</span>
-                        </div>
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
+              <button
+                id="manual-deploy-btn"
+                onClick={() => setIsDeployModalOpen(true)}
+                className="h-10 px-4 flex items-center justify-center gap-2 bg-[#2563eb] hover:bg-[#1d4ed8] dark:bg-[#272727] dark:hover:bg-[#333] text-white font-medium border border-transparent transition-colors rounded-sm"
+              >
+                <Rocket className="w-4 h-4" />
+                Manual Deploy
+              </button>
             </div>
           </div>
 
@@ -112,8 +374,8 @@ function ServiceLayout() {
               <div className="flex items-center gap-2 text-[15px]">
                 <span className="text-gray-500 dark:text-[#8f8f8f]">Service ID:</span>
                 <span className="text-gray-900 dark:text-[#f0f0f0] font-mono flex items-center gap-1">
-                  {service.id}
-                  <button onClick={() => copyToClipboard(service.id.toString())} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"><Copy className="w-4 h-4" /></button>
+                  {service.publicId || service.id}
+                  <button onClick={() => copyToClipboard(service.publicId || service.id.toString())} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"><Copy className="w-4 h-4" /></button>
                 </span>
               </div>
               {service.repositoryName && (
@@ -124,7 +386,7 @@ function ServiceLayout() {
                   </a>
                   {service.repositoryBranch && (
                     <span className="text-gray-900 dark:text-[#f0f0f0] flex items-center gap-1 ml-2">
-                      <svg fill="currentColor" width="16" height="16" viewBox="0 0 16 16"><path d="M13 9C12.5578 9.00128 12.1285 9.14923 11.7794 9.42069C11.4303 9.69214 11.1812 10.0717 11.071 10.5H8.99998C8.60229 10.4996 8.22102 10.3414 7.93981 10.0602C7.6586 9.77897 7.50042 9.3977 7.49998 9V7C7.49808 6.45731 7.3179 5.93028 6.98718 5.5H11.071C11.1927 5.97133 11.4821 6.3821 11.885 6.65531C12.2879 6.92851 12.7766 7.0454 13.2595 6.98406C13.7424 6.92273 14.1864 6.68737 14.5081 6.32212C14.8299 5.95687 15.0075 5.48679 15.0075 5C15.0075 4.51322 14.8299 4.04314 14.5081 3.67789C14.1864 3.31264 13.7424 3.07728 13.2595 3.01595C12.7766 2.95461 12.2879 3.0715 11.885 3.3447C11.4821 3.61791 11.1927 4.02868 11.071 4.5H4.92898C4.80729 4.02868 4.51787 3.61791 4.11498 3.3447C3.71209 3.0715 3.22339 2.95461 2.74048 3.01595C2.25758 3.07728 1.81362 3.31264 1.49182 3.67789C1.17003 4.04314 0.992493 4.51322 0.992493 5C0.992493 5.48679 1.17003 5.95687 1.49182 6.32212C1.81362 6.68737 2.25758 6.92273 2.74048 6.98406C3.22339 7.0454 3.71209 6.92851 4.11498 6.65531C4.51787 6.3821 4.80729 5.97133 4.92898 5.5H4.99998C5.39768 5.50044 5.77895 5.65862 6.06016 5.93983C6.34137 6.22104 6.49955 6.60231 6.49998 7V9C6.50076 9.66281 6.76441 10.2982 7.23308 10.7669C7.70175 11.2356 8.33718 11.4992 8.99998 11.5H11.071C11.1651 11.8614 11.3587 12.1891 11.6297 12.446C11.9007 12.7029 12.2383 12.8786 12.6042 12.9532C12.9701 13.0278 13.3496 12.9984 13.6996 12.8682C14.0496 12.7379 14.356 12.5122 14.5841 12.2165C14.8123 11.9209 14.9529 11.5672 14.9901 11.1956C15.0273 10.8241 14.9595 10.4495 14.7946 10.1145C14.6296 9.77954 14.374 9.49752 14.0567 9.30051C13.7395 9.1035 13.3734 8.99939 13 9ZM13 4C13.1978 4 13.3911 4.05865 13.5556 4.16854C13.72 4.27842 13.8482 4.4346 13.9239 4.61732C13.9996 4.80005 14.0194 5.00111 13.9808 5.1951C13.9422 5.38908 13.8469 5.56726 13.7071 5.70711C13.5672 5.84696 13.3891 5.9422 13.1951 5.98079C13.0011 6.01938 12.8 5.99957 12.6173 5.92388C12.4346 5.8482 12.2784 5.72002 12.1685 5.55557C12.0586 5.39113 12 5.19779 12 5C12.0003 4.73488 12.1057 4.4807 12.2932 4.29323C12.4807 4.10576 12.7349 4.00031 13 4ZM2.99998 6C2.8022 6 2.60886 5.94136 2.44441 5.83147C2.27996 5.72159 2.15179 5.56541 2.0761 5.38269C2.00042 5.19996 1.98061 4.9989 2.0192 4.80491C2.05778 4.61093 2.15302 4.43275 2.29288 4.2929C2.43273 4.15305 2.61091 4.0578 2.80489 4.01922C2.99887 3.98063 3.19994 4.00044 3.38267 4.07613C3.56539 4.15181 3.72157 4.27999 3.83145 4.44443C3.94134 4.60888 3.99998 4.80222 3.99998 5C3.99972 5.26514 3.89428 5.51934 3.7068 5.70682C3.51932 5.8943 3.26512 5.99974 2.99998 6ZM13 12C12.8022 12 12.6089 11.9414 12.4444 11.8315C12.28 11.7216 12.1518 11.5654 12.0761 11.3827C12.0004 11.2 11.9806 10.9989 12.0192 10.8049C12.0578 10.6109 12.153 10.4328 12.2929 10.2929C12.4327 10.153 12.6109 10.0578 12.8049 10.0192C12.9989 9.98063 13.1999 10.0004 13.3827 10.0761C13.5654 10.1518 13.7216 10.28 13.8315 10.4444C13.9413 10.6089 14 10.8022 14 11C13.9996 11.2651 13.8942 11.5193 13.7067 11.7067C13.5192 11.8942 13.2651 11.9996 13 12Z"></path></svg> 
+                      <GitBranch className="w-4 h-4 text-gray-400" />
                       {service.repositoryBranch}
                     </span>
                   )}
@@ -138,7 +400,7 @@ function ServiceLayout() {
               </div>
             </div>
           </div>
-          
+
           {/* Tabs */}
           <div className="flex items-center gap-6 text-sm font-medium">
             {tabs.map((tab) => {
@@ -148,8 +410,8 @@ function ServiceLayout() {
                   key={tab.path}
                   to={tab.path}
                   className={`flex items-center gap-2 pb-3 border-b-2 transition-colors ${
-                    isActive 
-                      ? 'border-[#2563eb] text-[#2563eb] dark:text-blue-400' 
+                    isActive
+                      ? 'border-[#2563eb] text-[#2563eb] dark:text-blue-400'
                       : 'border-transparent text-gray-500 hover:text-gray-900 dark:text-[#8f8f8f] dark:hover:text-[#e3e3e3]'
                   }`}
                 >
@@ -162,7 +424,7 @@ function ServiceLayout() {
         </header>
       </div>
 
-      <Outlet context={{ service }} />
+      <Outlet context={{ service, deployRefreshKey }} />
     </div>
   );
 }
@@ -172,8 +434,9 @@ export default function ServiceDetails() {
     <Routes>
       <Route element={<ServiceLayout />}>
         <Route index element={<Navigate to="deploys" replace />} />
-        <Route path="deploys" element={<ServiceDeploys />} />
-        <Route path="logs" element={<ServiceLogs />} />
+         <Route path="deploys" element={<ServiceDeploys />} />
+         <Route path="ci-history" element={<ServiceCiRuns />} />
+         <Route path="logs" element={<ServiceLogs />} />
         <Route path="metrics" element={<ServiceMetrics />} />
         <Route path="environment" element={<ServiceEnvironment />} />
         <Route path="settings" element={<ServiceSettings />} />

@@ -23,7 +23,7 @@ if (allowedOrigins == null || allowedOrigins.Length == 0)
     allowedOrigins = new[] { "http://localhost:5173", "http://localhost:5174" };
 }
 builder.Services.AddCors(options => options.AddPolicy("DefaultPolicy", policy =>
-    policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod()));
+    policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod().AllowCredentials()));
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>

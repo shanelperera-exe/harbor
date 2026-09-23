@@ -98,6 +98,27 @@ namespace Harbor.Project.Controllers
             return Ok(new ApiResponse<ServiceResponse> { Data = data });
         }
 
+        [HttpPatch("{id}")]
+        [ProducesResponseType(typeof(ApiResponse<ServiceResponse>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> Update(string projectId, string id, [FromBody] UpdateServiceRequest request)
+        {
+            var ownerId = GetUserId();
+            if (ownerId is null) return Unauthorized();
+
+            var isAdmin = User.IsInRole(Roles.Admin);
+            var (success, error, data) = await _serviceService.UpdateAsync(id, request, ownerId.Value, isAdmin);
+
+            if (!success)
+            {
+                return Problem(detail: error, statusCode: error == "Service not found." ? StatusCodes.Status404NotFound : StatusCodes.Status400BadRequest, title: "Bad Request");
+            }
+
+            return Ok(new ApiResponse<ServiceResponse> { Data = data });
+        }
+
         private int? GetUserId()
         {
             var claim = User.FindFirst("userId")?.Value;

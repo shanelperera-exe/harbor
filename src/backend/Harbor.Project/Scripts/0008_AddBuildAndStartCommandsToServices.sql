@@ -1,0 +1,3 @@
+ALTER TABLE "Services"
+    ADD COLUMN IF NOT EXISTS "BuildCommand" VARCHAR(500),
+    ADD COLUMN IF NOT EXISTS "StartCommand" VARCHAR(500);

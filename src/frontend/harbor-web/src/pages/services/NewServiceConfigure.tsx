@@ -3,7 +3,7 @@ import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { GoGitCommit } from 'react-icons/go';
 import { getProject } from '../../services/projectService';
 import { getEnvironments, type DeploymentEnvironment } from '../../services/environmentService';
-import { createDeployment } from '../../services/deploymentService';
+import { createDeployment, CiGateError } from '../../services/deploymentService';
 
 const NewServiceConfigure: React.FC = () => {
   const { projectId, serviceType } = useParams<{ projectId: string, serviceType: string }>();
@@ -204,7 +204,8 @@ const NewServiceConfigure: React.FC = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'ngrok-skip-browser-warning': 'true'
         },
         body: JSON.stringify({
           name: name.trim(),
@@ -242,10 +243,16 @@ const NewServiceConfigure: React.FC = () => {
           version,
           commitSha: deployType === 'commit' ? commit.trim() : undefined,
           branch: deployType === 'branch' ? branch.trim() : undefined,
+          overrideCiGate: true, // bypass CI gate on initial service setup
         });
-      } catch (deployErr: any) {
-        // Deployment record creation failed — service already exists, log and continue
-        console.error('Deployment record creation failed:', deployErr?.message);
+      } catch (deployErr: unknown) {
+        if (deployErr instanceof CiGateError) {
+          // CI is failing but we override on first deploy — this shouldn't happen with overrideCiGate:true
+          console.warn('CI gate warning on initial deploy (overridden):', deployErr.message);
+        } else {
+          // Deployment record creation failed — service already exists, log and continue
+          console.error('Deployment record creation failed:', (deployErr as Error)?.message);
+        }
       }
 
       navigate(`/projects/${projectId}/services/${newServiceId}`);

@@ -1,0 +1,8 @@
+services:
+  ngrok:
+    image: ngrok/ngrok:latest
+    container_name: harbor-ngrok
+    env_file: .env
+    command: http api-gateway:8080 --url=${NGROK_DOMAIN}
+    depends_on:
+      - api-gateway

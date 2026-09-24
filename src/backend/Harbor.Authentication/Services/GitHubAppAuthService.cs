@@ -102,7 +102,7 @@ public sealed class GitHubAppAuthService : IGitHubAppAuthService
         var encryptedToken = _encryptionService.Encrypt(accessToken);
         await _userRepository.AddExternalIdentityAsync(
             user.Id, provider, userInfo.Id.ToString(),
-            userInfo.Email ?? userInfo.Name, encryptedToken);
+            userInfo.Email ?? userInfo.Name, userInfo.Login, encryptedToken);
 
         if (installationId.HasValue)
         {

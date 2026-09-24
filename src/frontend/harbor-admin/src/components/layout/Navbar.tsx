@@ -27,7 +27,8 @@ export default function Navbar() {
 
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2.5 group">
-          <img src="/logos/harbor_primary.svg" alt="Harbor Logo" className="h-7 lg:h-10 w-auto group-hover:opacity-80 transition-opacity dark:invert-0 invert" />
+          <img src="/logos/harbor_light_notext.svg" alt="Harbor Logo" className="h-7 lg:h-10 w-auto group-hover:opacity-80 transition-opacity dark:hidden" />
+          <img src="/logos/harbor_dark_notext.png" alt="Harbor Logo" className="h-7 lg:h-10 w-auto group-hover:opacity-80 transition-opacity hidden dark:block" />
           <span className="text-2xl lg:text-2xl font-medium tracking-tight text-gray-900 dark:text-white transition-colors duration-300 lowercase" style={{ fontFamily: 'Roobert, sans-serif' }}>harbor™</span>
         </Link>
 

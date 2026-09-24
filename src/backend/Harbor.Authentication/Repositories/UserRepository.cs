@@ -137,7 +137,7 @@ namespace Harbor.Authentication.Repositories
 
             using var command = connection.CreateCommand();
             command.CommandText =
-                "SELECT \"Id\", \"Username\", \"Email\", \"PasswordHash\", \"Role\", \"CreatedAt\", \"AvatarSvg\" " +
+                "SELECT \"Id\", \"PublicId\", \"Username\", \"Email\", \"PasswordHash\", \"Role\", \"CreatedAt\", \"AvatarSvg\" " +
                 "FROM \"Users\" WHERE \"Id\" = @userId LIMIT 1";
             command.Parameters.AddWithValue("userId", userId);
 
@@ -147,12 +147,13 @@ namespace Harbor.Authentication.Repositories
                 return new User
                 {
                     Id = reader.GetInt32(0),
-                    Username = reader.GetString(1),
-                    Email = reader.GetString(2),
-                    PasswordHash = reader.GetString(3),
-                    Role = reader.GetString(4),
-                    CreatedAt = reader.GetDateTime(5),
-                    AvatarSvg = reader.IsDBNull(6) ? null : reader.GetString(6)
+                    PublicId = reader.IsDBNull(1) ? string.Empty : reader.GetString(1),
+                    Username = reader.GetString(2),
+                    Email = reader.GetString(3),
+                    PasswordHash = reader.GetString(4),
+                    Role = reader.GetString(5),
+                    CreatedAt = reader.GetDateTime(6),
+                    AvatarSvg = reader.IsDBNull(7) ? null : reader.GetString(7)
                 };
             }
 
@@ -246,16 +247,17 @@ namespace Harbor.Authentication.Repositories
             };
         }
 
-        public async Task AddExternalIdentityAsync(int userId, string provider, string providerUserId, string? providerEmail, string? accessToken = null)
+        public async Task AddExternalIdentityAsync(int userId, string provider, string providerUserId, string? providerEmail, string? providerUsername, string? accessToken = null)
         {
             using var connection = _dbFactory.CreateConnection();
             await connection.OpenAsync();
             using var command = connection.CreateCommand();
-            command.CommandText = "INSERT INTO \"ExternalIdentities\" (\"UserId\", \"Provider\", \"ProviderUserId\", \"ProviderEmail\", \"AccessToken\") VALUES (@userId, @provider, @providerUserId, @providerEmail, @accessToken) ON CONFLICT (\"UserId\", \"Provider\") DO UPDATE SET \"ProviderUserId\" = EXCLUDED.\"ProviderUserId\", \"ProviderEmail\" = EXCLUDED.\"ProviderEmail\", \"AccessToken\" = COALESCE(EXCLUDED.\"AccessToken\", \"ExternalIdentities\".\"AccessToken\")";
+            command.CommandText = "INSERT INTO \"ExternalIdentities\" (\"UserId\", \"Provider\", \"ProviderUserId\", \"ProviderEmail\", \"ProviderUsername\", \"AccessToken\") VALUES (@userId, @provider, @providerUserId, @providerEmail, @providerUsername, @accessToken) ON CONFLICT (\"UserId\", \"Provider\") DO UPDATE SET \"ProviderUserId\" = EXCLUDED.\"ProviderUserId\", \"ProviderEmail\" = EXCLUDED.\"ProviderEmail\", \"ProviderUsername\" = EXCLUDED.\"ProviderUsername\", \"AccessToken\" = COALESCE(EXCLUDED.\"AccessToken\", \"ExternalIdentities\".\"AccessToken\")";
             command.Parameters.AddWithValue("userId", userId);
             command.Parameters.AddWithValue("provider", provider);
             command.Parameters.AddWithValue("providerUserId", providerUserId);
             command.Parameters.AddWithValue("providerEmail", providerEmail ?? (object)DBNull.Value);
+            command.Parameters.AddWithValue("providerUsername", providerUsername ?? (object)DBNull.Value);
             command.Parameters.AddWithValue("accessToken", accessToken ?? (object)DBNull.Value);
             await command.ExecuteNonQueryAsync();
         }
@@ -298,6 +300,26 @@ namespace Harbor.Authentication.Repositories
             command.Parameters.AddWithValue("userId", userId);
             var value = await command.ExecuteScalarAsync();
             return value is string[] providers ? providers : Array.Empty<string>();
+        }
+
+        public async Task<Dictionary<string, string?>> GetProviderUsernamesAsync(int userId)
+        {
+            using var connection = _dbFactory.CreateConnection();
+            await connection.OpenAsync();
+
+            using var command = connection.CreateCommand();
+            command.CommandText = "SELECT \"Provider\", \"ProviderUsername\" FROM \"ExternalIdentities\" WHERE \"UserId\" = @userId";
+            command.Parameters.AddWithValue("userId", userId);
+
+            var result = new Dictionary<string, string?>();
+            using var reader = await command.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                var provider = reader.GetString(0);
+                var username = reader.IsDBNull(1) ? null : reader.GetString(1);
+                result[provider] = username;
+            }
+            return result;
         }
 
         public async Task AddExternalLoginMethodAsync(int userId, string provider)

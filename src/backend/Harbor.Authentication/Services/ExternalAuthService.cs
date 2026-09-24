@@ -36,6 +36,8 @@ namespace Harbor.Authentication.Services
                 return (false, "The provider did not return an email address.", null);
             }
 
+            var providerUsername = GetProviderUsername(principal, provider);
+
             var user = await _userRepository.GetByExternalIdentityAsync(provider, providerUserId)
                 ?? await _userRepository.GetByEmailAsync(email);
             if (user == null)
@@ -59,7 +61,7 @@ namespace Harbor.Authentication.Services
             }
 
             await _userRepository.AddExternalLoginMethodAsync(user.Id, provider);
-            await _userRepository.AddExternalIdentityAsync(user.Id, provider, providerUserId, email, accessToken);
+            await _userRepository.AddExternalIdentityAsync(user.Id, provider, providerUserId, email, providerUsername, accessToken);
             var (token, expiresAt) = _jwtService.GenerateToken(user);
             return (true, null, new LoginResponse
             {
@@ -84,13 +86,23 @@ namespace Harbor.Authentication.Services
             }
 
             var email = principal.FindFirstValue(ClaimTypes.Email) ?? principal.FindFirstValue("email");
-            await _userRepository.AddExternalIdentityAsync(userId, provider, providerUserId, email, accessToken);
+            var providerUsername = GetProviderUsername(principal, provider);
+            await _userRepository.AddExternalIdentityAsync(userId, provider, providerUserId, email, providerUsername, accessToken);
             await _userRepository.AddExternalLoginMethodAsync(userId, provider);
             return (true, null);
         }
 
         private static string? GetProviderUserId(ClaimsPrincipal principal) =>
             principal.FindFirstValue(ClaimTypes.NameIdentifier) ?? principal.FindFirstValue("sub");
+
+        private static string? GetProviderUsername(ClaimsPrincipal principal, string provider)
+        {
+            if (provider?.ToLowerInvariant() == "google")
+            {
+                return principal.FindFirstValue(ClaimTypes.Email) ?? principal.FindFirstValue("email");
+            }
+            return principal.FindFirstValue(ClaimTypes.Name) ?? principal.FindFirstValue("name");
+        }
 
         private static string BuildUsername(ClaimsPrincipal principal, string email)
         {

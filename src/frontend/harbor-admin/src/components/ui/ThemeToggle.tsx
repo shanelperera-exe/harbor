@@ -1,38 +1,18 @@
-import { useState, useEffect } from 'react';
+import { useTheme } from '../../contexts/ThemeContext';
 
 export default function ThemeToggle() {
-  const [isDark, setIsDark] = useState(true);
-
-  useEffect(() => {
-    // Check initial theme from localStorage or system preference
-    const savedTheme = localStorage.getItem('harbor_theme');
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const initialDark = savedTheme ? savedTheme === 'dark' : prefersDark;
-    
-    setIsDark(initialDark);
-    if (initialDark) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, []);
+  const { resolvedTheme, setTheme } = useTheme();
+  const isDark = resolvedTheme === 'dark';
 
   const toggleTheme = () => {
-    setIsDark(!isDark);
-    if (!isDark) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('harbor_theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('harbor_theme', 'light');
-    }
+    setTheme(isDark ? 'light' : 'dark');
   };
 
   return (
     <button 
       onClick={toggleTheme}
       aria-label="Toggle theme" 
-      className={`fixed right-6 bottom-6 md:right-8 md:bottom-8 z-[100] grid h-[45px] w-[45px] grid-cols-2 overflow-hidden border transition-colors duration-300 ease-out ${
+      className={`fixed right-6 bottom-6 md:right-8 md:bottom-8 z-[100] grid h-[45px] w-[45px] grid-cols-2 overflow-hidden border transition-colors duration-300 ease-out rounded-sm ${
         isDark 
           ? 'border-white bg-gray-900 text-white' 
           : 'border-gray-900 bg-white text-gray-900'

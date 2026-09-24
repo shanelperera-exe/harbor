@@ -234,4 +234,41 @@ public class DeploymentsControllerTests
         var body = Assert.IsType<CreateDeploymentResponse>(created.Value);
         Assert.Equal("deadbeef", body.CommitSha);
     }
+
+    [Fact]
+    public async Task Create_ValidRequest_ResponseContainsSelectedBranchAndCommit()
+    {
+        SetUser(userId: 7);
+        var request = new CreateDeploymentRequest
+        {
+            ServiceId = "13",
+            Environment = "production",
+            Version = "release/2026.09",
+            CommitSha = "0123456789abcdef0123456789abcdef01234567"
+        };
+        _serviceMock.Setup(s => s.CreateAsync(request, 7, false)).ReturnsAsync((true, (string?)null, 5));
+
+        var result = await _controller.Create(request);
+
+        var created = Assert.IsType<ObjectResult>(result.Result);
+        var body = Assert.IsType<CreateDeploymentResponse>(created.Value);
+        Assert.Equal("release/2026.09", body.Version);
+        Assert.Equal("0123456789abcdef0123456789abcdef01234567", body.CommitSha);
+    }
+
+    [Fact]
+    public async Task Create_MissingVersion_Returns400WithValidationDetail()
+    {
+        SetUser(userId: 7);
+        var request = new CreateDeploymentRequest { ServiceId = "13", Environment = "production", Version = "" };
+        _serviceMock.Setup(s => s.CreateAsync(request, 7, false))
+            .ReturnsAsync((false, "Version is required.", (int?)null));
+
+        var result = await _controller.Create(request);
+
+        var problem = Assert.IsType<ObjectResult>(result.Result);
+        Assert.Equal(400, problem.StatusCode);
+        var details = Assert.IsType<ProblemDetails>(problem.Value);
+        Assert.Equal("Version is required.", details.Detail);
+    }
 }

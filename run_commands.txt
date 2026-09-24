@@ -1,3 +1,7 @@
-docker compose up --build postgres mailpit api-gateway authentication-service project-service environment-service deployment-service reporting-service
+# Full stack with ngrok tunnel (local dev only)
+# Note: ensure no stale NGROK_AUTHTOKEN in your shell env, or prefix with the correct one:
+#   NGROK_AUTHTOKEN=<your_token> docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build ...
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build postgres mailpit api-gateway authentication-service project-service environment-service deployment-service reporting-service ngrok
 
-ngrok http --domain=implode-uncorrupt-thickness.ngrok-free.dev 5000
+# Ngrok-only (if the API gateway is already running)
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up ngrok

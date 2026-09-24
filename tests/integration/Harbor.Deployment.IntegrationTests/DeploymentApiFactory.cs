@@ -88,6 +88,7 @@ public class DeploymentApiFactory : WebApplicationFactory<Program>, IAsyncLifeti
             -- Projects table (owned by Harbor.Project)
             CREATE TABLE IF NOT EXISTS "Projects" (
                 "Id"         SERIAL  PRIMARY KEY,
+                "PublicId"   VARCHAR(50) NOT NULL,
                 "Name"       VARCHAR(100) NOT NULL,
                 "OwnerId"    INTEGER NOT NULL,
                 "IsArchived" BOOLEAN NOT NULL DEFAULT FALSE,
@@ -97,6 +98,7 @@ public class DeploymentApiFactory : WebApplicationFactory<Program>, IAsyncLifeti
             -- Services table (owned by Harbor.Project)
             CREATE TABLE IF NOT EXISTS "Services" (
                 "Id"        SERIAL  PRIMARY KEY,
+                "PublicId"  VARCHAR(50) NOT NULL,
                 "ProjectId" INTEGER NOT NULL REFERENCES "Projects"("Id"),
                 "Name"      VARCHAR(100) NOT NULL
             );
@@ -114,14 +116,14 @@ public class DeploymentApiFactory : WebApplicationFactory<Program>, IAsyncLifeti
 
         // Seed the Projects / Services / Environments the tests will reference.
         await using var seed = new NpgsqlCommand($"""
-            INSERT INTO "Projects" ("Id", "Name", "OwnerId") VALUES
-                ({SeedProjectId}, 'test-project', {SeedOwnerId}),
-                ({SeedProjectId + 1}, 'other-project', {OtherOwnerId})
+            INSERT INTO "Projects" ("Id", "PublicId", "Name", "OwnerId") VALUES
+                ({SeedProjectId}, 'prj-deployment-test', 'test-project', {SeedOwnerId}),
+                ({SeedProjectId + 1}, 'prj-deployment-other', 'other-project', {OtherOwnerId})
             ON CONFLICT DO NOTHING;
 
-            INSERT INTO "Services" ("Id", "ProjectId", "Name") VALUES
-                ({SeedServiceId},     {SeedProjectId},     'test-service'),
-                ({OtherServiceId},    {SeedProjectId + 1}, 'other-service')
+            INSERT INTO "Services" ("Id", "PublicId", "ProjectId", "Name") VALUES
+                ({SeedServiceId},     'srv-deployment-test',  {SeedProjectId},     'test-service'),
+                ({OtherServiceId},    'srv-deployment-other', {SeedProjectId + 1}, 'other-service')
             ON CONFLICT DO NOTHING;
 
             INSERT INTO "Environments" ("ProjectId", "Name", "Type", "IsActive") VALUES

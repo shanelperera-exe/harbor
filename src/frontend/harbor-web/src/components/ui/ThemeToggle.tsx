@@ -32,7 +32,7 @@ export default function ThemeToggle() {
     <button 
       onClick={toggleTheme}
       aria-label="Toggle theme" 
-      className={`fixed right-6 bottom-6 md:right-8 md:bottom-8 z-[100] grid h-[45px] w-[45px] grid-cols-2 overflow-hidden border transition-colors duration-300 ease-out ${
+      className={`fixed right-6 bottom-6 md:right-8 md:bottom-8 z-[100] grid h-[45px] w-[45px] grid-cols-2 overflow-hidden border transition-colors duration-300 ease-out rounded-sm ${
         isDark 
           ? 'border-white bg-gray-900 text-white' 
           : 'border-gray-900 bg-white text-gray-900'

@@ -1,0 +1,2 @@
+ALTER TABLE "Services"
+ADD COLUMN IF NOT EXISTS "RepositoryCommit" VARCHAR(40);

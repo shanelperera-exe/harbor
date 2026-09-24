@@ -14,17 +14,22 @@ namespace Harbor.Project.Repositories
 
         public async Task<int> CreateAsync(ProjectEntity project)
         {
+            if (string.IsNullOrEmpty(project.PublicId))
+            {
+                project.PublicId = Harbor.Common.Utilities.IdGenerator.ProjectId();
+            }
+
             using var connection = _dbFactory.CreateConnection();
             await connection.OpenAsync();
 
             using var command = connection.CreateCommand();
             command.CommandText =
-                "INSERT INTO \"Projects\" (\"Name\", \"Description\", \"RepositoryUrl\", \"OwnerId\", \"CreatedAt\") " +
-                "VALUES (@name, @description, @repositoryUrl, @ownerId, @createdAt) " +
+                "INSERT INTO \"Projects\" (\"PublicId\", \"Name\", \"Description\", \"OwnerId\", \"CreatedAt\") " +
+                "VALUES (@publicId, @name, @description, @ownerId, @createdAt) " +
                 "RETURNING \"Id\";";
+            command.Parameters.AddWithValue("publicId", project.PublicId);
             command.Parameters.AddWithValue("name", project.Name);
             command.Parameters.AddWithValue("description", project.Description ?? (object)DBNull.Value);
-            command.Parameters.AddWithValue("repositoryUrl", project.RepositoryUrl ?? (object)DBNull.Value);
             command.Parameters.AddWithValue("ownerId", project.OwnerId);
             command.Parameters.AddWithValue("createdAt", DateTime.UtcNow);
 
@@ -54,10 +59,38 @@ namespace Harbor.Project.Repositories
 
             using var command = connection.CreateCommand();
             command.CommandText =
-                "SELECT \"Id\", \"Name\", \"Description\", \"RepositoryUrl\", \"OwnerId\", \"CreatedAt\", " +
+                "SELECT \"Id\", \"PublicId\", \"Name\", \"Description\", \"OwnerId\", \"CreatedAt\", " +
                 "\"IsArchived\", \"ArchivedAt\", \"UpdatedAt\" " +
                 "FROM \"Projects\" WHERE \"Id\" = @id";
             command.Parameters.AddWithValue("id", id);
+
+            var projects = await ReadProjectsAsync(command);
+            return projects.FirstOrDefault();
+        }
+
+        public async Task<ProjectEntity?> GetByIdOrPublicIdAsync(string identifier)
+        {
+            using var connection = _dbFactory.CreateConnection();
+            await connection.OpenAsync();
+
+            using var command = connection.CreateCommand();
+            if (int.TryParse(identifier, out var id))
+            {
+                command.CommandText =
+                    "SELECT \"Id\", \"PublicId\", \"Name\", \"Description\", \"OwnerId\", \"CreatedAt\", " +
+                    "\"IsArchived\", \"ArchivedAt\", \"UpdatedAt\" " +
+                    "FROM \"Projects\" WHERE \"Id\" = @id OR \"PublicId\" = @identifier";
+                command.Parameters.AddWithValue("id", id);
+                command.Parameters.AddWithValue("identifier", identifier);
+            }
+            else
+            {
+                command.CommandText =
+                    "SELECT \"Id\", \"PublicId\", \"Name\", \"Description\", \"OwnerId\", \"CreatedAt\", " +
+                    "\"IsArchived\", \"ArchivedAt\", \"UpdatedAt\" " +
+                    "FROM \"Projects\" WHERE \"PublicId\" = @identifier";
+                command.Parameters.AddWithValue("identifier", identifier);
+            }
 
             var projects = await ReadProjectsAsync(command);
             return projects.FirstOrDefault();
@@ -70,7 +103,7 @@ namespace Harbor.Project.Repositories
 
             using var command = connection.CreateCommand();
             command.CommandText =
-                "SELECT \"Id\", \"Name\", \"Description\", \"RepositoryUrl\", \"OwnerId\", \"CreatedAt\", " +
+                "SELECT \"Id\", \"PublicId\", \"Name\", \"Description\", \"OwnerId\", \"CreatedAt\", " +
                 "\"IsArchived\", \"ArchivedAt\", \"UpdatedAt\" " +
                 "FROM \"Projects\" WHERE \"OwnerId\" = @ownerId AND \"IsArchived\" = FALSE ORDER BY \"CreatedAt\" DESC";
             command.Parameters.AddWithValue("ownerId", ownerId);
@@ -85,7 +118,7 @@ namespace Harbor.Project.Repositories
 
             using var command = connection.CreateCommand();
             command.CommandText =
-                "SELECT \"Id\", \"Name\", \"Description\", \"RepositoryUrl\", \"OwnerId\", \"CreatedAt\", " +
+                "SELECT \"Id\", \"PublicId\", \"Name\", \"Description\", \"OwnerId\", \"CreatedAt\", " +
                 "\"IsArchived\", \"ArchivedAt\", \"UpdatedAt\" " +
                 "FROM \"Projects\" WHERE \"IsArchived\" = FALSE ORDER BY \"CreatedAt\" DESC";
 
@@ -100,11 +133,10 @@ namespace Harbor.Project.Repositories
             using var command = connection.CreateCommand();
             command.CommandText =
                 "UPDATE \"Projects\" SET \"Name\" = @name, \"Description\" = @description, " +
-                "\"RepositoryUrl\" = @repositoryUrl, \"UpdatedAt\" = @updatedAt " +
+                "\"UpdatedAt\" = @updatedAt " +
                 "WHERE \"Id\" = @id AND \"IsArchived\" = FALSE";
             command.Parameters.AddWithValue("name", project.Name);
             command.Parameters.AddWithValue("description", project.Description ?? (object)DBNull.Value);
-            command.Parameters.AddWithValue("repositoryUrl", project.RepositoryUrl ?? (object)DBNull.Value);
             command.Parameters.AddWithValue("updatedAt", DateTime.UtcNow);
             command.Parameters.AddWithValue("id", project.Id);
 
@@ -137,9 +169,9 @@ namespace Harbor.Project.Repositories
                 projects.Add(new ProjectEntity
                 {
                     Id = reader.GetInt32(0),
-                    Name = reader.GetString(1),
-                    Description = reader.IsDBNull(2) ? null : reader.GetString(2),
-                    RepositoryUrl = reader.IsDBNull(3) ? null : reader.GetString(3),
+                    PublicId = reader.IsDBNull(1) ? string.Empty : reader.GetString(1),
+                    Name = reader.GetString(2),
+                    Description = reader.IsDBNull(3) ? null : reader.GetString(3),
                     OwnerId = reader.GetInt32(4),
                     CreatedAt = reader.GetDateTime(5),
                     IsArchived = reader.GetBoolean(6),

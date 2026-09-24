@@ -214,6 +214,51 @@ namespace Harbor.Authentication.Tests
             Assert.Equal("Username or email and password are required.", error);
         }
 
+        [Fact]
+        public async Task UpdatePreferencesAsync_InvalidTheme_ReturnsFailureWithoutWriting()
+        {
+            var request = new AccountPreferencesRequest
+            {
+                DashboardTheme = "solarized",
+                LogTheme = "dark"
+            };
+
+            var (success, error, data) = await _authService.UpdatePreferencesAsync(1, request);
+
+            Assert.False(success);
+            Assert.Equal("Dashboard theme is not supported.", error);
+            Assert.Null(data);
+            _userRepositoryMock.Verify(r => r.UpsertPreferencesAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task UnlinkExternalLoginAsync_OnlyPasswordlessProvider_ReturnsFailure()
+        {
+            _userRepositoryMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(new User { Id = 1 });
+            _userRepositoryMock.Setup(r => r.GetExternalLoginMethodsAsync(1)).ReturnsAsync(new[] { "github" });
+            _userRepositoryMock.Setup(r => r.GetHasPasswordAsync(1)).ReturnsAsync(false);
+
+            var (success, error, data) = await _authService.UnlinkExternalLoginAsync(1, "GitHub");
+
+            Assert.False(success);
+            Assert.Contains("Create a password", error);
+            Assert.Null(data);
+            _userRepositoryMock.Verify(r => r.RemoveExternalIdentityAsync(It.IsAny<int>(), It.IsAny<string>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task DeleteAccountAsync_ExistingUser_DeletesAuthenticatedUser()
+        {
+            _userRepositoryMock.Setup(r => r.GetByIdAsync(7)).ReturnsAsync(new User { Id = 7 });
+            _userRepositoryMock.Setup(r => r.DeleteAccountAsync(7)).ReturnsAsync(true);
+
+            var (success, error) = await _authService.DeleteAccountAsync(7);
+
+            Assert.True(success);
+            Assert.Null(error);
+            _userRepositoryMock.Verify(r => r.DeleteAccountAsync(7), Times.Once);
+        }
+
 
         private Microsoft.Extensions.Configuration.IConfiguration GetTestConfiguration()
         {

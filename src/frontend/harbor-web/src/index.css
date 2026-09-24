@@ -2,6 +2,7 @@
 
 @theme {
   --font-sans: "PP Neue Montreal", sans-serif;
+  --color-gray-900: oklch(0.21 0.03 263.45);
 }
 
 @custom-variant dark (&:where(.dark, .dark *));
@@ -88,11 +89,11 @@ body {
   min-width: 320px;
   min-height: 100vh;
   background-color: #ffffff;
-  color: #090909;
+  color: oklch(0.21 0.03 263.45);
 }
 
 html.dark body {
-  background-color: #090909;
+  background-color: oklch(0.21 0.03 263.45);
   color: white;
 }
 
@@ -110,3 +111,38 @@ html.dark body {
   display: inline-block;
   min-height: 1.2em;
 }
+
+/* Scrollbar Styles */
+::-webkit-scrollbar {
+  width: 14px;
+  height: 14px;
+}
+
+::-webkit-scrollbar-track {
+  background: #ffffff; /* Light mode track */
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #d1d5db; /* Light mode thumb (gray-300) */
+  border: 3px solid #ffffff;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: #9ca3af; /* Light mode thumb hover (gray-400) */
+}
+
+html.dark ::-webkit-scrollbar-track {
+  background: oklch(0.21 0.03 263.45); /* Dark mode track */
+}
+
+html.dark ::-webkit-scrollbar-thumb {
+  background-color: #525252; /* Dark mode thumb */
+  border: 3px solid oklch(0.21 0.03 263.45);
+  border-radius: 10px;
+}
+
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background-color: #737373; /* Dark mode thumb hover */
+}
+

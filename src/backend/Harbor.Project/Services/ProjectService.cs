@@ -38,31 +38,20 @@ namespace Harbor.Project.Services
 
             var project = new ProjectEntity
             {
+                PublicId = Harbor.Common.Utilities.IdGenerator.ProjectId(),
                 Name = request.Name.Trim(),
                 Description = request.Description?.Trim(),
-                RepositoryUrl = request.RepositoryUrl?.Trim(),
                 OwnerId = ownerId
             };
 
             var newId = await _projectRepository.CreateAsync(project);
+            project.Id = newId;
 
-            return (true, null, new ProjectResponse
-            {
-                Id = newId,
-                Name = project.Name,
-                Description = project.Description,
-                RepositoryUrl = project.RepositoryUrl,
-                OwnerId = project.OwnerId,
-                CreatedAt = DateTime.UtcNow,
-                IsArchived = false,
-                UpdatedAt = null
-            });
+            return (true, null, ToResponse(project));
         }
 
         public async Task<List<ProjectResponse>> GetAccessibleProjectsAsync(int userId, bool isAdmin)
         {
-            // For now, "accessible" = projects you own, or everything if you're an Admin.
-            // If a team/sharing model gets added later, this is the only place that needs to change.
             var projects = isAdmin
                 ? await _projectRepository.GetAllAsync()
                 : await _projectRepository.GetByOwnerAsync(userId);
@@ -70,18 +59,22 @@ namespace Harbor.Project.Services
             return projects.Select(ToResponse).ToList();
         }
 
-        public async Task<(bool Success, string? Error, bool Forbidden, ProjectResponse? Data)> UpdateAsync(
-            int projectId, UpdateProjectRequest request, int userId, bool isAdmin)
+        public async Task<ProjectResponse?> GetByIdAsync(string projectId)
         {
-            var project = await _projectRepository.GetByIdAsync(projectId);
+            var project = await _projectRepository.GetByIdOrPublicIdAsync(projectId);
+            return project == null ? null : ToResponse(project);
+        }
 
-            // --- Not found: treat like "you can't touch what doesn't exist" ---
+        public async Task<(bool Success, string? Error, bool Forbidden, ProjectResponse? Data)> UpdateAsync(
+            string projectId, UpdateProjectRequest request, int userId, bool isAdmin)
+        {
+            var project = await _projectRepository.GetByIdOrPublicIdAsync(projectId);
+
             if (project is null)
             {
                 return (false, "Project not found.", false, null);
             }
 
-            // --- Scenario 3: Unauthorized update ---
             if (!isAdmin && project.OwnerId != userId)
             {
                 return (false, "You do not have permission to update this project.", true, null);
@@ -92,7 +85,6 @@ namespace Harbor.Project.Services
                 return (false, "Archived projects cannot be updated.", false, null);
             }
 
-            // --- Validation, same rules as create ---
             if (string.IsNullOrWhiteSpace(request.Name))
             {
                 return (false, "Project name is required.", false, null);
@@ -117,7 +109,6 @@ namespace Harbor.Project.Services
 
             project.Name = trimmedName;
             project.Description = request.Description?.Trim();
-            project.RepositoryUrl = request.RepositoryUrl?.Trim();
 
             var updated = await _projectRepository.UpdateAsync(project);
             if (!updated)
@@ -125,20 +116,19 @@ namespace Harbor.Project.Services
                 return (false, "Project could not be updated. It may have been archived.", false, null);
             }
 
-            var refreshed = await _projectRepository.GetByIdAsync(projectId);
+            var refreshed = await _projectRepository.GetByIdAsync(project.Id);
             return (true, null, false, ToResponse(refreshed!));
         }
 
-        public async Task<(bool Success, string? Error, bool Forbidden)> ArchiveAsync(int projectId, int userId, bool isAdmin)
+        public async Task<(bool Success, string? Error, bool Forbidden)> ArchiveAsync(string projectId, int userId, bool isAdmin)
         {
-            var project = await _projectRepository.GetByIdAsync(projectId);
+            var project = await _projectRepository.GetByIdOrPublicIdAsync(projectId);
 
             if (project is null)
             {
                 return (false, "Project not found.", false);
             }
 
-            // --- Scenario 3: Unauthorized archive ---
             if (!isAdmin && project.OwnerId != userId)
             {
                 return (false, "You do not have permission to archive this project.", true);
@@ -149,7 +139,7 @@ namespace Harbor.Project.Services
                 return (false, "Project is already archived.", false);
             }
 
-            var archived = await _projectRepository.ArchiveAsync(projectId, DateTime.UtcNow);
+            var archived = await _projectRepository.ArchiveAsync(project.Id, DateTime.UtcNow);
             if (!archived)
             {
                 return (false, "Project could not be archived.", false);
@@ -161,9 +151,9 @@ namespace Harbor.Project.Services
         private static ProjectResponse ToResponse(ProjectEntity p) => new ProjectResponse
         {
             Id = p.Id,
+            PublicId = string.IsNullOrEmpty(p.PublicId) ? p.Id.ToString() : p.PublicId,
             Name = p.Name,
             Description = p.Description,
-            RepositoryUrl = p.RepositoryUrl,
             OwnerId = p.OwnerId,
             CreatedAt = p.CreatedAt,
             IsArchived = p.IsArchived,

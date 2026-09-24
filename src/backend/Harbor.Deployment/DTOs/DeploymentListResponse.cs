@@ -11,7 +11,8 @@ public class DeploymentListResponse
 public class DeploymentResponse
 {
     public int Id { get; init; }
-    public int ProjectId { get; init; }
+    public string PublicId { get; init; } = string.Empty;
+    public int ServiceId { get; init; }
     public string Environment { get; init; } = string.Empty;
     public string Version { get; init; } = string.Empty;
     public string? CommitSha { get; init; }

@@ -20,12 +20,12 @@ public class DeploymentServiceTests
     public async Task GetHistoryAsync_ReturnsPagedDeploymentSummaries()
     {
         var startedAt = DateTime.UtcNow;
-        _repository.Setup(r => r.GetHistoryAsync(7, 13, "Succeeded", 0, 20)).ReturnsAsync((new List<DeploymentEntity>
+        _repository.Setup(r => r.GetHistoryAsync(7, "13", "Succeeded", 0, 20)).ReturnsAsync((new List<DeploymentEntity>
         {
             new() { Id = 22, OwnerId = 7, ServiceId = 13, Environment = "production", Version = "1.4.0", CommitSha = "f00ba41234", Status = "Succeeded", StartedAt = startedAt }
         }, 1));
 
-        var result = await _service.GetHistoryAsync(7, new DeploymentHistoryQuery { ServiceId = 13, Status = " Succeeded ", Page = 1, PageSize = 20 });
+        var result = await _service.GetHistoryAsync(7, new DeploymentHistoryQuery { ServiceId = "13", Status = " Succeeded ", Page = 1, PageSize = 20 });
 
         var deployment = Assert.Single(result.Items);
         Assert.Equal(1, result.TotalCount);
@@ -152,12 +152,50 @@ public class DeploymentServiceTests
     // ---------- CreateAsync: Valid requests ----------
 
     [Fact]
+    public async Task CreateAsync_ValidBranch_StoresSelectedBranch()
+    {
+        var request = new CreateDeploymentRequest { ServiceId = "13", Environment = "production", Version = "release/1.4" };
+
+        _repository.Setup(r => r.GetServiceAccessAsync("13")).ReturnsAsync((true, 7, false, 10, 13));
+        _repository.Setup(r => r.GetEnvironmentByNameAsync(10, "production")).ReturnsAsync((true, true, "Production"));
+        _repository.Setup(r => r.CreateAsync(It.IsAny<DeploymentEntity>())).ReturnsAsync(42);
+
+        var result = await _service.CreateAsync(request, 7, isAdmin: false);
+
+        Assert.True(result.Success);
+        _repository.Verify(r => r.CreateAsync(It.Is<DeploymentEntity>(deployment =>
+            deployment.Version == "release/1.4" && deployment.CommitSha == null)), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateAsync_ValidCommitReference_StoresSelectedCommit()
+    {
+        var request = new CreateDeploymentRequest
+        {
+            ServiceId = "13",
+            Environment = "production",
+            Version = "main",
+            CommitSha = "0123456789abcdef0123456789abcdef01234567"
+        };
+
+        _repository.Setup(r => r.GetServiceAccessAsync("13")).ReturnsAsync((true, 7, false, 10, 13));
+        _repository.Setup(r => r.GetEnvironmentByNameAsync(10, "production")).ReturnsAsync((true, true, "Production"));
+        _repository.Setup(r => r.CreateAsync(It.IsAny<DeploymentEntity>())).ReturnsAsync(42);
+
+        var result = await _service.CreateAsync(request, 7, isAdmin: false);
+
+        Assert.True(result.Success);
+        _repository.Verify(r => r.CreateAsync(It.Is<DeploymentEntity>(deployment =>
+            deployment.Version == "main" && deployment.CommitSha == "0123456789abcdef0123456789abcdef01234567")), Times.Once);
+    }
+
+    [Fact]
     public async Task CreateAsync_ValidRequest_CreatesDeployment()
     {
-        var request = new CreateDeploymentRequest { ServiceId = 13, Environment = "production", Version = "1.4.0", CommitSha = "abc123" };
+        var request = new CreateDeploymentRequest { ServiceId = "13", Environment = "production", Version = "1.4.0", CommitSha = "abc123" };
         const int ownerId = 7;
 
-        _repository.Setup(r => r.GetServiceAccessAsync(13)).ReturnsAsync((true, 7, false, 10));
+        _repository.Setup(r => r.GetServiceAccessAsync("13")).ReturnsAsync((true, 7, false, 10, 13));
         _repository.Setup(r => r.GetEnvironmentByNameAsync(10, "production")).ReturnsAsync((true, true, "Production"));
         _repository.Setup(r => r.CreateAsync(It.IsAny<DeploymentEntity>())).ReturnsAsync(42);
 
@@ -176,10 +214,10 @@ public class DeploymentServiceTests
     [Fact]
     public async Task CreateAsync_StoresCorrectInitialStatusAndTimestamp()
     {
-        var request = new CreateDeploymentRequest { ServiceId = 13, Environment = "staging", Version = "2.0.0" };
+        var request = new CreateDeploymentRequest { ServiceId = "13", Environment = "staging", Version = "2.0.0" };
         const int ownerId = 7;
 
-        _repository.Setup(r => r.GetServiceAccessAsync(13)).ReturnsAsync((true, 7, false, 10));
+        _repository.Setup(r => r.GetServiceAccessAsync("13")).ReturnsAsync((true, 7, false, 10, 13));
         _repository.Setup(r => r.GetEnvironmentByNameAsync(10, "staging")).ReturnsAsync((true, true, "Staging"));
         _repository.Setup(r => r.CreateAsync(It.IsAny<DeploymentEntity>())).ReturnsAsync(1);
 
@@ -192,7 +230,7 @@ public class DeploymentServiceTests
         Assert.NotNull(deployedEntity);
         Assert.Equal("Pending", deployedEntity!.Status);
         Assert.Equal(ownerId, deployedEntity.OwnerId);
-        Assert.Equal(request.ServiceId, deployedEntity.ServiceId);
+        Assert.Equal(13, deployedEntity.ServiceId);
         Assert.Equal(request.Environment, deployedEntity.Environment);
         Assert.Equal(request.Version, deployedEntity.Version);
         Assert.True(deployedEntity.StartedAt <= DateTime.UtcNow);
@@ -201,9 +239,9 @@ public class DeploymentServiceTests
     [Fact]
     public async Task CreateAsync_CommitShaIsOptional_DeploymentStillCreated()
     {
-        var request = new CreateDeploymentRequest { ServiceId = 13, Environment = "production", Version = "1.0.0", CommitSha = null };
+        var request = new CreateDeploymentRequest { ServiceId = "13", Environment = "production", Version = "1.0.0", CommitSha = null };
 
-        _repository.Setup(r => r.GetServiceAccessAsync(13)).ReturnsAsync((true, 7, false, 10));
+        _repository.Setup(r => r.GetServiceAccessAsync("13")).ReturnsAsync((true, 7, false, 10, 13));
         _repository.Setup(r => r.GetEnvironmentByNameAsync(10, "production")).ReturnsAsync((true, true, "Production"));
         _repository.Setup(r => r.CreateAsync(It.IsAny<DeploymentEntity>())).ReturnsAsync(5);
 
@@ -216,9 +254,9 @@ public class DeploymentServiceTests
     [Fact]
     public async Task CreateAsync_EnvironmentAndVersionAreWhitespaceTrimmed()
     {
-        var request = new CreateDeploymentRequest { ServiceId = 13, Environment = "  production  ", Version = "  1.0.0  ", CommitSha = "  abc  " };
+        var request = new CreateDeploymentRequest { ServiceId = "13", Environment = "  production  ", Version = "  1.0.0  ", CommitSha = "  abc  " };
 
-        _repository.Setup(r => r.GetServiceAccessAsync(13)).ReturnsAsync((true, 7, false, 10));
+        _repository.Setup(r => r.GetServiceAccessAsync("13")).ReturnsAsync((true, 7, false, 10, 13));
         _repository.Setup(r => r.GetEnvironmentByNameAsync(10, "production")).ReturnsAsync((true, true, "Production"));
         _repository.Setup(r => r.CreateAsync(It.IsAny<DeploymentEntity>())).ReturnsAsync(1);
 
@@ -237,8 +275,23 @@ public class DeploymentServiceTests
     [InlineData("   ")]
     public async Task CreateAsync_MissingVersion_ReturnsValidationError(string? version)
     {
-        var request = new CreateDeploymentRequest { ServiceId = 13, Environment = "production", Version = version! };
-        _repository.Setup(r => r.GetServiceAccessAsync(13)).ReturnsAsync((true, 7, false, 10));
+        var request = new CreateDeploymentRequest { ServiceId = "13", Environment = "production", Version = version! };
+        _repository.Setup(r => r.GetServiceAccessAsync("13")).ReturnsAsync((true, 7, false, 10, 13));
+        _repository.Setup(r => r.GetEnvironmentByNameAsync(10, "production")).ReturnsAsync((true, true, "Production"));
+
+        var result = await _service.CreateAsync(request, 7, isAdmin: false);
+
+        Assert.False(result.Success);
+        Assert.Equal("Version is required.", result.Error);
+        Assert.Null(result.DeploymentId);
+        _repository.Verify(r => r.CreateAsync(It.IsAny<DeploymentEntity>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CreateAsync_InvalidVersionReference_DoesNotCreateDeployment()
+    {
+        var request = new CreateDeploymentRequest { ServiceId = "13", Environment = "production", Version = "  " };
+        _repository.Setup(r => r.GetServiceAccessAsync("13")).ReturnsAsync((true, 7, false, 10, 13));
         _repository.Setup(r => r.GetEnvironmentByNameAsync(10, "production")).ReturnsAsync((true, true, "Production"));
 
         var result = await _service.CreateAsync(request, 7, isAdmin: false);
@@ -252,8 +305,8 @@ public class DeploymentServiceTests
     [Fact]
     public async Task CreateAsync_ServiceNotFound_ReturnsError()
     {
-        var request = new CreateDeploymentRequest { ServiceId = 999, Environment = "production", Version = "1.0.0" };
-        _repository.Setup(r => r.GetServiceAccessAsync(999)).ReturnsAsync((false, 0, false, 0));
+        var request = new CreateDeploymentRequest { ServiceId = "999", Environment = "production", Version = "1.0.0" };
+        _repository.Setup(r => r.GetServiceAccessAsync("999")).ReturnsAsync((false, 0, false, 0, 0));
 
         var result = await _service.CreateAsync(request, 7, isAdmin: false);
 
@@ -265,11 +318,10 @@ public class DeploymentServiceTests
     [Fact]
     public async Task CreateAsync_ArchivedProject_ReturnsError()
     {
-        var request = new CreateDeploymentRequest { ServiceId = 13, Environment = "production", Version = "1.0.0" };
-        _repository.Setup(r => r.GetServiceAccessAsync(13)).ReturnsAsync((true, 7, true, 10));
+        var request = new CreateDeploymentRequest { ServiceId = "13", Environment = "production", Version = "1.0.0" };
+        _repository.Setup(r => r.GetServiceAccessAsync("13")).ReturnsAsync((true, 7, true, 10, 13));
 
         var result = await _service.CreateAsync(request, 7, isAdmin: false);
-
         Assert.False(result.Success);
         Assert.Equal("Project is archived.", result.Error);
         _repository.Verify(r => r.CreateAsync(It.IsAny<DeploymentEntity>()), Times.Never);
@@ -278,8 +330,8 @@ public class DeploymentServiceTests
     [Fact]
     public async Task CreateAsync_EnvironmentNotFound_ReturnsError()
     {
-        var request = new CreateDeploymentRequest { ServiceId = 13, Environment = "nonexistent", Version = "1.0.0" };
-        _repository.Setup(r => r.GetServiceAccessAsync(13)).ReturnsAsync((true, 7, false, 10));
+        var request = new CreateDeploymentRequest { ServiceId = "13", Environment = "nonexistent", Version = "1.0.0" };
+        _repository.Setup(r => r.GetServiceAccessAsync("13")).ReturnsAsync((true, 7, false, 10, 13));
         _repository.Setup(r => r.GetEnvironmentByNameAsync(10, "nonexistent")).ReturnsAsync(((bool Exists, bool IsActive, string Type)?)null);
 
         var result = await _service.CreateAsync(request, 7, isAdmin: false);
@@ -292,8 +344,8 @@ public class DeploymentServiceTests
     [Fact]
     public async Task CreateAsync_InactiveEnvironment_ReturnsError()
     {
-        var request = new CreateDeploymentRequest { ServiceId = 13, Environment = "production", Version = "1.0.0" };
-        _repository.Setup(r => r.GetServiceAccessAsync(13)).ReturnsAsync((true, 7, false, 10));
+        var request = new CreateDeploymentRequest { ServiceId = "13", Environment = "production", Version = "1.0.0" };
+        _repository.Setup(r => r.GetServiceAccessAsync("13")).ReturnsAsync((true, 7, false, 10, 13));
         _repository.Setup(r => r.GetEnvironmentByNameAsync(10, "production")).ReturnsAsync((true, false, "Production"));
 
         var result = await _service.CreateAsync(request, 7, isAdmin: false);
@@ -306,8 +358,8 @@ public class DeploymentServiceTests
     [Fact]
     public async Task CreateAsync_UnsupportedEnvironmentType_ReturnsError()
     {
-        var request = new CreateDeploymentRequest { ServiceId = 13, Environment = "qa", Version = "1.0.0" };
-        _repository.Setup(r => r.GetServiceAccessAsync(13)).ReturnsAsync((true, 7, false, 10));
+        var request = new CreateDeploymentRequest { ServiceId = "13", Environment = "qa", Version = "1.0.0" };
+        _repository.Setup(r => r.GetServiceAccessAsync("13")).ReturnsAsync((true, 7, false, 10, 13));
         _repository.Setup(r => r.GetEnvironmentByNameAsync(10, "qa")).ReturnsAsync((true, true, "QA"));
 
         var result = await _service.CreateAsync(request, 7, isAdmin: false);
@@ -322,8 +374,8 @@ public class DeploymentServiceTests
     [Fact]
     public async Task CreateAsync_NonOwnerNonAdmin_ReturnsForbidden()
     {
-        var request = new CreateDeploymentRequest { ServiceId = 13, Environment = "production", Version = "1.0.0" };
-        _repository.Setup(r => r.GetServiceAccessAsync(13)).ReturnsAsync((true, 7, false, 10));
+        var request = new CreateDeploymentRequest { ServiceId = "13", Environment = "production", Version = "1.0.0" };
+        _repository.Setup(r => r.GetServiceAccessAsync("13")).ReturnsAsync((true, 7, false, 10, 13));
 
         var result = await _service.CreateAsync(request, ownerId: 99, isAdmin: false);
 
@@ -335,8 +387,8 @@ public class DeploymentServiceTests
     [Fact]
     public async Task CreateAsync_AdminCanDeployToOtherUsersService()
     {
-        var request = new CreateDeploymentRequest { ServiceId = 13, Environment = "production", Version = "1.0.0" };
-        _repository.Setup(r => r.GetServiceAccessAsync(13)).ReturnsAsync((true, 7, false, 10));
+        var request = new CreateDeploymentRequest { ServiceId = "13", Environment = "production", Version = "1.0.0" };
+        _repository.Setup(r => r.GetServiceAccessAsync("13")).ReturnsAsync((true, 7, false, 10, 13));
         _repository.Setup(r => r.GetEnvironmentByNameAsync(10, "production")).ReturnsAsync((true, true, "Production"));
         _repository.Setup(r => r.CreateAsync(It.IsAny<DeploymentEntity>())).ReturnsAsync(42);
 
@@ -349,8 +401,8 @@ public class DeploymentServiceTests
     [Fact]
     public async Task CreateAsync_OwnerCanDeployToOwnService()
     {
-        var request = new CreateDeploymentRequest { ServiceId = 13, Environment = "production", Version = "1.0.0" };
-        _repository.Setup(r => r.GetServiceAccessAsync(13)).ReturnsAsync((true, 7, false, 10));
+        var request = new CreateDeploymentRequest { ServiceId = "13", Environment = "production", Version = "1.0.0" };
+        _repository.Setup(r => r.GetServiceAccessAsync("13")).ReturnsAsync((true, 7, false, 10, 13));
         _repository.Setup(r => r.GetEnvironmentByNameAsync(10, "production")).ReturnsAsync((true, true, "Production"));
         _repository.Setup(r => r.CreateAsync(It.IsAny<DeploymentEntity>())).ReturnsAsync(42);
 
@@ -366,8 +418,8 @@ public class DeploymentServiceTests
     [InlineData("Production")]
     public async Task CreateAsync_AllSupportedEnvironmentTypes_Succeed(string envType)
     {
-        var request = new CreateDeploymentRequest { ServiceId = 13, Environment = envType.ToLower(), Version = "1.0.0" };
-        _repository.Setup(r => r.GetServiceAccessAsync(13)).ReturnsAsync((true, 7, false, 10));
+        var request = new CreateDeploymentRequest { ServiceId = "13", Environment = envType.ToLower(), Version = "1.0.0" };
+        _repository.Setup(r => r.GetServiceAccessAsync("13")).ReturnsAsync((true, 7, false, 10, 13));
         _repository.Setup(r => r.GetEnvironmentByNameAsync(10, envType.ToLower())).ReturnsAsync((true, true, envType));
         _repository.Setup(r => r.CreateAsync(It.IsAny<DeploymentEntity>())).ReturnsAsync(1);
 

@@ -6,6 +6,7 @@ using Harbor.GitHub;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using Harbor.Deployment.Kafka;
 
 if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("JWT_SECRET")))
 {
@@ -79,6 +80,14 @@ builder.Services.AddSingleton<DbConnectionFactory>();
 builder.Services.AddScoped<IDeploymentRepository, DeploymentRepository>();
 builder.Services.AddScoped<IDeploymentService, DeploymentService>();
 builder.Services.AddScoped<IInstallationTokenResolver, InstallationTokenResolver>();
+
+builder.Services.Configure<KafkaOptions>(options =>
+{
+    options.BootstrapServers = builder.Configuration["KAFKA_BOOTSTRAP_SERVERS"] ?? string.Empty;
+    options.DeploymentTopic = builder.Configuration["KAFKA_DEPLOYMENT_TOPIC"] ?? string.Empty;
+});
+builder.Services.AddSingleton<IKafkaProducerService, KafkaProducerService>();
+
 builder.Services.AddHarborGitHubApp();
 builder.Services.Configure<GitHubActionsOptions>(options =>
 {

@@ -53,18 +53,22 @@ Harbor follows a **microservices architecture**: one ASP.NET Core Web API per bu
              ▼               ▼             ▼               ▼              ▼
      Harbor.Authentication  Harbor.Project  Harbor.Environment  Harbor.Deployment  Harbor.Reporting
       (users, JWT, roles)   (projects)      (envs + config)     (deployments)      (planned)
-             │               │             │               │
-             └───────────────┴─────────────┴───────────────┘
-                                 │
-                                 ▼
-                          PostgreSQL (harbor_db)
+             │               │             │               │              │
+             └───────────────┴─────────────┴───────────────┘              │
+                                 │                                        │
+                                 ▼                                        ▼
+                          PostgreSQL (harbor_db)                     Apache Kafka
+                                                                   (Event Streaming)
+```
+
+**Apache Kafka Integration**: Harbor uses Apache Kafka as an event streaming platform to decouple microservices. The `Harbor.Deployment` service acts as a Producer, publishing `DeploymentLifecycleEvent` messages to a Kafka topic (`deployment-events`) whenever a deployment's state changes. Other services (like the planned Reporting or Notification services) will act as Consumers, subscribing to these events to react asynchronously without creating tight coupling or blocking the Deployment service.
                      one schema, per-service tables,
                      accessed via ADO.NET (Npgsql) — no ORM
 
-     ┌─────────────────────────────┐        ┌───────────────────────────────┐
-     │ Kafka (reserved, not wired) │        │ Prometheus / Grafana (reserved) │
-     │ future deployment events    │        │ future metrics & dashboards     │
-     └─────────────────────────────┘        └───────────────────────────────┘
+                                            ┌───────────────────────────────┐
+                                            │ Prometheus / Grafana (reserved) │
+                                            │ future metrics & dashboards     │
+                                            └───────────────────────────────┘
 ```
 
 **Design summary:**
@@ -74,7 +78,7 @@ Harbor follows a **microservices architecture**: one ASP.NET Core Web API per bu
 - All services share **one PostgreSQL database** (`harbor_db`) but each service owns its own tables and never queries another service's tables directly — cross-service data needs go through HTTP, preserving service boundaries even though the database is physically shared.
 - Data access is raw SQL via `Npgsql`/ADO.NET behind a Repository interface — there is intentionally no ORM (see [Implementation Decisions](#architecture--implementation-decisions)).
 - `Harbor.Authentication` is the identity provider: it issues JWTs that every other service independently validates using a shared `JWT_SECRET`/`JWT_ISSUER`/`JWT_AUDIENCE` — no service-to-service call is needed to verify a token.
-- Kafka and Prometheus/Grafana directories exist under `infrastructure/` as **reserved integration points** for future event-driven notifications and observability; they are not yet wired into any service (see [Known Limitations](#known-limitations--roadmap)).
+- Prometheus/Grafana directories exist under `infrastructure/` as **reserved integration points** for future observability; they are not yet wired into any service (see [Known Limitations](#known-limitations--roadmap)).
 
 ---
 
@@ -93,7 +97,7 @@ Harbor follows a **microservices architecture**: one ASP.NET Core Web API per bu
 | Config | DotNetEnv (`.env`, git-ignored) |
 | Testing | xUnit + Moq (unit), Testcontainers (integration), Selenium (E2E), JMeter (performance) |
 | CI/CD | GitHub Actions, Docker, Azure Container Apps |
-| Messaging (reserved) | Apache Kafka |
+| Messaging / Events | Apache Kafka |
 | Observability (reserved) | Prometheus, Grafana |
 
 ---

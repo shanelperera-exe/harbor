@@ -7,6 +7,7 @@ public interface IDeploymentRepository
     Task<(IReadOnlyList<DeploymentEntity> Items, int TotalCount)> GetHistoryAsync(int ownerId, string? serviceId, string? status, int skip, int take);
     Task<(IReadOnlyList<DeploymentEntity> Items, int TotalCount)> GetHistoryAsync(int ownerId, int serviceId, string? status, int skip, int take);
     Task<DeploymentEntity?> GetByIdAsync(int id, int ownerId);
+    Task<DeploymentEntity?> GetEntityByIdAsync(int id);
     Task<IReadOnlyList<DeploymentLogEntity>> GetLogsAsync(int deploymentId);
     Task<int> CreateAsync(DeploymentEntity deployment);
     Task<bool> UpdateTriggerResultAsync(int deploymentId, string status, string? failureReason, string? triggerError);

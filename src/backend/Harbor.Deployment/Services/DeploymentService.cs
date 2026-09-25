@@ -1,6 +1,8 @@
 using Harbor.Deployment.DTOs;
 using Harbor.Deployment.Models;
 using Harbor.Deployment.Repositories;
+using Harbor.Deployment.Kafka;
+using Harbor.Contracts.Kafka;
 using Microsoft.Extensions.Options;
 
 namespace Harbor.Deployment.Services;
@@ -11,6 +13,7 @@ public class DeploymentService : IDeploymentService
     private readonly IGitHubActionsClient gitHubActionsClient;
     private readonly IOptions<GitHubActionsOptions> options;
     private readonly IInstallationTokenResolver? installationTokenResolver;
+    private readonly IKafkaProducerService kafkaProducerService;
     private readonly ILogger<DeploymentService> logger;
 
     public DeploymentService(
@@ -18,12 +21,14 @@ public class DeploymentService : IDeploymentService
         IGitHubActionsClient? gitHubActionsClient = null,
         IOptions<GitHubActionsOptions>? options = null,
         IInstallationTokenResolver? installationTokenResolver = null,
+        IKafkaProducerService? kafkaProducerService = null,
         ILogger<DeploymentService>? logger = null)
     {
         this.repository = repository;
         this.gitHubActionsClient = gitHubActionsClient ?? new DisabledGitHubActionsClient();
         this.options = options ?? Microsoft.Extensions.Options.Options.Create(new GitHubActionsOptions());
         this.installationTokenResolver = installationTokenResolver;
+        this.kafkaProducerService = kafkaProducerService ?? new DisabledKafkaProducerService();
         this.logger = logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<DeploymentService>.Instance;
     }
     private const int MaxPageSize = 100;
@@ -47,6 +52,11 @@ public class DeploymentService : IDeploymentService
             Task.FromResult(new CiCheckResult("unknown"));
         public Task<string?> FetchRunLogsAsync(string owner, string repository, long runId, string installationToken, CancellationToken cancellationToken = default) =>
             Task.FromResult<string?>(null);
+    }
+
+    internal sealed class DisabledKafkaProducerService : IKafkaProducerService
+    {
+        public Task PublishDeploymentEventAsync(DeploymentLifecycleEvent @event) => Task.CompletedTask;
     }
 
     public async Task<DeploymentDetailsResponse?> GetDetailsAsync(int id, int ownerId)
@@ -137,10 +147,12 @@ public class DeploymentService : IDeploymentService
         if (!result.Succeeded)
         {
             await repository.UpdateTriggerResultAsync(deploymentId, "Failed", result.Error, result.Error);
+            await PublishEventAsync(deploymentId, serviceAccess.RealServiceId.ToString(), "Failed", deployment.Environment, deployment.Version, result.Error);
             return (true, result.Error, deploymentId, "Failed", null);
         }
 
         await repository.UpdateTriggerResultAsync(deploymentId, "Running", null, null);
+        await PublishEventAsync(deploymentId, serviceAccess.RealServiceId.ToString(), "Running", deployment.Environment, deployment.Version, null);
 
         // ── Background: capture GitHub Actions run ID + URL for webhook correlation ──────────────
         if (!string.IsNullOrWhiteSpace(installationToken))
@@ -170,8 +182,26 @@ public class DeploymentService : IDeploymentService
         return (true, null, deploymentId, "Running", null);
     }
 
-    public Task<bool> UpdateStatusAsync(int deploymentId, string status, string? failureReason) =>
-        repository.UpdateTriggerResultAsync(deploymentId, status, failureReason, null);
+    public async Task<bool> UpdateStatusAsync(int deploymentId, string status, string? failureReason)
+    {
+        var result = await repository.UpdateTriggerResultAsync(deploymentId, status, failureReason, null);
+        if (result)
+        {
+            try
+            {
+                var deployment = await repository.GetEntityByIdAsync(deploymentId);
+                if (deployment != null)
+                {
+                    await PublishEventAsync(deploymentId, deployment.ServiceId.ToString(), status, deployment.Environment, deployment.Version, failureReason);
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to publish Kafka event during UpdateStatusAsync for deployment {DeploymentId}", deploymentId);
+            }
+        }
+        return result;
+    }
 
     public async Task<CiRunListResponse> GetCiRunsAsync(int ownerId, string serviceId, int page, int pageSize)
     {
@@ -242,5 +272,27 @@ public class DeploymentService : IDeploymentService
         };
 
         return await CreateAsync(request, ownerId, isAdmin: true);
+    }
+
+    private async Task PublishEventAsync(int deploymentId, string serviceId, string status, string environment, string version, string? failureReason)
+    {
+        try
+        {
+            var @event = new DeploymentLifecycleEvent
+            {
+                DeploymentId = deploymentId,
+                ServiceId = serviceId,
+                Status = status,
+                Environment = environment,
+                Version = version,
+                Timestamp = DateTime.UtcNow,
+                FailureReason = failureReason
+            };
+            await kafkaProducerService.PublishDeploymentEventAsync(@event);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to publish deployment lifecycle event for deployment {DeploymentId}", deploymentId);
+        }
     }
 }

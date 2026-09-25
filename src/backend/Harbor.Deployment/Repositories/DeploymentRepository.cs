@@ -56,6 +56,16 @@ public class DeploymentRepository(DbConnectionFactory dbFactory) : IDeploymentRe
         return (await ReadDeploymentsAsync(command)).SingleOrDefault();
     }
 
+    public async Task<DeploymentEntity?> GetEntityByIdAsync(int id)
+    {
+        await using var connection = dbFactory.CreateConnection();
+        await connection.OpenAsync();
+        await using var command = connection.CreateCommand();
+        command.CommandText = "SELECT \"Id\", \"PublicId\", \"ServiceId\", \"OwnerId\", \"Environment\", \"Version\", \"CommitSha\", \"Status\", \"StartedAt\", \"CompletedAt\", \"FailureReason\", \"WorkflowFile\", \"WorkflowRef\", \"TriggerError\", \"WorkflowRunId\", \"WorkflowRunUrl\" FROM \"Deployments\" WHERE \"Id\" = @id";
+        command.Parameters.AddWithValue("id", id);
+        return (await ReadDeploymentsAsync(command)).SingleOrDefault();
+    }
+
     public async Task<IReadOnlyList<DeploymentLogEntity>> GetLogsAsync(int deploymentId)
     {
         await using var connection = dbFactory.CreateConnection();

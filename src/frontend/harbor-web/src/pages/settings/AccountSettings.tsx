@@ -8,6 +8,7 @@ import { MdOutlinePublic } from "react-icons/md";
 import { RiLinksFill, RiSaveLine } from "react-icons/ri";
 import { PiPassword, PiEye, PiEyeSlash } from "react-icons/pi";
 import { FiExternalLink } from "react-icons/fi";
+import { LuCircleAlert } from "react-icons/lu";
 import UserAvatar from "../../components/ui/UserAvatar";
 import { clearAuthSession } from "../../services/authSession";
 import { useTheme } from "../../contexts/ThemeContext";
@@ -175,6 +176,7 @@ export default function AccountSettings() {
 const hasGithubDeploymentCredential = connectedProviders.includes('github');
   const [githubAccountData, setGithubAccountData] = useState<{owner: string, count: number, repositories?: any[]} | null>(null);
   const hasGithubInstallation = profile.githubInstallationId != null || githubAccountData != null;
+  const [isRefreshingGitHub, setIsRefreshingGitHub] = useState(false);
 
   useEffect(() => {
     async function loadGithubData() {
@@ -182,6 +184,7 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
       
       const token = localStorage.getItem('harbor_token');
       if (!token) return;
+      if (profile.githubInstallationId == null) return;
       
       try {
         const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
@@ -206,7 +209,7 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
     }
     
     void loadGithubData();
-  }, [profile.loginMethods]);
+  }, [profile.loginMethods, profile.githubInstallationId]);
 
   useEffect(() => {
     const handleFocus = async () => {
@@ -224,7 +227,30 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
         if (response.ok) {
           const data = await response.json();
           if (data.data) {
-            setProfile(data.data);
+            const userProfile = data.data;
+            if (userProfile.loginMethods?.map((m: string) => m.toLowerCase()).includes('github') && userProfile.githubInstallationId == null) {
+              setIsRefreshingGitHub(true);
+              try {
+                const refreshResp = await fetch(`${authApiBase}/auth/github/refresh-installation`, {
+                  method: 'POST',
+                  headers: { 
+                    Authorization: `Bearer ${token}`,
+                    'ngrok-skip-browser-warning': 'true',
+                  }
+                });
+                if (refreshResp.ok) {
+                  const refreshData = await refreshResp.json();
+                  if (refreshData.installationId) {
+                    userProfile.githubInstallationId = refreshData.installationId;
+                  }
+                }
+              } catch (e) {
+                console.error('Failed to refresh github installation', e);
+              } finally {
+                setIsRefreshingGitHub(false);
+              }
+            }
+            setProfile(userProfile);
           }
         }
       } catch (err) {
@@ -234,6 +260,8 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
     
     window.addEventListener('focus', handleFocus);
     document.addEventListener('visibilitychange', handleFocus);
+    void handleFocus();
+    
     return () => {
       window.removeEventListener('focus', handleFocus);
       document.removeEventListener('visibilitychange', handleFocus);
@@ -258,6 +286,7 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
     try {
       const response = await fetch(`${authApiBase}/auth/external/${provider}/link`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 
           Authorization: `Bearer ${token}`,
           'ngrok-skip-browser-warning': 'true',
@@ -1245,10 +1274,14 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                                        <span className="block">
                                         <IoLogoGithub className="w-7 h-7 text-gray-900 dark:text-white flex-shrink-0" />
                                       </span>
-                                      <span className="text-[18px] font-medium text-gray-900 dark:text-white">{githubAccountData?.owner || 'Loading...'}</span>
+                                      <span className="text-[18px] font-medium text-gray-900 dark:text-white">
+                                        {githubAccountData?.owner || (hasGithubInstallation ? 'Loading...' : (profile.providerUsernames?.github || 'GitHub'))}
+                                      </span>
                                     </summary>
                                     <div className="border-x border-b border-solid border-gray-300 dark:border-[#525252] pt-3 pr-3 pb-3 pl-9 [max-height:14.25rem] [overflow:auto] bg-gray-50 dark:bg-[oklch(0.21_0.03_263.45)] rounded-sm">
-                                      <h6 className="text-[12px] font-medium text-gray-500 dark:text-[#b3b3b3]">Repositories you have access to</h6>
+                                      <h6 className="text-[12px] font-medium text-gray-500 dark:text-[#b3b3b3]">
+                                        {hasGithubInstallation ? 'Repositories you have access to' : 'Please install the GitHub app to load your repositories'}
+                                      </h6>
                                       <ul className="-mb-1 mt-2">
                                         {githubAccountData?.repositories?.map((repo) => (
                                           <li key={repo.id}>
@@ -1313,6 +1346,13 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                                   <span>GitHub Connected</span>
                                   <RiLinksFill className="w-5 h-5 text-gray-500 dark:text-[#a1a1aa]" />
                                 </div>
+                              ) : isRefreshingGitHub ? (
+                                <div className="flex items-center gap-3">
+                                  <div className="flex items-center text-[16px] text-gray-900 dark:text-[#e3e3e3] font-medium space-x-2.5">
+                                    <svg className="animate-spin h-5 w-5 text-gray-900 dark:text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                    <span>Syncing GitHub Installation...</span>
+                                  </div>
+                                </div>
                               ) : (
                                 <div className="flex items-center gap-3">
                                   <div className="flex items-center text-[16px] text-gray-900 dark:text-[#e3e3e3] font-medium space-x-2.5">
@@ -1355,11 +1395,22 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                 </div>
               </div>
 
-              <div id="delete-account" className="scroll-mt-24 xl:scroll-mt-20 mt-12 pt-8">
-                <button type="button" onClick={() => setIsDeleteModalOpen(true)} className="type-interface-01 bg-[#e23642] hover:bg-[#c0222d] text-white transition-colors h-10 py-2.5 px-3 flex items-center group/button rounded-sm">
-                  <div className="inline-flex w-4 h-4 me-1.5"><svg fill="currentColor" width="16" height="17" viewBox="0 0 16 17" xmlns="http://www.w3.org/2000/svg"><path d="M7 6.66699H6V12.667H7V6.66699Z"></path><path d="M10 6.66699H9V12.667H10V6.66699Z"></path><path d="M2 3.66699V4.66699H3V14.667C3 14.9322 3.10536 15.1866 3.29289 15.3741C3.48043 15.5616 3.73478 15.667 4 15.667H12C12.2652 15.667 12.5196 15.5616 12.7071 15.3741C12.8946 15.1866 13 14.9322 13 14.667V4.66699H14V3.66699H2ZM4 14.667V4.66699H12V14.667H4Z"></path><path d="M10 1.66699H6V2.66699H10V1.66699Z"></path></svg></div>
-                  Delete Harbor Account
-                </button>
+              <div id="delete-account" className="scroll-mt-24 xl:scroll-mt-20 mt-12 pt-8 border-t border-gray-300 dark:border-[#525252]">
+                <div className="flex flex-col gap-2 mb-6">
+                  <h2 className="text-[26px] font-[500] leading-[32px] tracking-[-0.24px] text-gray-900 dark:text-[#f0f0f0]" style={{ fontFamily: 'Roobert, sans-serif' }}>Danger Zone</h2>
+                </div>
+                <div className="border border-red-500 dark:border-red-600/50 rounded-sm overflow-hidden">
+                  <div className="p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-[oklch(0.21_0.03_263.45)]">
+                    <div>
+                      <h4 className="text-[16px] font-medium text-gray-900 dark:text-[#f0f0f0]">Delete Harbor Account</h4>
+                      <p className="text-[14px] text-gray-500 dark:text-[#b3b3b3] mt-1">Once you delete your account, there is no going back. Please be certain.</p>
+                    </div>
+                    <button type="button" onClick={() => setIsDeleteModalOpen(true)} className="type-interface-01 bg-[#e23642] hover:bg-[#c0222d] text-white transition-colors h-10 py-2.5 px-3 flex items-center group/button rounded-sm whitespace-nowrap shrink-0">
+                      <div className="inline-flex w-4 h-4 me-1.5"><svg fill="currentColor" width="16" height="17" viewBox="0 0 16 17" xmlns="http://www.w3.org/2000/svg"><path d="M7 6.66699H6V12.667H7V6.66699Z"></path><path d="M10 6.66699H9V12.667H10V6.66699Z"></path><path d="M2 3.66699V4.66699H3V14.667C3 14.9322 3.10536 15.1866 3.29289 15.3741C3.48043 15.5616 3.73478 15.667 4 15.667H12C12.2652 15.667 12.5196 15.5616 12.7071 15.3741C12.8946 15.1866 13 14.9322 13 14.667V4.66699H14V3.66699H2ZM4 14.667V4.66699H12V14.667H4Z"></path><path d="M10 1.66699H6V2.66699H10V1.66699Z"></path></svg></div>
+                      Delete Harbor Account
+                    </button>
+                  </div>
+                </div>
               </div>
 
               </div>
@@ -1460,15 +1511,22 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                 <div className="w-full">
                   <h1 className="text-[28px] leading-[32px] font-medium text-strong mb-1 font-['Roobert',sans-serif]">Delete Harbor Account</h1>
                 </div>
-                <button type="button" aria-label="Close modal" onClick={() => { setIsDeleteModalOpen(false); setDeleteConfirmationText(''); }} className="flex p-0 w-4 h-4 text-gray-500 hover:text-gray-900 dark:text-[#8f8f8f] dark:hover:text-white absolute right-3 top-3">
-                  <svg fill="currentColor" aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M12 4.7L11.3 4L8 7.3L4.7 4L4 4.7L7.3 8L4 11.3L4.7 12L8 8.7L11.3 12L12 11.3L8.7 8L12 4.7Z"></path></svg>
+                <button type="button" aria-label="Close modal" onClick={() => { setIsDeleteModalOpen(false); setDeleteConfirmationText(''); }} className="flex p-0 w-6 h-6 items-center justify-center text-gray-500 hover:text-gray-900 dark:text-[#8f8f8f] dark:hover:text-white absolute right-4 top-4">
+                  <svg fill="currentColor" aria-hidden="true" width="24" height="24" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M12 4.7L11.3 4L8 7.3L4.7 4L4 4.7L7.3 8L4 11.3L4.7 12L8 8.7L11.3 12L12 11.3L8.7 8L12 4.7Z"></path></svg>
                 </button>
               </div>
               
-              <div className="text-[16px] leading-relaxed text-primary p-6 space-y-4 font-normal">
-                <div>This will delete all existing services, databases, data, Projects, and environment groups in your account.</div>
-                <div>Deleting your account can <span className="font-semibold text-strong">NOT</span> be reversed.</div>
-                <div>Type <span className="font-semibold text-[16px] status-critical-text">sudo delete my account</span> in the text box below and click the delete button.</div>
+              <div className="text-[16px] leading-relaxed text-gray-800 dark:text-[#e3e3e3] p-6 space-y-4 font-normal">
+                <div className="bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300 p-4 rounded-sm border border-red-100 dark:border-red-900/30 flex items-start space-x-3">
+                  <div className="flex-shrink-0 mt-0.5">
+                    <LuCircleAlert className="w-5 h-5 text-red-600 dark:text-red-400" />
+                  </div>
+                  <div>
+                    <p>This will delete all existing services, databases, data, Projects, and environment groups in your account.</p>
+                    <p className="mt-2">Deleting your account can <span className="font-bold underline">NOT</span> be reversed.</p>
+                  </div>
+                </div>
+                <div>Type <span className="font-mono font-bold text-red-600 dark:text-red-400 bg-gray-100 dark:bg-[#1a1a1a] px-1.5 py-0.5 rounded border border-gray-200 dark:border-[#333] select-all shadow-sm">sudo delete my account</span> in the text box below and click the delete button.</div>
                 {deleteError && (
                   <p role="alert" className="text-[16px] text-red-600 dark:text-red-400">{deleteError}</p>
                 )}
@@ -1499,7 +1557,14 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                       : 'bg-[#e23642] text-white opacity-30 cursor-not-allowed'
                   }`}
                 >
-                  {isDeletingAccount ? 'Deleting...' : 'Delete Harbor Account'}
+                  {isDeletingAccount ? (
+                    'Deleting...'
+                  ) : (
+                    <>
+                      <div className="inline-flex w-4 h-4 me-1.5"><svg fill="currentColor" width="16" height="17" viewBox="0 0 16 17" xmlns="http://www.w3.org/2000/svg"><path d="M7 6.66699H6V12.667H7V6.66699Z"></path><path d="M10 6.66699H9V12.667H10V6.66699Z"></path><path d="M2 3.66699V4.66699H3V14.667C3 14.9322 3.10536 15.1866 3.29289 15.3741C3.48043 15.5616 3.73478 15.667 4 15.667H12C12.2652 15.667 12.5196 15.5616 12.7071 15.3741C12.8946 15.1866 13 14.9322 13 14.667V4.66699H14V3.66699H2ZM4 14.667V4.66699H12V14.667H4Z"></path><path d="M10 1.66699H6V2.66699H10V1.66699Z"></path></svg></div>
+                      Delete Harbor Account
+                    </>
+                  )}
                 </button>
                 <button 
                   type="button" 

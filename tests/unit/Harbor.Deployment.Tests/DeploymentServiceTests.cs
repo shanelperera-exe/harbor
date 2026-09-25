@@ -2,6 +2,8 @@ using Harbor.Deployment.DTOs;
 using Harbor.Deployment.Models;
 using Harbor.Deployment.Repositories;
 using Harbor.Deployment.Services;
+using Harbor.Deployment.Kafka;
+using Harbor.Contracts.Kafka;
 using Moq;
 using Xunit;
 
@@ -10,9 +12,17 @@ namespace Harbor.Deployment.Tests;
 public class DeploymentServiceTests
 {
     private readonly Mock<IDeploymentRepository> _repository = new();
+    private readonly Mock<IGitHubActionsClient> _githubMock = new();
+    private readonly Mock<IKafkaProducerService> _kafkaProducer = new();
     private readonly DeploymentService _service;
 
-    public DeploymentServiceTests() => _service = new DeploymentService(_repository.Object);
+    public DeploymentServiceTests()
+    {
+        _repository.Setup(r => r.GetRepositoryNameAsync(It.IsAny<int>())).ReturnsAsync("owner/repo");
+        _repository.Setup(r => r.GetWorkflowFileAsync(It.IsAny<int>())).ReturnsAsync("deploy.yml");
+        _githubMock.Setup(g => g.DispatchAsync(It.IsAny<WorkflowDispatchRequest>(), It.IsAny<System.Threading.CancellationToken>())).ReturnsAsync(new WorkflowDispatchResult(true, null));
+        _service = new DeploymentService(_repository.Object, gitHubActionsClient: _githubMock.Object, kafkaProducerService: _kafkaProducer.Object);
+    }
 
     // ---------- GetHistoryAsync ----------
 
@@ -20,7 +30,7 @@ public class DeploymentServiceTests
     public async Task GetHistoryAsync_ReturnsPagedDeploymentSummaries()
     {
         var startedAt = DateTime.UtcNow;
-        _repository.Setup(r => r.GetHistoryAsync(7, 13, "Succeeded", 0, 20)).ReturnsAsync((new List<DeploymentEntity>
+        _repository.Setup(r => r.GetHistoryAsync(7, "13", "Succeeded", 0, 20)).ReturnsAsync((new List<DeploymentEntity>
         {
             new() { Id = 22, OwnerId = 7, ServiceId = 13, Environment = "production", Version = "1.4.0", CommitSha = "f00ba41234", Status = "Succeeded", StartedAt = startedAt }
         }, 1));
@@ -154,10 +164,10 @@ public class DeploymentServiceTests
     [Fact]
     public async Task CreateAsync_ValidRequest_CreatesDeployment()
     {
-        var request = new CreateDeploymentRequest { ServiceId = "13", Environment = "production", Version = "1.4.0", CommitSha = "abc123" };
+        var request = new CreateDeploymentRequest { ServiceId = "13", Environment = "production", Version = "1.4.0", CommitSha = "abc123", Branch = "main" };
         const int ownerId = 7;
 
-        _repository.Setup(r => r.GetServiceAccessAsync("13")).ReturnsAsync((true, 7, false, 10, 0));
+        _repository.Setup(r => r.GetServiceAccessAsync("13")).ReturnsAsync((true, 7, false, 10, 13));
         _repository.Setup(r => r.GetEnvironmentByNameAsync(10, "production")).ReturnsAsync((true, true, "Production"));
         _repository.Setup(r => r.CreateAsync(It.IsAny<DeploymentEntity>())).ReturnsAsync(42);
 
@@ -165,6 +175,12 @@ public class DeploymentServiceTests
 
         Assert.True(result.Success);
         Assert.Null(result.Error);
+
+        _kafkaProducer.Verify(k => k.PublishDeploymentEventAsync(It.Is<DeploymentLifecycleEvent>(e =>
+            e.DeploymentId == 42 &&
+            e.Status == "Running" &&
+            e.Environment == "production" &&
+            e.Version == "1.4.0")), Times.Once);
         Assert.Equal(42, result.DeploymentId);
 
         _repository.Verify(r => r.CreateAsync(It.Is<DeploymentEntity>(d =>
@@ -174,12 +190,41 @@ public class DeploymentServiceTests
     }
 
     [Fact]
-    public async Task CreateAsync_StoresCorrectInitialStatusAndTimestamp()
+    public async Task CreateAsync_DispatchFails_ReturnsFailureAndPublishesEvent()
     {
-        var request = new CreateDeploymentRequest { ServiceId = "13", Environment = "staging", Version = "2.0.0" };
+        var request = new CreateDeploymentRequest { ServiceId = "13", Environment = "production", Version = "1.4.0", CommitSha = "abc123", Branch = "main" };
         const int ownerId = 7;
 
-        _repository.Setup(r => r.GetServiceAccessAsync("13")).ReturnsAsync((true, 7, false, 10, 0));
+        _repository.Setup(r => r.GetServiceAccessAsync("13")).ReturnsAsync((true, 7, false, 10, 13));
+        _repository.Setup(r => r.GetEnvironmentByNameAsync(10, "production")).ReturnsAsync((true, true, "Production"));
+        _repository.Setup(r => r.CreateAsync(It.IsAny<DeploymentEntity>())).ReturnsAsync(42);
+
+        _githubMock.Setup(g => g.DispatchAsync(It.IsAny<WorkflowDispatchRequest>(), It.IsAny<System.Threading.CancellationToken>()))
+            .ReturnsAsync(new WorkflowDispatchResult(false, "GitHub API timeout"));
+
+        var result = await _service.CreateAsync(request, ownerId, isAdmin: false);
+
+        Assert.True(result.Success);
+        Assert.Equal("GitHub API timeout", result.Error);
+        Assert.Equal("Failed", result.Status);
+
+        _kafkaProducer.Verify(k => k.PublishDeploymentEventAsync(It.Is<DeploymentLifecycleEvent>(e =>
+            e.DeploymentId == 42 &&
+            e.Status == "Failed" &&
+            e.Environment == "production" &&
+            e.Version == "1.4.0" &&
+            e.FailureReason == "GitHub API timeout")), Times.Once);
+
+        _repository.Verify(r => r.UpdateTriggerResultAsync(42, "Failed", "GitHub API timeout", "GitHub API timeout"), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateAsync_StoresCorrectInitialStatusAndTimestamp()
+    {
+        var request = new CreateDeploymentRequest { ServiceId = "13", Environment = "staging", Version = "2.0.0", Branch = "main" };
+        const int ownerId = 7;
+
+        _repository.Setup(r => r.GetServiceAccessAsync("13")).ReturnsAsync((true, 7, false, 10, 13));
         _repository.Setup(r => r.GetEnvironmentByNameAsync(10, "staging")).ReturnsAsync((true, true, "Staging"));
         _repository.Setup(r => r.CreateAsync(It.IsAny<DeploymentEntity>())).ReturnsAsync(1);
 
@@ -201,9 +246,9 @@ public class DeploymentServiceTests
     [Fact]
     public async Task CreateAsync_CommitShaIsOptional_DeploymentStillCreated()
     {
-        var request = new CreateDeploymentRequest { ServiceId = "13", Environment = "production", Version = "1.0.0", CommitSha = null };
+        var request = new CreateDeploymentRequest { ServiceId = "13", Environment = "production", Version = "1.0.0", CommitSha = null, Branch = "main" };
 
-        _repository.Setup(r => r.GetServiceAccessAsync("13")).ReturnsAsync((true, 7, false, 10, 0));
+        _repository.Setup(r => r.GetServiceAccessAsync("13")).ReturnsAsync((true, 7, false, 10, 13));
         _repository.Setup(r => r.GetEnvironmentByNameAsync(10, "production")).ReturnsAsync((true, true, "Production"));
         _repository.Setup(r => r.CreateAsync(It.IsAny<DeploymentEntity>())).ReturnsAsync(5);
 
@@ -216,9 +261,9 @@ public class DeploymentServiceTests
     [Fact]
     public async Task CreateAsync_EnvironmentAndVersionAreWhitespaceTrimmed()
     {
-        var request = new CreateDeploymentRequest { ServiceId = "13", Environment = "  production  ", Version = "  1.0.0  ", CommitSha = "  abc  " };
+        var request = new CreateDeploymentRequest { ServiceId = "13", Environment = "  production  ", Version = "  1.0.0  ", CommitSha = "  abc  ", Branch = "main" };
 
-        _repository.Setup(r => r.GetServiceAccessAsync("13")).ReturnsAsync((true, 7, false, 10, 0));
+        _repository.Setup(r => r.GetServiceAccessAsync("13")).ReturnsAsync((true, 7, false, 10, 13));
         _repository.Setup(r => r.GetEnvironmentByNameAsync(10, "production")).ReturnsAsync((true, true, "Production"));
         _repository.Setup(r => r.CreateAsync(It.IsAny<DeploymentEntity>())).ReturnsAsync(1);
 
@@ -237,8 +282,8 @@ public class DeploymentServiceTests
     [InlineData("   ")]
     public async Task CreateAsync_MissingVersion_ReturnsValidationError(string? version)
     {
-        var request = new CreateDeploymentRequest { ServiceId = "13", Environment = "production", Version = version! };
-        _repository.Setup(r => r.GetServiceAccessAsync("13")).ReturnsAsync((true, 7, false, 10, 0));
+        var request = new CreateDeploymentRequest { ServiceId = "13", Environment = "production", Version = version!, Branch = "main" };
+        _repository.Setup(r => r.GetServiceAccessAsync("13")).ReturnsAsync((true, 7, false, 10, 13));
         _repository.Setup(r => r.GetEnvironmentByNameAsync(10, "production")).ReturnsAsync((true, true, "Production"));
 
         var result = await _service.CreateAsync(request, 7, isAdmin: false);
@@ -252,7 +297,7 @@ public class DeploymentServiceTests
     [Fact]
     public async Task CreateAsync_ServiceNotFound_ReturnsError()
     {
-        var request = new CreateDeploymentRequest { ServiceId = "999", Environment = "production", Version = "1.0.0" };
+        var request = new CreateDeploymentRequest { ServiceId = "999", Environment = "production", Version = "1.0.0", Branch = "main" };
         _repository.Setup(r => r.GetServiceAccessAsync("999")).ReturnsAsync((false, 0, false, 0, 0));
 
         var result = await _service.CreateAsync(request, 7, isAdmin: false);
@@ -265,8 +310,8 @@ public class DeploymentServiceTests
     [Fact]
     public async Task CreateAsync_ArchivedProject_ReturnsError()
     {
-        var request = new CreateDeploymentRequest { ServiceId = "13", Environment = "production", Version = "1.0.0" };
-        _repository.Setup(r => r.GetServiceAccessAsync("13")).ReturnsAsync((true, 7, true, 10, 0));
+        var request = new CreateDeploymentRequest { ServiceId = "13", Environment = "production", Version = "1.0.0", Branch = "main" };
+        _repository.Setup(r => r.GetServiceAccessAsync("13")).ReturnsAsync((true, 7, true, 10, 13));
 
         var result = await _service.CreateAsync(request, 7, isAdmin: false);
 
@@ -278,8 +323,8 @@ public class DeploymentServiceTests
     [Fact]
     public async Task CreateAsync_EnvironmentNotFound_ReturnsError()
     {
-        var request = new CreateDeploymentRequest { ServiceId = "13", Environment = "nonexistent", Version = "1.0.0" };
-        _repository.Setup(r => r.GetServiceAccessAsync("13")).ReturnsAsync((true, 7, false, 10, 0));
+        var request = new CreateDeploymentRequest { ServiceId = "13", Environment = "nonexistent", Version = "1.0.0", Branch = "main" };
+        _repository.Setup(r => r.GetServiceAccessAsync("13")).ReturnsAsync((true, 7, false, 10, 13));
         _repository.Setup(r => r.GetEnvironmentByNameAsync(10, "nonexistent")).ReturnsAsync(((bool Exists, bool IsActive, string Type)?)null);
 
         var result = await _service.CreateAsync(request, 7, isAdmin: false);
@@ -292,8 +337,8 @@ public class DeploymentServiceTests
     [Fact]
     public async Task CreateAsync_InactiveEnvironment_ReturnsError()
     {
-        var request = new CreateDeploymentRequest { ServiceId = "13", Environment = "production", Version = "1.0.0" };
-        _repository.Setup(r => r.GetServiceAccessAsync("13")).ReturnsAsync((true, 7, false, 10, 0));
+        var request = new CreateDeploymentRequest { ServiceId = "13", Environment = "production", Version = "1.0.0", Branch = "main" };
+        _repository.Setup(r => r.GetServiceAccessAsync("13")).ReturnsAsync((true, 7, false, 10, 13));
         _repository.Setup(r => r.GetEnvironmentByNameAsync(10, "production")).ReturnsAsync((true, false, "Production"));
 
         var result = await _service.CreateAsync(request, 7, isAdmin: false);
@@ -306,8 +351,8 @@ public class DeploymentServiceTests
     [Fact]
     public async Task CreateAsync_UnsupportedEnvironmentType_ReturnsError()
     {
-        var request = new CreateDeploymentRequest { ServiceId = "13", Environment = "qa", Version = "1.0.0" };
-        _repository.Setup(r => r.GetServiceAccessAsync("13")).ReturnsAsync((true, 7, false, 10, 0));
+        var request = new CreateDeploymentRequest { ServiceId = "13", Environment = "qa", Version = "1.0.0", Branch = "main" };
+        _repository.Setup(r => r.GetServiceAccessAsync("13")).ReturnsAsync((true, 7, false, 10, 13));
         _repository.Setup(r => r.GetEnvironmentByNameAsync(10, "qa")).ReturnsAsync((true, true, "QA"));
 
         var result = await _service.CreateAsync(request, 7, isAdmin: false);
@@ -322,8 +367,8 @@ public class DeploymentServiceTests
     [Fact]
     public async Task CreateAsync_NonOwnerNonAdmin_ReturnsForbidden()
     {
-        var request = new CreateDeploymentRequest { ServiceId = "13", Environment = "production", Version = "1.0.0" };
-        _repository.Setup(r => r.GetServiceAccessAsync("13")).ReturnsAsync((true, 7, false, 10, 0));
+        var request = new CreateDeploymentRequest { ServiceId = "13", Environment = "production", Version = "1.0.0", Branch = "main" };
+        _repository.Setup(r => r.GetServiceAccessAsync("13")).ReturnsAsync((true, 7, false, 10, 13));
 
         var result = await _service.CreateAsync(request, ownerId: 99, isAdmin: false);
 
@@ -335,8 +380,8 @@ public class DeploymentServiceTests
     [Fact]
     public async Task CreateAsync_AdminCanDeployToOtherUsersService()
     {
-        var request = new CreateDeploymentRequest { ServiceId = "13", Environment = "production", Version = "1.0.0" };
-        _repository.Setup(r => r.GetServiceAccessAsync("13")).ReturnsAsync((true, 7, false, 10, 0));
+        var request = new CreateDeploymentRequest { ServiceId = "13", Environment = "production", Version = "1.0.0", Branch = "main" };
+        _repository.Setup(r => r.GetServiceAccessAsync("13")).ReturnsAsync((true, 7, false, 10, 13));
         _repository.Setup(r => r.GetEnvironmentByNameAsync(10, "production")).ReturnsAsync((true, true, "Production"));
         _repository.Setup(r => r.CreateAsync(It.IsAny<DeploymentEntity>())).ReturnsAsync(42);
 
@@ -349,8 +394,8 @@ public class DeploymentServiceTests
     [Fact]
     public async Task CreateAsync_OwnerCanDeployToOwnService()
     {
-        var request = new CreateDeploymentRequest { ServiceId = "13", Environment = "production", Version = "1.0.0" };
-        _repository.Setup(r => r.GetServiceAccessAsync("13")).ReturnsAsync((true, 7, false, 10, 0));
+        var request = new CreateDeploymentRequest { ServiceId = "13", Environment = "production", Version = "1.0.0", Branch = "main" };
+        _repository.Setup(r => r.GetServiceAccessAsync("13")).ReturnsAsync((true, 7, false, 10, 13));
         _repository.Setup(r => r.GetEnvironmentByNameAsync(10, "production")).ReturnsAsync((true, true, "Production"));
         _repository.Setup(r => r.CreateAsync(It.IsAny<DeploymentEntity>())).ReturnsAsync(42);
 
@@ -366,13 +411,41 @@ public class DeploymentServiceTests
     [InlineData("Production")]
     public async Task CreateAsync_AllSupportedEnvironmentTypes_Succeed(string envType)
     {
-        var request = new CreateDeploymentRequest { ServiceId = "13", Environment = envType.ToLower(), Version = "1.0.0" };
-        _repository.Setup(r => r.GetServiceAccessAsync("13")).ReturnsAsync((true, 7, false, 10, 0));
+        var request = new CreateDeploymentRequest { ServiceId = "13", Environment = envType.ToLower(), Version = "1.0.0", Branch = "main" };
+        _repository.Setup(r => r.GetServiceAccessAsync("13")).ReturnsAsync((true, 7, false, 10, 13));
         _repository.Setup(r => r.GetEnvironmentByNameAsync(10, envType.ToLower())).ReturnsAsync((true, true, envType));
         _repository.Setup(r => r.CreateAsync(It.IsAny<DeploymentEntity>())).ReturnsAsync(1);
 
         var result = await _service.CreateAsync(request, 7, isAdmin: false);
 
         Assert.True(result.Success);
+    }
+
+    // ---------- Kafka Publishing ----------
+
+    [Fact]
+    public async Task UpdateStatusAsync_PublishesKafkaEvent()
+    {
+        _repository.Setup(r => r.UpdateTriggerResultAsync(101, "Failed", "Some error", null)).ReturnsAsync(true);
+        _repository.Setup(r => r.GetEntityByIdAsync(101)).ReturnsAsync(new DeploymentEntity
+        {
+            Id = 101,
+            ServiceId = 42,
+            Environment = "Production",
+            Version = "1.0.0",
+            Status = "Failed"
+        });
+
+        var result = await _service.UpdateStatusAsync(101, "Failed", "Some error");
+
+        Assert.True(result);
+        _kafkaProducer.Verify(k => k.PublishDeploymentEventAsync(It.Is<DeploymentLifecycleEvent>(e => 
+            e.DeploymentId == 101 && 
+            e.ServiceId == "42" && 
+            e.Status == "Failed" && 
+            e.Environment == "Production" && 
+            e.Version == "1.0.0" && 
+            e.FailureReason == "Some error"
+        )), Times.Once);
     }
 }

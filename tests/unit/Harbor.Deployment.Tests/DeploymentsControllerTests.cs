@@ -157,7 +157,7 @@ public class DeploymentsControllerTests
     {
         SetUser(userId: 7);
         var request = new CreateDeploymentRequest { ServiceId = "13", Environment = "production", Version = "1.4.0", CommitSha = "abc123" };
-        _serviceMock.Setup(s => s.CreateAsync(request, 7, false)).ReturnsAsync((true, (string?)null, (int?)42, "", (string?)null));
+        _serviceMock.Setup(s => s.CreateAsync(request, 7, false)).ReturnsAsync((true, (string?)null, (int?)42, "Pending", (string?)null));
 
         var result = await _controller.Create(request);
 

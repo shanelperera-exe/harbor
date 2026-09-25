@@ -15,7 +15,7 @@ public class EnvironmentServiceTests
     public EnvironmentServiceTests()
     {
         _service = new EnvironmentService(_repository.Object);
-        _repository.Setup(r => r.GetProjectAccessAsync("10")).ReturnsAsync((true, 5, 0, false));
+        _repository.Setup(r => r.GetProjectAccessAsync("10")).ReturnsAsync((true, 10, 5, false));
         _repository.Setup(r => r.TypeExistsForProjectAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int?>())).ReturnsAsync(false);
         _repository.Setup(r => r.CreateAsync(It.IsAny<EnvironmentEntity>())).ReturnsAsync(42);
     }

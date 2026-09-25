@@ -36,10 +36,10 @@ public sealed class GitHubAppJwtProvider : IGitHubAppJwtProvider
         var rsa = GetRsa();
 
         var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-        var exp = now + 600;
+        var exp = now + 540; // 9 minutes to avoid clock drift issues (max is 10 minutes)
 
         var header = new { alg = "RS256", typ = "JWT" };
-        var payload = new { iat = now, exp = exp, iss = _options.AppId };
+        var payload = new { iat = now - 60, exp = exp, iss = _options.AppId };
 
         var headerJson = JsonSerializer.Serialize(header);
         var payloadJson = JsonSerializer.Serialize(payload);

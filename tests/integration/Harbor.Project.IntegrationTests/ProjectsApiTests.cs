@@ -51,8 +51,7 @@ namespace Harbor.Project.IntegrationTests
             var request = new CreateProjectRequest
             {
                 Name = UniqueName("harbor-api"),
-                Description = "Integration test project",
-                RepositoryUrl = "https://github.com/team/harbor-api"
+                Description = "Integration test project"
             };
 
             // Act
@@ -195,8 +194,7 @@ namespace Harbor.Project.IntegrationTests
             var request = new UpdateProjectRequest
             {
                 Name = newName,
-                Description = "Updated via integration test",
-                RepositoryUrl = "https://github.com/team/updated-repo"
+                Description = "Updated via integration test"
             };
 
             // Act

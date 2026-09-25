@@ -112,6 +112,18 @@ public class DeploymentRepository(DbConnectionFactory dbFactory) : IDeploymentRe
         return await command.ExecuteNonQueryAsync() == 1;
     }
 
+    public async Task<bool> UpdateStatusAsync(int deploymentId, string status, string? failureReason = null)
+    {
+        await using var connection = dbFactory.CreateConnection();
+        await connection.OpenAsync();
+        await using var command = connection.CreateCommand();
+        command.CommandText = "UPDATE \"Deployments\" SET \"Status\" = @status, \"FailureReason\" = @failureReason, \"CompletedAt\" = CASE WHEN @status IN ('Failed', 'Successful') THEN now() ELSE \"CompletedAt\" END WHERE \"Id\" = @id";
+        command.Parameters.AddWithValue("id", deploymentId);
+        command.Parameters.AddWithValue("status", status);
+        command.Parameters.AddWithValue("failureReason", (object?)failureReason ?? DBNull.Value);
+        return await command.ExecuteNonQueryAsync() == 1;
+    }
+
     public async Task<string?> GetRepositoryNameAsync(int serviceId)
     {
         await using var connection = dbFactory.CreateConnection();

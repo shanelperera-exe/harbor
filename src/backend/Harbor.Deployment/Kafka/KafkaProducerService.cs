@@ -28,7 +28,8 @@ public class KafkaProducerService : IKafkaProducerService, IDisposable
             {
                 BootstrapServers = this.options.BootstrapServers,
                 Acks = Acks.Leader,
-                MessageSendMaxRetries = 3
+                MessageSendMaxRetries = 3,
+                BrokerAddressFamily = BrokerAddressFamily.V4
             };
 
             producer = new ProducerBuilder<string, string>(config).Build();

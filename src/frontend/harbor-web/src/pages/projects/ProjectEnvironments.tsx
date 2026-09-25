@@ -256,22 +256,18 @@ export default function ProjectEnvironments() {
                                     <code className="text-[13.5px] leading-[18px] font-mono empty:hidden">{service.repositoryBranch || 'main'}</code>
                                   </a>
                                 </div>
-                                <div className="flex items-center justify-start flex-nowrap gap-1 h-[22px] transition-all duration-300 text-gray-500 dark:text-[#8f8f8f]">
-                                  <span className="inline-flex h-fit items-center flex-none">
-                                    <svg viewBox="0 0 16 16" height="16" width="16" style={{ color: "currentcolor" }}>
-                                      <path fill="currentColor" fillRule="evenodd" d="M8 10.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5M8 12a4 4 0 0 0 3.93-3.25H16v-1.5h-4.07a4 4 0 0 0-7.86 0H0v1.5h4.07A4 4 0 0 0 8 12" clipRule="evenodd"></path>
-                                    </svg>
-                                  </span>
-                                  <a href={service.repositoryUrl && service.repositoryCommit ? `${service.repositoryUrl}/commit/${service.repositoryCommit}` : "#"} rel="noopener" target="_blank" title="Git Commit" onClick={(e) => e.stopPropagation()} className="cursor-pointer focus-visible:outline-2 outline-[#2563eb] outline-offset-4 z-[2] flex shrink items-center gap-1.5 truncate hover:text-gray-900 dark:hover:text-white transition-colors group/commit">
-                                    <code className="max-w-full text-[13.5px] leading-[18px] font-mono empty:hidden text-gray-900 dark:text-[#ededed]">{service.repositoryCommit ? service.repositoryCommit.substring(0, 7) : 'b50e8a2'}</code>
+                                {service.repositoryCommit && (
+                                  <div className="flex items-center justify-start flex-nowrap gap-1 h-[22px] transition-all duration-300 text-gray-500 dark:text-[#8f8f8f]">
                                     <span className="inline-flex h-fit items-center flex-none">
-                                      <svg viewBox="0 0 16 16" height="14" width="14" className="text-gray-900 dark:text-[#ededed]" style={{ color: "currentcolor" }}>
-                                        <path fill="currentColor" d="M8 0a1 1 0 0 1 .7.29l1.76 1.76h2.5a1 1 0 0 1 .99 1v2.49L15.7 7.3a1 1 0 0 1 0 1.4l-1.76 1.76v2.5a1 1 0 0 1-1 .99h-2.49L8.7 15.7a1 1 0 0 1-1.4 0l-1.76-1.76h-2.5a1 1 0 0 1-.99-1v-2.49L.3 8.7a1 1 0 0 1 0-1.4l1.76-1.76v-2.5a1 1 0 0 1 1-.99h2.49L7.3.3A1 1 0 0 1 8 0M6.6 3.11l-.44.44h-2.6v2.6L1.7 8l1.84 1.84v2.6h2.6l.45.45 1.4 1.4 1.4-1.4.44-.44h2.6v-2.6l.45-.45 1.4-1.4-1.84-1.84v-2.6h-2.6L8 1.7zm4.59 3.3-3.72 3.71c-.3.3-.77.3-1.06 0L4.8 8.53l1.07-1.06 1.06 1.06 3.18-3.18z"></path>
+                                      <svg viewBox="0 0 16 16" height="16" width="16" style={{ color: "currentcolor" }}>
+                                        <path fill="currentColor" fillRule="evenodd" d="M8 10.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5M8 12a4 4 0 0 0 3.93-3.25H16v-1.5h-4.07a4 4 0 0 0-7.86 0H0v1.5h4.07A4 4 0 0 0 8 12" clipRule="evenodd"></path>
                                       </svg>
                                     </span>
-                                    <span className="truncate text-[13px] font-normal leading-[1.3] text-gray-900 dark:text-[#ededed] group-hover/commit:underline underline-offset-2" title="Commit details">Commit details</span>
-                                  </a>
-                                </div>
+                                    <a href={service.repositoryUrl ? `${service.repositoryUrl}/commit/${service.repositoryCommit}` : "#"} rel="noopener" target="_blank" title="Git Commit" onClick={(e) => e.stopPropagation()} className="cursor-pointer focus-visible:outline-2 outline-[#2563eb] outline-offset-4 z-[2] flex shrink items-center gap-1.5 truncate hover:text-gray-900 dark:hover:text-white transition-colors group/commit">
+                                      <code className="max-w-full text-[13.5px] leading-[18px] font-mono empty:hidden text-gray-900 dark:text-[#ededed] group-hover/commit:underline underline-offset-2">{service.repositoryCommit.substring(0, 7)}</code>
+                                    </a>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </td>

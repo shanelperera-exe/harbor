@@ -122,6 +122,7 @@ services:
       - dp_keys:/root/.aspnet/DataProtection-Keys
     depends_on:
       - postgres
+      - kafka
     restart: unless-stopped
 
   reporting-service:

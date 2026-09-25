@@ -11,6 +11,7 @@ public interface IDeploymentRepository
     Task<IReadOnlyList<DeploymentLogEntity>> GetLogsAsync(int deploymentId);
     Task<int> CreateAsync(DeploymentEntity deployment);
     Task<bool> UpdateTriggerResultAsync(int deploymentId, string status, string? failureReason, string? triggerError);
+    Task<bool> UpdateStatusAsync(int deploymentId, string status, string? failureReason = null);
     Task<string?> GetRepositoryNameAsync(int serviceId);
     Task<string?> GetWorkflowFileAsync(int serviceId);
     Task<(bool Exists, int OwnerId, bool IsArchived, int ProjectId, int RealServiceId)> GetServiceAccessAsync(string serviceIdOrPublicId);

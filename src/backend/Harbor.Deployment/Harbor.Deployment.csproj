@@ -25,4 +25,8 @@
     <EmbeddedResource Include="Scripts\**\*.sql" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Harbor.Deployment.Tests" />
+  </ItemGroup>
+
 </Project>

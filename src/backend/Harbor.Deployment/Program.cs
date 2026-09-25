@@ -85,8 +85,10 @@ builder.Services.Configure<KafkaOptions>(options =>
 {
     options.BootstrapServers = builder.Configuration["KAFKA_BOOTSTRAP_SERVERS"] ?? string.Empty;
     options.DeploymentTopic = builder.Configuration["KAFKA_DEPLOYMENT_TOPIC"] ?? string.Empty;
+    options.ConsumerGroupId = builder.Configuration["KAFKA_CONSUMER_GROUP_ID"] ?? "harbor-deployment-group";
 });
 builder.Services.AddSingleton<IKafkaProducerService, KafkaProducerService>();
+builder.Services.AddHostedService<KafkaConsumerService>();
 
 builder.Services.AddHarborGitHubApp();
 builder.Services.Configure<GitHubActionsOptions>(options =>

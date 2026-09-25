@@ -1086,8 +1086,8 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                             <p className="text-[16px] text-gray-600 dark:text-[#c7c7c7] leading-[24px] font-normal tracking-[0.16px] normal-case">Use these methods to sign in to your Harbor account.</p>
                           </div>
                           <div className="col-span-2">
-                            <ul className="bg-white dark:bg-white/[0.02] border border-gray-300 dark:border-[#525252] rounded-sm overflow-hidden list-none m-0 p-0 [&>li:not(:last-child)]:border-b [&>li:not(:last-child)]:border-gray-200 dark:[&>li:not(:last-child)]:border-white/10">
-                              <li className="p-5 flex flex-col items-stretch justify-start flex-initial hover:bg-gray-50 dark:hover:bg-white/[0.04] transition-colors">
+                            <ul className="bg-white dark:bg-white/[0.02] border border-gray-300 dark:border-[#525252] rounded-sm list-none m-0 p-0 [&>li:not(:last-child)]:border-b [&>li:not(:last-child)]:border-gray-200 dark:[&>li:not(:last-child)]:border-white/10">
+                              <li className="p-5 flex flex-col items-stretch justify-start flex-initial hover:bg-gray-50 dark:hover:bg-white/[0.04] transition-colors first:rounded-t-sm last:rounded-b-sm">
                                 <section className="flex items-center gap-4">
                                   <div className="left flex flex-1 items-center gap-4 min-w-0">
                                     <div className="space-between flex w-full items-center gap-3">
@@ -1139,7 +1139,7 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                                 </section>
                               </li>
 
-                              <li className="p-5 flex flex-col items-stretch justify-start flex-initial hover:bg-gray-50 dark:hover:bg-white/[0.04] transition-colors">
+                              <li className="p-5 flex flex-col items-stretch justify-start flex-initial hover:bg-gray-50 dark:hover:bg-white/[0.04] transition-colors first:rounded-t-sm last:rounded-b-sm">
                                 <section className="flex items-center gap-4">
                                   <div className="left flex flex-1 items-center gap-4 min-w-0">
                                     <div className="space-between flex min-h-[40px] w-full items-center gap-3">
@@ -1163,7 +1163,7 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                                             <IoEllipsisHorizontal className="w-5 h-5" />
                                           </button>
                                           {signinMethodDropdownOpen === 'google' && (
-                                            <div className="absolute right-0 top-full mt-1 z-[100] min-w-[160px] bg-white dark:bg-[#1a1a1a] border border-gray-300 dark:border-[#525252] rounded-sm overflow-hidden py-1">
+                                            <div className="absolute right-0 top-full mt-1 z-[100] min-w-[160px] bg-white dark:bg-[oklch(0.21_0.03_263.45)] border border-gray-300 dark:border-[#525252] rounded-sm shadow-md overflow-hidden py-1">
                                               <button
                                                 type="button"
                                                 onClick={() => { void linkLoginMethod('google'); setSigninMethodDropdownOpen(null); }}
@@ -1197,7 +1197,7 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                                 </section>
                               </li>
 
-                              <li className="p-5 flex flex-col items-stretch justify-start flex-initial hover:bg-gray-50 dark:hover:bg-white/[0.04] transition-colors">
+                              <li className="p-5 flex flex-col items-stretch justify-start flex-initial hover:bg-gray-50 dark:hover:bg-white/[0.04] transition-colors first:rounded-t-sm last:rounded-b-sm">
                                 <section className="flex items-center gap-4">
                                   <div className="left flex flex-1 items-center gap-4 min-w-0">
                                     <div className="space-between flex min-h-[40px] w-full items-center gap-3">
@@ -1221,7 +1221,7 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                                             <IoEllipsisHorizontal className="w-5 h-5" />
                                           </button>
                                           {signinMethodDropdownOpen === 'github' && (
-                                            <div className="absolute right-0 top-full mt-1 z-[100] min-w-[160px] bg-white dark:bg-[#1a1a1a] border border-gray-300 dark:border-[#525252] rounded-sm overflow-hidden py-1">
+                                            <div className="absolute right-0 top-full mt-1 z-[100] min-w-[160px] bg-white dark:bg-[oklch(0.21_0.03_263.45)] border border-gray-300 dark:border-[#525252] rounded-sm shadow-md overflow-hidden py-1">
                                               <button
                                                 type="button"
                                                 onClick={() => { void linkLoginMethod('github'); setSigninMethodDropdownOpen(null); }}

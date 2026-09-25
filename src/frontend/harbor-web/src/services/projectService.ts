@@ -1,5 +1,7 @@
 const projectApiBase = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api') + '/projects';
 
+import { type Service } from './serviceService';
+
 export interface Project {
   id: number;
   publicId?: string;
@@ -10,6 +12,7 @@ export interface Project {
   createdAt: string;
   isArchived: boolean;
   archivedAt?: string | null;
+  services?: Service[];
 }
 
 export interface CreateProjectPayload {

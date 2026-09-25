@@ -7,6 +7,7 @@ export interface Service {
   repositoryUrl?: string | null;
   repositoryName?: string | null;
   repositoryBranch?: string | null;
+  repositoryCommit?: string | null;
   createdAt: string;
 }
 

@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
-import { FaGithubAlt } from "react-icons/fa";
+import { FaGithubAlt, FaGithub } from "react-icons/fa";
 import { FcGoogle } from "react-icons/fc";
 import { IoCopyOutline, IoEllipsisHorizontal } from "react-icons/io5";
 import { IoMdCheckmark, IoLogoGithub } from "react-icons/io";
@@ -207,6 +207,39 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
     
     void loadGithubData();
   }, [profile.loginMethods]);
+
+  useEffect(() => {
+    const handleFocus = async () => {
+      if (document.visibilityState !== 'visible') return;
+      try {
+        const authApiBase = import.meta.env.VITE_AUTH_API_BASE_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+        const token = localStorage.getItem('harbor_token');
+        if (!token) return;
+        const response = await fetch(`${authApiBase}/auth/me`, {
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            'ngrok-skip-browser-warning': 'true',
+          }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          if (data.data) {
+            setProfile(data.data);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to refresh profile on focus', err);
+      }
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleFocus);
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleFocus);
+    };
+  }, []);
+
   const currentUsername: string = profile.username;
   const currentEmail: string = profile.email;
   const avatarSvg: string | null = profile.avatarSvg;
@@ -549,7 +582,7 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
   ];
 
   const activeIndex = navItems.findIndex(item => item.id === activeSection);
-  const indicatorOffset = Math.max(0, activeIndex) * 2.25; // 2.25rem = h-9
+  const indicatorOffset = Math.max(0, activeIndex) * 2.75; // 2.75rem = h-11
 
   return (
     <div className="w-full lg:max-w-[calc(100vw-294px)]">
@@ -558,7 +591,7 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
           <div className="my-6 md:my-12 flex justify-between">
             <div className="">
               <div className="">
-                <h1 className="text-[32px] font-[500] leading-[36px] tracking-[-0.32px] text-strong" style={{ fontFamily: 'Roobert, sans-serif' }}>Account settings</h1>
+                <h1 className="text-[36px] font-[500] leading-[40px] tracking-[-0.32px] text-strong" style={{ fontFamily: 'Roobert, sans-serif' }}>Account settings</h1>
               </div>
             </div>
           </div>
@@ -566,18 +599,18 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
             <div className="relative flex-shrink-0 hidden xl:block xl:sticky xl:h-full xl:max-h-[calc(100vh_-_3.5rem)] xl:top-14 custom-scrollbar overflow-y-auto">
               <nav aria-labelledby="_r_3f_">
                 <span id="_r_3f_" className="sr-only">Table of contents</span>
-                <ul className="relative min-w-[11.5rem] border-l border-solid border-gray-200 dark:border-white/10">
+                <ul className="relative min-w-[12rem] border-l border-solid border-gray-300 dark:border-[#525252]">
                   <div 
-                    className="opacity-100 absolute top-2 -left-px w-[2px] h-5 bg-blue-600 dark:bg-blue-500 rounded-full motion-safe:transition motion-safe:duration-300 motion-safe:ease-out-cubic" 
+                    className="opacity-100 absolute top-3 -left-px w-[2px] h-5 bg-blue-600 dark:bg-blue-500 rounded-full motion-safe:transition motion-safe:duration-300 motion-safe:ease-out-cubic" 
                     style={{ transform: `translateY(${indicatorOffset}rem)` }}
                   ></div>
                   {navItems.map(item => {
                     const isActive = activeSection === item.id;
                     return (
-                      <li key={item.id} className="flex items-center h-9 py-2 pl-4">
+                      <li key={item.id} className="flex items-center h-11 py-2 pl-5">
                         <a 
                           aria-selected={isActive} 
-                          className={`type-body-02 ${isActive ? 'sidecar-text--active active:text-strong' : 'sidecar-text'} hover:underline active:no-underline`} 
+                          className={`text-[18px] font-medium ${isActive ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-[#a1a1aa]'} hover:text-gray-800 dark:hover:text-[#e3e3e3] transition-colors`} 
                           href={`#${item.id}`}
                         >
                           {item.label}
@@ -592,12 +625,12 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
             <div className="flex-1 space-y-10">
               <div data-id="profile" className="scroll-mt-24 xl:scroll-mt-20">
                 <div>
-                  <div id="profile" className="p-6 md:p-8 page-primary border border-solid border-[#6b6b6b] scroll-mt-20 rounded-sm">
+                  <div id="profile" className="p-6 md:p-8 page-primary border border-solid border-gray-300 dark:border-[#525252] scroll-mt-20 rounded-sm">
                     <div className="mb-8">
                       <div className="flex justify-between small:items-center">
                         <div className="flex-1 small:pr-4">
                           <div className="">
-                            <h2 className="text-[24px] font-[500] leading-[28px] tracking-[-0.24px] text-strong" style={{ fontFamily: 'Roobert, sans-serif' }}>Profile</h2>
+                            <h2 className="text-[26px] font-[500] leading-[32px] tracking-[-0.24px] text-strong" style={{ fontFamily: 'Roobert, sans-serif' }}>Profile</h2>
                             {profileError && (
                               <p role="alert" className="mt-2 text-sm text-red-600 dark:text-red-400">{profileError}</p>
                             )}
@@ -622,7 +655,7 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                                     <input 
                                       id="name" 
                                       readOnly={!isEditingName} 
-                                      className={`h-10 truncate type-interface-01 w-full m-0 py-2.5 px-3 placeholder:input-text--placeholder border border-solid border-[#6b6b6b] rounded-sm appearance-none outline-none transition-colors ${
+                                      className={`h-10 truncate type-interface-01 w-full m-0 py-2.5 px-3 placeholder:input-text--placeholder border border-solid border-gray-300 dark:border-[#525252] rounded-sm appearance-none outline-none transition-colors ${
                                         isEditingName 
                                           ? "bg-transparent text-primary focus:border-[#2563eb] focus:ring-1 focus:ring-[#2563eb]" 
                                           : "input-background--readonly input-text--readonly caret-transparent"
@@ -637,7 +670,7 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                                 <div className="flex justify-end mt-4">
                                   {isEditingName ? (
                                     <div className="flex items-center gap-3">
-                                      <button type="button" onClick={() => { setIsEditingName(false); setName(currentUsername); }} className="type-interface-01 button-ghost-text hover:button-ghost-background--hover hover:button-ghost-text--hover h-10 py-2.5 px-3 flex items-center border border-solid border-[#6b6b6b] rounded-sm">
+                                      <button type="button" onClick={() => { setIsEditingName(false); setName(currentUsername); }} className="type-interface-01 button-ghost-text hover:button-ghost-background--hover hover:button-ghost-text--hover h-10 py-2.5 px-3 flex items-center border border-solid border-gray-300 dark:border-[#525252] rounded-sm">
                                         Cancel
                                       </button>
                                       <button type="submit" disabled={isSavingProfile || name.trim() === currentUsername} className="type-interface-01 button-primary-text button-primary-background hover:button-primary-background--hover disabled:opacity-50 disabled:cursor-not-allowed h-10 py-2.5 px-4 flex items-center space-x-2 rounded-sm font-medium text-black bg-white">
@@ -671,7 +704,7 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                                     <input 
                                       id="email" 
                                       readOnly={!isEditingEmail} 
-                                      className={`h-10 truncate type-interface-01 w-full m-0 py-2.5 px-3 placeholder:input-text--placeholder border border-solid border-[#6b6b6b] rounded-sm appearance-none outline-none transition-colors ${
+                                      className={`h-10 truncate type-interface-01 w-full m-0 py-2.5 px-3 placeholder:input-text--placeholder border border-solid border-gray-300 dark:border-[#525252] rounded-sm appearance-none outline-none transition-colors ${
                                         isEditingEmail 
                                           ? "bg-transparent text-primary focus:border-[#2563eb] focus:ring-1 focus:ring-[#2563eb]" 
                                           : "input-background--readonly input-text--readonly caret-transparent"
@@ -686,7 +719,7 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                                 <div className="flex justify-end mt-4">
                                   {isEditingEmail ? (
                                     <div className="flex items-center gap-3">
-                                      <button type="button" onClick={() => { setIsEditingEmail(false); setEmail(currentEmail); }} className="type-interface-01 button-ghost-text hover:button-ghost-background--hover hover:button-ghost-text--hover h-10 py-2.5 px-3 flex items-center border border-solid border-[#6b6b6b] rounded-sm">
+                                      <button type="button" onClick={() => { setIsEditingEmail(false); setEmail(currentEmail); }} className="type-interface-01 button-ghost-text hover:button-ghost-background--hover hover:button-ghost-text--hover h-10 py-2.5 px-3 flex items-center border border-solid border-gray-300 dark:border-[#525252] rounded-sm">
                                         Cancel
                                       </button>
                                       <button type="submit" disabled={isSavingProfile || email.trim() === currentEmail} className="type-interface-01 button-primary-text button-primary-background hover:button-primary-background--hover disabled:opacity-50 disabled:cursor-not-allowed h-10 py-2.5 px-4 flex items-center space-x-2 rounded-sm font-medium text-black bg-white">
@@ -742,7 +775,7 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                               <form noValidate onSubmit={(e) => { e.preventDefault(); }}>
                                 <div className="flex flex-col">
                                   <div className="flex relative items-center">
-                                    <span className="text-gray-900 dark:text-[#f0f0f0] font-normal truncate type-interface-01">
+                                    <span className="text-gray-900 dark:text-[#f0f0f0] font-normal truncate type-interface-01 font-geist-mono bg-gray-100 dark:bg-[#1a1a1a] px-2 py-1 rounded-sm border border-gray-300 dark:border-[#525252]">
                                       {profile.publicId || ''}
                                     </span>
                                     {profile.publicId && (
@@ -774,12 +807,12 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
 
               <div data-id="appearance" className="scroll-mt-24 xl:scroll-mt-20">
                 <div>
-                  <div id="appearance" className="p-6 md:p-8 page-primary border border-solid border-[#6b6b6b] scroll-mt-20 rounded-sm">
+                  <div id="appearance" className="p-6 md:p-8 page-primary border border-solid border-gray-300 dark:border-[#525252] scroll-mt-20 rounded-sm">
                     <div className="mb-8">
                       <div className="flex justify-between small:items-center">
                         <div className="flex-1 small:pr-4">
                           <div className="">
-                            <h2 className="text-[24px] font-[500] leading-[28px] tracking-[-0.24px] text-strong" style={{ fontFamily: 'Roobert, sans-serif' }}>Appearance</h2>
+                            <h2 className="text-[26px] font-[500] leading-[32px] tracking-[-0.24px] text-strong" style={{ fontFamily: 'Roobert, sans-serif' }}>Appearance</h2>
                             {preferencesError && (
                               <p role="alert" className="mt-2 text-sm text-red-600 dark:text-red-400">{preferencesError}</p>
                             )}
@@ -809,7 +842,7 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                                       aria-expanded="false" 
                                       aria-haspopup="listbox" 
                                       aria-labelledby="themeSetting-label themeSetting" 
-                                      className={`type-interface-01 w-full m-0 py-2.5 px-3 placeholder:input-text--placeholder border border-solid border-[#6b6b6b] rounded-sm appearance-none outline-none transition-colors h-10 text-left flex items-center ${
+                                      className={`type-interface-01 w-full m-0 py-2.5 px-3 placeholder:input-text--placeholder border border-solid border-gray-300 dark:border-[#525252] rounded-sm appearance-none outline-none transition-colors h-10 text-left flex items-center ${
                                         isEditingTheme
                                           ? "bg-transparent text-primary focus:border-[#2563eb] focus:ring-1 focus:ring-[#2563eb]" 
                                           : "input-background--readonly input-text--readonly caret-transparent"
@@ -827,7 +860,7 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                                     </button>
                                     
                                     {isEditingTheme && themeDropdownOpen && (
-                                      <div className="absolute z-10 w-full mt-1 bg-white dark:bg-[oklch(0.21_0.03_263.45)] border border-[#6b6b6b] shadow-lg rounded-sm">
+                                      <div className="absolute z-10 w-full mt-1 bg-white dark:bg-[oklch(0.21_0.03_263.45)] border border-gray-300 dark:border-[#525252] shadow-lg rounded-sm">
                                         <ul className="py-1">
                                           {themeOptions.map((opt) => (
                                             <li key={opt.value}>
@@ -856,7 +889,7 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                                 <div className="flex justify-end mt-4">
                                   {isEditingTheme ? (
                                     <div className="flex items-center gap-3">
-                                      <button type="button" onClick={() => { setIsEditingTheme(false); setTheme(savedTheme); setThemeDropdownOpen(false); }} className="type-interface-01 button-ghost-text hover:button-ghost-background--hover hover:button-ghost-text--hover h-10 py-2.5 px-3 flex items-center border border-solid border-[#6b6b6b] rounded-sm">
+                                      <button type="button" onClick={() => { setIsEditingTheme(false); setTheme(savedTheme); setThemeDropdownOpen(false); }} className="type-interface-01 button-ghost-text hover:button-ghost-background--hover hover:button-ghost-text--hover h-10 py-2.5 px-3 flex items-center border border-solid border-gray-300 dark:border-[#525252] rounded-sm">
                                         Cancel
                                       </button>
                                       <button type="submit" disabled={isSavingPreferences || theme === savedTheme} onClick={(e) => {
@@ -899,7 +932,7 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                                       aria-expanded="false" 
                                       aria-haspopup="listbox" 
                                       aria-labelledby="logThemeSetting-label logThemeSetting" 
-                                      className={`type-interface-01 w-full m-0 py-2.5 px-3 placeholder:input-text--placeholder border border-solid border-[#6b6b6b] rounded-sm appearance-none outline-none transition-colors h-10 text-left flex items-center ${
+                                      className={`type-interface-01 w-full m-0 py-2.5 px-3 placeholder:input-text--placeholder border border-solid border-gray-300 dark:border-[#525252] rounded-sm appearance-none outline-none transition-colors h-10 text-left flex items-center ${
                                         isEditingLogTheme
                                           ? "bg-transparent text-primary focus:border-[#2563eb] focus:ring-1 focus:ring-[#2563eb]" 
                                           : "input-background--readonly input-text--readonly caret-transparent"
@@ -917,7 +950,7 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                                     </button>
                                     
                                     {isEditingLogTheme && logThemeDropdownOpen && (
-                                      <div className="absolute z-10 w-full mt-1 bg-white dark:bg-[oklch(0.21_0.03_263.45)] border border-[#6b6b6b] shadow-lg outline-none rounded-sm">
+                                      <div className="absolute z-10 w-full mt-1 bg-white dark:bg-[oklch(0.21_0.03_263.45)] border border-gray-300 dark:border-[#525252] shadow-lg outline-none rounded-sm">
                                         <ul role="listbox" className="list-none p-2 custom-scrollbar max-h-80 overflow-y-auto overscroll-contain">
                                           {logThemeOptions.map((opt) => {
                                             const isActive = logTheme === opt.value;
@@ -956,7 +989,7 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                                 <div className="flex justify-end mt-4">
                                   {isEditingLogTheme ? (
                                     <div className="flex items-center gap-3">
-                                      <button type="button" onClick={() => { setIsEditingLogTheme(false); setLogTheme(savedLogTheme); setLogThemeDropdownOpen(false); }} className="type-interface-01 button-ghost-text hover:button-ghost-background--hover hover:button-ghost-text--hover h-10 py-2.5 px-3 flex items-center border border-solid border-[#6b6b6b] rounded-sm">
+                                      <button type="button" onClick={() => { setIsEditingLogTheme(false); setLogTheme(savedLogTheme); setLogThemeDropdownOpen(false); }} className="type-interface-01 button-ghost-text hover:button-ghost-background--hover hover:button-ghost-text--hover h-10 py-2.5 px-3 flex items-center border border-solid border-gray-300 dark:border-[#525252] rounded-sm">
                                         Cancel
                                       </button>
                                       <button type="submit" disabled={isSavingPreferences || logTheme === savedLogTheme} onClick={(e) => {
@@ -986,12 +1019,12 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
 
               <div data-id="account-security" className="scroll-mt-24 xl:scroll-mt-20">
                 <div>
-                  <div id="account-security" className="p-6 md:p-8 page-primary border border-solid border-[#6b6b6b] scroll-mt-20 mb-8 rounded-sm">
+                  <div id="account-security" className="p-6 md:p-8 page-primary border border-solid border-gray-300 dark:border-[#525252] scroll-mt-20 mb-8 rounded-sm">
                     <div className="mb-8">
                       <div className="flex justify-between small:items-center">
                         <div className="flex-1 small:pr-4">
                           <div className="">
-                            <h2 className="text-[24px] font-[500] leading-[28px] tracking-[-0.24px] text-strong" style={{ fontFamily: 'Roobert, sans-serif' }}>Account Security</h2>
+                            <h2 className="text-[26px] font-[500] leading-[32px] tracking-[-0.24px] text-strong" style={{ fontFamily: 'Roobert, sans-serif' }}>Account Security</h2>
                             {securityError && (
                               <p role="alert" className="mt-2 text-sm text-red-600 dark:text-red-400">{securityError}</p>
                             )}
@@ -1011,7 +1044,7 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                             <p className="text-[16px] text-gray-600 dark:text-[#c7c7c7] leading-[24px] font-normal tracking-[0.16px] normal-case"></p>
                           </div>
                           <div className="col-span-2">
-                            <button type="button" onClick={() => { setPasswordError(''); setPasswordNotice(''); setIsPasswordModalOpen(true); }} className="text-[16px] font-medium text-gray-900 dark:text-[#e3e3e3] hover:bg-gray-100 dark:hover:bg-white dark:hover:text-black border border-solid border-[#6b6b6b] h-10 py-2.5 px-3 flex items-center space-x-2 transition-colors rounded-sm">
+                            <button type="button" onClick={() => { setPasswordError(''); setPasswordNotice(''); setIsPasswordModalOpen(true); }} className="text-[16px] font-medium text-gray-900 dark:text-[#e3e3e3] hover:bg-gray-100 dark:hover:bg-white dark:hover:text-black border border-solid border-gray-300 dark:border-[#525252] h-10 py-2.5 px-3 flex items-center space-x-2 transition-colors rounded-sm">
                               <PiPassword className="w-5 h-5" />
                               <span>{profile.hasPassword ? 'Change password' : 'Create password'}</span>
                             </button>
@@ -1024,8 +1057,8 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                             <p className="text-[16px] text-gray-600 dark:text-[#c7c7c7] leading-[24px] font-normal tracking-[0.16px] normal-case">Use these methods to sign in to your Harbor account.</p>
                           </div>
                           <div className="col-span-2">
-                            <ul className="bg-[var(--geist-background)] shadow-[var(--ds-shadow-border),0_4px_6px_rgba(0,0,0,0.04)] rounded-[5px] overflow-hidden list-none m-0 p-0 [&>li:not(:last-child)]:border-b [&>li:not(:last-child)]:border-[color:var(--accents-2)] shadow-border">
-                              <li className="p-4 flex flex-col items-stretch justify-start flex-initial">
+                            <ul className="bg-white dark:bg-white/[0.02] border border-gray-300 dark:border-[#525252] rounded-sm overflow-hidden list-none m-0 p-0 [&>li:not(:last-child)]:border-b [&>li:not(:last-child)]:border-gray-200 dark:[&>li:not(:last-child)]:border-white/10">
+                              <li className="p-5 flex flex-col items-stretch justify-start flex-initial hover:bg-gray-50 dark:hover:bg-white/[0.04] transition-colors">
                                 <section className="flex items-center gap-4">
                                   <div className="left flex flex-1 items-center gap-4 min-w-0">
                                     <div className="space-between flex w-full items-center gap-3">
@@ -1036,42 +1069,48 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                                         <h4 className="text-[16px] font-medium">Email</h4>
                                         <p className="text-copy-14 text-gray-900 dark:text-[#f0f0f0]">{profile.email}</p>
                                       </div>
-                                      <button
-                                        type="button"
-                                        onClick={() => setSigninMethodDropdownOpen(signinMethodDropdownOpen === 'email' ? null : 'email')}
-                                        className="outline-none m-0 p-0 border-0 bg-transparent cursor-pointer flex items-center justify-center text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 h-8 w-8 rounded-md transition-colors"
-                                        title="More options"
-                                      >
-                                        <IoEllipsisHorizontal className="w-5 h-5" />
-                                      </button>
+                                      <div className="relative">
+                                        <button
+                                          type="button"
+                                          onClick={() => setSigninMethodDropdownOpen(signinMethodDropdownOpen === 'email' ? null : 'email')}
+                                          className="outline-none m-0 p-0 border-0 bg-transparent cursor-pointer flex items-center justify-center text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 h-8 w-8 rounded-sm transition-colors"
+                                          title="More options"
+                                        >
+                                          <IoEllipsisHorizontal className="w-5 h-5" />
+                                        </button>
+                                        {signinMethodDropdownOpen === 'email' && (
+                                          <div className="absolute right-0 top-full mt-1 z-[100] min-w-[160px] bg-white dark:bg-[#1a1a1a] border border-gray-300 dark:border-[#525252] rounded-sm overflow-hidden py-1">
+                                            <button
+                                              type="button"
+                                              onClick={() => {
+                                                setSigninMethodDropdownOpen(null);
+                                                const profileSection = document.getElementById('profile');
+                                                if (profileSection) {
+                                                  profileSection.scrollIntoView({ behavior: 'smooth' });
+                                                }
+                                              }}
+                                              className="w-full flex items-center gap-2 px-3 py-2 text-[14px] text-gray-900 dark:text-[#f0f0f0] hover:bg-gray-100 dark:hover:bg-white/[0.04] transition-colors"
+                                            >
+                                              <FiExternalLink className="w-4 h-4" />
+                                              Manage
+                                            </button>
+                                            <button
+                                              type="button"
+                                              onClick={() => void disconnectLoginMethod('email')}
+                                              className="w-full flex items-center gap-2 px-3 py-2 text-[14px] text-red-600 dark:text-[#f4b3b7] hover:bg-red-50 dark:hover:bg-[#390508] transition-colors"
+                                            >
+                                              <svg fill="currentColor" className="w-4 h-4 shrink-0" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M2.49892 1.79373L1.79194 2.50096L3.4999 4.20832L4.20688 3.50109L2.49892 1.79373Z"></path><path d="M12.4979 11.789L11.7907 12.496L13.4981 14.2039L14.2053 13.4969L12.4979 11.789Z"></path><path d="M6.5 1H5.5V3H6.5V1Z"></path><path d="M3 5.5H1V6.5H3V5.5Z"></path><path d="M15 9.5H13V10.5H15V9.5Z"></path><path d="M10.5 13H9.5V15H10.5V13Z"></path><path d="M8.29 10.535L6.435 12.395C6.24918 12.5808 6.02858 12.7282 5.78579 12.8288C5.54301 12.9294 5.28279 12.9811 5.02 12.9811C4.75721 12.9811 4.49699 12.9294 4.25421 12.8288C4.01142 12.7282 3.79082 12.5808 3.605 12.395C3.22972 12.0197 3.01889 11.5107 3.01889 10.98C3.01889 10.4493 3.22972 9.94028 3.605 9.565L5.465 7.705L4.755 7L2.9 8.86C2.61533 9.13707 2.38853 9.46792 2.23275 9.83334C2.07697 10.1988 1.99531 10.5915 1.99252 10.9887C1.98973 11.386 2.06586 11.7798 2.21649 12.1474C2.36712 12.515 2.58925 12.849 2.87 13.13C3.15032 13.408 3.48277 13.628 3.84828 13.7773C4.21379 13.9266 4.60518 14.0023 5 14C5.40168 14.0004 5.79944 13.921 6.17023 13.7665C6.54101 13.612 6.87743 13.3855 7.16 13.1L9 11.245L8.29 10.535Z"></path><path d="M7.705 5.465L9.565 3.605C9.75082 3.41918 9.97142 3.27178 10.2142 3.17121C10.457 3.07065 10.7172 3.01889 10.98 3.01889C11.2428 3.01889 11.503 3.07065 11.7458 3.17121C11.9886 3.27178 12.2092 3.41918 12.395 3.605C12.5808 3.79082 12.7282 4.01142 12.8288 4.25421C12.9294 4.49699 12.9811 4.75721 12.9811 5.02C12.9811 5.28279 12.9294 5.54301 12.8288 5.78579C12.7282 6.02858 12.5808 6.24918 12.395 6.435L10.535 8.295L11.245 9L13.1 7.14C13.3847 6.86293 13.6115 6.53208 13.7673 6.16666C13.923 5.80123 14.0047 5.40851 14.0075 5.01127C14.0103 4.61404 13.9341 4.2202 13.7835 3.85262C13.6329 3.48505 13.4107 3.15104 13.13 2.87C12.8497 2.59196 12.5172 2.37198 12.1517 2.22269C11.7862 2.07339 11.3948 1.99772 11 2C10.5983 1.99961 10.2006 2.07897 9.82977 2.23346C9.45899 2.38795 9.12257 2.61451 8.84 2.9L7 4.755L7.705 5.465Z"></path></svg>
+                                              Disconnect
+                                            </button>
+                                          </div>
+                                        )}
+                                      </div>
                                     </div>
                                   </div>
                                 </section>
-                                {signinMethodDropdownOpen === 'email' && (
-                                  <div className="relative mt-2 ml-10">
-                                    <div className="absolute left-0 top-full z-50 min-w-[140px] bg-white dark:bg-[oklch(0.21_0.03_263.45)] border border-solid border-[#6b6b6b] shadow-lg rounded-md overflow-hidden">
-                                      <button
-                                        type="button"
-                                        onClick={() => { void linkLoginMethod('email'); setSigninMethodDropdownOpen(null); }}
-                                        className="w-full flex items-center gap-2 px-3 py-2 text-[14px] text-gray-900 dark:text-[#f0f0f0] hover:bg-gray-100 dark:hover:bg-[#1a1a1a]"
-                                      >
-                                        <FiExternalLink className="w-4 h-4" />
-                                        Manage
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => void disconnectLoginMethod('email')}
-                                        className="w-full flex items-center gap-2 px-3 py-2 text-[14px] text-red-600 dark:text-[#f4b3b7] hover:bg-red-50 dark:hover:bg-[#390508]"
-                                      >
-                                        <svg fill="currentColor" className="w-4 h-4 shrink-0" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M2.49892 1.79373L1.79194 2.50096L3.4999 4.20832L4.20688 3.50109L2.49892 1.79373Z"></path><path d="M12.4979 11.789L11.7907 12.496L13.4981 14.2039L14.2053 13.4969L12.4979 11.789Z"></path><path d="M6.5 1H5.5V3H6.5V1Z"></path><path d="M3 5.5H1V6.5H3V5.5Z"></path><path d="M15 9.5H13V10.5H15V9.5Z"></path><path d="M10.5 13H9.5V15H10.5V13Z"></path><path d="M8.29 10.535L6.435 12.395C6.24918 12.5808 6.02858 12.7282 5.78579 12.8288C5.54301 12.9294 5.28279 12.9811 5.02 12.9811C4.75721 12.9811 4.49699 12.9294 4.25421 12.8288C4.01142 12.7282 3.79082 12.5808 3.605 12.395C3.22972 12.0197 3.01889 11.5107 3.01889 10.98C3.01889 10.4493 3.22972 9.94028 3.605 9.565L5.465 7.705L4.755 7L2.9 8.86C2.61533 9.13707 2.38853 9.46792 2.23275 9.83334C2.07697 10.1988 1.99531 10.5915 1.99252 10.9887C1.98973 11.386 2.06586 11.7798 2.21649 12.1474C2.36712 12.515 2.58925 12.849 2.87 13.13C3.15032 13.408 3.48277 13.628 3.84828 13.7773C4.21379 13.9266 4.60518 14.0023 5 14C5.40168 14.0004 5.79944 13.921 6.17023 13.7665C6.54101 13.612 6.87743 13.3855 7.16 13.1L9 11.245L8.29 10.535Z"></path><path d="M7.705 5.465L9.565 3.605C9.75082 3.41918 9.97142 3.27178 10.2142 3.17121C10.457 3.07065 10.7172 3.01889 10.98 3.01889C11.2428 3.01889 11.503 3.07065 11.7458 3.17121C11.9886 3.27178 12.2092 3.41918 12.395 3.605C12.5808 3.79082 12.7282 4.01142 12.8288 4.25421C12.9294 4.49699 12.9811 4.75721 12.9811 5.02C12.9811 5.28279 12.9294 5.54301 12.8288 5.78579C12.7282 6.02858 12.5808 6.24918 12.395 6.435L10.535 8.295L11.245 9L13.1 7.14C13.3847 6.86293 13.6115 6.53208 13.7673 6.16666C13.923 5.80123 14.0047 5.40851 14.0075 5.01127C14.0103 4.61404 13.9341 4.2202 13.7835 3.85262C13.6329 3.48505 13.4107 3.15104 13.13 2.87C12.8497 2.59196 12.5172 2.37198 12.1517 2.22269C11.7862 2.07339 11.3948 1.99772 11 2C10.5983 1.99961 10.2006 2.07897 9.82977 2.23346C9.45899 2.38795 9.12257 2.61451 8.84 2.9L7 4.755L7.705 5.465Z"></path></svg>
-                                        Disconnect
-                                      </button>
-                                    </div>
-                                  </div>
-                                )}
                               </li>
 
-                              <li className="p-4 flex flex-col items-stretch justify-start flex-initial">
+                              <li className="p-5 flex flex-col items-stretch justify-start flex-initial hover:bg-gray-50 dark:hover:bg-white/[0.04] transition-colors">
                                 <section className="flex items-center gap-4">
                                   <div className="left flex flex-1 items-center gap-4 min-w-0">
                                     <div className="space-between flex min-h-[40px] w-full items-center gap-3">
@@ -1080,24 +1119,46 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                                         <h4 className="text-[16px] font-medium">Google</h4>
                                         <p className="text-copy-14 text-gray-900 dark:text-[#f0f0f0]" data-testid="account/social-provider/username/google">
                                           {isProviderConnected('google')
-                                            ? (profile.providerUsernames?.google ?? profile.email)
+                                            ? (profile.providerUsernames?.google ?? 'Connected')
                                             : 'Not connected'}
                                         </p>
                                       </div>
                                       {isProviderConnected('google') ? (
-                                        <button
-                                          type="button"
-                                          onClick={() => setSigninMethodDropdownOpen(signinMethodDropdownOpen === 'google' ? null : 'google')}
-                                          className="outline-none m-0 p-0 border-0 bg-transparent cursor-pointer flex items-center justify-center text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 h-8 w-8 rounded-md transition-colors"
-                                          title="More options"
-                                        >
-                                          <IoEllipsisHorizontal className="w-5 h-5" />
-                                        </button>
+                                        <div className="relative">
+                                          <button
+                                            type="button"
+                                            onClick={() => setSigninMethodDropdownOpen(signinMethodDropdownOpen === 'google' ? null : 'google')}
+                                            className="outline-none m-0 p-0 border-0 bg-transparent cursor-pointer flex items-center justify-center text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 h-8 w-8 rounded-sm transition-colors"
+                                            title="More options"
+                                          >
+                                            <IoEllipsisHorizontal className="w-5 h-5" />
+                                          </button>
+                                          {signinMethodDropdownOpen === 'google' && (
+                                            <div className="absolute right-0 top-full mt-1 z-[100] min-w-[160px] bg-white dark:bg-[#1a1a1a] border border-gray-300 dark:border-[#525252] rounded-sm overflow-hidden py-1">
+                                              <button
+                                                type="button"
+                                                onClick={() => { void linkLoginMethod('google'); setSigninMethodDropdownOpen(null); }}
+                                                className="w-full flex items-center gap-2 px-3 py-2 text-[14px] text-gray-900 dark:text-[#f0f0f0] hover:bg-gray-100 dark:hover:bg-white/[0.04] transition-colors"
+                                              >
+                                                <FiExternalLink className="w-4 h-4" />
+                                                Manage in Google
+                                              </button>
+                                              <button
+                                                type="button"
+                                                onClick={() => void disconnectLoginMethod('google')}
+                                                className="w-full flex items-center gap-2 px-3 py-2 text-[14px] text-red-600 dark:text-[#f4b3b7] hover:bg-red-50 dark:hover:bg-[#390508] transition-colors"
+                                              >
+                                                <svg fill="currentColor" className="w-4 h-4 shrink-0" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M2.49892 1.79373L1.79194 2.50096L3.4999 4.20832L4.20688 3.50109L2.49892 1.79373Z"></path><path d="M12.4979 11.789L11.7907 12.496L13.4981 14.2039L14.2053 13.4969L12.4979 11.789Z"></path><path d="M6.5 1H5.5V3H6.5V1Z"></path><path d="M3 5.5H1V6.5H3V5.5Z"></path><path d="M15 9.5H13V10.5H15V9.5Z"></path><path d="M10.5 13H9.5V15H10.5V13Z"></path><path d="M8.29 10.535L6.435 12.395C6.24918 12.5808 6.02858 12.7282 5.78579 12.8288C5.54301 12.9294 5.28279 12.9811 5.02 12.9811C4.75721 12.9811 4.49699 12.9294 4.25421 12.8288C4.01142 12.7282 3.79082 12.5808 3.605 12.395C3.22972 12.0197 3.01889 11.5107 3.01889 10.98C3.01889 10.4493 3.22972 9.94028 3.605 9.565L5.465 7.705L4.755 7L2.9 8.86C2.61533 9.13707 2.38853 9.46792 2.23275 9.83334C2.07697 10.1988 1.99531 10.5915 1.99252 10.9887C1.98973 11.386 2.06586 11.7798 2.21649 12.1474C2.36712 12.515 2.58925 12.849 2.87 13.13C3.15032 13.408 3.48277 13.628 3.84828 13.7773C4.21379 13.9266 4.60518 14.0023 5 14C5.40168 14.0004 5.79944 13.921 6.17023 13.7665C6.54101 13.612 6.87743 13.3855 7.16 13.1L9 11.245L8.29 10.535Z"></path><path d="M7.705 5.465L9.565 3.605C9.75082 3.41918 9.97142 3.27178 10.2142 3.17121C10.457 3.07065 10.7172 3.01889 10.98 3.01889C11.2428 3.01889 11.503 3.07065 11.7458 3.17121C11.9886 3.27178 12.2092 3.41918 12.395 3.605C12.5808 3.79082 12.7282 4.01142 12.8288 4.25421C12.9294 4.49699 12.9811 4.75721 12.9811 5.02C12.9811 5.28279 12.9294 5.54301 12.8288 5.78579C12.7282 6.02858 12.5808 6.24918 12.395 6.435L10.535 8.295L11.245 9L13.1 7.14C13.3847 6.86293 13.6115 6.53208 13.7673 6.16666C13.923 5.80123 14.0047 5.40851 14.0075 5.01127C14.0103 4.61404 13.9341 4.2202 13.7835 3.85262C13.6329 3.48505 13.4107 3.15104 13.13 2.87C12.8497 2.59196 12.5172 2.37198 12.1517 2.22269C11.7862 2.07339 11.3948 1.99772 11 2C10.5983 1.99961 10.2006 2.07897 9.82977 2.23346C9.45899 2.38795 9.12257 2.61451 8.84 2.9L7 4.755L7.705 5.465Z"></path></svg>
+                                                Disconnect
+                                              </button>
+                                            </div>
+                                          )}
+                                        </div>
                                       ) : (
                                         <button
                                           type="button"
                                           onClick={() => void linkLoginMethod('google')}
-                                          className="text-white bg-[#2563eb] hover:bg-[#1d4ed8] dark:bg-white dark:text-black dark:hover:bg-gray-200 font-medium !px-3 max-w-full items-center justify-center transition-[border-color, background,color,transform,box-shadow] duration-[time:150ms] ease-in-out data-[focus]:transition-none data-[focus]:shadow-[var(--ds-focus-ring)] [&_svg]:shrink-0 text-(length:--geist-form-small-font) h-[32px] rounded-md"
+                                          className="text-white bg-[#2563eb] hover:bg-[#1d4ed8] dark:bg-white dark:text-black dark:hover:bg-gray-200 font-medium !px-3 max-w-full items-center justify-center transition-[border-color, background,color,transform,box-shadow] duration-[time:150ms] ease-in-out data-[focus]:transition-none data-[focus]:shadow-[var(--ds-focus-ring)] [&_svg]:shrink-0 text-(length:--geist-form-small-font) h-[32px] rounded-sm"
                                         >
                                           Connect
                                         </button>
@@ -1105,31 +1166,9 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                                     </div>
                                   </div>
                                 </section>
-                                {signinMethodDropdownOpen === 'google' && (
-                                  <div className="relative mt-2 ml-10">
-                                    <div className="absolute left-0 top-full z-50 min-w-[140px] bg-white dark:bg-[oklch(0.21_0.03_263.45)] border border-solid border-[#6b6b6b] shadow-lg rounded-md overflow-hidden">
-                                      <button
-                                        type="button"
-                                        onClick={() => { void linkLoginMethod('google'); setSigninMethodDropdownOpen(null); }}
-                                        className="w-full flex items-center gap-2 px-3 py-2 text-[14px] text-gray-900 dark:text-[#f0f0f0] hover:bg-gray-100 dark:hover:bg-[#1a1a1a]"
-                                      >
-                                        <FiExternalLink className="w-4 h-4" />
-                                        Manage
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => void disconnectLoginMethod('google')}
-                                        className="w-full flex items-center gap-2 px-3 py-2 text-[14px] text-red-600 dark:text-[#f4b3b7] hover:bg-red-50 dark:hover:bg-[#390508]"
-                                      >
-                                        <svg fill="currentColor" className="w-4 h-4 shrink-0" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M2.49892 1.79373L1.79194 2.50096L3.4999 4.20832L4.20688 3.50109L2.49892 1.79373Z"></path><path d="M12.4979 11.789L11.7907 12.496L13.4981 14.2039L14.2053 13.4969L12.4979 11.789Z"></path><path d="M6.5 1H5.5V3H6.5V1Z"></path><path d="M3 5.5H1V6.5H3V5.5Z"></path><path d="M15 9.5H13V10.5H15V9.5Z"></path><path d="M10.5 13H9.5V15H10.5V13Z"></path><path d="M8.29 10.535L6.435 12.395C6.24918 12.5808 6.02858 12.7282 5.78579 12.8288C5.54301 12.9294 5.28279 12.9811 5.02 12.9811C4.75721 12.9811 4.49699 12.9294 4.25421 12.8288C4.01142 12.7282 3.79082 12.5808 3.605 12.395C3.22972 12.0197 3.01889 11.5107 3.01889 10.98C3.01889 10.4493 3.22972 9.94028 3.605 9.565L5.465 7.705L4.755 7L2.9 8.86C2.61533 9.13707 2.38853 9.46792 2.23275 9.83334C2.07697 10.1988 1.99531 10.5915 1.99252 10.9887C1.98973 11.386 2.06586 11.7798 2.21649 12.1474C2.36712 12.515 2.58925 12.849 2.87 13.13C3.15032 13.408 3.48277 13.628 3.84828 13.7773C4.21379 13.9266 4.60518 14.0023 5 14C5.40168 14.0004 5.79944 13.921 6.17023 13.7665C6.54101 13.612 6.87743 13.3855 7.16 13.1L9 11.245L8.29 10.535Z"></path><path d="M7.705 5.465L9.565 3.605C9.75082 3.41918 9.97142 3.27178 10.2142 3.17121C10.457 3.07065 10.7172 3.01889 10.98 3.01889C11.2428 3.01889 11.503 3.07065 11.7458 3.17121C11.9886 3.27178 12.2092 3.41918 12.395 3.605C12.5808 3.79082 12.7282 4.01142 12.8288 4.25421C12.9294 4.49699 12.9811 4.75721 12.9811 5.02C12.9811 5.28279 12.9294 5.54301 12.8288 5.78579C12.7282 6.02858 12.5808 6.24918 12.395 6.435L10.535 8.295L11.245 9L13.1 7.14C13.3847 6.86293 13.6115 6.53208 13.7673 6.16666C13.923 5.80123 14.0047 5.40851 14.0075 5.01127C14.0103 4.61404 13.9341 4.2202 13.7835 3.85262C13.6329 3.48505 13.4107 3.15104 13.13 2.87C12.8497 2.59196 12.5172 2.37198 12.1517 2.22269C11.7862 2.07339 11.3948 1.99772 11 2C10.5983 1.99961 10.2006 2.07897 9.82977 2.23346C9.45899 2.38795 9.12257 2.61451 8.84 2.9L7 4.755L7.705 5.465Z"></path></svg>
-                                        Disconnect
-                                      </button>
-                                    </div>
-                                  </div>
-                                )}
                               </li>
 
-                              <li className="p-4 flex flex-col items-stretch justify-start flex-initial">
+                              <li className="p-5 flex flex-col items-stretch justify-start flex-initial hover:bg-gray-50 dark:hover:bg-white/[0.04] transition-colors">
                                 <section className="flex items-center gap-4">
                                   <div className="left flex flex-1 items-center gap-4 min-w-0">
                                     <div className="space-between flex min-h-[40px] w-full items-center gap-3">
@@ -1137,23 +1176,47 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                                       <div className="flex grow flex-col">
                                         <h4 className="text-[16px] font-medium">GitHub</h4>
                                         <p className="text-copy-14 text-gray-900 dark:text-[#f0f0f0]" data-testid="account/social-provider/username/github">
-                                          {(profile.providerUsernames?.github) ?? profile.username}
+                                          {isProviderConnected('github')
+                                            ? (profile.providerUsernames?.github ?? 'Connected')
+                                            : 'Not connected'}
                                         </p>
                                       </div>
                                       {isProviderConnected('github') ? (
-                                        <button
-                                          type="button"
-                                          onClick={() => setSigninMethodDropdownOpen(signinMethodDropdownOpen === 'github' ? null : 'github')}
-                                          className="outline-none m-0 p-0 border-0 bg-transparent cursor-pointer flex items-center justify-center text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 h-8 w-8 rounded-md transition-colors"
-                                          title="More options"
-                                        >
-                                          <IoEllipsisHorizontal className="w-5 h-5" />
-                                        </button>
+                                        <div className="relative">
+                                          <button
+                                            type="button"
+                                            onClick={() => setSigninMethodDropdownOpen(signinMethodDropdownOpen === 'github' ? null : 'github')}
+                                            className="outline-none m-0 p-0 border-0 bg-transparent cursor-pointer flex items-center justify-center text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 h-8 w-8 rounded-sm transition-colors"
+                                            title="More options"
+                                          >
+                                            <IoEllipsisHorizontal className="w-5 h-5" />
+                                          </button>
+                                          {signinMethodDropdownOpen === 'github' && (
+                                            <div className="absolute right-0 top-full mt-1 z-[100] min-w-[160px] bg-white dark:bg-[#1a1a1a] border border-gray-300 dark:border-[#525252] rounded-sm overflow-hidden py-1">
+                                              <button
+                                                type="button"
+                                                onClick={() => { void linkLoginMethod('github'); setSigninMethodDropdownOpen(null); }}
+                                                className="w-full flex items-center gap-2 px-3 py-2 text-[14px] text-gray-900 dark:text-[#f0f0f0] hover:bg-gray-100 dark:hover:bg-white/[0.04] transition-colors"
+                                              >
+                                                <FiExternalLink className="w-4 h-4" />
+                                                Manage in GitHub
+                                              </button>
+                                              <button
+                                                type="button"
+                                                onClick={() => void disconnectLoginMethod('github')}
+                                                className="w-full flex items-center gap-2 px-3 py-2 text-[14px] text-red-600 dark:text-[#f4b3b7] hover:bg-red-50 dark:hover:bg-[#390508] transition-colors"
+                                              >
+                                                <svg fill="currentColor" className="w-4 h-4 shrink-0" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M2.49892 1.79373L1.79194 2.50096L3.4999 4.20832L4.20688 3.50109L2.49892 1.79373Z"></path><path d="M12.4979 11.789L11.7907 12.496L13.4981 14.2039L14.2053 13.4969L12.4979 11.789Z"></path><path d="M6.5 1H5.5V3H6.5V1Z"></path><path d="M3 5.5H1V6.5H3V5.5Z"></path><path d="M15 9.5H13V10.5H15V9.5Z"></path><path d="M10.5 13H9.5V15H10.5V13Z"></path><path d="M8.29 10.535L6.435 12.395C6.24918 12.5808 6.02858 12.7282 5.78579 12.8288C5.54301 12.9294 5.28279 12.9811 5.02 12.9811C4.75721 12.9811 4.49699 12.9294 4.25421 12.8288C4.01142 12.7282 3.79082 12.5808 3.605 12.395C3.22972 12.0197 3.01889 11.5107 3.01889 10.98C3.01889 10.4493 3.22972 9.94028 3.605 9.565L5.465 7.705L4.755 7L2.9 8.86C2.61533 9.13707 2.38853 9.46792 2.23275 9.83334C2.07697 10.1988 1.99531 10.5915 1.99252 10.9887C1.98973 11.386 2.06586 11.7798 2.21649 12.1474C2.36712 12.515 2.58925 12.849 2.87 13.13C3.15032 13.408 3.48277 13.628 3.84828 13.7773C4.21379 13.9266 4.60518 14.0023 5 14C5.40168 14.0004 5.79944 13.921 6.17023 13.7665C6.54101 13.612 6.87743 13.3855 7.16 13.1L9 11.245L8.29 10.535Z"></path><path d="M7.705 5.465L9.565 3.605C9.75082 3.41918 9.97142 3.27178 10.2142 3.17121C10.457 3.07065 10.7172 3.01889 10.98 3.01889C11.2428 3.01889 11.503 3.07065 11.7458 3.17121C11.9886 3.27178 12.2092 3.41918 12.395 3.605C12.5808 3.79082 12.7282 4.01142 12.8288 4.25421C12.9294 4.49699 12.9811 4.75721 12.9811 5.02C12.9811 5.28279 12.9294 5.54301 12.8288 5.78579C12.7282 6.02858 12.5808 6.24918 12.395 6.435L10.535 8.295L11.245 9L13.1 7.14C13.3847 6.86293 13.6115 6.53208 13.7673 6.16666C13.923 5.80123 14.0047 5.40851 14.0075 5.01127C14.0103 4.61404 13.9341 4.2202 13.7835 3.85262C13.6329 3.48505 13.4107 3.15104 13.13 2.87C12.8497 2.59196 12.5172 2.37198 12.1517 2.22269C11.7862 2.07339 11.3948 1.99772 11 2C10.5983 1.99961 10.2006 2.07897 9.82977 2.23346C9.45899 2.38795 9.12257 2.61451 8.84 2.9L7 4.755L7.705 5.465Z"></path></svg>
+                                                Disconnect
+                                              </button>
+                                            </div>
+                                          )}
+                                        </div>
                                       ) : (
                                         <button
                                           type="button"
                                           onClick={() => void linkLoginMethod('github')}
-                                          className="text-white bg-[#2563eb] hover:bg-[#1d4ed8] dark:bg-white dark:text-black dark:hover:bg-gray-200 font-medium !px-3 max-w-full items-center justify-center transition-[border-color, background,color,transform,box-shadow] duration-[time:150ms] ease-in-out data-[focus]:transition-none data-[focus]:shadow-[var(--ds-focus-ring)] [&_svg]:shrink-0 text-(length:--geist-form-small-font) h-[32px] rounded-md"
+                                          className="text-white bg-[#2563eb] hover:bg-[#1d4ed8] dark:bg-white dark:text-black dark:hover:bg-gray-200 font-medium !px-3 max-w-full items-center justify-center transition-[border-color, background,color,transform,box-shadow] duration-[time:150ms] ease-in-out data-[focus]:transition-none data-[focus]:shadow-[var(--ds-focus-ring)] [&_svg]:shrink-0 text-(length:--geist-form-small-font) h-[32px] rounded-sm"
                                         >
                                           Connect
                                         </button>
@@ -1161,28 +1224,6 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                                     </div>
                                   </div>
                                 </section>
-                                {signinMethodDropdownOpen === 'github' && (
-                                  <div className="relative mt-2 ml-10">
-                                    <div className="absolute left-0 top-full z-50 min-w-[140px] bg-white dark:bg-[oklch(0.21_0.03_263.45)] border border-solid border-[#6b6b6b] shadow-lg rounded-md overflow-hidden">
-                                      <button
-                                        type="button"
-                                        onClick={() => { void linkLoginMethod('github'); setSigninMethodDropdownOpen(null); }}
-                                        className="w-full flex items-center gap-2 px-3 py-2 text-[14px] text-gray-900 dark:text-[#f0f0f0] hover:bg-gray-100 dark:hover:bg-[#1a1a1a]"
-                                      >
-                                        <FiExternalLink className="w-4 h-4" />
-                                        Manage
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => void disconnectLoginMethod('github')}
-                                        className="w-full flex items-center gap-2 px-3 py-2 text-[14px] text-red-600 dark:text-[#f4b3b7] hover:bg-red-50 dark:hover:bg-[#390508]"
-                                      >
-                                        <svg fill="currentColor" className="w-4 h-4 shrink-0" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M2.49892 1.79373L1.79194 2.50096L3.4999 4.20832L4.20688 3.50109L2.49892 1.79373Z"></path><path d="M12.4979 11.789L11.7907 12.496L13.4981 14.2039L14.2053 13.4969L12.4979 11.789Z"></path><path d="M6.5 1H5.5V3H6.5V1Z"></path><path d="M3 5.5H1V6.5H3V5.5Z"></path><path d="M15 9.5H13V10.5H15V9.5Z"></path><path d="M10.5 13H9.5V15H10.5V13Z"></path><path d="M8.29 10.535L6.435 12.395C6.24918 12.5808 6.02858 12.7282 5.78579 12.8288C5.54301 12.9294 5.28279 12.9811 5.02 12.9811C4.75721 12.9811 4.49699 12.9294 4.25421 12.8288C4.01142 12.7282 3.79082 12.5808 3.605 12.395C3.22972 12.0197 3.01889 11.5107 3.01889 10.98C3.01889 10.4493 3.22972 9.94028 3.605 9.565L5.465 7.705L4.755 7L2.9 8.86C2.61533 9.13707 2.38853 9.46792 2.23275 9.83334C2.07697 10.1988 1.99531 10.5915 1.99252 10.9887C1.98973 11.386 2.06586 11.7798 2.21649 12.1474C2.36712 12.515 2.58925 12.849 2.87 13.13C3.15032 13.408 3.48277 13.628 3.84828 13.7773C4.21379 13.9266 4.60518 14.0023 5 14C5.40168 14.0004 5.79944 13.921 6.17023 13.7665C6.54101 13.612 6.87743 13.3855 7.16 13.1L9 11.245L8.29 10.535Z"></path><path d="M7.705 5.465L9.565 3.605C9.75082 3.41918 9.97142 3.27178 10.2142 3.17121C10.457 3.07065 10.7172 3.01889 10.98 3.01889C11.2428 3.01889 11.503 3.07065 11.7458 3.17121C11.9886 3.27178 12.2092 3.41918 12.395 3.605C12.5808 3.79082 12.7282 4.01142 12.8288 4.25421C12.9294 4.49699 12.9811 4.75721 12.9811 5.02C12.9811 5.28279 12.9294 5.54301 12.8288 5.78579C12.7282 6.02858 12.5808 6.24918 12.395 6.435L10.535 8.295L11.245 9L13.1 7.14C13.3847 6.86293 13.6115 6.53208 13.7673 6.16666C13.923 5.80123 14.0047 5.40851 14.0075 5.01127C14.0103 4.61404 13.9341 4.2202 13.7835 3.85262C13.6329 3.48505 13.4107 3.15104 13.13 2.87C12.8497 2.59196 12.5172 2.37198 12.1517 2.22269C11.7862 2.07339 11.3948 1.99772 11 2C10.5983 1.99961 10.2006 2.07897 9.82977 2.23346C9.45899 2.38795 9.12257 2.61451 8.84 2.9L7 4.755L7.705 5.465Z"></path></svg>
-                                        Disconnect
-                                      </button>
-                                    </div>
-                                  </div>
-                                )}
                               </li>
                             </ul>
                           </div>
@@ -1199,14 +1240,14 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                               <li key="github">
                                 <div className="grid [grid-template-columns:1fr_auto] [grid-template-rows:auto_1fr] relative">
                                   <details className="group [grid-column:1/-1] [grid-row:1/3]">
-                                    <summary className="border border-solid border-gray-300 dark:border-[#4d4d4d] py-3 px-3 grid grid-cols-[max-content_max-content_1fr_max-content] items-center gap-2 cursor-pointer text-gray-900 dark:text-[#e3e3e3] hover:text-black dark:hover:text-[#f0f0f0] bg-white dark:bg-[oklch(0.21_0.03_263.45)] hover:bg-gray-50 dark:hover:bg-[#1a1a1a] focus-visible:outline-none list-none marker:hidden [&::-webkit-details-marker]:hidden transition-colors rounded-sm">
+                                    <summary className="border border-solid border-gray-300 dark:border-[#525252] py-3 px-3 grid grid-cols-[max-content_max-content_1fr_max-content] items-center gap-2 cursor-pointer text-gray-900 dark:text-[#e3e3e3] hover:text-black dark:hover:text-[#f0f0f0] bg-white dark:bg-[oklch(0.21_0.03_263.45)] hover:bg-gray-50 dark:hover:bg-[#1a1a1a] focus-visible:outline-none list-none marker:hidden [&::-webkit-details-marker]:hidden transition-colors rounded-sm">
                                       <svg fill="currentColor" aria-hidden="true" className="group-open:rotate-180 w-4 h-4 transition-transform" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M8 10.9998L3 5.9998L3.7 5.2998L8 9.5998L12.3 5.2998L13 5.9998L8 10.9998Z"></path></svg>
                                        <span className="block">
                                         <IoLogoGithub className="w-7 h-7 text-gray-900 dark:text-white flex-shrink-0" />
                                       </span>
                                       <span className="text-[18px] font-medium text-gray-900 dark:text-white">{githubAccountData?.owner || 'Loading...'}</span>
                                     </summary>
-                                    <div className="border-x border-b border-solid border-gray-300 dark:border-[#4d4d4d] pt-3 pr-3 pb-3 pl-9 [max-height:14.25rem] [overflow:auto] bg-gray-50 dark:bg-[oklch(0.21_0.03_263.45)] rounded-sm">
+                                    <div className="border-x border-b border-solid border-gray-300 dark:border-[#525252] pt-3 pr-3 pb-3 pl-9 [max-height:14.25rem] [overflow:auto] bg-gray-50 dark:bg-[oklch(0.21_0.03_263.45)] rounded-sm">
                                       <h6 className="text-[12px] font-medium text-gray-500 dark:text-[#b3b3b3]">Repositories you have access to</h6>
                                       <ul className="-mb-1 mt-2">
                                         {githubAccountData?.repositories?.map((repo) => (
@@ -1234,13 +1275,13 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                                   </details>
                                   
                                    <div className="[grid-column:-2/-1] [grid-row:1/1] justify-self-end border border-solid border-transparent py-3 px-3 flex relative items-center">
-                                     <button type="button" aria-expanded={credentialOptionsOpen} aria-haspopup="menu" onClick={() => setCredentialOptionsOpen(!credentialOptionsOpen)} className="outline-none m-0 p-0 border-0 bg-transparent cursor-pointer flex items-center justify-center text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 h-8 w-8 rounded-md transition-colors">
+                                     <button type="button" aria-expanded={credentialOptionsOpen} aria-haspopup="menu" onClick={() => setCredentialOptionsOpen(!credentialOptionsOpen)} className="outline-none m-0 p-0 border-0 bg-transparent cursor-pointer flex items-center justify-center text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 h-8 w-8 rounded-sm transition-colors">
                                        <span className="sr-only">Options</span>
                                        <IoEllipsisHorizontal className="w-5 h-5" />
                                      </button>
                                     
                                     {credentialOptionsOpen && (
-                                      <div className="min-w-[208px] p-4 bg-white dark:bg-[oklch(0.21_0.03_263.45)] shadow-lg border border-solid border-gray-200 dark:border-[#4d4d4d] outline-none absolute z-50 top-full right-0 mt-1 rounded-sm">
+                                      <div className="min-w-[208px] p-4 bg-white dark:bg-[oklch(0.21_0.03_263.45)] shadow-lg border border-solid border-gray-300 dark:border-[#525252] outline-none absolute z-50 top-full right-0 mt-1 rounded-sm">
                                         <button type="button" onClick={() => { setCredentialOptionsOpen(false); window.open('https://github.com/settings/installations', '_blank'); }} className="w-full flex relative text-[14px] text-gray-900 dark:text-[#e3e3e3] py-2 px-3 whitespace-nowrap focus-visible:outline-none cursor-pointer hover:bg-gray-100 dark:hover:bg-[#272727] transition-colors rounded-sm">
                                           <div className="w-full flex items-center space-x-2.5">
                                             <svg fill="currentColor" className="w-4 h-4 shrink-0" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M13 14H3C2.73489 13.9996 2.48075 13.8942 2.29329 13.7067C2.10583 13.5193 2.00036 13.2651 2 13V3C2.00036 2.73489 2.10583 2.48075 2.29329 2.29329C2.48075 2.10583 2.73489 2.00036 3 2H8V3H3V13H13V8H14V13C13.9996 13.2651 13.8942 13.5193 13.7067 13.7067C13.5193 13.8942 13.2651 13.9996 13 14Z"></path><path d="M10 1V2H13.293L9 6.293L9.707 7L14 2.707V6H15V1H10Z"></path></svg>
@@ -1282,51 +1323,13 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                                     href="https://github.com/apps/harbordev/installations/new"
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="text-[16px] font-medium text-white hover:text-gray-300 bg-gray-900 dark:bg-white dark:text-black h-10 py-2.5 px-4 flex items-center transition-colors outline-none rounded-sm"
+                                    className="text-[17px] font-medium text-white bg-[#24292e] hover:bg-[#1b1f23] dark:bg-white dark:text-black dark:hover:bg-gray-200 py-1.5 px-3 flex items-center transition-all rounded-sm outline-none"
                                   >
-                                    <span className="me-1.5 flex items-center">
-                                      <span className="block border border-solid border-gray-300 dark:border-[#525252] p-0.5 relative rounded-sm bg-white dark:bg-[#1a1a1a]">
-                                        <svg width="15" height="15" viewBox="0 0 24 23" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="flex-shrink-0 text-black dark:text-white" aria-label="GitHub"><path fillRule="evenodd" clipRule="evenodd" d="M12.0183 0.405518C5.73469 0.405518 0.655029 5.50047 0.655029 11.8036C0.655029 16.8421 3.90974 21.107 8.42489 22.6165C8.9894 22.73 9.19618 22.3712 9.19618 22.0695C9.19618 21.8052 9.17757 20.8995 9.17757 19.9558C6.01659 20.6352 5.35835 18.597 5.35835 18.597C4.85036 17.2761 4.09768 16.9365 4.09768 16.9365C3.06309 16.2383 4.17304 16.2383 4.17304 16.2383C5.32067 16.3138 5.92286 17.4083 5.92286 17.4083C6.9386 19.1443 8.57538 18.6538 9.23386 18.3518C9.32782 17.6158 9.62904 17.1063 9.94886 16.8233C7.42775 16.5591 4.77523 15.5778 4.77523 11.1996C4.77523 9.95415 5.22647 8.93516 5.94146 8.14266C5.82866 7.85966 5.43348 6.68944 6.05451 5.12321C6.05451 5.12321 7.01396 4.82122 9.17733 6.2932C10.1036 6.0437 11.0587 5.91677 12.0183 5.91571C12.9777 5.91571 13.9558 6.04794 14.8589 6.2932C17.0226 4.82122 17.982 5.12321 17.982 5.12321C18.603 6.68944 18.2076 7.85966 18.0948 8.14266C18.8287 8.93516 19.2613 9.95415 19.2613 11.1996C19.2613 15.5778 16.6088 16.5401 14.0688 16.8233C14.4828 17.1818 14.8401 17.861 14.8401 18.9368C14.8401 20.4653 14.8215 21.692 14.8215 22.0692C14.8215 22.3712 15.0285 22.73 15.5928 22.6167C20.1079 21.1068 23.3626 16.8421 23.3626 11.8036C23.3813 5.50047 18.283 0.405518 12.0183 0.405518Z"></path></svg>
-                                      </span>
+                                    <span className="me-2.5 flex items-center">
+                                      <FaGithub className="w-[24px] h-[24px] flex-shrink-0 text-white dark:text-black" />
                                     </span>
                                     <span>Install GitHub App</span>
                                   </a>
-                                  <button
-                                    type="button"
-                                    onClick={async () => {
-                                      const token = localStorage.getItem('harbor_token');
-                                      if (!token) return;
-                                      try {
-                                        const response = await fetch(`${authApiBase}/auth/github/refresh-installation`, {
-                                          method: 'POST',
-                                          headers: {
-                                            Authorization: `Bearer ${token}`,
-                                            'ngrok-skip-browser-warning': 'true',
-                                          },
-                                        });
-                                        const data = await response.json();
-                                        if (response.ok) {
-                                          setProfile(prev => ({ ...prev, githubInstallationId: data.InstallationId }));
-                                          window.dispatchEvent(new Event('storage'));
-                                        } else {
-                                          console.error('Failed to refresh installation:', data);
-                                        }
-                                      } catch (err) {
-                                        console.error('Error refreshing installation:', err);
-                                      }
-                                    }}
-                                    className="text-[16px] font-medium text-white hover:text-gray-300 bg-blue-600 dark:bg-blue-500 h-10 py-2.5 px-4 flex items-center transition-colors outline-none rounded-sm"
-                                  >
-                                    <span className="me-1.5 flex items-center">
-                                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true" className="flex-shrink-0">
-                                        <path d="M23 4v6" />
-                                        <path d="M1 20v-6" />
-                                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10" />
-                                        <path d="M20.49 15a9 9 0 0 0-14.85 3.36L1 14" />
-                                      </svg>
-                                    </span>
-                                    <span>Refresh Installation</span>
-                                  </button>
                                 </div>
                               )
                             ) : (
@@ -1334,12 +1337,10 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                                 <button 
                                   type="button" 
                                   onClick={() => void linkLoginMethod('github')}
-                                  className="text-[16px] font-medium text-gray-900 dark:text-[#e3e3e3] hover:bg-gray-100 dark:hover:bg-[#1a1a1a] border border-solid border-gray-300 dark:border-[#4d4d4d] h-10 py-2.5 px-3 flex items-center transition-colors outline-none rounded-sm"
+                                  className="text-[17px] font-medium text-white bg-[#24292e] hover:bg-[#1b1f23] dark:bg-white dark:text-black dark:hover:bg-gray-200 py-1.5 px-3 flex items-center transition-all rounded-sm outline-none"
                                 >
-                                  <span className="me-1.5 flex items-center">
-                                    <span className="block border border-solid border-gray-300 dark:border-[#525252] p-0.5 relative rounded-sm bg-white dark:bg-[#1a1a1a]">
-                                      <svg width="15" height="15" viewBox="0 0 24 23" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="flex-shrink-0 text-black dark:text-white" aria-label="GitHub"><path fillRule="evenodd" clipRule="evenodd" d="M12.0183 0.405518C5.73469 0.405518 0.655029 5.50047 0.655029 11.8036C0.655029 16.8421 3.90974 21.107 8.42489 22.6165C8.9894 22.73 9.19618 22.3712 9.19618 22.0695C9.19618 21.8052 9.17757 20.8995 9.17757 19.9558C6.01659 20.6352 5.35835 18.597 5.35835 18.597C4.85036 17.2761 4.09768 16.9365 4.09768 16.9365C3.06309 16.2383 4.17304 16.2383 4.17304 16.2383C5.32067 16.3138 5.92286 17.4083 5.92286 17.4083C6.9386 19.1443 8.57538 18.6538 9.23386 18.3518C9.32782 17.6158 9.62904 17.1063 9.94886 16.8233C7.42775 16.5591 4.77523 15.5778 4.77523 11.1996C4.77523 9.95415 5.22647 8.93516 5.94146 8.14266C5.82866 7.85966 5.43348 6.68944 6.05451 5.12321C6.05451 5.12321 7.01396 4.82122 9.17733 6.2932C10.1036 6.0437 11.0587 5.91677 12.0183 5.91571C12.9777 5.91571 13.9558 6.04794 14.8589 6.2932C17.0226 4.82122 17.982 5.12321 17.982 5.12321C18.603 6.68944 18.2076 7.85966 18.0948 8.14266C18.8287 8.93516 19.2613 9.95415 19.2613 11.1996C19.2613 15.5778 16.6088 16.5401 14.0688 16.8233C14.4828 17.1818 14.8401 17.861 14.8401 18.9368C14.8401 20.4653 14.8215 21.692 14.8215 22.0692C14.8215 22.3712 15.0285 22.73 15.5928 22.6167C20.1079 21.1068 23.3626 16.8421 23.3626 11.8036C23.3813 5.50047 18.283 0.405518 12.0183 0.405518Z"></path></svg>
-                                    </span>
+                                  <span className="me-2.5 flex items-center">
+                                    <FaGithub className="w-[24px] h-[24px] flex-shrink-0 text-white dark:text-black" />
                                   </span>
                                   <span>Connect GitHub</span>
                                 </button>
@@ -1443,7 +1444,7 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
               {passwordError && <p role="alert" className="text-[16px] text-red-600 dark:text-red-400">{passwordError}</p>}
               {passwordNotice && <p role="status" className="text-[16px] text-green-600 dark:text-green-400">{passwordNotice}</p>}
               <div className="flex justify-end gap-3 pt-2">
-                <button type="button" disabled={isChangingPassword} onClick={() => setIsPasswordModalOpen(false)} className="h-10 border border-[#6b6b6b] px-3 text-[16px] text-gray-900 disabled:opacity-50 dark:text-white rounded-sm">Cancel</button>
+                <button type="button" disabled={isChangingPassword} onClick={() => setIsPasswordModalOpen(false)} className="h-10 border border-gray-300 dark:border-[#525252] px-3 text-[16px] text-gray-900 disabled:opacity-50 dark:text-white rounded-sm">Cancel</button>
                 <button type="submit" disabled={isChangingPassword || !newPassword || !confirmPassword} className="h-10 bg-[#2563eb] hover:bg-[#1d4ed8] dark:bg-white dark:hover:bg-gray-200 px-4 text-[16px] font-medium text-white dark:text-black disabled:cursor-not-allowed disabled:opacity-50 rounded-sm">{isChangingPassword ? 'Saving...' : profile.hasPassword ? 'Change password' : 'Create password'}</button>
               </div>
             </form>
@@ -1453,9 +1454,9 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
       
       {isDeleteModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 px-4" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) { setIsDeleteModalOpen(false); setDeleteConfirmationText(''); } }}>
-          <div className="inline-block w-full text-left align-middle transform page-primary bg-white dark:bg-[oklch(0.21_0.03_263.45)] shadow-lg border border-solid modal-border max-w-xl rounded-sm">
+          <div className="inline-block w-full text-left align-middle transform page-primary bg-white dark:bg-[oklch(0.21_0.03_263.45)] shadow-lg border border-solid border-gray-300 dark:border-[#525252] max-w-xl rounded-sm">
             <form onSubmit={deleteAccount}>
-              <div className="flex flex-col gap-2 items-start border-solid border-b modal-border p-6 relative">
+              <div className="flex flex-col gap-2 items-start border-solid border-b border-gray-300 dark:border-[#525252] p-6 relative">
                 <div className="w-full">
                   <h1 className="text-[28px] leading-[32px] font-medium text-strong mb-1 font-['Roobert',sans-serif]">Delete Harbor Account</h1>
                 </div>
@@ -1488,7 +1489,7 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                 </div>
               </div>
               
-              <div className="w-full flex justify-start space-x-2 p-6 border-solid border-t modal-border">
+              <div className="w-full flex justify-start space-x-2 p-6 border-solid border-t border-gray-300 dark:border-[#525252]">
                 <button 
                   type="submit" 
                   disabled={isDeletingAccount || deleteConfirmationText !== 'sudo delete my account'}
@@ -1504,7 +1505,7 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                   type="button" 
                   disabled={isDeletingAccount}
                   onClick={() => { setIsDeleteModalOpen(false); setDeleteConfirmationText(''); }} 
-                  className="type-interface-01 text-[16px] text-gray-900 bg-white hover:bg-gray-100 dark:bg-[#1a1a1a] dark:text-[#e3e3e3] dark:hover:bg-[#272727] border border-solid border-gray-300 dark:border-[#4d4d4d] h-10 py-2.5 px-3 flex items-center group/button disabled:opacity-50 disabled:cursor-not-allowed transition-colors rounded-sm"
+                  className="type-interface-01 text-[16px] text-gray-900 bg-white hover:bg-gray-100 dark:bg-[#1a1a1a] dark:text-[#e3e3e3] dark:hover:bg-[#272727] border border-solid border-gray-300 dark:border-[#525252] h-10 py-2.5 px-3 flex items-center group/button disabled:opacity-50 disabled:cursor-not-allowed transition-colors rounded-sm"
                 >
                   Cancel
                 </button>

@@ -234,6 +234,7 @@ namespace Harbor.Authentication.Services
 
             var profile = ToProfileResponse(user);
             profile.LoginMethods = await _userRepository.GetExternalLoginMethodsAsync(user.Id);
+            profile.ProviderUsernames = await _userRepository.GetProviderUsernamesAsync(user.Id);
             profile.HasPassword = await _userRepository.GetHasPasswordAsync(user.Id);
             profile.GitHubInstallationId = await _userRepository.GetGitHubInstallationAsync(user.Id);
             profile.Preferences = ToPreferencesResponse(await _userRepository.GetPreferencesAsync(user.Id));
@@ -354,6 +355,7 @@ namespace Harbor.Authentication.Services
         private static ProfileResponse ToProfileResponse(User user) => new()
         {
             Id = user.Id,
+            PublicId = user.PublicId,
             Username = user.Username,
             Email = user.Email,
             Role = user.Role,

@@ -3,6 +3,7 @@ import { useLocation, Link, useNavigate } from 'react-router-dom';
 
 import { Breadcrumbs } from './Breadcrumbs';
 import UserAvatar from '../ui/UserAvatar';
+import { useTheme, type Theme } from '../../contexts/ThemeContext';
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 
@@ -40,27 +41,6 @@ function IconChevronRight() {
   );
 }
 
-
-
-
-// ─── Theme helpers ─────────────────────────────────────────────────────────────
-
-type Theme = 'light' | 'dark' | 'system';
-
-function getStoredTheme(): Theme {
-  return (localStorage.getItem('harbor_theme') as Theme) ?? 'system';
-}
-
-function applyTheme(theme: Theme) {
-  const root = document.documentElement;
-  if (theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-    root.classList.add('dark');
-  } else {
-    root.classList.remove('dark');
-  }
-  localStorage.setItem('harbor_theme', theme);
-}
-
 // ─── Profile dropdown ──────────────────────────────────────────────────────────
 
 function ProfileDropdown({
@@ -77,7 +57,7 @@ function ProfileDropdown({
   const navigate = useNavigate();
   // 'main' | 'theme'
   const [panel, setPanel] = useState<'main' | 'theme'>('main');
-  const [theme, setTheme] = useState<Theme>(getStoredTheme);
+  const { theme, setTheme } = useTheme();
 
   function handleSignOut() {
     localStorage.removeItem('harbor_token');
@@ -88,7 +68,6 @@ function ProfileDropdown({
 
   function handleTheme(t: Theme) {
     setTheme(t);
-    applyTheme(t);
   }
 
   const baseItemClass =
@@ -371,8 +350,8 @@ export default function DashboardHeader({
             )}
           </button>
           <a className="flex-shrink-0 flex items-center justify-center focus:outline-none" href="/">
-            <img src="/logos/harbor_primary.svg" alt="Harbor" className="w-7 h-7 sm:w-8 sm:h-8 object-contain dark:hidden invert" />
-            <img src="/logos/harbor_primary.svg" alt="Harbor" className="w-7 h-7 sm:w-8 sm:h-8 object-contain hidden dark:block" />
+            <img src="/logos/harbor_light_notext.svg" alt="Harbor" className="w-7 h-7 sm:w-8 sm:h-8 object-contain dark:hidden" />
+            <img src="/logos/harbor_dark_notext.png" alt="Harbor" className="w-7 h-7 sm:w-8 sm:h-8 object-contain hidden dark:block" />
           </a>
         </div>
         <div className="flex-1 min-w-0 flex items-center pl-4 sm:pl-5 space-x-2">

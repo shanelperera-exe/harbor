@@ -15,10 +15,11 @@ namespace Harbor.Authentication.Repositories
         Task UpdateAvatarAsync(int userId, string avatarSvg);
         Task UpdateProfileAsync(int userId, string username, string email, string avatarSvg);
         Task<string[]> GetExternalLoginMethodsAsync(int userId);
+        Task<Dictionary<string, string?>> GetProviderUsernamesAsync(int userId);
         Task AddExternalLoginMethodAsync(int userId, string provider);
         Task<bool> GetHasPasswordAsync(int userId);
         Task<User?> GetByExternalIdentityAsync(string provider, string providerUserId);
-        Task AddExternalIdentityAsync(int userId, string provider, string providerUserId, string? providerEmail, string? accessToken = null);
+        Task AddExternalIdentityAsync(int userId, string provider, string providerUserId, string? providerEmail, string? providerUsername, string? accessToken = null);
         Task SetGitHubInstallationAsync(int userId, long installationId);
         Task<long?> GetGitHubInstallationAsync(int userId);
         Task<string?> GetExternalAccessTokenAsync(int userId, string provider);

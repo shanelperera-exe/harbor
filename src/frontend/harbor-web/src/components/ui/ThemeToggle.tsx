@@ -1,31 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useTheme } from '../../contexts/ThemeContext';
 
 export default function ThemeToggle() {
-  const [isDark, setIsDark] = useState(true);
-
-  useEffect(() => {
-    // Check initial theme from localStorage or system preference
-    const savedTheme = localStorage.getItem('harbor_theme');
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const initialDark = savedTheme ? savedTheme === 'dark' : prefersDark;
-    
-    setIsDark(initialDark);
-    if (initialDark) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, []);
+  const { resolvedTheme, setTheme } = useTheme();
+  const isDark = resolvedTheme === 'dark';
 
   const toggleTheme = () => {
-    setIsDark(!isDark);
-    if (!isDark) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('harbor_theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('harbor_theme', 'light');
-    }
+    setTheme(isDark ? 'light' : 'dark');
   };
 
   return (

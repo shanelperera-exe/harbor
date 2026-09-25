@@ -175,12 +175,47 @@ public class DeploymentServiceTests
 
         Assert.True(result.Success);
         Assert.Null(result.Error);
+
+        _kafkaProducer.Verify(k => k.PublishDeploymentEventAsync(It.Is<DeploymentLifecycleEvent>(e =>
+            e.DeploymentId == 42 &&
+            e.Status == "Running" &&
+            e.Environment == "production" &&
+            e.Version == "1.4.0")), Times.Once);
         Assert.Equal(42, result.DeploymentId);
 
         _repository.Verify(r => r.CreateAsync(It.Is<DeploymentEntity>(d =>
             d.ServiceId == 13 && d.OwnerId == ownerId && d.Environment == "production" &&
             d.Version == "1.4.0" && d.CommitSha == "abc123" && d.Status == "Pending" &&
             d.StartedAt != default)), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateAsync_DispatchFails_ReturnsFailureAndPublishesEvent()
+    {
+        var request = new CreateDeploymentRequest { ServiceId = "13", Environment = "production", Version = "1.4.0", CommitSha = "abc123", Branch = "main" };
+        const int ownerId = 7;
+
+        _repository.Setup(r => r.GetServiceAccessAsync("13")).ReturnsAsync((true, 7, false, 10, 13));
+        _repository.Setup(r => r.GetEnvironmentByNameAsync(10, "production")).ReturnsAsync((true, true, "Production"));
+        _repository.Setup(r => r.CreateAsync(It.IsAny<DeploymentEntity>())).ReturnsAsync(42);
+
+        _githubMock.Setup(g => g.DispatchAsync(It.IsAny<WorkflowDispatchRequest>(), It.IsAny<System.Threading.CancellationToken>()))
+            .ReturnsAsync(new WorkflowDispatchResult(false, "GitHub API timeout"));
+
+        var result = await _service.CreateAsync(request, ownerId, isAdmin: false);
+
+        Assert.True(result.Success);
+        Assert.Equal("GitHub API timeout", result.Error);
+        Assert.Equal("Failed", result.Status);
+
+        _kafkaProducer.Verify(k => k.PublishDeploymentEventAsync(It.Is<DeploymentLifecycleEvent>(e =>
+            e.DeploymentId == 42 &&
+            e.Status == "Failed" &&
+            e.Environment == "production" &&
+            e.Version == "1.4.0" &&
+            e.FailureReason == "GitHub API timeout")), Times.Once);
+
+        _repository.Verify(r => r.UpdateTriggerResultAsync(42, "Failed", "GitHub API timeout", "GitHub API timeout"), Times.Once);
     }
 
     [Fact]

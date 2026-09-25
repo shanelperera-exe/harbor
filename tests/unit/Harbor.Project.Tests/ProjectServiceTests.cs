@@ -263,8 +263,9 @@ namespace Harbor.Project.Tests
                 CreatedAt = existing.CreatedAt,
                 IsArchived = false
             };
-            _projectRepositoryMock.SetupSequence(r => r.GetByIdAsync(1))
-                .ReturnsAsync(existing)
+            _projectRepositoryMock.Setup(r => r.GetByIdOrPublicIdAsync("1"))
+                .ReturnsAsync(existing);
+            _projectRepositoryMock.Setup(r => r.GetByIdAsync(1))
                 .ReturnsAsync(updated);
 
             // Act
@@ -299,8 +300,9 @@ namespace Harbor.Project.Tests
             };
             var request = new UpdateProjectRequest { Name = "Harbor-API", Description = "updated description" };
 
-            _projectRepositoryMock.SetupSequence(r => r.GetByIdAsync(1))
-                .ReturnsAsync(existing)
+            _projectRepositoryMock.Setup(r => r.GetByIdOrPublicIdAsync("1"))
+                .ReturnsAsync(existing);
+            _projectRepositoryMock.Setup(r => r.GetByIdAsync(1))
                 .ReturnsAsync(existing);
             _projectRepositoryMock.Setup(r => r.UpdateAsync(It.IsAny<ProjectEntity>())).ReturnsAsync(true);
 
@@ -335,7 +337,7 @@ namespace Harbor.Project.Tests
             // Arrange
             const int userId = 10;
             var archived = new ProjectEntity { Id = 1, Name = "old-name", OwnerId = userId, IsArchived = true };
-            _projectRepositoryMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(archived);
+            _projectRepositoryMock.Setup(r => r.GetByIdOrPublicIdAsync("1")).ReturnsAsync(archived);
             var request = new UpdateProjectRequest { Name = "new-name" };
 
             // Act
@@ -359,7 +361,7 @@ namespace Harbor.Project.Tests
             // Arrange
             const int userId = 10;
             var existing = new ProjectEntity { Id = 1, Name = "old-name", OwnerId = userId, IsArchived = false };
-            _projectRepositoryMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(existing);
+            _projectRepositoryMock.Setup(r => r.GetByIdOrPublicIdAsync("1")).ReturnsAsync(existing);
             var request = new UpdateProjectRequest { Name = name! };
 
             // Act
@@ -377,7 +379,7 @@ namespace Harbor.Project.Tests
             // Arrange
             const int userId = 10;
             var existing = new ProjectEntity { Id = 1, Name = "old-name", OwnerId = userId, IsArchived = false };
-            _projectRepositoryMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(existing);
+            _projectRepositoryMock.Setup(r => r.GetByIdOrPublicIdAsync("1")).ReturnsAsync(existing);
             var request = new UpdateProjectRequest { Name = "old-name", Description = new string('d', 501) };
 
             // Act
@@ -394,7 +396,7 @@ namespace Harbor.Project.Tests
             // Arrange
             const int userId = 10;
             var existing = new ProjectEntity { Id = 1, Name = "old-name", OwnerId = userId, IsArchived = false };
-            _projectRepositoryMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(existing);
+            _projectRepositoryMock.Setup(r => r.GetByIdOrPublicIdAsync("1")).ReturnsAsync(existing);
             _projectRepositoryMock.Setup(r => r.NameExistsForOwnerAsync("taken-name", userId)).ReturnsAsync(true);
             var request = new UpdateProjectRequest { Name = "taken-name" };
 
@@ -417,8 +419,9 @@ namespace Harbor.Project.Tests
             var existing = new ProjectEntity { Id = 1, Name = "old-name", OwnerId = ownerId, IsArchived = false };
             var refreshed = new ProjectEntity { Id = 1, Name = "new-name", OwnerId = ownerId, IsArchived = false };
 
-            _projectRepositoryMock.SetupSequence(r => r.GetByIdAsync(1))
-                .ReturnsAsync(existing)
+            _projectRepositoryMock.Setup(r => r.GetByIdOrPublicIdAsync("1"))
+                .ReturnsAsync(existing);
+            _projectRepositoryMock.Setup(r => r.GetByIdAsync(1))
                 .ReturnsAsync(refreshed);
             _projectRepositoryMock.Setup(r => r.NameExistsForOwnerAsync("new-name", ownerId)).ReturnsAsync(false);
             _projectRepositoryMock.Setup(r => r.UpdateAsync(It.IsAny<ProjectEntity>())).ReturnsAsync(true);
@@ -440,7 +443,7 @@ namespace Harbor.Project.Tests
             // Arrange: e.g. the project got archived by someone else between the read and the write
             const int userId = 10;
             var existing = new ProjectEntity { Id = 1, Name = "old-name", OwnerId = userId, IsArchived = false };
-            _projectRepositoryMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(existing);
+            _projectRepositoryMock.Setup(r => r.GetByIdOrPublicIdAsync("1")).ReturnsAsync(existing);
             _projectRepositoryMock.Setup(r => r.NameExistsForOwnerAsync("new-name", userId)).ReturnsAsync(false);
             _projectRepositoryMock.Setup(r => r.UpdateAsync(It.IsAny<ProjectEntity>())).ReturnsAsync(false);
 
@@ -463,7 +466,7 @@ namespace Harbor.Project.Tests
         {
             // Arrange
             var existing = new ProjectEntity { Id = 1, Name = "old-name", OwnerId = 10, IsArchived = false };
-            _projectRepositoryMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(existing);
+            _projectRepositoryMock.Setup(r => r.GetByIdOrPublicIdAsync("1")).ReturnsAsync(existing);
             var request = new UpdateProjectRequest { Name = "new-name" };
 
             // Act: userId 20 does not own this project and is not an Admin
@@ -486,7 +489,7 @@ namespace Harbor.Project.Tests
             // Arrange
             const int userId = 10;
             var existing = new ProjectEntity { Id = 1, Name = "my-project", OwnerId = userId, IsArchived = false };
-            _projectRepositoryMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(existing);
+            _projectRepositoryMock.Setup(r => r.GetByIdOrPublicIdAsync("1")).ReturnsAsync(existing);
             _projectRepositoryMock
                 .Setup(r => r.ArchiveAsync(1, It.IsAny<DateTime>()))
                 .ReturnsAsync(true);
@@ -523,7 +526,7 @@ namespace Harbor.Project.Tests
             // Arrange
             const int userId = 10;
             var existing = new ProjectEntity { Id = 1, Name = "my-project", OwnerId = userId, IsArchived = true };
-            _projectRepositoryMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(existing);
+            _projectRepositoryMock.Setup(r => r.GetByIdOrPublicIdAsync("1")).ReturnsAsync(existing);
 
             // Act
             var (success, error, forbidden) = await _projectService.ArchiveAsync("1", userId, isAdmin: false);
@@ -543,7 +546,7 @@ namespace Harbor.Project.Tests
             const int ownerId = 10;
             const int adminId = 99;
             var existing = new ProjectEntity { Id = 1, Name = "my-project", OwnerId = ownerId, IsArchived = false };
-            _projectRepositoryMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(existing);
+            _projectRepositoryMock.Setup(r => r.GetByIdOrPublicIdAsync("1")).ReturnsAsync(existing);
             _projectRepositoryMock.Setup(r => r.ArchiveAsync(1, It.IsAny<DateTime>())).ReturnsAsync(true);
 
             // Act
@@ -560,7 +563,7 @@ namespace Harbor.Project.Tests
             // Arrange
             const int userId = 10;
             var existing = new ProjectEntity { Id = 1, Name = "my-project", OwnerId = userId, IsArchived = false };
-            _projectRepositoryMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(existing);
+            _projectRepositoryMock.Setup(r => r.GetByIdOrPublicIdAsync("1")).ReturnsAsync(existing);
             _projectRepositoryMock.Setup(r => r.ArchiveAsync(1, It.IsAny<DateTime>())).ReturnsAsync(false);
 
             // Act
@@ -579,7 +582,7 @@ namespace Harbor.Project.Tests
         {
             // Arrange
             var existing = new ProjectEntity { Id = 1, Name = "my-project", OwnerId = 10, IsArchived = false };
-            _projectRepositoryMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(existing);
+            _projectRepositoryMock.Setup(r => r.GetByIdOrPublicIdAsync("1")).ReturnsAsync(existing);
 
             // Act: userId 20 does not own this project and is not an Admin
             var (success, error, forbidden) = await _projectService.ArchiveAsync("1", userId: 20, isAdmin: false);

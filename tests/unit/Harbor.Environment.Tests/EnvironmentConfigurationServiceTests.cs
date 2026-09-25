@@ -27,7 +27,7 @@ public class EnvironmentConfigurationServiceTests
 
         // Standard project access: project 1 owned by user 5, not archived
         _environmentRepository.Setup(r => r.GetProjectAccessAsync("1"))
-            .ReturnsAsync((true, 5, 0, false));
+            .ReturnsAsync((true, 1, 5, false));
 
         // Environment exists and is active
         _environmentRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>(), It.IsAny<int>()))

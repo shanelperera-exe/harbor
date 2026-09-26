@@ -38,7 +38,7 @@ public class DeploymentService : IDeploymentService
     {
         var page = Math.Max(1, query.Page);
         var pageSize = Math.Clamp(query.PageSize, 1, MaxPageSize);
-        var (items, totalCount) = await repository.GetHistoryAsync(ownerId, query.ServiceId, query.Status?.Trim(), (page - 1) * pageSize, pageSize);
+        var (items, totalCount) = await repository.GetHistoryAsync(ownerId, query.ProjectId?.Trim(), query.Environment?.Trim(), query.ServiceId?.Trim(), query.Status?.Trim(), (page - 1) * pageSize, pageSize);
         return new DeploymentListResponse { Items = items.Select(ToResponse).ToList(), Page = page, PageSize = pageSize, TotalCount = totalCount };
     }
 

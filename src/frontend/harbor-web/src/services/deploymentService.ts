@@ -94,10 +94,12 @@ async function readResponse<T>(response: Response, fallback: string): Promise<T>
 }
 
 export async function getDeploymentHistory(
-  filters: { serviceId?: number | string; status?: string; page?: number } = {},
+  filters: { serviceId?: number | string; projectId?: number | string; environment?: string; status?: string; page?: number } = {},
 ): Promise<DeploymentHistory> {
   const query = new URLSearchParams({ page: String(filters.page ?? 1), pageSize: '20' });
   if (filters.serviceId) query.set('serviceId', String(filters.serviceId));
+  if (filters.projectId) query.set('projectId', String(filters.projectId));
+  if (filters.environment) query.set('environment', filters.environment);
   if (filters.status) query.set('status', filters.status);
   return readResponse<DeploymentHistory>(
     await fetch(`${deploymentApiBase}?${query}`, { headers: headers() }),

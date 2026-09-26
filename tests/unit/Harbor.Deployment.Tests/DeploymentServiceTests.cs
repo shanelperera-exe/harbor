@@ -30,7 +30,7 @@ public class DeploymentServiceTests
     public async Task GetHistoryAsync_ReturnsPagedDeploymentSummaries()
     {
         var startedAt = DateTime.UtcNow;
-        _repository.Setup(r => r.GetHistoryAsync(7, "13", "Succeeded", 0, 20)).ReturnsAsync((new List<DeploymentEntity>
+        _repository.Setup(r => r.GetHistoryAsync(7, null, null, "13", "Succeeded", 0, 20)).ReturnsAsync((new List<DeploymentEntity>
         {
             new() { Id = 22, OwnerId = 7, ServiceId = 13, Environment = "production", Version = "1.4.0", CommitSha = "f00ba41234", Status = "Succeeded", StartedAt = startedAt }
         }, 1));
@@ -48,7 +48,7 @@ public class DeploymentServiceTests
     [Fact]
     public async Task GetHistoryAsync_NoFilter_ReturnsAllOwnerDeployments()
     {
-        _repository.Setup(r => r.GetHistoryAsync(5, null, null, 0, 20)).ReturnsAsync((new List<DeploymentEntity>
+        _repository.Setup(r => r.GetHistoryAsync(5, null, null, null, null, 0, 20)).ReturnsAsync((new List<DeploymentEntity>
         {
             new() { Id = 1, OwnerId = 5, ServiceId = 10, Environment = "staging", Version = "2.0.0", Status = "Pending", StartedAt = DateTime.UtcNow },
             new() { Id = 2, OwnerId = 5, ServiceId = 11, Environment = "production", Version = "1.0.0", Status = "Succeeded", StartedAt = DateTime.UtcNow }
@@ -65,7 +65,7 @@ public class DeploymentServiceTests
     [InlineData(-5, 1)]
     public async Task GetHistoryAsync_PageBelowOne_ClampedToOne(int page, int expectedPage)
     {
-        _repository.Setup(r => r.GetHistoryAsync(1, null, null, 0, 20)).ReturnsAsync((new List<DeploymentEntity>(), 0));
+        _repository.Setup(r => r.GetHistoryAsync(1, null, null, null, null, 0, 20)).ReturnsAsync((new List<DeploymentEntity>(), 0));
 
         var result = await _service.GetHistoryAsync(1, new DeploymentHistoryQuery { Page = page });
 
@@ -77,7 +77,7 @@ public class DeploymentServiceTests
     [InlineData(0, 1)]       // page size below 1 → clamped to 1
     public async Task GetHistoryAsync_PageSizeOutOfRange_IsClamped(int pageSize, int expectedPageSize)
     {
-        _repository.Setup(r => r.GetHistoryAsync(1, null, null, 0, expectedPageSize)).ReturnsAsync((new List<DeploymentEntity>(), 0));
+        _repository.Setup(r => r.GetHistoryAsync(1, null, null, null, null, 0, expectedPageSize)).ReturnsAsync((new List<DeploymentEntity>(), 0));
 
         var result = await _service.GetHistoryAsync(1, new DeploymentHistoryQuery { PageSize = pageSize });
 
@@ -87,11 +87,11 @@ public class DeploymentServiceTests
     [Fact]
     public async Task GetHistoryAsync_StatusIsWhitespaceTrimmed_PassedToRepository()
     {
-        _repository.Setup(r => r.GetHistoryAsync(1, null, "Failed", 0, 20)).ReturnsAsync((new List<DeploymentEntity>(), 0));
+        _repository.Setup(r => r.GetHistoryAsync(1, null, null, null, "Failed", 0, 20)).ReturnsAsync((new List<DeploymentEntity>(), 0));
 
         await _service.GetHistoryAsync(1, new DeploymentHistoryQuery { Status = "  Failed  " });
 
-        _repository.Verify(r => r.GetHistoryAsync(1, null, "Failed", 0, 20), Times.Once);
+        _repository.Verify(r => r.GetHistoryAsync(1, null, null, null, "Failed", 0, 20), Times.Once);
     }
 
     // ---------- GetDetailsAsync ----------

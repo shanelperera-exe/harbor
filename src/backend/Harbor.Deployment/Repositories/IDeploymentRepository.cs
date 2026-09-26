@@ -4,7 +4,7 @@ namespace Harbor.Deployment.Repositories;
 
 public interface IDeploymentRepository
 {
-    Task<(IReadOnlyList<DeploymentEntity> Items, int TotalCount)> GetHistoryAsync(int ownerId, string? serviceId, string? status, int skip, int take);
+    Task<(IReadOnlyList<DeploymentEntity> Items, int TotalCount)> GetHistoryAsync(int ownerId, string? projectId, string? environment, string? serviceId, string? status, int skip, int take);
     Task<(IReadOnlyList<DeploymentEntity> Items, int TotalCount)> GetHistoryAsync(int ownerId, int serviceId, string? status, int skip, int take);
     Task<DeploymentEntity?> GetByIdAsync(int id, int ownerId);
     Task<DeploymentEntity?> GetEntityByIdAsync(int id);

@@ -13,6 +13,9 @@ export interface Deployment {
   workflowFile?: string | null;
   workflowRef?: string | null;
   workflowRunUrl?: string | null;
+  projectName?: string | null;
+  serviceName?: string | null;
+  userName?: string | null;
 }
 
 export interface DeploymentLog {

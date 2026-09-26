@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { RiSaveLine } from 'react-icons/ri';
-import { LuCircleAlert } from 'react-icons/lu';
 import { getProject, updateProject, archiveProject, type Project } from '../../services/projectService';
 import { getEnvironments, type DeploymentEnvironment } from '../../services/environmentService';
 import { getServices, type Service } from '../../services/serviceService';
+import { DeleteConfirmationModal } from '../../components/ui/DeleteConfirmationModal';
 
 export default function ProjectSettings() {
   const navigate = useNavigate();
@@ -166,7 +166,6 @@ export default function ProjectSettings() {
   const activeIndex = navItems.findIndex(item => item.id === activeSection);
   const indicatorOffset = Math.max(0, activeIndex) * 2.75; 
   const deleteConfirmExpected = `delete project ${project.name}`;
-  const isDeleteConfirmed = deleteConfirmText === deleteConfirmExpected;
 
   return (
     <div className="w-full lg:max-w-[calc(100vw-294px)]">
@@ -354,76 +353,37 @@ export default function ProjectSettings() {
       </main>
 
       {/* Delete Confirmation Modal */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 px-4" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) { closeDeleteModal(); } }}>
-          <div className="inline-block w-full text-left align-middle transform page-primary bg-white dark:bg-[oklch(0.21_0.03_263.45)] shadow-lg border border-solid border-gray-300 dark:border-[#525252] max-w-xl rounded-sm">
-            <form onSubmit={handleConfirmDelete}>
-              <div className="flex flex-col gap-2 items-start border-solid border-b border-gray-300 dark:border-[#525252] p-6 relative">
-                <div className="w-full">
-                  <h1 className="text-[28px] leading-[32px] font-medium text-strong mb-1 text-gray-900 dark:text-white font-['Roobert',sans-serif]">Delete Project</h1>
+      <DeleteConfirmationModal
+        isOpen={showDeleteModal}
+        onClose={closeDeleteModal}
+        onConfirm={handleConfirmDelete}
+        title="Delete Project"
+        warningMessage={
+          <>
+            <p>This project <span className="font-bold">{project.name}</span> will be <span className="font-bold underline">permanently deleted</span>, along with all of its environments and services.</p>
+            <p className="mt-2">To keep any services, please move them out of the project first.</p>
+          </>
+        }
+        expectedConfirmText={deleteConfirmExpected}
+        confirmText={deleteConfirmText}
+        setConfirmText={setDeleteConfirmText}
+        isDeleting={isArchiving}
+        deleteButtonLabel="Delete project"
+      >
+        {environments.length > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {environments.map((env) => (
+              <div key={env.id} className="p-3 border border-gray-300 dark:border-[#525252] rounded-sm bg-gray-50 dark:bg-white/[0.03]">
+                <div className="flex items-center text-gray-900 dark:text-white font-medium mb-1 truncate">
+                  <svg fill="currentColor" aria-hidden="true" className="shrink-0 size-4 mr-2 text-gray-700 dark:text-gray-300" width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M5.72573 2.18206L4.21915 3.07246L4.72795 3.93336L6.23453 3.04296L5.72573 2.18206Z"></path><path d="M3 6H2V4.95C2 4.6 2.2 4.25 2.5 4.1L3.25 3.65L3.75 4.5L3 4.95V6Z"></path><path d="M3 7H2V9H3V7Z"></path><path d="M3.25 12.35L2.5 11.9C2.2 11.7 2 11.4 2 11.05V10H3V11.05L3.75 11.5L3.25 12.35Z"></path><path d="M4.72447 12.0523L4.21577 12.9132L5.72235 13.8034L6.23105 12.9425L4.72447 12.0523Z"></path><path d="M8.75 13.55L8 14L7.25 13.55L6.75 14.4L7.5 14.85C7.65 14.95 7.85 15 8 15C8.2 15 8.35 14.95 8.5 14.85L9.25 14.4L8.75 13.55Z"></path><path d="M11.2676 12.063L9.76107 12.9534L10.2699 13.8143L11.7764 12.9239L11.2676 12.063Z"></path><path d="M12.6 12.45L12.1 11.6L13 11.1V10H14V11.05C14 11.4 13.8 11.75 13.5 11.9L12.6 12.45Z"></path><path d="M14 7H13V9H14V7Z"></path><path d="M14 6H13V4.95L12.1 4.45L12.6 3.6L13.5 4.1C13.8 4.3 14 4.6 14 4.95V6Z"></path><path d="M10.2343 2.15943L9.72561 3.02033L11.2322 3.91055L11.7409 3.04965L10.2343 2.15943Z"></path><path d="M8.75 2.45L8 2L7.25 2.45L6.75 1.6L7.5 1.15C7.65 1.05 7.8 1 8 1C8.2 1 8.35 1.05 8.5 1.15L9.25 1.6L8.75 2.45Z"></path></svg>
+                  {env.name}
                 </div>
-                <button type="button" aria-label="Close modal" onClick={closeDeleteModal} className="flex p-0 w-6 h-6 items-center justify-center text-gray-500 hover:text-gray-900 dark:text-[#8f8f8f] dark:hover:text-white absolute right-4 top-4">
-                  <svg fill="currentColor" aria-hidden="true" width="24" height="24" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M12 4.7L11.3 4L8 7.3L4.7 4L4 4.7L7.3 8L4 11.3L4.7 12L8 8.7L11.3 12L12 11.3L8.7 8L12 4.7Z"></path></svg>
-                </button>
+                <div className="text-gray-500 dark:text-[#a1a1aa] text-[13px] ml-6">{services.length} {services.length === 1 ? 'service' : 'services'}</div>
               </div>
-              
-              <div className="text-[16px] leading-relaxed text-gray-800 dark:text-[#e3e3e3] p-6 space-y-5 font-normal">
-                <div className="bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300 p-4 rounded-sm border border-red-100 dark:border-red-900/30 flex items-start space-x-3">
-                  <div className="flex-shrink-0 mt-0.5">
-                    <LuCircleAlert className="w-5 h-5 text-red-600 dark:text-red-400" />
-                  </div>
-                  <div>
-                    <p>This project <span className="font-bold">{project.name}</span> will be <span className="font-bold underline">permanently deleted</span>, along with all of its environments and services.</p>
-                    <p className="mt-2">To keep any services, please move them out of the project first.</p>
-                  </div>
-                </div>
-                
-                {environments.length > 0 && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {environments.map((env) => (
-                      <div key={env.id} className="p-3 border border-gray-300 dark:border-[#525252] rounded-sm bg-gray-50 dark:bg-white/[0.03]">
-                        <div className="flex items-center text-gray-900 dark:text-white font-medium mb-1 truncate">
-                          <svg fill="currentColor" aria-hidden="true" className="shrink-0 size-4 mr-2 text-gray-700 dark:text-gray-300" width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M5.72573 2.18206L4.21915 3.07246L4.72795 3.93336L6.23453 3.04296L5.72573 2.18206Z"></path><path d="M3 6H2V4.95C2 4.6 2.2 4.25 2.5 4.1L3.25 3.65L3.75 4.5L3 4.95V6Z"></path><path d="M3 7H2V9H3V7Z"></path><path d="M3.25 12.35L2.5 11.9C2.2 11.7 2 11.4 2 11.05V10H3V11.05L3.75 11.5L3.25 12.35Z"></path><path d="M4.72447 12.0523L4.21577 12.9132L5.72235 13.8034L6.23105 12.9425L4.72447 12.0523Z"></path><path d="M8.75 13.55L8 14L7.25 13.55L6.75 14.4L7.5 14.85C7.65 14.95 7.85 15 8 15C8.2 15 8.35 14.95 8.5 14.85L9.25 14.4L8.75 13.55Z"></path><path d="M11.2676 12.063L9.76107 12.9534L10.2699 13.8143L11.7764 12.9239L11.2676 12.063Z"></path><path d="M12.6 12.45L12.1 11.6L13 11.1V10H14V11.05C14 11.4 13.8 11.75 13.5 11.9L12.6 12.45Z"></path><path d="M14 7H13V9H14V7Z"></path><path d="M14 6H13V4.95L12.1 4.45L12.6 3.6L13.5 4.1C13.8 4.3 14 4.6 14 4.95V6Z"></path><path d="M10.2343 2.15943L9.72561 3.02033L11.2322 3.91055L11.7409 3.04965L10.2343 2.15943Z"></path><path d="M8.75 2.45L8 2L7.25 2.45L6.75 1.6L7.5 1.15C7.65 1.05 7.8 1 8 1C8.2 1 8.35 1.05 8.5 1.15L9.25 1.6L8.75 2.45Z"></path></svg>
-                          {env.name}
-                        </div>
-                        <div className="text-gray-500 dark:text-[#a1a1aa] text-[13px] ml-6">{services.length} {services.length === 1 ? 'service' : 'services'}</div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                
-                <div>Type <span className="font-mono font-bold text-red-600 dark:text-red-400 bg-gray-100 dark:bg-[#1a1a1a] px-1.5 py-0.5 rounded border border-gray-200 dark:border-[#333] select-all shadow-sm">{deleteConfirmExpected}</span> below to confirm.</div>
-                
-                <div className="flex flex-col mt-2">
-                  <label htmlFor="sudo-command" className="sr-only">Sudo Command</label>
-                  <div className="flex relative items-center">
-                    <input 
-                      autoComplete="off" 
-                      spellCheck="false" 
-                      id="sudo-command" 
-                      className="h-10 w-full border border-gray-300 bg-transparent py-2.5 px-3 text-[16px] text-gray-900 outline-none focus:border-[#2563eb] focus:ring-1 focus:ring-[#2563eb] dark:border-[#525252] dark:text-white transition-colors rounded-sm" 
-                      type="text" 
-                      value={deleteConfirmText} 
-                      onChange={(e) => setDeleteConfirmText(e.target.value)} 
-                      name="sudoCommand" 
-                      placeholder="Sudo Command"
-                    />
-                  </div>
-                </div>
-              </div>
-              
-              <div className="w-full flex justify-start space-x-2 p-6 border-solid border-t border-gray-300 dark:border-[#525252]">
-                <button type="submit" disabled={!isDeleteConfirmed || isArchiving} className={`h-10 py-2.5 px-4 flex items-center group/button transition-colors rounded-sm font-medium ${isDeleteConfirmed && !isArchiving ? 'bg-[#e23642] hover:bg-[#c0222d] text-white cursor-pointer' : 'bg-[#fad1d3] dark:bg-red-900/30 text-[#c0222d] dark:text-red-500/50 cursor-not-allowed'}`}>
-                  {isArchiving ? 'Deleting...' : 'Delete project'}
-                </button>
-                <button type="button" onClick={closeDeleteModal} className="h-10 py-2.5 px-3 flex items-center border border-solid border-gray-300 dark:border-[#525252] hover:bg-gray-100 dark:hover:bg-[#272727] text-gray-900 dark:text-[#f0f0f0] rounded-sm transition-colors">
-                  Cancel
-                </button>
-              </div>
-            </form>
+            ))}
           </div>
-        </div>
-      )}
+        )}
+      </DeleteConfirmationModal>
     </div>
   );
 }

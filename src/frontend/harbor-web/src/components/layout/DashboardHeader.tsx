@@ -357,8 +357,8 @@ export default function DashboardHeader({
         <div className="flex-1 min-w-0 flex items-center pl-4 sm:pl-5 space-x-2">
           <div className="flex relative items-center h-auto min-w-0 w-full">
             <button data-testid="workspace-switcher" type="button" className="h-10 min-w-0 w-full focus:outline-none flex items-center p-1.5 bg-transparent text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-[#1a1a1a] transition-colors rounded-sm">
-              <div className="flex w-full items-center justify-between space-x-2.5 h-10 text-[15px] overflow-hidden">
-                <span className="truncate flex-1 text-left" title="My Workspace">My Workspace</span>
+              <div className="flex w-full items-center justify-between space-x-2.5 h-10 text-[17px] overflow-hidden">
+                <span className="truncate flex-1 text-left font-normal" title={currentUsername ? `${currentUsername}'s workspace` : "My Workspace"}>{currentUsername ? `${currentUsername}'s workspace` : "My Workspace"}</span>
                 <svg fill="currentColor" aria-hidden="true" className="flex-shrink-0 w-4 h-4" width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
                   <path d="M8 14L4.5 10.5L5.205 9.795L8 12.585L10.795 9.795L11.5 10.5L8 14Z"></path>
                   <path d="M8 2L11.5 5.5L10.795 6.205L8 3.415L5.205 6.205L4.5 5.5L8 2Z"></path>

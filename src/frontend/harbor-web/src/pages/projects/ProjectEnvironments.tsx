@@ -11,6 +11,7 @@ import {
 } from '../../services/environmentService';
 import { getProject, type Project } from '../../services/projectService';
 import { getServices, type Service } from '../../services/serviceService';
+import { StatusBadge } from '../../components/ui/StatusBadge';
 
 export default function ProjectEnvironments() {
   const { id } = useParams();
@@ -272,12 +273,7 @@ export default function ProjectEnvironments() {
                             </div>
                           </td>
                           <td className="px-4">
-                            <div className="inline-flex shrink-0 items-center justify-center rounded-full whitespace-nowrap h-6 px-3 pr-2.5 gap-1.5 text-[12px] leading-[24px] font-medium tabular-nums bg-transparent ring-1 ring-inset ring-gray-200 dark:ring-white/[0.14] hover:bg-gray-100 dark:hover:bg-[#272727] text-gray-900 dark:text-[#ededed] cursor-pointer w-fit transition-colors">
-                              <span className="relative flex items-center justify-center -ml-1">
-                                <span className="w-2.5 h-2.5 rounded-full shrink-0 bg-[#50e3c2]"></span>
-                              </span>
-                              <span>Ready</span>
-                            </div>
+                            <StatusBadge status="ready" label="Ready" />
                           </td>
                           <td className="px-4 text-[14px]">
                             <a href={`https://${service.name}-${env.name.toLowerCase()}.harbor.app`} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="text-gray-900 dark:text-[#f0f0f0] hover:text-[#2563eb] dark:hover:text-[#3b82f6] hover:underline transition-colors flex items-center gap-1.5">

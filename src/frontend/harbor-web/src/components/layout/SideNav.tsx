@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useMatch } from 'react-router-dom';
 import { getProject, type Project } from '../../services/projectService';
+import { getService, type Service } from '../../services/serviceService';
 import { RxDashboard } from "react-icons/rx";
 
 const NavItem = ({ icon, label, to, isFooter = false, isButton = false }: any) => {
@@ -65,23 +66,32 @@ export default function SideNav({
 } = {}) {
   const projectMatch = useMatch('/projects/:id/*');
   const projectIdStr = projectMatch?.params?.id;
-  const projectId = projectIdStr ? parseInt(projectIdStr, 10) : null;
+  const projectId = projectIdStr || null;
   
   const serviceMatch = useMatch('/projects/:projectId/services/:serviceId/*');
   const serviceId = serviceMatch?.params?.serviceId;
   const isServiceContext = !!serviceId;
   
-  const isProjectContext = !!projectId && !isNaN(projectId) && !isServiceContext;
+  const isProjectContext = !!projectId && !isServiceContext;
 
   const [project, setProject] = useState<Project | null>(null);
+  const [service, setService] = useState<Service | null>(null);
 
   useEffect(() => {
-    if (projectId && !isNaN(projectId)) {
-      getProject(projectId).then(p => setProject(p || null)).catch(() => {});
+    if (projectId) {
+      getProject(projectId as any).then(p => setProject(p || null)).catch(() => {});
     } else {
       setProject(null);
     }
   }, [isProjectContext, projectId]);
+
+  useEffect(() => {
+    if (isServiceContext && projectId && serviceId) {
+      getService(projectId, serviceId).then(s => setService(s || null)).catch(() => {});
+    } else {
+      setService(null);
+    }
+  }, [isServiceContext, projectId, serviceId]);
 
   const [isResizing, setIsResizing] = useState(false);
 
@@ -167,12 +177,12 @@ export default function SideNav({
               
               <div className="flex items-center space-x-2 text-black dark:text-white px-1 py-3">
                 <svg fill="currentColor" aria-hidden="true" className="flex-shrink-0 w-5 h-5 text-gray-700 dark:text-[#f0f0f0]" width="16" height="16" viewBox="0 0 16 16"><path d="M8 1C6.61553 1 5.26216 1.41054 4.11101 2.17971C2.95987 2.94888 2.06266 4.04213 1.53285 5.32122C1.00303 6.6003 0.86441 8.00776 1.13451 9.36563C1.4046 10.7235 2.07129 11.9708 3.05026 12.9497C4.02922 13.9287 5.2765 14.5954 6.63437 14.8655C7.99224 15.1356 9.3997 14.997 10.6788 14.4672C11.9579 13.9373 13.0511 13.0401 13.8203 11.889C14.5895 10.7378 15 9.38447 15 8C15 6.14348 14.2625 4.36301 12.9497 3.05025C11.637 1.7375 9.85652 1 8 1ZM14 7.5H11C10.9416 5.65854 10.4646 3.85458 9.605 2.225C10.7893 2.54895 11.8457 3.22842 12.6316 4.17171C13.4175 5.115 13.8952 6.27669 14 7.5ZM8 14C7.88846 14.0075 7.77654 14.0075 7.665 14C6.62915 12.3481 6.05426 10.4491 6 8.5H10C9.95026 10.4477 9.38058 12.3466 8.35 14C8.23348 14.0082 8.11653 14.0082 8 14ZM6 7.5C6.04975 5.55234 6.61942 3.65341 7.65 2C7.87264 1.97498 8.09737 1.97498 8.32 2C9.36114 3.6504 9.94124 5.54953 10 7.5H6ZM6.38 2.225C5.52565 3.85582 5.05373 5.65972 5 7.5H2C2.10485 6.27669 2.58247 5.115 3.3684 4.17171C4.15432 3.22842 5.21072 2.54895 6.395 2.225H6.38ZM2.025 8.5H5.025C5.07718 10.3399 5.54739 12.1438 6.4 13.775C5.21943 13.4476 4.16739 12.7666 3.38528 11.8236C2.60317 10.8806 2.12848 9.72076 2.025 8.5ZM9.605 13.775C10.4646 12.1454 10.9416 10.3415 11 8.5H14C13.8952 9.72331 13.4175 10.885 12.6316 11.8283C11.8457 12.7716 10.7893 13.4511 9.605 13.775Z"></path></svg>
-                <span className="font-medium truncate">{serviceId}</span>
+                <span className="font-medium truncate">{service ? service.name : (serviceId || 'Loading...')}</span>
               </div>
               
               <div className="flex flex-col space-y-6 py-2">
                 <ul>
-                  <NavItem label="Deploys" to={`/projects/${serviceMatch.params.projectId}/services/${serviceId}/deploys`} icon={<IconServiceDeploys />} />
+                  <NavItem label="Deployments" to={`/projects/${serviceMatch.params.projectId}/services/${serviceId}/deploys`} icon={<IconServiceDeploys />} />
                   <NavItem label="Settings" to={`/projects/${serviceMatch.params.projectId}/services/${serviceId}/settings`} icon={<IconServiceSettings />} />
                 </ul>
                 

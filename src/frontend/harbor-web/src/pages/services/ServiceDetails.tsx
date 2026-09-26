@@ -306,7 +306,7 @@ function ServiceLayout() {
   };
 
   const tabs = [
-    { name: 'Deploys', path: 'deploys', icon: LayoutGrid },
+    { name: 'Deployments', path: 'deploys', icon: LayoutGrid },
     { name: 'CI History', path: 'ci-history', icon: Activity },
     { name: 'Logs', path: 'logs', icon: Terminal },
     { name: 'Metrics', path: 'metrics', icon: Activity },
@@ -369,8 +369,8 @@ function ServiceLayout() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 text-base pb-6">
-            <div className="flex flex-col gap-3">
+          <div className="grid grid-cols-1 gap-4 pt-2 text-base pb-6">
+            <div className="flex flex-col gap-6">
               <div className="flex items-center gap-2 text-[15px]">
                 <span className="text-gray-500 dark:text-[#8f8f8f]">Service ID:</span>
                 <span className="text-gray-900 dark:text-[#f0f0f0] font-mono flex items-center gap-1">
@@ -378,25 +378,149 @@ function ServiceLayout() {
                   <button onClick={() => copyToClipboard(service.publicId || service.id.toString())} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"><Copy className="w-4 h-4" /></button>
                 </span>
               </div>
-              {service.repositoryName && (
-                <div className="flex items-center gap-2 text-[15px]">
-                  <FaGithub className="w-4 h-4 text-gray-900 dark:text-white" />
-                  <a href={service.repositoryUrl} target="_blank" rel="noopener noreferrer" className="text-[#3b82f6] hover:underline flex items-center gap-1">
-                    {service.repositoryName}
-                  </a>
-                  {service.repositoryBranch && (
-                    <span className="text-gray-900 dark:text-[#f0f0f0] flex items-center gap-1 ml-2">
-                      <GitBranch className="w-4 h-4 text-gray-400" />
-                      {service.repositoryBranch}
-                    </span>
-                  )}
+              
+              <div className="relative flex min-w-px max-w-full flex-1 flex-col items-stretch justify-start pt-2">
+                <div className="flex flex-col gap-[23px]">
+                  <div className="flex flex-row items-center justify-start flex-none">
+                    <div className="max-w-full mx-auto w-[calc(100vw-(100vw-100%))] px-0 min-w-0">
+                      <dl className="m-0 [&>dd>span]:flex [&>dd>span]:overflow-hidden [&>dd>span_a]:inline-block [&>dd>span_a]:truncate" data-version="v1">
+                        <dt className="text-sm !leading-[14px] min-h-[14px] capitalize whitespace-nowrap text-[#8f8f8f] mb-2" data-geist-description-title="">Deployment</dt>
+                        <dd className="text-sm text-gray-900 dark:text-white !leading-4 font-medium" data-geist-description-content="">
+                          <span className="display-[inherit] box-sizing-[initial] animate-partial-fade-in">
+                            <a data-zone="same" className="cursor-pointer focus-visible:outline-2 outline-blue-500 outline-offset-4 font-medium text-gray-900 dark:text-white no-underline hover:underline" href={`https://${service.name}.onrender.com`}>
+                              {service.name}-698ml64dl-shanelperera-exes-projects.vercel.app
+                            </a>
+                          </span>
+                        </dd>
+                      </dl>
+                    </div>
+                    {/* Speed Insights circle */}
+                    <div className="flex flex-row items-center justify-start gap-2 flex-initial" style={{ marginLeft: '8px', marginRight: '8px' }}>
+                      <a data-zone="same" className="cursor-pointer focus-visible:outline-2 outline-blue-500 outline-offset-4" href="#" style={{ display: 'flex' }}>
+                        <span className="inline-flex h-fit items-center" data-testid="legacy/tooltip-trigger" data-version="v1" tabIndex={0}>
+                          <div aria-valuemax={100} aria-valuemin={0} aria-valuenow={0} className="relative flex flex-col justify-center items-center [&_svg]:overflow-visible [--transition-length:1s] [--transition-step:200ms] [--delay:0s] [--percent-to-deg:3.6deg] transform-gpu" data-geist-progress-circle="" data-version="v1" role="progressbar" style={{ '--circle-size': '100px', '--circumference': '282.7433388230814', '--percent-to-px': '2.827433388230814px', '--gap-percent': '0', '--offset-factor': '0' } as any}>
+                            <svg aria-hidden="true" fill="none" height="32" strokeWidth="2" viewBox="0 0 100 100" width="32">
+                              <circle cx="50" cy="50" r="45" strokeWidth="10" strokeDashoffset="0" strokeLinecap="round" strokeLinejoin="round" className="[--offset-factor-secondary:calc(1-var(--offset-factor))] [stroke-dasharray:calc(var(--stroke-percent)*var(--percent-to-px))_var(--circumference)] [transform:rotate(calc(360deg-90deg-(var(--gap-percent)*var(--percent-to-deg)*var(--offset-factor-secondary))))_scaleY(-1)] [transform-origin:calc(var(--circle-size)/2)_calc(var(--circle-size)/2)] [transition:all_var(--transition-length)_ease_var(--delay)]" stroke="#333" style={{ opacity: 1, '--stroke-percent': '99' } as any}></circle>
+                              <circle cx="50" cy="50" r="45" strokeWidth="10" strokeDashoffset="0" strokeLinecap="round" strokeLinejoin="round" className="[stroke-dasharray:calc(var(--stroke-percent)*var(--percent-to-px))_var(--circumference)] [transition-property:stroke-dasharray,transform] [transition:var(--transition-length)_ease_var(--delay),stroke_var(--transition-length)_ease_var(--delay)] [transform:rotate(calc(-90deg+var(--gap-percent)*var(--offset-factor)*var(--percent-to-deg)))] [transform-origin:calc(var(--circle-size)/2)_calc(var(--circle-size)/2)]" data-geist-progress-circle-fg="" stroke="#ff4e42" style={{ opacity: 0, '--stroke-percent': '0' } as any}></circle>
+                            </svg>
+                            <div aria-hidden="true" className="flex absolute">
+                              <span className="flex text-[11px] font-medium leading-[0.75rem] text-gray-900 dark:text-white">
+                                <svg viewBox="0 0 16 16" height="16" width="16" data-slot="geist-icon" style={{ color: 'currentcolor' }}>
+                                  <path fill="currentColor" fillRule="evenodd" d="M5.51 3.62 3.76 8.35a1 1 0 0 1-.93.65H0V7.5h2.48l2.09-5.64a1 1 0 0 1 1.87-.01l4.07 10.6 1.73-4.32a1 1 0 0 1 .93-.63H16V9h-2.49l-2.08 5.19a1 1 0 0 1-1.86-.02z" clipRule="evenodd"></path>
+                                </svg>
+                              </span>
+                            </div>
+                          </div>
+                        </span>
+                      </a>
+                    </div>
+                  </div>
+                  
+                  <div className="max-w-full mx-auto w-[calc(100vw-(100vw-100%))] px-0">
+                    <dl className="m-0" data-version="v1">
+                      <dt className="text-sm !leading-[14px] min-h-[14px] capitalize whitespace-nowrap text-[#8f8f8f] mb-2" data-geist-description-title="">
+                        <div className="max-w-full mx-auto w-[calc(100vw-(100vw-100%))] px-0">
+                          <div className="flex gap-2 items-center">
+                            Domains
+                            <button type="button" aria-label="Add a domain" className="flex items-center text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
+                              <svg viewBox="0 0 16 16" height="16" width="16" data-slot="geist-icon" data-glyph="circular" className="cursor-pointer" style={{ color: 'currentcolor' }}>
+                                <path fill="currentColor" fillRule="evenodd" d="M14.5 8a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M8.75 4.25v3h3v1.5h-3v3h-1.5v-3h-3v-1.5h3v-3z" clipRule="evenodd"></path>
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+                      </dt>
+                      <dd className="text-sm text-gray-900 dark:text-white !leading-4 font-medium" data-geist-description-content="">
+                        <span className="display-[inherit] box-sizing-[initial] animate-partial-fade-in">
+                          <span className="text-[14px] leading-[20px] font-medium undefined">
+                            <div className="flex flex-row items-stretch justify-start gap-2 flex-initial max-w-full">
+                              <a href={`https://${service.name}.onrender.com`} rel="noopener" target="_blank" data-zone="null" className="cursor-pointer focus-visible:outline-2 outline-blue-500 outline-offset-4 inline-flex items-center gap-0.5 pt-px leading-[16px] hover:underline" style={{ minWidth: '0px', maxWidth: '100%' }}>
+                                <span className="geist-ellipsis">{service.name}.onrender.com</span>
+                                <svg viewBox="0 0 16 16" height="16" width="16" data-slot="geist-icon" style={{ color: 'currentcolor' }}>
+                                  <path fill="currentColor" fillRule="evenodd" d="M11.5 9.75v1.5q-.02.23-.25.25h-6.5a.25.25 0 0 1-.25-.25v-6.5c0-.14.11-.25.25-.25H7V3H4.75C3.78 3 3 3.78 3 4.75v6.5c0 .97.78 1.75 1.75 1.75h6.5c.97 0 1.75-.78 1.75-1.75V9h-1.5zM8.5 3h3.75c.41 0 .75.34.75.75V7.5h-1.5V5.56L8.53 8.53 8 9.06 6.94 8l.53-.53 2.97-2.97H8.5z" clipRule="evenodd"></path>
+                                </svg>
+                              </a>
+                            </div>
+                          </span>
+                        </span>
+                      </dd>
+                    </dl>
+                  </div>
+                  
+                  <div className="relative block min-w-px max-w-full flex-[0_1_auto] items-stretch justify-start sm:flex sm:flex-row lg:flex-wrap gap-8">
+                    <dl className="m-0" data-version="v1">
+                      <dt className="text-sm !leading-[14px] min-h-[14px] capitalize whitespace-nowrap text-[#8f8f8f] mb-2" data-geist-description-title="">Status</dt>
+                      <dd className="text-sm text-gray-900 dark:text-white !leading-4 font-medium" data-geist-description-content="">
+                        <span className="display-[inherit] box-sizing-[initial] animate-partial-fade-in">
+                          <div className="relative flex h-[22px] min-w-px max-w-full flex-row items-center lg:flex-wrap">
+                            <div className="flex gap-2 whitespace-nowrap *:text-ellipsis text-[14px] h-5 items-center -ml-[3px]" aria-label="This deployment is ready." data-testid="deployment/status">
+                              <span className="flex items-center gap-1">
+                                <span className="w-4 h-4 flex items-center justify-center">
+                                  <span data-glyph="circular" className="w-2.5 h-2.5 flex-none rounded-full shrink-0 bg-[#50e3c2]"></span>
+                                </span>
+                                <span className="inline-flex h-fit items-center" data-testid="legacy/tooltip-trigger" data-version="v1" tabIndex={0}>
+                                  <span className="text-[14px]" style={{ fontWeight: 500 }}>Ready</span>
+                                </span>
+                              </span>
+                            </div>
+                          </div>
+                        </span>
+                      </dd>
+                    </dl>
+                    
+                    <dl className="m-0" data-version="v1">
+                      <dt className="text-sm !leading-[14px] min-h-[14px] capitalize whitespace-nowrap text-[#8f8f8f] mb-2" data-geist-description-title="">Created</dt>
+                      <dd className="text-sm text-gray-900 dark:text-white !leading-4 font-medium" data-geist-description-content="">
+                        <span className="display-[inherit] box-sizing-[initial] animate-partial-fade-in">
+                          <div className="flex items-center gap-[0.4rem] inline-flex cursor-pointer flex-[0_1_auto] overflow-hidden">
+                            <p className="text-[14px] inline-block truncate">Sep 22 by shanelperera-exe</p>
+                            <div className="relative w-[22px] h-[22px] shrink-0">
+                              <span aria-label="github/shanelperera-exe" className="w-[22px] h-[22px] shrink-0 rounded-full inline-block overflow-hidden leading-0 align-top relative transition-[background] duration-200 ease-in-out" data-geist-avatar="" data-mask="true" data-resolved="true" data-version="v1" role="img">
+                                <img data-version="v1" alt="github/shanelperera-exe" title="github/shanelperera-exe" loading="eager" width="22" height="22" decoding="sync" className="h-auto max-w-full w-full h-full relative" src="https://avatars.githubusercontent.com/shanelperera-exe?s=44" />
+                              </span>
+                            </div>
+                          </div>
+                        </span>
+                      </dd>
+                    </dl>
+                  </div>
+                  
+                  <div className="max-w-full mx-auto w-[calc(100vw-(100vw-100%))] px-0">
+                    <dl className="m-0" data-version="v1">
+                      <dt className="text-sm !leading-[14px] min-h-[14px] capitalize whitespace-nowrap text-[#8f8f8f] mb-2" data-geist-description-title="">Source</dt>
+                      <dd className="text-sm text-gray-900 dark:text-white !leading-4 font-medium" data-geist-description-content="">
+                        <span className="display-[inherit] box-sizing-[initial] animate-partial-fade-in">
+                          <div className="flex flex-col items-stretch justify-start flex-initial min-h-[44px] w-full text-gray-900 dark:text-white">
+                            <div className="flex items-center justify-start flex-nowrap gap-1 h-[22px] transition-all duration-300">
+                              <svg viewBox="0 0 16 16" height="16" width="16" data-slot="geist-icon" className="flex-none text-gray-400" style={{ color: 'currentcolor' }}>
+                                <path fill="currentColor" fillRule="evenodd" d="M4.75 1.75V1h-1.5v8.09a3 3 0 1 0 3.67 3.6 6.75 6.75 0 0 0 5.77-5.77 3 3 0 1 0-1.52-.03 5.25 5.25 0 0 1-4.28 4.28A3 3 0 0 0 4.75 9.1zM13.5 4a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0M4 13.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3" clipRule="evenodd"></path>
+                              </svg>
+                              <a href={service.repositoryUrl || "#"} rel="noopener" target="_blank" title="Git Branch" data-zone="null" className="cursor-pointer focus-visible:outline-2 outline-blue-500 outline-offset-4 z-2 flex shrink gap-2 truncate">
+                                <code className="text-[13.5px] leading-[18px] empty:hidden truncate font-mono text-gray-900 dark:text-white" data-geist-inline-code="" data-version="v1">{service.repositoryBranch || 'main'}</code>
+                              </a>
+                            </div>
+                            <div className="flex items-center justify-start flex-nowrap gap-1 h-[22px] transition-all duration-300">
+                              <span className="inline-flex h-fit items-center flex-none" data-testid="legacy/tooltip-trigger" data-version="v1" tabIndex={0}>
+                                <svg viewBox="0 0 16 16" height="16" width="16" data-slot="geist-icon" className="text-gray-400" style={{ color: 'currentcolor' }}>
+                                  <path fill="currentColor" fillRule="evenodd" d="M8 10.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5M8 12a4 4 0 0 0 3.93-3.25H16v-1.5h-4.07a4 4 0 0 0-7.86 0H0v1.5h4.07A4 4 0 0 0 8 12" clipRule="evenodd"></path>
+                                </svg>
+                              </span>
+                              <a href="#" rel="noopener" target="_blank" title="Git Commit" data-zone="null" className="cursor-pointer focus-visible:outline-2 outline-blue-500 outline-offset-4 z-[2] flex shrink items-center gap-1.5 truncate text-gray-900 dark:text-white">
+                                <code className="max-w-full text-[13.5px] leading-[18px] empty:hidden font-mono" data-geist-inline-code="" data-version="v1">b50e8a2</code>
+                                <span className="inline-flex h-fit items-center flex-none" data-testid="legacy/tooltip-trigger" data-version="v1" tabIndex={0}>
+                                  <svg viewBox="0 0 16 16" height="14" width="14" data-slot="geist-icon" className="text-gray-900 dark:text-white" style={{ color: 'currentcolor' }}>
+                                    <path fill="currentColor" d="M8 0a1 1 0 0 1 .7.29l1.76 1.76h2.5a1 1 0 0 1 .99 1v2.49L15.7 7.3a1 1 0 0 1 0 1.4l-1.76 1.76v2.5a1 1 0 0 1-1 .99h-2.49L8.7 15.7a1 1 0 0 1-1.4 0l-1.76-1.76h-2.5a1 1 0 0 1-.99-1v-2.49L.3 8.7a1 1 0 0 1 0-1.4l1.76-1.76v-2.5a1 1 0 0 1 1-.99h2.49L7.3.3A1 1 0 0 1 8 0M6.6 3.11l-.44.44h-2.6v2.6L1.7 8l1.84 1.84v2.6h2.6l.45.45 1.4 1.4 1.4-1.4.44-.44h2.6v-2.6l.45-.45 1.4-1.4-1.84-1.84v-2.6h-2.6L8 1.7zm4.59 3.3-3.72 3.71c-.3.3-.77.3-1.06 0L4.8 8.53l1.07-1.06 1.06 1.06 3.18-3.18z"></path>
+                                  </svg>
+                                </span>
+                                <span className="truncate text-[14px] font-normal leading-[1.3] text-gray-500 dark:text-[#a1a1aa] hover:underline" title="Merge pull request #15 from shanelperera-exe/test">Merge pull request #15 from shanelperera-exe/test</span>
+                              </a>
+                            </div>
+                          </div>
+                        </span>
+                      </dd>
+                    </dl>
+                  </div>
                 </div>
-              )}
-              <div className="flex items-center gap-2 text-[15px]">
-                <a href={`https://${service.name}.onrender.com`} target="_blank" rel="noopener noreferrer" className="text-[#3b82f6] hover:underline">
-                  https://{service.name}.onrender.com
-                </a>
-                <button onClick={() => copyToClipboard(`https://${service.name}.onrender.com`)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"><Copy className="w-4 h-4" /></button>
               </div>
             </div>
           </div>

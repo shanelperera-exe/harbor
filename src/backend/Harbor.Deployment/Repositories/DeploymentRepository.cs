@@ -7,9 +7,9 @@ namespace Harbor.Deployment.Repositories;
 public class DeploymentRepository(DbConnectionFactory dbFactory) : IDeploymentRepository
 {
     public Task<(IReadOnlyList<DeploymentEntity> Items, int TotalCount)> GetHistoryAsync(int ownerId, int serviceId, string? status, int skip, int take) =>
-        GetHistoryAsync(ownerId, serviceId.ToString(), status, skip, take);
+        GetHistoryAsync(ownerId, null, null, serviceId.ToString(), status, skip, take);
 
-    public async Task<(IReadOnlyList<DeploymentEntity> Items, int TotalCount)> GetHistoryAsync(int ownerId, string? serviceId, string? status, int skip, int take)
+    public async Task<(IReadOnlyList<DeploymentEntity> Items, int TotalCount)> GetHistoryAsync(int ownerId, string? projectId, string? environment, string? serviceId, string? status, int skip, int take)
     {
         await using var connection = dbFactory.CreateConnection();
         await connection.OpenAsync();
@@ -17,6 +17,14 @@ public class DeploymentRepository(DbConnectionFactory dbFactory) : IDeploymentRe
         var whereClauses = new List<string> { 
             "d.\"ServiceId\" IN (SELECT s.\"Id\" FROM \"Services\" s JOIN \"Projects\" p ON s.\"ProjectId\" = p.\"Id\" WHERE p.\"OwnerId\" = @ownerId)"
         };
+        if (!string.IsNullOrWhiteSpace(projectId))
+        {
+            whereClauses.Add("p.\"Id\"::text = @projectId");
+        }
+        if (!string.IsNullOrWhiteSpace(environment))
+        {
+            whereClauses.Add("LOWER(d.\"Environment\") = LOWER(@environment)");
+        }
         if (!string.IsNullOrWhiteSpace(serviceId))
         {
             whereClauses.Add("""
@@ -35,8 +43,12 @@ public class DeploymentRepository(DbConnectionFactory dbFactory) : IDeploymentRe
         var filter = "WHERE " + string.Join(" AND ", whereClauses);
 
         await using var count = connection.CreateCommand();
-        count.CommandText = $"SELECT COUNT(1) FROM \"Deployments\" d {filter}";
-        AddFilters(count, ownerId, serviceId, status);
+        count.CommandText = $@"
+            SELECT COUNT(1) FROM ""Deployments"" d
+            JOIN ""Services"" s ON d.""ServiceId"" = s.""Id""
+            JOIN ""Projects"" p ON s.""ProjectId"" = p.""Id""
+            {filter}";
+        AddFilters(count, ownerId, projectId, environment, serviceId, status);
         var total = Convert.ToInt32(await count.ExecuteScalarAsync());
 
         await using var command = connection.CreateCommand();
@@ -50,7 +62,7 @@ public class DeploymentRepository(DbConnectionFactory dbFactory) : IDeploymentRe
             {filter}
             ORDER BY d.""StartedAt"" DESC, d.""Id"" DESC
             OFFSET @skip LIMIT @take";
-        AddFilters(command, ownerId, serviceId, status);
+        AddFilters(command, ownerId, projectId, environment, serviceId, status);
         command.Parameters.AddWithValue("skip", skip);
         command.Parameters.AddWithValue("take", take);
         
@@ -245,9 +257,17 @@ public class DeploymentRepository(DbConnectionFactory dbFactory) : IDeploymentRe
         return (await ReadDeploymentsAsync(command)).SingleOrDefault();
     }
 
-    private static void AddFilters(NpgsqlCommand command, int ownerId, string? serviceId, string? status)
+    private static void AddFilters(NpgsqlCommand command, int ownerId, string? projectId, string? environment, string? serviceId, string? status)
     {
         command.Parameters.AddWithValue("ownerId", ownerId);
+        if (!string.IsNullOrWhiteSpace(projectId))
+        {
+            command.Parameters.AddWithValue("projectId", projectId);
+        }
+        if (!string.IsNullOrWhiteSpace(environment))
+        {
+            command.Parameters.AddWithValue("environment", environment);
+        }
         if (!string.IsNullOrWhiteSpace(serviceId))
         {
             command.Parameters.AddWithValue("serviceId", serviceId);

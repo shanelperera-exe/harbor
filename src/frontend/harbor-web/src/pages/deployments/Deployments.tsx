@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { getDeploymentHistory, getDeploymentDetails, type Deployment, type DeploymentDetails } from '../../services/deploymentService';
+import { getProjects, type Project } from '../../services/projectService';
 import { Loader2, CheckCircle, XCircle, Clock, AlertTriangle, GitCommit, GitBranch, Zap, RefreshCw, ChevronRight, User } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 
@@ -40,7 +41,10 @@ export default function Deployments() {
   const [history, setHistory] = useState<Deployment[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [page, setPage] = useState(1);
+  const [projectId, setProjectId] = useState('');
+  const [environment, setEnvironment] = useState('');
   const [status, setStatus] = useState('');
+  const [projects, setProjects] = useState<Project[]>([]);
   const [selected, setSelected] = useState<DeploymentDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -51,7 +55,12 @@ export default function Deployments() {
     if (silent) setIsRefreshing(true);
     else { setIsLoading(true); setError(null); }
     try {
-      const result = await getDeploymentHistory({ status: status || undefined, page });
+      const result = await getDeploymentHistory({ 
+        projectId: projectId || undefined,
+        environment: environment || undefined,
+        status: status || undefined, 
+        page 
+      });
       setHistory(result.items);
       setTotalCount(result.totalCount);
     } catch (err) {
@@ -60,9 +69,13 @@ export default function Deployments() {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [status, page]);
+  }, [projectId, environment, status, page]);
 
   useEffect(() => { load(false); }, [load]);
+  
+  useEffect(() => {
+    getProjects().then(setProjects).catch(() => {});
+  }, []);
 
   // Auto-poll while active deployments exist
   useEffect(() => {
@@ -121,6 +134,32 @@ export default function Deployments() {
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
           </button>
+          <select
+            value={projectId}
+            onChange={(e) => { setProjectId(e.target.value); setPage(1); }}
+            aria-label="Filter deployment project"
+            className="h-8 pl-3 pr-8 text-sm border border-gray-200 dark:border-[#2a2a2a] bg-white dark:bg-[#141414] text-gray-700 dark:text-[#c9c9c9] rounded-md focus:outline-none focus:border-[#3b82f6] transition-colors"
+          >
+            <option value="" className="bg-white dark:bg-[#141414]">All projects</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id} className="bg-white dark:bg-[#141414]">
+                {p.name}
+              </option>
+            ))}
+          </select>
+          <select
+            value={environment}
+            onChange={(e) => { setEnvironment(e.target.value); setPage(1); }}
+            aria-label="Filter deployment environment"
+            className="h-8 pl-3 pr-8 text-sm border border-gray-200 dark:border-[#2a2a2a] bg-white dark:bg-[#141414] text-gray-700 dark:text-[#c9c9c9] rounded-md focus:outline-none focus:border-[#3b82f6] transition-colors"
+          >
+            <option value="" className="bg-white dark:bg-[#141414]">All environments</option>
+            {['Development', 'Staging', 'Production'].map((v) => (
+              <option key={v} value={v} className="bg-white dark:bg-[#141414]">
+                {v}
+              </option>
+            ))}
+          </select>
           <select
             value={status}
             onChange={(e) => { setStatus(e.target.value); setPage(1); }}

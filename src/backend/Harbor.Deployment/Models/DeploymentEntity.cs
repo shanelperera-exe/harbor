@@ -18,4 +18,9 @@ public class DeploymentEntity
     public string? TriggerError { get; init; }
     public long? WorkflowRunId { get; init; }
     public string? WorkflowRunUrl { get; init; }
+
+    // Joined properties for history view
+    public string? ProjectName { get; init; }
+    public string? ServiceName { get; init; }
+    public string? UserName { get; init; }
 }

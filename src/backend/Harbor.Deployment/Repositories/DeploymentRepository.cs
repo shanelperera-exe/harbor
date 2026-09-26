@@ -14,35 +14,76 @@ public class DeploymentRepository(DbConnectionFactory dbFactory) : IDeploymentRe
         await using var connection = dbFactory.CreateConnection();
         await connection.OpenAsync();
 
-        var whereClauses = new List<string> { "\"OwnerId\" = @ownerId" };
+        var whereClauses = new List<string> { 
+            "d.\"ServiceId\" IN (SELECT s.\"Id\" FROM \"Services\" s JOIN \"Projects\" p ON s.\"ProjectId\" = p.\"Id\" WHERE p.\"OwnerId\" = @ownerId)"
+        };
         if (!string.IsNullOrWhiteSpace(serviceId))
         {
             whereClauses.Add("""
                 EXISTS (
                     SELECT 1
                     FROM "Services" s
-                    WHERE s."Id" = "Deployments"."ServiceId"
+                    WHERE s."Id" = d."ServiceId"
                       AND (s."PublicId" = @serviceId OR s."Id"::text = @serviceId)
                 )
                 """);
         }
         if (!string.IsNullOrWhiteSpace(status))
         {
-            whereClauses.Add("LOWER(\"Status\") = LOWER(@status)");
+            whereClauses.Add("LOWER(d.\"Status\") = LOWER(@status)");
         }
         var filter = "WHERE " + string.Join(" AND ", whereClauses);
 
         await using var count = connection.CreateCommand();
-        count.CommandText = $"SELECT COUNT(1) FROM \"Deployments\" {filter}";
+        count.CommandText = $"SELECT COUNT(1) FROM \"Deployments\" d {filter}";
         AddFilters(count, ownerId, serviceId, status);
         var total = Convert.ToInt32(await count.ExecuteScalarAsync());
 
         await using var command = connection.CreateCommand();
-        command.CommandText = $"SELECT \"Id\", \"PublicId\", \"ServiceId\", \"OwnerId\", \"Environment\", \"Version\", \"CommitSha\", \"Status\", \"StartedAt\", \"CompletedAt\", \"FailureReason\", \"WorkflowFile\", \"WorkflowRef\", \"TriggerError\", \"WorkflowRunId\", \"WorkflowRunUrl\" FROM \"Deployments\" {filter} ORDER BY \"StartedAt\" DESC, \"Id\" DESC OFFSET @skip LIMIT @take";
+        command.CommandText = $@"
+            SELECT d.""Id"", d.""PublicId"", d.""ServiceId"", d.""OwnerId"", d.""Environment"", d.""Version"", d.""CommitSha"", d.""Status"", d.""StartedAt"", d.""CompletedAt"", d.""FailureReason"", d.""WorkflowFile"", d.""WorkflowRef"", d.""TriggerError"", d.""WorkflowRunId"", d.""WorkflowRunUrl"",
+                   p.""Name"" AS ""ProjectName"", s.""Name"" AS ""ServiceName"", u.""Username"" AS ""UserName""
+            FROM ""Deployments"" d
+            JOIN ""Services"" s ON d.""ServiceId"" = s.""Id""
+            JOIN ""Projects"" p ON s.""ProjectId"" = p.""Id""
+            LEFT JOIN ""Users"" u ON d.""OwnerId"" = u.""Id""
+            {filter}
+            ORDER BY d.""StartedAt"" DESC, d.""Id"" DESC
+            OFFSET @skip LIMIT @take";
         AddFilters(command, ownerId, serviceId, status);
         command.Parameters.AddWithValue("skip", skip);
         command.Parameters.AddWithValue("take", take);
-        return (await ReadDeploymentsAsync(command), total);
+        
+        var result = new List<DeploymentEntity>();
+        await using var reader = await command.ExecuteReaderAsync();
+        while (await reader.ReadAsync()) 
+        {
+            var entity = new DeploymentEntity
+            {
+                Id = reader.GetInt32(0),
+                PublicId = reader.IsDBNull(1) ? string.Empty : reader.GetString(1),
+                ServiceId = reader.GetInt32(2),
+                OwnerId = reader.GetInt32(3),
+                Environment = reader.GetString(4),
+                Version = reader.GetString(5),
+                CommitSha = reader.IsDBNull(6) ? null : reader.GetString(6),
+                Status = reader.GetString(7),
+                StartedAt = reader.GetDateTime(8),
+                CompletedAt = reader.IsDBNull(9) ? null : reader.GetDateTime(9),
+                FailureReason = reader.IsDBNull(10) ? null : reader.GetString(10),
+                WorkflowFile = reader.IsDBNull(11) ? null : reader.GetString(11),
+                WorkflowRef = reader.IsDBNull(12) ? null : reader.GetString(12),
+                TriggerError = reader.IsDBNull(13) ? null : reader.GetString(13),
+                WorkflowRunId = reader.IsDBNull(14) ? null : reader.GetInt64(14),
+                WorkflowRunUrl = reader.IsDBNull(15) ? null : reader.GetString(15),
+                ProjectName = reader.IsDBNull(16) ? null : reader.GetString(16),
+                ServiceName = reader.IsDBNull(17) ? null : reader.GetString(17),
+                UserName = reader.IsDBNull(18) ? null : reader.GetString(18)
+            };
+            result.Add(entity);
+        }
+
+        return (result, total);
     }
 
     public async Task<DeploymentEntity?> GetByIdAsync(int id, int ownerId)

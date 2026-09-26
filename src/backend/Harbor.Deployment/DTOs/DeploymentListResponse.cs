@@ -21,4 +21,7 @@ public class DeploymentResponse
     public DateTime? CompletedAt { get; init; }
     public string? WorkflowFile { get; init; }
     public string? WorkflowRef { get; init; }
+    public string? ProjectName { get; init; }
+    public string? ServiceName { get; init; }
+    public string? UserName { get; init; }
 }

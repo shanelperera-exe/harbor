@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { getDeploymentHistory, getDeploymentDetails, type Deployment, type DeploymentDetails } from '../../services/deploymentService';
-import { Loader2, CheckCircle, XCircle, Clock, AlertTriangle, GitCommit, GitBranch, Zap, RefreshCw, ChevronRight } from 'lucide-react';
+import { Loader2, CheckCircle, XCircle, Clock, AlertTriangle, GitCommit, GitBranch, Zap, RefreshCw, ChevronRight, User } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 
 const POLL_MS = 6000;
@@ -167,8 +167,10 @@ export default function Deployments() {
                 <thead className="bg-gray-50 dark:bg-[#111] border-b border-gray-200 dark:border-[#1f1f1f]">
                   <tr>
                     <th className="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-[#6b6b6b] uppercase tracking-wider">Status</th>
+                    <th className="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-[#6b6b6b] uppercase tracking-wider">Project</th>
                     <th className="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-[#6b6b6b] uppercase tracking-wider">Environment</th>
                     <th className="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-[#6b6b6b] uppercase tracking-wider">Version / Commit</th>
+                    <th className="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-[#6b6b6b] uppercase tracking-wider">User</th>
                     <th className="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-[#6b6b6b] uppercase tracking-wider hidden md:table-cell">Duration</th>
                     <th className="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-[#6b6b6b] uppercase tracking-wider">Started</th>
                     <th className="px-4 py-3 w-12"><span className="sr-only">Details</span></th>
@@ -188,6 +190,10 @@ export default function Deployments() {
                         </span>
                       </td>
                       <td className="px-4 py-3">
+                        <div className="text-sm font-medium text-gray-900 dark:text-white max-w-[120px] truncate" title={dep.projectName || '—'}>{dep.projectName || '—'}</div>
+                        <div className="text-xs text-gray-500 dark:text-[#6b6b6b] max-w-[120px] truncate" title={dep.serviceName || ''}>{dep.serviceName || ''}</div>
+                      </td>
+                      <td className="px-4 py-3">
                         <span className="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium bg-gray-100 dark:bg-[#1a1a1a] text-gray-700 dark:text-[#aaa] border border-gray-200 dark:border-[#2a2a2a]">
                           {dep.environment}
                         </span>
@@ -203,6 +209,12 @@ export default function Deployments() {
                             {dep.commitSha.slice(0, 10)}
                           </div>
                         )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1.5 text-gray-700 dark:text-[#aaa] text-xs">
+                          <User className="w-3.5 h-3.5 text-gray-400" />
+                          <span className="truncate max-w-[100px]">{dep.userName || 'System'}</span>
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-gray-500 dark:text-[#6b6b6b] font-mono text-xs hidden md:table-cell">
                         {duration(dep)}
@@ -289,8 +301,22 @@ function DeploymentDetailPanel({ deployment }: { deployment: DeploymentDetails |
         {/* Meta */}
         <dl className="grid grid-cols-2 gap-3 text-sm">
           <div>
+            <dt className="text-xs text-gray-500 dark:text-[#6b6b6b] mb-0.5">Project / Service</dt>
+            <dd className="font-medium text-gray-900 dark:text-[#e3e3e3] flex flex-col">
+              <span>{deployment.projectName || '—'}</span>
+              <span className="text-xs text-gray-500 dark:text-[#6b6b6b]">{deployment.serviceName || '—'}</span>
+            </dd>
+          </div>
+          <div>
             <dt className="text-xs text-gray-500 dark:text-[#6b6b6b] mb-0.5">Environment</dt>
             <dd className="font-medium text-gray-900 dark:text-[#e3e3e3]">{deployment.environment}</dd>
+          </div>
+          <div>
+            <dt className="text-xs text-gray-500 dark:text-[#6b6b6b] mb-0.5">User</dt>
+            <dd className="font-medium text-gray-900 dark:text-[#e3e3e3] flex items-center gap-1.5">
+              <User className="w-3.5 h-3.5 text-gray-400" />
+              {deployment.userName || 'System'}
+            </dd>
           </div>
           <div>
             <dt className="text-xs text-gray-500 dark:text-[#6b6b6b] mb-0.5">Version</dt>

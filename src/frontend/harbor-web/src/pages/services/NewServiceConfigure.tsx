@@ -214,6 +214,7 @@ const NewServiceConfigure: React.FC = () => {
           repositoryName: repo.fullName,
           repositoryBranch: branch.trim(),
           repositoryCommit: deployType === 'commit' ? commit.trim() : undefined,
+          isPrivate: repo.isPrivate || false,
           workflowFile: workflowFile.trim() || 'deploy.yml',
           rootDir: rootDir.trim(),
           buildCommand: buildCommand.trim(),

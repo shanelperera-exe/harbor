@@ -3,6 +3,7 @@ const deploymentApiBase = (import.meta.env.VITE_API_BASE_URL || 'http://localhos
 export interface Deployment {
   id: number;
   publicId?: string;
+  hash?: string;
   serviceId?: number | string;
   environment: string;
   version: string;
@@ -28,6 +29,7 @@ export interface DeploymentDetails extends Deployment {
   failureReason?: string | null;
   triggerError?: string | null;
   workflowRunUrl?: string | null;
+  deploymentUrl?: string | null;
   logs: DeploymentLog[];
 }
 

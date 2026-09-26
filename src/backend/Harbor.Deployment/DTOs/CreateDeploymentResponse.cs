@@ -4,6 +4,7 @@ public class CreateDeploymentResponse
 {
     public int Id { get; init; }
     public string PublicId { get; init; } = string.Empty;
+    public string Hash { get; init; } = string.Empty;
     public string ServiceId { get; init; } = string.Empty;
     public int OwnerId { get; init; }
     public string Environment { get; init; } = string.Empty;

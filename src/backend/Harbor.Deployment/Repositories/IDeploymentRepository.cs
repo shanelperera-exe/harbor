@@ -15,7 +15,7 @@ public interface IDeploymentRepository
     Task<string?> GetRepositoryNameAsync(int serviceId);
     Task<string?> GetWorkflowFileAsync(int serviceId);
     Task<(bool Exists, int OwnerId, bool IsArchived, int ProjectId, int RealServiceId)> GetServiceAccessAsync(string serviceIdOrPublicId);
-    Task<(bool Exists, bool IsActive, string Type)?> GetEnvironmentByNameAsync(int projectId, string environmentName);
+    Task<(bool Exists, bool IsActive, string Type, string? DeploymentUrl)?> GetEnvironmentByNameAsync(int projectId, string environmentName);
     Task SetWorkflowRunAsync(int deploymentId, long workflowRunId, string runUrl);
     Task<DeploymentEntity?> GetByWorkflowRunIdAsync(long workflowRunId);
     Task AddLogsAsync(int deploymentId, string logText);

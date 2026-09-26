@@ -42,7 +42,10 @@ namespace Harbor.Project.Services
                 RepositoryName = request.RepositoryName?.Trim(),
                 RepositoryBranch = request.RepositoryBranch?.Trim(),
                 RepositoryCommit = request.RepositoryCommit?.Trim(),
-                WorkflowFile = string.IsNullOrWhiteSpace(request.WorkflowFile) ? "deploy.yml" : request.WorkflowFile.Trim()
+                WorkflowFile = string.IsNullOrWhiteSpace(request.WorkflowFile) ? "deploy.yml" : request.WorkflowFile.Trim(),
+                DeploymentUrl = request.DeploymentUrls != null ? System.Text.Json.JsonSerializer.Serialize(request.DeploymentUrls) : request.DeploymentUrl?.Trim(),
+                Provider = request.Provider?.Trim(),
+                IsPrivate = request.IsPrivate
             };
 
             var id = await _serviceRepository.CreateAsync(serviceEntity);
@@ -112,6 +115,20 @@ namespace Harbor.Project.Services
                 service.StartCommand = string.IsNullOrWhiteSpace(request.StartCommand) ? null : request.StartCommand.Trim();
             }
 
+            if (request.DeploymentUrls != null)
+            {
+                service.DeploymentUrl = System.Text.Json.JsonSerializer.Serialize(request.DeploymentUrls);
+            }
+            else if (request.DeploymentUrl != null)
+            {
+                service.DeploymentUrl = string.IsNullOrWhiteSpace(request.DeploymentUrl) ? null : request.DeploymentUrl.Trim();
+            }
+
+            if (request.Provider != null)
+            {
+                service.Provider = string.IsNullOrWhiteSpace(request.Provider) ? null : request.Provider.Trim();
+            }
+
             var updated = await _serviceRepository.UpdateAsync(service);
             if (!updated) return (false, "Failed to update service.", null);
 
@@ -119,21 +136,56 @@ namespace Harbor.Project.Services
             return (true, null, ToResponse(updatedService!));
         }
 
-        private static ServiceResponse ToResponse(ServiceEntity s) => new()
+        private static ServiceResponse ToResponse(ServiceEntity s)
         {
-            Id = s.Id,
-            PublicId = string.IsNullOrEmpty(s.PublicId) ? s.Id.ToString() : s.PublicId,
-            ProjectId = s.ProjectId,
-            Name = s.Name,
-            Type = s.Type,
-            RepositoryUrl = s.RepositoryUrl,
-            RepositoryName = s.RepositoryName,
-            RepositoryBranch = s.RepositoryBranch,
-            RepositoryCommit = s.RepositoryCommit,
-            WorkflowFile = s.WorkflowFile,
-            BuildCommand = s.BuildCommand,
-            StartCommand = s.StartCommand,
-            CreatedAt = s.CreatedAt
-        };
+            var response = new ServiceResponse
+            {
+                Id = s.Id,
+                PublicId = string.IsNullOrEmpty(s.PublicId) ? s.Id.ToString() : s.PublicId,
+                ProjectId = s.ProjectId,
+                Name = s.Name,
+                Type = s.Type,
+                RepositoryUrl = s.RepositoryUrl,
+                RepositoryName = s.RepositoryName,
+                RepositoryBranch = s.RepositoryBranch,
+                RepositoryCommit = s.RepositoryCommit,
+                WorkflowFile = s.WorkflowFile,
+                BuildCommand = s.BuildCommand,
+                StartCommand = s.StartCommand,
+                DeploymentUrl = s.DeploymentUrl,
+                Provider = s.Provider,
+                IsPrivate = s.IsPrivate,
+                CreatedAt = s.CreatedAt,
+                DeploymentUrls = new System.Collections.Generic.List<ServiceDeploymentUrl>()
+            };
+
+            if (!string.IsNullOrEmpty(s.DeploymentUrl))
+            {
+                try
+                {
+                    if (s.DeploymentUrl.Trim().StartsWith("["))
+                    {
+                        var parsedUrls = System.Text.Json.JsonSerializer.Deserialize<System.Collections.Generic.List<ServiceDeploymentUrl>>(s.DeploymentUrl);
+                        if (parsedUrls != null)
+                        {
+                            response.DeploymentUrls = parsedUrls;
+                            // Set primary DeploymentUrl to the first one for backward compatibility
+                            response.DeploymentUrl = parsedUrls.FirstOrDefault()?.Url;
+                        }
+                    }
+                    else
+                    {
+                        response.DeploymentUrls.Add(new ServiceDeploymentUrl { Environment = "Production", Url = s.DeploymentUrl });
+                    }
+                }
+                catch
+                {
+                    // Fallback if parsing fails
+                    response.DeploymentUrls.Add(new ServiceDeploymentUrl { Environment = "Production", Url = s.DeploymentUrl });
+                }
+            }
+
+            return response;
+        }
     }
 }

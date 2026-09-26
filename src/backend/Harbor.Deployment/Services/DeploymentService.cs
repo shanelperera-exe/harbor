@@ -64,7 +64,37 @@ public class DeploymentService : IDeploymentService
         var deployment = await repository.GetByIdAsync(id, ownerId);
         if (deployment is null) return null;
         var logs = await repository.GetLogsAsync(id);
-        return new DeploymentDetailsResponse { Id = deployment.Id, ServiceId = deployment.ServiceId, Environment = deployment.Environment, Version = deployment.Version, CommitSha = deployment.CommitSha, Status = deployment.Status, StartedAt = deployment.StartedAt, CompletedAt = deployment.CompletedAt, WorkflowFile = deployment.WorkflowFile, WorkflowRef = deployment.WorkflowRef, WorkflowRunUrl = deployment.WorkflowRunUrl, FailureReason = string.Equals(deployment.Status, "Failed", StringComparison.OrdinalIgnoreCase) ? deployment.FailureReason : null, TriggerError = deployment.TriggerError, Logs = logs.Select(log => new DeploymentLogResponse { Timestamp = log.Timestamp, Level = log.Level, Message = log.Message }).ToList() };
+        
+        string? deploymentUrl = null;
+        var serviceAccess = await repository.GetServiceAccessAsync(deployment.ServiceId.ToString());
+        if (serviceAccess.Exists)
+        {
+            var env = await repository.GetEnvironmentByNameAsync(serviceAccess.ProjectId, deployment.Environment);
+            if (env != null)
+            {
+                deploymentUrl = env.Value.DeploymentUrl;
+            }
+        }
+
+        return new DeploymentDetailsResponse { 
+            Id = deployment.Id, 
+            PublicId = string.IsNullOrEmpty(deployment.PublicId) ? deployment.Id.ToString() : deployment.PublicId,
+            Hash = !string.IsNullOrEmpty(deployment.PublicId) && deployment.PublicId.StartsWith("dep-") ? (deployment.PublicId.Length >= 13 ? deployment.PublicId.Substring(4, 9) : deployment.PublicId.Substring(4)) : deployment.Id.ToString(),
+            ServiceId = deployment.ServiceId, 
+            Environment = deployment.Environment, 
+            Version = deployment.Version, 
+            CommitSha = deployment.CommitSha, 
+            Status = deployment.Status, 
+            StartedAt = deployment.StartedAt, 
+            CompletedAt = deployment.CompletedAt, 
+            WorkflowFile = deployment.WorkflowFile, 
+            WorkflowRef = deployment.WorkflowRef, 
+            WorkflowRunUrl = deployment.WorkflowRunUrl, 
+            DeploymentUrl = deploymentUrl,
+            FailureReason = string.Equals(deployment.Status, "Failed", StringComparison.OrdinalIgnoreCase) ? deployment.FailureReason : null, 
+            TriggerError = deployment.TriggerError, 
+            Logs = logs.Select(log => new DeploymentLogResponse { Timestamp = log.Timestamp, Level = log.Level, Message = log.Message }).ToList() 
+        };
     }
 
     public async Task<(bool Success, string? Error, int? DeploymentId, string Status, string? CiWarning)> CreateAsync(CreateDeploymentRequest request, int ownerId, bool isAdmin)
@@ -241,7 +271,7 @@ public class DeploymentService : IDeploymentService
         CompletedAt = ciRun.CompletedAt,
     };
 
-    private static DeploymentResponse ToResponse(DeploymentEntity deployment) => new() { Id = deployment.Id, PublicId = string.IsNullOrEmpty(deployment.PublicId) ? deployment.Id.ToString() : deployment.PublicId, ServiceId = deployment.ServiceId, Environment = deployment.Environment, Version = deployment.Version, CommitSha = deployment.CommitSha, Status = deployment.Status, StartedAt = deployment.StartedAt, CompletedAt = deployment.CompletedAt, WorkflowFile = deployment.WorkflowFile, WorkflowRef = deployment.WorkflowRef, ProjectName = deployment.ProjectName, ServiceName = deployment.ServiceName, UserName = deployment.UserName };
+    private static DeploymentResponse ToResponse(DeploymentEntity deployment) => new() { Id = deployment.Id, PublicId = string.IsNullOrEmpty(deployment.PublicId) ? deployment.Id.ToString() : deployment.PublicId, Hash = !string.IsNullOrEmpty(deployment.PublicId) && deployment.PublicId.StartsWith("dep-") ? (deployment.PublicId.Length >= 13 ? deployment.PublicId.Substring(4, 9) : deployment.PublicId.Substring(4)) : deployment.Id.ToString(), ServiceId = deployment.ServiceId, Environment = deployment.Environment, Version = deployment.Version, CommitSha = deployment.CommitSha, Status = deployment.Status, StartedAt = deployment.StartedAt, CompletedAt = deployment.CompletedAt, WorkflowFile = deployment.WorkflowFile, WorkflowRef = deployment.WorkflowRef, ProjectName = deployment.ProjectName, ServiceName = deployment.ServiceName, UserName = deployment.UserName };
 
     // ── Deployment rollback (2.2) ──────────────────────────────────────────────
 

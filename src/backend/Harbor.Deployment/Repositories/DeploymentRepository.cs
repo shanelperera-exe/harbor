@@ -220,18 +220,18 @@ public class DeploymentRepository(DbConnectionFactory dbFactory) : IDeploymentRe
             : (false, 0, false, 0, 0);
     }
 
-    public async Task<(bool Exists, bool IsActive, string Type)?> GetEnvironmentByNameAsync(int projectId, string environmentName)
+    public async Task<(bool Exists, bool IsActive, string Type, string? DeploymentUrl)?> GetEnvironmentByNameAsync(int projectId, string environmentName)
     {
         await using var connection = dbFactory.CreateConnection();
         await connection.OpenAsync();
         await using var command = connection.CreateCommand();
-        command.CommandText = "SELECT \"IsActive\", \"Type\" FROM \"Environments\" WHERE \"ProjectId\" = @projectId AND \"Name\" = @environmentName;";
+        command.CommandText = "SELECT \"IsActive\", \"Type\", \"DeploymentUrl\" FROM \"Environments\" WHERE \"ProjectId\" = @projectId AND \"Name\" = @environmentName;";
         command.Parameters.AddWithValue("projectId", projectId);
         command.Parameters.AddWithValue("environmentName", environmentName);
 
         await using var reader = await command.ExecuteReaderAsync();
         return await reader.ReadAsync()
-            ? (true, reader.GetBoolean(0), reader.GetString(1))
+            ? (true, reader.GetBoolean(0), reader.GetString(1), reader.IsDBNull(2) ? null : reader.GetString(2))
             : null;
     }
 

@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { getDeploymentHistory, getDeploymentDetails, type Deployment, type DeploymentDetails } from '../../services/deploymentService';
 import { getProjects, type Project } from '../../services/projectService';
-import { Loader2, CheckCircle, XCircle, Clock, AlertTriangle, GitCommit, GitBranch, Zap, RefreshCw, ChevronRight, User } from 'lucide-react';
+import { Loader2, CheckCircle, XCircle, Clock, AlertTriangle, GitCommit, GitBranch, Zap, RefreshCw, ChevronRight, User, ExternalLink, Globe } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 
 const POLL_MS = 6000;
@@ -379,6 +379,28 @@ function DeploymentDetailPanel({ deployment }: { deployment: DeploymentDetails |
               <dd className="font-mono text-xs text-gray-700 dark:text-[#aaa] flex items-center gap-1">
                 <Zap className="w-3 h-3 text-gray-400" />
                 {deployment.workflowFile}
+              </dd>
+            </div>
+          )}
+          {deployment.deploymentUrl && (
+            <div>
+              <dt className="text-xs text-gray-500 dark:text-[#6b6b6b] mb-0.5">Application</dt>
+              <dd className="text-xs">
+                <a href={deployment.deploymentUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline flex items-center gap-1 font-medium">
+                  <Globe className="w-3 h-3" />
+                  View live App
+                </a>
+              </dd>
+            </div>
+          )}
+          {deployment.workflowRunUrl && (
+            <div>
+              <dt className="text-xs text-gray-500 dark:text-[#6b6b6b] mb-0.5">GitHub Action</dt>
+              <dd className="text-xs">
+                <a href={deployment.workflowRunUrl} target="_blank" rel="noopener noreferrer" className="text-gray-900 dark:text-[#e3e3e3] hover:text-blue-500 dark:hover:text-blue-400 hover:underline flex items-center gap-1 font-medium">
+                  <ExternalLink className="w-3 h-3" />
+                  View Run
+                </a>
               </dd>
             </div>
           )}

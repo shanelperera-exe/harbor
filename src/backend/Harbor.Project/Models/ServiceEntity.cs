@@ -14,6 +14,9 @@ namespace Harbor.Project.Models
         public string? WorkflowFile { get; set; }
         public string? BuildCommand { get; set; }
         public string? StartCommand { get; set; }
+        public string? DeploymentUrl { get; set; }
+        public string? Provider { get; set; }
+        public bool IsPrivate { get; set; }
         public DateTime CreatedAt { get; set; }
     }
 }

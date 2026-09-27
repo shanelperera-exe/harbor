@@ -57,7 +57,7 @@ namespace Harbor.Project.Services
 
             using var response = await _httpClient.SendAsync(request);
             if (!response.IsSuccessStatusCode)
-                return new List<GitHubRepository>();
+                throw new GitHubApiException(response.StatusCode, await response.Content.ReadAsStringAsync());
 
             var content = await response.Content.ReadAsStringAsync();
             using var document = JsonDocument.Parse(content);
@@ -93,7 +93,7 @@ namespace Harbor.Project.Services
 
             using var response = await _httpClient.SendAsync(request);
             if (!response.IsSuccessStatusCode)
-                return new List<GitHubBranch>();
+                throw new GitHubApiException(response.StatusCode, await response.Content.ReadAsStringAsync());
 
             var content = await response.Content.ReadAsStringAsync();
             using var document = JsonDocument.Parse(content);
@@ -117,9 +117,9 @@ namespace Harbor.Project.Services
             using var request = new HttpRequestMessage(HttpMethod.Get, $"repos/{owner}/{repo}/commits?sha={branch}&per_page=100");
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-            using var response = await _httpClient.SendAsync(request);
+using var response = await _httpClient.SendAsync(request);
             if (!response.IsSuccessStatusCode)
-                return new List<GitHubCommit>();
+                throw new GitHubApiException(response.StatusCode, await response.Content.ReadAsStringAsync());
 
             var content = await response.Content.ReadAsStringAsync();
             using var document = JsonDocument.Parse(content);
@@ -140,6 +140,17 @@ namespace Harbor.Project.Services
             }
 
             return commits;
+        }
+    }
+
+    public class GitHubApiException : Exception
+    {
+        public System.Net.HttpStatusCode StatusCode { get; }
+
+        public GitHubApiException(System.Net.HttpStatusCode statusCode, string? body) : base(
+            $"GitHub API request failed with status {(int)statusCode} ({statusCode}). Response: {body}")
+        {
+            StatusCode = statusCode;
         }
     }
 }

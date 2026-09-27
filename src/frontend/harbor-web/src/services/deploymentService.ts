@@ -1,3 +1,5 @@
+import { type StatusType } from '../components/ui/StatusBadge';
+
 const deploymentApiBase = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api') + '/deployments';
 
 export interface Deployment {
@@ -8,6 +10,7 @@ export interface Deployment {
   environment: string;
   version: string;
   commitSha?: string | null;
+  commitMessage?: string | null;
   status: string;
   startedAt: string;
   completedAt?: string | null;
@@ -16,6 +19,7 @@ export interface Deployment {
   workflowRunUrl?: string | null;
   projectName?: string | null;
   serviceName?: string | null;
+  serviceType?: string | null;
   userName?: string | null;
 }
 
@@ -75,6 +79,7 @@ export interface CreateDeploymentRequest {
   environment: string;
   version: string;
   commitSha?: string | null;
+  commitMessage?: string | null;
   branch?: string | null;
   /** Pass true to bypass the CI gate check and deploy even when CI is failing. */
   overrideCiGate?: boolean;
@@ -96,9 +101,9 @@ async function readResponse<T>(response: Response, fallback: string): Promise<T>
 }
 
 export async function getDeploymentHistory(
-  filters: { serviceId?: number | string; projectId?: number | string; environment?: string; status?: string; page?: number } = {},
+  filters: { serviceId?: number | string; projectId?: number | string; environment?: string; status?: string; page?: number; pageSize?: number } = {},
 ): Promise<DeploymentHistory> {
-  const query = new URLSearchParams({ page: String(filters.page ?? 1), pageSize: '20' });
+  const query = new URLSearchParams({ page: String(filters.page ?? 1), pageSize: String(filters.pageSize ?? 20) });
   if (filters.serviceId) query.set('serviceId', String(filters.serviceId));
   if (filters.projectId) query.set('projectId', String(filters.projectId));
   if (filters.environment) query.set('environment', filters.environment);
@@ -159,3 +164,11 @@ export async function getCiRunHistory(
     'Unable to load CI run history.',
   );
 }
+
+export const mapDeployStatus = (status: string): { type: StatusType, label: string } => {
+  const s = status.toLowerCase();
+  if (s === 'succeeded' || s === 'ready') return { type: 'ready', label: 'Success' };
+  if (s === 'failed' || s === 'error') return { type: 'error', label: 'Failed' };
+  if (s === 'running' || s === 'pending' || s === 'queued') return { type: 'running', label: 'Running' };
+  return { type: 'stopped', label: status.charAt(0).toUpperCase() + status.slice(1) };
+};

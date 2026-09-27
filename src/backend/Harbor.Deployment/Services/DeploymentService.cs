@@ -59,11 +59,11 @@ public class DeploymentService : IDeploymentService
         public Task PublishDeploymentEventAsync(DeploymentLifecycleEvent @event) => Task.CompletedTask;
     }
 
-    public async Task<DeploymentDetailsResponse?> GetDetailsAsync(int id, int ownerId)
+    public async Task<DeploymentDetailsResponse?> GetDetailsAsync(string identifier, int ownerId)
     {
-        var deployment = await repository.GetByIdAsync(id, ownerId);
+        var deployment = await repository.GetEntityByIdentifierAsync(identifier, ownerId);
         if (deployment is null) return null;
-        var logs = await repository.GetLogsAsync(id);
+        var logs = await repository.GetLogsAsync(deployment.Id);
         
         string? deploymentUrl = null;
         var serviceAccess = await repository.GetServiceAccessAsync(deployment.ServiceId.ToString());
@@ -93,6 +93,11 @@ public class DeploymentService : IDeploymentService
             DeploymentUrl = deploymentUrl,
             FailureReason = string.Equals(deployment.Status, "Failed", StringComparison.OrdinalIgnoreCase) ? deployment.FailureReason : null, 
             TriggerError = deployment.TriggerError, 
+            ProjectName = deployment.ProjectName,
+            ServiceName = deployment.ServiceName,
+            ServiceType = deployment.ServiceType,
+            UserName = deployment.UserName,
+            CommitMessage = deployment.CommitMessage,
             Logs = logs.Select(log => new DeploymentLogResponse { Timestamp = log.Timestamp, Level = log.Level, Message = log.Message }).ToList() 
         };
     }
@@ -111,8 +116,9 @@ public class DeploymentService : IDeploymentService
 
         if (string.IsNullOrWhiteSpace(request.Version)) return (false, "Version is required.", null, "Failed", null);
         var workflowFile = await repository.GetWorkflowFileAsync(serviceAccess.RealServiceId) ?? options.Value.DefaultWorkflowFile;
-        var workflowRef = string.IsNullOrWhiteSpace(request.CommitSha) ? request.Branch?.Trim() : request.CommitSha.Trim();
-        if (string.IsNullOrWhiteSpace(workflowRef)) return (false, "A branch or commit is required.", null, "Failed", null);
+        var ciRef = string.IsNullOrWhiteSpace(request.CommitSha) ? request.Branch?.Trim() : request.CommitSha.Trim();
+        var dispatchRef = string.IsNullOrWhiteSpace(request.Branch) ? "main" : request.Branch.Trim();
+        if (string.IsNullOrWhiteSpace(ciRef) || string.IsNullOrWhiteSpace(dispatchRef)) return (false, "A branch or commit is required.", null, "Failed", null);
         var repositoryName = await repository.GetRepositoryNameAsync(serviceAccess.RealServiceId);
         if (string.IsNullOrWhiteSpace(repositoryName) || !repositoryName.Contains('/')) return (false, "The service does not have a valid GitHub repository configured.", null, "Failed", null);
 
@@ -132,7 +138,7 @@ public class DeploymentService : IDeploymentService
         if (!string.IsNullOrWhiteSpace(installationToken) && !request.OverrideCiGate)
         {
             var repoParts = repositoryName.Split('/', 2);
-            var ciResult = await gitHubActionsClient.GetCiStatusAsync(repoParts[0], repoParts[1], workflowRef, installationToken);
+            var ciResult = await gitHubActionsClient.GetCiStatusAsync(repoParts[0], repoParts[1], ciRef, installationToken);
             ciWarning = ciResult.Status switch
             {
                 "failing" => ciResult.Summary,
@@ -151,9 +157,10 @@ public class DeploymentService : IDeploymentService
             Environment = request.Environment.Trim(),
             Version = request.Version.Trim(),
             CommitSha = request.CommitSha?.Trim(),
+            CommitMessage = request.CommitMessage?.Trim(),
             Status = "Pending",
             WorkflowFile = workflowFile,
-            WorkflowRef = workflowRef,
+            WorkflowRef = dispatchRef,
             StartedAt = DateTime.UtcNow
         };
 
@@ -162,7 +169,7 @@ public class DeploymentService : IDeploymentService
 
         // Resolve the user's GitHub App installation token for workflow dispatch
         var result = await gitHubActionsClient.DispatchAsync(new WorkflowDispatchRequest(
-            parts[0], parts[1], workflowFile, workflowRef,
+            parts[0], parts[1], workflowFile, dispatchRef,
             new Dictionary<string, string>
             {
                 ["environment"] = deployment.Environment,
@@ -271,7 +278,7 @@ public class DeploymentService : IDeploymentService
         CompletedAt = ciRun.CompletedAt,
     };
 
-    private static DeploymentResponse ToResponse(DeploymentEntity deployment) => new() { Id = deployment.Id, PublicId = string.IsNullOrEmpty(deployment.PublicId) ? deployment.Id.ToString() : deployment.PublicId, Hash = !string.IsNullOrEmpty(deployment.PublicId) && deployment.PublicId.StartsWith("dep-") ? (deployment.PublicId.Length >= 13 ? deployment.PublicId.Substring(4, 9) : deployment.PublicId.Substring(4)) : deployment.Id.ToString(), ServiceId = deployment.ServiceId, Environment = deployment.Environment, Version = deployment.Version, CommitSha = deployment.CommitSha, Status = deployment.Status, StartedAt = deployment.StartedAt, CompletedAt = deployment.CompletedAt, WorkflowFile = deployment.WorkflowFile, WorkflowRef = deployment.WorkflowRef, ProjectName = deployment.ProjectName, ServiceName = deployment.ServiceName, UserName = deployment.UserName };
+    private static DeploymentResponse ToResponse(DeploymentEntity deployment) => new() { Id = deployment.Id, PublicId = string.IsNullOrEmpty(deployment.PublicId) ? deployment.Id.ToString() : deployment.PublicId, Hash = !string.IsNullOrEmpty(deployment.PublicId) && deployment.PublicId.StartsWith("dep-") ? (deployment.PublicId.Length >= 13 ? deployment.PublicId.Substring(4, 9) : deployment.PublicId.Substring(4)) : deployment.Id.ToString(), ServiceId = deployment.ServiceId, Environment = deployment.Environment, Version = deployment.Version, CommitSha = deployment.CommitSha, CommitMessage = deployment.CommitMessage, Status = deployment.Status, StartedAt = deployment.StartedAt, CompletedAt = deployment.CompletedAt, WorkflowFile = deployment.WorkflowFile, WorkflowRef = deployment.WorkflowRef, ProjectName = deployment.ProjectName, ServiceName = deployment.ServiceName, ServiceType = deployment.ServiceType, UserName = deployment.UserName };
 
     // ── Deployment rollback (2.2) ──────────────────────────────────────────────
 

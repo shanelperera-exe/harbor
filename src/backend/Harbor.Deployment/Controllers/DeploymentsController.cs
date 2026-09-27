@@ -33,10 +33,10 @@ public class DeploymentsController(IDeploymentService deploymentService) : Contr
         if (userId is null) return Unauthorized();
         return Ok(await deploymentService.GetCiRunsAsync(userId.Value, query.ServiceId, query.Page, query.PageSize));
     }
-    [HttpGet("{id:int}")]
+    [HttpGet("{id}")]
     [ProducesResponseType(typeof(DeploymentDetailsResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<DeploymentDetailsResponse>> GetDetails(int id)
+    public async Task<ActionResult<DeploymentDetailsResponse>> GetDetails(string id)
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();

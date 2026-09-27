@@ -15,7 +15,7 @@ import { MdFiberNew } from 'react-icons/md';
 import FilterDropdown from '../../components/ui/FilterDropdown';
 import { getDeploymentHistory, type Deployment, mapDeployStatus } from '../../services/deploymentService';
 import { DeployModal } from './ServiceDetails';
-import { StatusBadge, type StatusType } from '../../components/ui/StatusBadge';
+import { StatusBadge } from '../../components/ui/StatusBadge';
 
 const POLL_INTERVAL_MS = 5000;
 

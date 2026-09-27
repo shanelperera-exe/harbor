@@ -268,7 +268,7 @@ export default function SideNav({
 
               <NavSection title="Infrastructure">
                 <NavItem label="Environments" to="/environments" icon={<IconGroups />} />
-                <NavItem label="Deployments" to="/deployments" icon={<IconWebhooks />} />
+                <NavItem label="Deployments" to="/deployments" icon={<IconServiceDeploys />} />
               </NavSection>
 
               <NavSection title="Observability">

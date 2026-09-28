@@ -83,9 +83,22 @@ builder.Services.AddScoped<IInstallationTokenResolver, InstallationTokenResolver
 
 builder.Services.Configure<KafkaOptions>(options =>
 {
+    // Option 1: Azure Event Hubs connection string (production)
+    options.ConnectionString = builder.Configuration["KAFKA_CONNECTION_STRING"] ?? string.Empty;
+    
+    // Option 2: Individual settings (local dev, Confluent Cloud, etc.)
     options.BootstrapServers = builder.Configuration["KAFKA_BOOTSTRAP_SERVERS"] ?? string.Empty;
     options.DeploymentTopic = builder.Configuration["KAFKA_DEPLOYMENT_TOPIC"] ?? string.Empty;
+    options.SaslUsername = builder.Configuration["KAFKA_SASL_USERNAME"] ?? string.Empty;
+    options.SaslPassword = builder.Configuration["KAFKA_SASL_PASSWORD"] ?? string.Empty;
+    options.SecurityProtocol = builder.Configuration["KAFKA_SECURITY_PROTOCOL"] ?? "Plaintext";
+    options.SaslMechanism = builder.Configuration["KAFKA_SASL_MECHANISM"] ?? "Plain";
+    options.AutoOffsetReset = builder.Configuration["KAFKA_AUTO_OFFSET_RESET"] ?? "Latest";
+    
     options.ConsumerGroupId = builder.Configuration["KAFKA_CONSUMER_GROUP_ID"] ?? "harbor-deployment-group";
+    
+    // Connection string takes priority and overwrites individual settings
+    options.ApplyConnectionString();
 });
 builder.Services.AddSingleton<IKafkaProducerService, KafkaProducerService>();
 builder.Services.AddHostedService<KafkaConsumerService>();

@@ -32,6 +32,16 @@ public class KafkaProducerService : IKafkaProducerService, IDisposable
                 BrokerAddressFamily = BrokerAddressFamily.V4
             };
 
+            // Configure SASL/SSL for Azure Event Hubs
+            if (!string.IsNullOrWhiteSpace(this.options.SaslUsername) && !string.IsNullOrWhiteSpace(this.options.SaslPassword))
+            {
+                config.SecurityProtocol = Enum.Parse<SecurityProtocol>(this.options.SecurityProtocol);
+                config.SaslMechanism = Enum.Parse<SaslMechanism>(this.options.SaslMechanism);
+                config.SaslUsername = this.options.SaslUsername;
+                config.SaslPassword = this.options.SaslPassword;
+                logger.LogInformation("Kafka producer configured with SASL/{Protocol}", this.options.SecurityProtocol);
+            }
+
             producer = new ProducerBuilder<string, string>(config).Build();
             logger.LogInformation("Kafka producer initialized with servers: {Servers}", this.options.BootstrapServers);
         }
@@ -63,12 +73,10 @@ public class KafkaProducerService : IKafkaProducerService, IDisposable
         catch (ProduceException<string, string> ex)
         {
             logger.LogError(ex, "Kafka delivery failed for deployment {DeploymentId}. Reason: {Reason}", @event.DeploymentId, ex.Error.Reason);
-            // Do not throw the exception to prevent application crash
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "An unexpected error occurred while publishing deployment event {DeploymentId}", @event.DeploymentId);
-            // Do not throw the exception to prevent application crash
         }
     }
 

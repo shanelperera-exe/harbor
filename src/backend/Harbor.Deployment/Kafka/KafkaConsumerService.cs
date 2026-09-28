@@ -39,10 +39,20 @@ public class KafkaConsumerService : BackgroundService
         {
             BootstrapServers = _options.BootstrapServers,
             GroupId = _options.ConsumerGroupId,
-            AutoOffsetReset = AutoOffsetReset.Earliest,
+            AutoOffsetReset = Enum.Parse<AutoOffsetReset>(_options.AutoOffsetReset),
             EnableAutoCommit = false,
             BrokerAddressFamily = BrokerAddressFamily.V4
         };
+
+        // Configure SASL/SSL for Azure Event Hubs
+        if (!string.IsNullOrWhiteSpace(_options.SaslUsername) && !string.IsNullOrWhiteSpace(_options.SaslPassword))
+        {
+            config.SecurityProtocol = Enum.Parse<SecurityProtocol>(_options.SecurityProtocol);
+            config.SaslMechanism = Enum.Parse<SaslMechanism>(_options.SaslMechanism);
+            config.SaslUsername = _options.SaslUsername;
+            config.SaslPassword = _options.SaslPassword;
+            _logger.LogInformation("Kafka consumer configured with SASL/{Protocol}", _options.SecurityProtocol);
+        }
 
         using var consumer = new ConsumerBuilder<Ignore, string>(config).Build();
         consumer.Subscribe(_options.DeploymentTopic);

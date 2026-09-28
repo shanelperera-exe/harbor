@@ -98,10 +98,11 @@ public class DeploymentApiTests : IClassFixture<DeploymentApiFactory>
         // Use a dedicated user to avoid collisions with other tests
         const int userId = 99902;
         var client = CreateClient(userId, "Admin");
+        var serviceId = await _factory.ProvisionServiceForOwnerAsync(userId);
 
-        // Deployments land in "Pending" status right after creation; we can filter on that.
+        // Deployments move to "Running" once the workflow dispatch succeeds.
         await CreateDeploymentAsync(client, new CreateDeploymentRequest
-            { ServiceId = SeedSvc.ToString(), Environment = "production", Version = "filter-test", CommitSha = "abc123" });
+            { ServiceId = serviceId.ToString(), Environment = "production", Version = "filter-test", CommitSha = "abc123" });
 
         var response = await client.GetAsync("/api/deployments?status=Running");
         var body     = await response.Content.ReadFromJsonAsync<DeploymentListResponse>();
@@ -116,9 +117,10 @@ public class DeploymentApiTests : IClassFixture<DeploymentApiFactory>
     {
         const int userId = 99903;
         var client = CreateClient(userId, "Admin");
+        var serviceId = await _factory.ProvisionServiceForOwnerAsync(userId);
 
         await CreateDeploymentAsync(client, new CreateDeploymentRequest
-            { ServiceId = SeedSvc.ToString(), Environment = "staging", Version = "case-test", CommitSha = "abc123" });
+            { ServiceId = serviceId.ToString(), Environment = "staging", Version = "case-test", CommitSha = "abc123" });
 
         // Use lowercase status filter — service trims and the repo does LOWER() compare
         var response = await client.GetAsync("/api/deployments?status=running");
@@ -133,11 +135,12 @@ public class DeploymentApiTests : IClassFixture<DeploymentApiFactory>
     {
         const int userId = 99904;
         var client = CreateClient(userId, "Admin");
+        var serviceId = await _factory.ProvisionServiceForOwnerAsync(userId);
 
         // Create 3 deployments
         for (var i = 1; i <= 3; i++)
             await CreateDeploymentAsync(client, new CreateDeploymentRequest
-                { ServiceId = SeedSvc.ToString(), Environment = "dev", Version = $"page-test-{i}", CommitSha = "abc123" });
+                { ServiceId = serviceId.ToString(), Environment = "dev", Version = $"page-test-{i}", CommitSha = "abc123" });
 
         // Fetch page 1 with pageSize=2
         var response = await client.GetAsync("/api/deployments?page=1&pageSize=2");
@@ -147,31 +150,31 @@ public class DeploymentApiTests : IClassFixture<DeploymentApiFactory>
         Assert.Equal(2, body!.Items.Count);
         Assert.Equal(1, body.Page);
         Assert.Equal(2, body.PageSize);
-        Assert.True(body.TotalCount >= 3);
+        // History is scoped to this user's own project, which holds exactly 3 deployments.
+        Assert.Equal(3, body.TotalCount);
     }
 
     [Fact]
     public async Task GetHistory_FilterByServiceId_ReturnsOnlyThatServicesDeployments()
     {
         const int userId = 99905;
-        var client = CreateClient(userId);
+        var client = CreateClient(userId, "Admin");
+        var firstServiceId = await _factory.ProvisionServiceForOwnerAsync(userId);
+        var secondServiceId = await _factory.ProvisionServiceForOwnerAsync(userId);
 
-        // Create one deployment for SeedSvc and one for OtherSvc (but OtherSvc belongs to
-        // OtherOwner — use admin to bypass ownership check for seeding purposes)
-        var adminClient = CreateClient(userId, "Admin");
-        var dep1 = await CreateDeploymentAsync(adminClient, new CreateDeploymentRequest
-            { ServiceId = SeedSvc.ToString(), Environment = "production", Version = "svc-filter-1", CommitSha = "abc123" });
-        var dep2 = await CreateDeploymentAsync(adminClient, new CreateDeploymentRequest
-            { ServiceId = OtherSvc.ToString(), Environment = "production", Version = "svc-filter-2", CommitSha = "abc123" });
+        var dep1 = await CreateDeploymentAsync(client, new CreateDeploymentRequest
+            { ServiceId = firstServiceId.ToString(), Environment = "production", Version = "svc-filter-1", CommitSha = "abc123" });
+        var dep2 = await CreateDeploymentAsync(client, new CreateDeploymentRequest
+            { ServiceId = secondServiceId.ToString(), Environment = "production", Version = "svc-filter-2", CommitSha = "abc123" });
 
-        // Admin can see both when not filtering
-        var all    = await adminClient.GetAsync("/api/deployments");
-        var allBody = await all.Content.ReadFromJsonAsync<DeploymentListResponse>();
+        // Both appear when not filtering
+        var all      = await client.GetAsync("/api/deployments");
+        var allBody  = await all.Content.ReadFromJsonAsync<DeploymentListResponse>();
         Assert.Contains(allBody!.Items, d => d.Id == dep1.Id);
         Assert.Contains(allBody.Items, d => d.Id == dep2.Id);
 
-        // When filtering by SeedSvc, only dep1 appears
-        var filtered     = await adminClient.GetAsync($"/api/deployments?serviceId={SeedSvc}");
+        // When filtering by the first service, only dep1 appears
+        var filtered     = await client.GetAsync($"/api/deployments?serviceId={firstServiceId}");
         var filteredBody = await filtered.Content.ReadFromJsonAsync<DeploymentListResponse>();
         Assert.Contains(filteredBody!.Items, d => d.Id == dep1.Id);
         Assert.DoesNotContain(filteredBody.Items, d => d.Id == dep2.Id);
@@ -411,15 +414,14 @@ public class DeploymentApiTests : IClassFixture<DeploymentApiFactory>
     public async Task Create_DeploymentAppearsInHistoryAfterCreation()
     {
         const int userId = 99906;
-        var client = CreateClient(userId);
+        var client = CreateClient(userId, "Admin");
+        var serviceId = await _factory.ProvisionServiceForOwnerAsync(userId);
 
-        // Admin-deploy because the seeded service belongs to SeedOwner, not userId
-        var adminClient = CreateClient(userId, "Admin");
-        var dep = await CreateDeploymentAsync(adminClient, new CreateDeploymentRequest
-            { ServiceId = SeedSvc.ToString(), Environment = "production", Version = "history-verify", CommitSha = "abc123" });
+        var dep = await CreateDeploymentAsync(client, new CreateDeploymentRequest
+            { ServiceId = serviceId.ToString(), Environment = "production", Version = "history-verify", CommitSha = "abc123" });
 
-        // The created deployment should appear in the admin's history
-        var history = await adminClient.GetAsync("/api/deployments");
+        // The created deployment should appear in the owner's history
+        var history = await client.GetAsync("/api/deployments");
         var body    = await history.Content.ReadFromJsonAsync<DeploymentListResponse>();
 
         Assert.Contains(body!.Items, d => d.Id == dep.Id);

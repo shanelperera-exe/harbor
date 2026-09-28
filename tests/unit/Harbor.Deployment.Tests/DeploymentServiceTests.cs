@@ -100,10 +100,10 @@ public class DeploymentServiceTests
     public async Task GetDetailsAsync_SuccessfulDeployment_DoesNotReturnFailureReason()
     {
         var deployment = new DeploymentEntity { Id = 5, OwnerId = 7, ServiceId = 13, Environment = "production", Version = "1.0.0", Status = "Succeeded", StartedAt = DateTime.UtcNow, FailureReason = "should be hidden" };
-        _repository.Setup(r => r.GetByIdAsync(5, 7)).ReturnsAsync(deployment);
+        _repository.Setup(r => r.GetEntityByIdentifierAsync("5", 7)).ReturnsAsync(deployment);
         _repository.Setup(r => r.GetLogsAsync(5)).ReturnsAsync(new List<DeploymentLogEntity>());
 
-        var result = await _service.GetDetailsAsync(5, 7);
+        var result = await _service.GetDetailsAsync("5", 7);
 
         Assert.NotNull(result);
         Assert.Equal("Succeeded", result!.Status);
@@ -114,13 +114,13 @@ public class DeploymentServiceTests
     public async Task GetDetailsAsync_FailedDeployment_ReturnsFailureReasonAndLogs()
     {
         var deployment = new DeploymentEntity { Id = 8, OwnerId = 7, ServiceId = 13, Environment = "staging", Version = "1.5.0", Status = "Failed", StartedAt = DateTime.UtcNow, FailureReason = "Health check did not become ready." };
-        _repository.Setup(r => r.GetByIdAsync(8, 7)).ReturnsAsync(deployment);
+        _repository.Setup(r => r.GetEntityByIdentifierAsync("8", 7)).ReturnsAsync(deployment);
         _repository.Setup(r => r.GetLogsAsync(8)).ReturnsAsync(new List<DeploymentLogEntity>
         {
             new() { DeploymentId = 8, Timestamp = deployment.StartedAt, Level = "Error", Message = "Readiness probe timed out." }
         });
 
-        var result = await _service.GetDetailsAsync(8, 7);
+        var result = await _service.GetDetailsAsync("8", 7);
 
         Assert.NotNull(result);
         Assert.Equal("Failed", result!.Status);
@@ -133,9 +133,9 @@ public class DeploymentServiceTests
     [Fact]
     public async Task GetDetailsAsync_UnknownOrOtherUsersDeployment_ReturnsNull()
     {
-        _repository.Setup(r => r.GetByIdAsync(99, 7)).ReturnsAsync((DeploymentEntity?)null);
+        _repository.Setup(r => r.GetEntityByIdentifierAsync("99", 7)).ReturnsAsync((DeploymentEntity?)null);
 
-        var result = await _service.GetDetailsAsync(99, 7);
+        var result = await _service.GetDetailsAsync("99", 7);
 
         Assert.Null(result);
         _repository.Verify(r => r.GetLogsAsync(It.IsAny<int>()), Times.Never);
@@ -146,14 +146,14 @@ public class DeploymentServiceTests
     {
         var now = DateTime.UtcNow;
         var deployment = new DeploymentEntity { Id = 3, OwnerId = 1, ServiceId = 2, Environment = "staging", Version = "1.0.0", Status = "Failed", StartedAt = now, FailureReason = "OOM" };
-        _repository.Setup(r => r.GetByIdAsync(3, 1)).ReturnsAsync(deployment);
+        _repository.Setup(r => r.GetEntityByIdentifierAsync("3", 1)).ReturnsAsync(deployment);
         _repository.Setup(r => r.GetLogsAsync(3)).ReturnsAsync(new List<DeploymentLogEntity>
         {
             new() { DeploymentId = 3, Timestamp = now, Level = "Info", Message = "Starting deployment." },
             new() { DeploymentId = 3, Timestamp = now.AddSeconds(1), Level = "Error", Message = "Out of memory." }
         });
 
-        var result = await _service.GetDetailsAsync(3, 1);
+        var result = await _service.GetDetailsAsync("3", 1);
 
         Assert.NotNull(result);
         Assert.Equal(2, result!.Logs.Count);
@@ -168,7 +168,7 @@ public class DeploymentServiceTests
         const int ownerId = 7;
 
         _repository.Setup(r => r.GetServiceAccessAsync("13")).ReturnsAsync((true, 7, false, 10, 13));
-        _repository.Setup(r => r.GetEnvironmentByNameAsync(10, "production")).ReturnsAsync((true, true, "Production"));
+        _repository.Setup(r => r.GetEnvironmentByNameAsync(10, "production")).ReturnsAsync((true, true, "Production", null));
         _repository.Setup(r => r.CreateAsync(It.IsAny<DeploymentEntity>())).ReturnsAsync(42);
 
         var result = await _service.CreateAsync(request, ownerId, isAdmin: false);
@@ -196,7 +196,7 @@ public class DeploymentServiceTests
         const int ownerId = 7;
 
         _repository.Setup(r => r.GetServiceAccessAsync("13")).ReturnsAsync((true, 7, false, 10, 13));
-        _repository.Setup(r => r.GetEnvironmentByNameAsync(10, "production")).ReturnsAsync((true, true, "Production"));
+        _repository.Setup(r => r.GetEnvironmentByNameAsync(10, "production")).ReturnsAsync((true, true, "Production", null));
         _repository.Setup(r => r.CreateAsync(It.IsAny<DeploymentEntity>())).ReturnsAsync(42);
 
         _githubMock.Setup(g => g.DispatchAsync(It.IsAny<WorkflowDispatchRequest>(), It.IsAny<System.Threading.CancellationToken>()))
@@ -225,7 +225,7 @@ public class DeploymentServiceTests
         const int ownerId = 7;
 
         _repository.Setup(r => r.GetServiceAccessAsync("13")).ReturnsAsync((true, 7, false, 10, 13));
-        _repository.Setup(r => r.GetEnvironmentByNameAsync(10, "staging")).ReturnsAsync((true, true, "Staging"));
+        _repository.Setup(r => r.GetEnvironmentByNameAsync(10, "staging")).ReturnsAsync((true, true, "Staging", null));
         _repository.Setup(r => r.CreateAsync(It.IsAny<DeploymentEntity>())).ReturnsAsync(1);
 
         var result = await _service.CreateAsync(request, ownerId, isAdmin: false);
@@ -249,7 +249,7 @@ public class DeploymentServiceTests
         var request = new CreateDeploymentRequest { ServiceId = "13", Environment = "production", Version = "1.0.0", CommitSha = null, Branch = "main" };
 
         _repository.Setup(r => r.GetServiceAccessAsync("13")).ReturnsAsync((true, 7, false, 10, 13));
-        _repository.Setup(r => r.GetEnvironmentByNameAsync(10, "production")).ReturnsAsync((true, true, "Production"));
+        _repository.Setup(r => r.GetEnvironmentByNameAsync(10, "production")).ReturnsAsync((true, true, "Production", null));
         _repository.Setup(r => r.CreateAsync(It.IsAny<DeploymentEntity>())).ReturnsAsync(5);
 
         var result = await _service.CreateAsync(request, 7, isAdmin: false);
@@ -264,7 +264,7 @@ public class DeploymentServiceTests
         var request = new CreateDeploymentRequest { ServiceId = "13", Environment = "  production  ", Version = "  1.0.0  ", CommitSha = "  abc  ", Branch = "main" };
 
         _repository.Setup(r => r.GetServiceAccessAsync("13")).ReturnsAsync((true, 7, false, 10, 13));
-        _repository.Setup(r => r.GetEnvironmentByNameAsync(10, "production")).ReturnsAsync((true, true, "Production"));
+        _repository.Setup(r => r.GetEnvironmentByNameAsync(10, "production")).ReturnsAsync((true, true, "Production", null));
         _repository.Setup(r => r.CreateAsync(It.IsAny<DeploymentEntity>())).ReturnsAsync(1);
 
         await _service.CreateAsync(request, 7, isAdmin: false);
@@ -284,7 +284,7 @@ public class DeploymentServiceTests
     {
         var request = new CreateDeploymentRequest { ServiceId = "13", Environment = "production", Version = version!, Branch = "main" };
         _repository.Setup(r => r.GetServiceAccessAsync("13")).ReturnsAsync((true, 7, false, 10, 13));
-        _repository.Setup(r => r.GetEnvironmentByNameAsync(10, "production")).ReturnsAsync((true, true, "Production"));
+        _repository.Setup(r => r.GetEnvironmentByNameAsync(10, "production")).ReturnsAsync((true, true, "Production", null));
 
         var result = await _service.CreateAsync(request, 7, isAdmin: false);
 
@@ -325,7 +325,7 @@ public class DeploymentServiceTests
     {
         var request = new CreateDeploymentRequest { ServiceId = "13", Environment = "nonexistent", Version = "1.0.0", Branch = "main" };
         _repository.Setup(r => r.GetServiceAccessAsync("13")).ReturnsAsync((true, 7, false, 10, 13));
-        _repository.Setup(r => r.GetEnvironmentByNameAsync(10, "nonexistent")).ReturnsAsync(((bool Exists, bool IsActive, string Type)?)null);
+        _repository.Setup(r => r.GetEnvironmentByNameAsync(10, "nonexistent")).ReturnsAsync(((bool Exists, bool IsActive, string Type, string? DeploymentUrl)?)null);
 
         var result = await _service.CreateAsync(request, 7, isAdmin: false);
 
@@ -339,7 +339,7 @@ public class DeploymentServiceTests
     {
         var request = new CreateDeploymentRequest { ServiceId = "13", Environment = "production", Version = "1.0.0", Branch = "main" };
         _repository.Setup(r => r.GetServiceAccessAsync("13")).ReturnsAsync((true, 7, false, 10, 13));
-        _repository.Setup(r => r.GetEnvironmentByNameAsync(10, "production")).ReturnsAsync((true, false, "Production"));
+        _repository.Setup(r => r.GetEnvironmentByNameAsync(10, "production")).ReturnsAsync((true, false, "Production", null));
 
         var result = await _service.CreateAsync(request, 7, isAdmin: false);
 
@@ -353,7 +353,7 @@ public class DeploymentServiceTests
     {
         var request = new CreateDeploymentRequest { ServiceId = "13", Environment = "qa", Version = "1.0.0", Branch = "main" };
         _repository.Setup(r => r.GetServiceAccessAsync("13")).ReturnsAsync((true, 7, false, 10, 13));
-        _repository.Setup(r => r.GetEnvironmentByNameAsync(10, "qa")).ReturnsAsync((true, true, "QA"));
+        _repository.Setup(r => r.GetEnvironmentByNameAsync(10, "qa")).ReturnsAsync((true, true, "QA", null));
 
         var result = await _service.CreateAsync(request, 7, isAdmin: false);
 
@@ -382,7 +382,7 @@ public class DeploymentServiceTests
     {
         var request = new CreateDeploymentRequest { ServiceId = "13", Environment = "production", Version = "1.0.0", Branch = "main" };
         _repository.Setup(r => r.GetServiceAccessAsync("13")).ReturnsAsync((true, 7, false, 10, 13));
-        _repository.Setup(r => r.GetEnvironmentByNameAsync(10, "production")).ReturnsAsync((true, true, "Production"));
+        _repository.Setup(r => r.GetEnvironmentByNameAsync(10, "production")).ReturnsAsync((true, true, "Production", null));
         _repository.Setup(r => r.CreateAsync(It.IsAny<DeploymentEntity>())).ReturnsAsync(42);
 
         var result = await _service.CreateAsync(request, ownerId: 99, isAdmin: true);
@@ -396,7 +396,7 @@ public class DeploymentServiceTests
     {
         var request = new CreateDeploymentRequest { ServiceId = "13", Environment = "production", Version = "1.0.0", Branch = "main" };
         _repository.Setup(r => r.GetServiceAccessAsync("13")).ReturnsAsync((true, 7, false, 10, 13));
-        _repository.Setup(r => r.GetEnvironmentByNameAsync(10, "production")).ReturnsAsync((true, true, "Production"));
+        _repository.Setup(r => r.GetEnvironmentByNameAsync(10, "production")).ReturnsAsync((true, true, "Production", null));
         _repository.Setup(r => r.CreateAsync(It.IsAny<DeploymentEntity>())).ReturnsAsync(42);
 
         var result = await _service.CreateAsync(request, ownerId: 7, isAdmin: false);
@@ -413,7 +413,7 @@ public class DeploymentServiceTests
     {
         var request = new CreateDeploymentRequest { ServiceId = "13", Environment = envType.ToLower(), Version = "1.0.0", Branch = "main" };
         _repository.Setup(r => r.GetServiceAccessAsync("13")).ReturnsAsync((true, 7, false, 10, 13));
-        _repository.Setup(r => r.GetEnvironmentByNameAsync(10, envType.ToLower())).ReturnsAsync((true, true, envType));
+        _repository.Setup(r => r.GetEnvironmentByNameAsync(10, envType.ToLower())).ReturnsAsync((true, true, envType, null));
         _repository.Setup(r => r.CreateAsync(It.IsAny<DeploymentEntity>())).ReturnsAsync(1);
 
         var result = await _service.CreateAsync(request, 7, isAdmin: false);

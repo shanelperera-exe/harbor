@@ -1,4 +1,6 @@
+using Harbor.Deployment.Kafka;
 using Harbor.Deployment.Services;
+using Harbor.Contracts.Kafka;
 using Microsoft.Extensions.Options;
 
 namespace Harbor.Deployment.IntegrationTests;
@@ -35,4 +37,26 @@ public sealed class TestInstallationTokenResolver : IInstallationTokenResolver
 {
     public Task<string?> GetInstallationTokenAsync(int userId) =>
         Task.FromResult<string?>("test-installation-token");
+}
+
+/// <summary>
+/// Test double for IKafkaProducerService that records published events instead of
+/// contacting a broker. Without this, the real producer resolves the bootstrap
+/// servers from the developer's .env and blocks the test run on connection timeouts.
+/// </summary>
+public sealed class TestKafkaProducerService : IKafkaProducerService
+{
+    private readonly List<DeploymentLifecycleEvent> _events = new();
+    private readonly Lock _gate = new();
+
+    public IReadOnlyList<DeploymentLifecycleEvent> PublishedEvents
+    {
+        get { lock (_gate) return _events.ToList(); }
+    }
+
+    public Task PublishDeploymentEventAsync(DeploymentLifecycleEvent @event)
+    {
+        lock (_gate) _events.Add(@event);
+        return Task.CompletedTask;
+    }
 }

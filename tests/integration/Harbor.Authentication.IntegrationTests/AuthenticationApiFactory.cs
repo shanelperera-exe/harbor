@@ -14,9 +14,12 @@ public class AuthenticationApiFactory : WebApplicationFactory<Program>, IAsyncLi
 {
     public AuthenticationApiFactory()
     {
-        Environment.SetEnvironmentVariable("JWT_SECRET", JwtSecret);
-        Environment.SetEnvironmentVariable("JWT_ISSUER", JwtIssuer);
-        Environment.SetEnvironmentVariable("JWT_AUDIENCE", JwtAudience);
+        // Note: no process-wide environment variables are set here on purpose.
+        // Program.cs calls `Env.TraversePath().Load()`, which loads the repository's
+        // .env and overwrites JWT_* environment variables, so reading them back in
+        // ConfigureWebHost would validate tokens against the developer's .env issuer
+        // instead of the test issuer. The values below are supplied through
+        // ConfigureAppConfiguration instead, which is what the app actually resolves.
     }
 
     public const string JwtSecret = "auth-integration-test-key-at-least-32chars";
@@ -50,6 +53,10 @@ public class AuthenticationApiFactory : WebApplicationFactory<Program>, IAsyncLi
                 ["FRONTEND_URL"] = "http://localhost:5173"
             }));
 
+        // Post-configure the bearer handler with the same constants used by TestJwtFactory
+        // and by the app's own configuration above, so a token minted by /api/auth/login
+        // validates. Reading process environment variables here would be non-deterministic
+        // because Program.cs loads the repository's .env file.
         builder.ConfigureServices(services =>
             services.PostConfigure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, options =>
                 options.TokenValidationParameters = new TokenValidationParameters
@@ -58,9 +65,9 @@ public class AuthenticationApiFactory : WebApplicationFactory<Program>, IAsyncLi
                     ValidateAudience = true,
                     ValidateLifetime = true,
                     ValidateIssuerSigningKey = true,
-                    ValidIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER") ?? JwtIssuer,
-                    ValidAudience = Environment.GetEnvironmentVariable("JWT_AUDIENCE") ?? JwtAudience,
-                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Environment.GetEnvironmentVariable("JWT_SECRET") ?? JwtSecret))
+                    ValidIssuer = JwtIssuer,
+                    ValidAudience = JwtAudience,
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(JwtSecret))
                 }));
     }
 
@@ -74,11 +81,12 @@ public class AuthenticationApiFactory : WebApplicationFactory<Program>, IAsyncLi
         await using var connection = new NpgsqlConnection(_db.GetConnectionString());
         await connection.OpenAsync();
 
-        // Seed a test user for login and profile tests
+        // Seed a test user for login and profile tests.
+        // "PublicId" is NOT NULL since migration 0007, so it must be supplied here.
         await using var seed = new NpgsqlCommand($"""
-            INSERT INTO "Users" ("Username", "Email", "PasswordHash", "Role", "AvatarSvg") VALUES
-            ('testuser', 'testuser@example.com', '$2a$11$0FfO9bNqfLqQoGz/lWn2r.dE5y.T/j0XqM0vNlV/L8lZ/U7P3q/B6', 'User', '<svg></svg>'),
-            ('adminuser', 'admin@example.com', '$2a$11$0FfO9bNqfLqQoGz/lWn2r.dE5y.T/j0XqM0vNlV/L8lZ/U7P3q/B6', 'Admin', '<svg></svg>')
+            INSERT INTO "Users" ("PublicId", "Username", "Email", "PasswordHash", "Role", "AvatarSvg") VALUES
+            ('usr-00000000000000000001', 'testuser', 'testuser@example.com', '$2a$11$0FfO9bNqfLqQoGz/lWn2r.dE5y.T/j0XqM0vNlV/L8lZ/U7P3q/B6', 'User', '<svg></svg>'),
+            ('usr-00000000000000000002', 'adminuser', 'admin@example.com', '$2a$11$0FfO9bNqfLqQoGz/lWn2r.dE5y.T/j0XqM0vNlV/L8lZ/U7P3q/B6', 'Admin', '<svg></svg>')
             ON CONFLICT DO NOTHING;
             """, connection);
         // The password hash is for 'Password123!'

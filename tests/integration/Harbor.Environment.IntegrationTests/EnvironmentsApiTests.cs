@@ -134,8 +134,19 @@ public class EnvironmentsApiTests(EnvironmentApiFactory factory) : IClassFixture
         await using (var connection = new Npgsql.NpgsqlConnection(_factory.Services.GetRequiredService<IConfiguration>().GetConnectionString("HarborDb")))
         {
             await connection.OpenAsync();
-            await using var command = new Npgsql.NpgsqlCommand("INSERT INTO \"Deployments\" (\"ProjectId\", \"OwnerId\", \"Environment\", \"Version\", \"Status\", \"StartedAt\") VALUES (@projectId, 110, 'production', '1.0.0', 'Succeeded', NOW())", connection);
+
+            // Deployment history is detected by joining Deployments to Services, so the
+            // seeded deployment must reference a real service in this project, exactly as
+            // the Harbor.Deployment service writes them.
+            await using var serviceCommand = new Npgsql.NpgsqlCommand(
+                "INSERT INTO \"Services\" (\"ProjectId\", \"Name\") VALUES (@projectId, 'api') RETURNING \"Id\"",
+                connection);
+            serviceCommand.Parameters.AddWithValue("projectId", projectId);
+            var serviceId = Convert.ToInt32(await serviceCommand.ExecuteScalarAsync());
+
+            await using var command = new Npgsql.NpgsqlCommand("INSERT INTO \"Deployments\" (\"ProjectId\", \"OwnerId\", \"ServiceId\", \"Environment\", \"Version\", \"Status\", \"StartedAt\") VALUES (@projectId, 110, @serviceId, 'production', '1.0.0', 'Succeeded', NOW())", connection);
             command.Parameters.AddWithValue("projectId", projectId);
+            command.Parameters.AddWithValue("serviceId", serviceId);
             await command.ExecuteNonQueryAsync();
         }
 

@@ -37,6 +37,9 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(getStoredTheme);
+  // Tracked as state so that a system appearance change re-renders consumers of
+  // resolvedTheme; updating only the DOM class would leave the context value stale.
+  const [systemTheme, setSystemTheme] = useState<'light' | 'dark'>(resolveSystemTheme);
 
   const setTheme = useCallback((next: Theme) => {
     localStorage.setItem(STORAGE_KEY, next);
@@ -54,7 +57,12 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (theme !== 'system') return;
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handler = () => applyThemeToDom('system');
+    const handler = () => {
+      setSystemTheme(mediaQuery.matches ? 'dark' : 'light');
+      applyThemeToDom('system');
+    };
+    // Sync once on mount in case the preference changed since initial state.
+    handler();
     mediaQuery.addEventListener('change', handler);
     return () => mediaQuery.removeEventListener('change', handler);
   }, [theme]);
@@ -76,7 +84,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     };
   }, [theme]);
 
-  const resolvedTheme = resolveTheme(theme);
+  const resolvedTheme = theme === 'system' ? systemTheme : theme;
 
   return (
     <ThemeContext.Provider value={{ theme, resolvedTheme, setTheme }}>

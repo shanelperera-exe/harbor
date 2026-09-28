@@ -39,7 +39,10 @@ public sealed class GitHubAppJwtProvider : IGitHubAppJwtProvider
         var exp = now + 540; // 9 minutes to avoid clock drift issues (max is 10 minutes)
 
         var header = new { alg = "RS256", typ = "JWT" };
-        var payload = new { iat = now - 60, exp = exp, iss = _options.AppId };
+        // "iss" must be serialized as a JSON string: RFC 7519 section 4.1.1 defines it as a
+        // case-sensitive StringOrURI. A numeric value makes the token unreadable to
+        // standards-compliant JWT consumers.
+        var payload = new { iat = now - 60, exp = exp, iss = _options.AppId.ToString() };
 
         var headerJson = JsonSerializer.Serialize(header);
         var payloadJson = JsonSerializer.Serialize(payload);

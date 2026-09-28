@@ -1,3 +1,4 @@
+using Harbor.Deployment.Kafka;
 using Harbor.Deployment.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Hosting;
@@ -78,6 +79,11 @@ public class DeploymentApiFactory : WebApplicationFactory<Program>, IAsyncLifeti
             services.AddSingleton<IGitHubActionsClient, TestGitHubActionsClient>();
             services.RemoveAll<IInstallationTokenResolver>();
             services.AddSingleton<IInstallationTokenResolver, TestInstallationTokenResolver>();
+
+            // Replace the real Kafka producer. It would otherwise read bootstrap servers
+            // from the developer's .env and block on connection timeouts.
+            services.RemoveAll<IKafkaProducerService>();
+            services.AddSingleton<IKafkaProducerService, TestKafkaProducerService>();
         });
     }
 
@@ -100,6 +106,7 @@ public class DeploymentApiFactory : WebApplicationFactory<Program>, IAsyncLifeti
             -- Projects table (owned by Harbor.Project)
             CREATE TABLE IF NOT EXISTS "Projects" (
                 "Id"         SERIAL  PRIMARY KEY,
+                "PublicId"   VARCHAR(50),
                 "Name"       VARCHAR(100) NOT NULL,
                 "OwnerId"    INTEGER NOT NULL,
                 "IsArchived" BOOLEAN NOT NULL DEFAULT FALSE,
@@ -112,18 +119,31 @@ public class DeploymentApiFactory : WebApplicationFactory<Program>, IAsyncLifeti
                 "PublicId"      VARCHAR(50),
                 "ProjectId"     INTEGER NOT NULL REFERENCES "Projects"("Id"),
                 "Name"          VARCHAR(100) NOT NULL,
+                "Type"          VARCHAR(50) NOT NULL DEFAULT 'Backend',
                 "RepositoryName" VARCHAR(500),
                 "RepositoryBranch" VARCHAR(200),
                 "WorkflowFile"  VARCHAR(200)
             );
 
+            -- Users table (owned by Harbor.Authentication)
+            -- DeploymentRepository LEFT JOINs Users to show who triggered a deployment.
+            CREATE TABLE IF NOT EXISTS "Users" (
+                "Id"       SERIAL  PRIMARY KEY,
+                "Username" VARCHAR(100) NOT NULL,
+                "Email"    VARCHAR(255) NOT NULL DEFAULT ''
+            );
+
             -- Environments table (owned by Harbor.Environment)
+            -- DeploymentRepository.GetEnvironmentByNameAsync selects
+            -- "IsActive", "Type" and "DeploymentUrl", so "DeploymentUrl" must exist here.
             CREATE TABLE IF NOT EXISTS "Environments" (
-                "Id"        SERIAL  PRIMARY KEY,
-                "ProjectId" INTEGER NOT NULL,
-                "Name"      VARCHAR(100) NOT NULL,
-                "Type"      VARCHAR(50) NOT NULL,
-                "IsActive"  BOOLEAN NOT NULL DEFAULT TRUE
+                "Id"           SERIAL  PRIMARY KEY,
+                "PublicId"     VARCHAR(50),
+                "ProjectId"    INTEGER NOT NULL,
+                "Name"         VARCHAR(100) NOT NULL,
+                "Type"         VARCHAR(50) NOT NULL,
+                "DeploymentUrl" VARCHAR(500),
+                "IsActive"     BOOLEAN NOT NULL DEFAULT TRUE
             );
             """, connection);
         await setup.ExecuteNonQueryAsync();
@@ -135,9 +155,14 @@ public class DeploymentApiFactory : WebApplicationFactory<Program>, IAsyncLifeti
                 ({SeedProjectId + 1}, 'other-project', {OtherOwnerId})
             ON CONFLICT DO NOTHING;
 
-            INSERT INTO "Services" ("Id", "PublicId", "ProjectId", "Name", "RepositoryName", "WorkflowFile") VALUES
-                ({SeedServiceId},     '{Guid.NewGuid():N}', {SeedProjectId},     'test-service',  '{SeedRepoFullName}', 'ci.yml'),
-                ({OtherServiceId},    '{Guid.NewGuid():N}', {SeedProjectId + 1}, 'other-service', 'other-owner/other-repo', 'ci.yml')
+            INSERT INTO "Services" ("Id", "PublicId", "ProjectId", "Name", "Type", "RepositoryName", "WorkflowFile") VALUES
+                ({SeedServiceId},     '{Guid.NewGuid():N}', {SeedProjectId},     'test-service',  'Backend', '{SeedRepoFullName}', 'ci.yml'),
+                ({OtherServiceId},    '{Guid.NewGuid():N}', {SeedProjectId + 1}, 'other-service', 'Backend', 'other-owner/other-repo', 'ci.yml')
+            ON CONFLICT DO NOTHING;
+
+            INSERT INTO "Users" ("Id", "Username") VALUES
+                ({SeedOwnerId},  'test-owner'),
+                ({OtherOwnerId}, 'other-owner')
             ON CONFLICT DO NOTHING;
 
             INSERT INTO "Environments" ("ProjectId", "Name", "Type", "IsActive") VALUES
@@ -149,6 +174,58 @@ public class DeploymentApiFactory : WebApplicationFactory<Program>, IAsyncLifeti
             ON CONFLICT DO NOTHING;
             """, connection);
         await seed.ExecuteNonQueryAsync();
+    }
+
+    /// <summary>
+    /// Creates a project, service and environments owned by <paramref name="ownerId"/> and
+    /// returns the new service's id.
+    ///
+    /// Deployment history is scoped to the projects a caller owns
+    /// (DeploymentRepository filters on p."OwnerId"), so a test that wants history results
+    /// for its own user must deploy to a service that user owns. The shared seeded service
+    /// belongs to <see cref="SeedOwnerId"/>, so a different caller legitimately sees none of it.
+    /// </summary>
+    public async Task<int> ProvisionServiceForOwnerAsync(int ownerId)
+    {
+        await using var connection = new NpgsqlConnection(_db.GetConnectionString());
+        await connection.OpenAsync();
+
+        var suffix = Guid.NewGuid().ToString("N")[..8];
+
+        int projectId;
+        await using (var projectCommand = new NpgsqlCommand($"""
+            INSERT INTO "Projects" ("PublicId", "Name", "OwnerId")
+            VALUES ('prj-{suffix}', 'owned-project-{suffix}', @ownerId)
+            RETURNING "Id";
+            """, connection))
+        {
+            projectCommand.Parameters.AddWithValue("ownerId", ownerId);
+            projectId = Convert.ToInt32(await projectCommand.ExecuteScalarAsync());
+        }
+
+        int serviceId;
+        await using (var serviceCommand = new NpgsqlCommand($"""
+            INSERT INTO "Services" ("PublicId", "ProjectId", "Name", "Type", "RepositoryName", "WorkflowFile")
+            VALUES ('srv-{suffix}', @projectId, 'owned-service-{suffix}', 'Backend', 'owner-{suffix}/repo', 'ci.yml')
+            RETURNING "Id";
+            """, connection))
+        {
+            serviceCommand.Parameters.AddWithValue("projectId", projectId);
+            serviceId = Convert.ToInt32(await serviceCommand.ExecuteScalarAsync());
+        }
+
+        await using (var environmentCommand = new NpgsqlCommand($"""
+            INSERT INTO "Environments" ("ProjectId", "Name", "Type", "IsActive") VALUES
+                (@projectId, 'production', 'Production', TRUE),
+                (@projectId, 'staging',    'Staging',    TRUE),
+                (@projectId, 'dev',        'Development',TRUE);
+            """, connection))
+        {
+            environmentCommand.Parameters.AddWithValue("projectId", projectId);
+            await environmentCommand.ExecuteNonQueryAsync();
+        }
+
+        return serviceId;
     }
 
     public new async Task DisposeAsync() => await _db.DisposeAsync();

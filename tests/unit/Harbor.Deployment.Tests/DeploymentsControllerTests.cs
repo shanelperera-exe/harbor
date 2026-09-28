@@ -86,19 +86,19 @@ public class DeploymentsControllerTests
     {
         SetUser(userId: null);
 
-        var result = await _controller.GetDetails(1);
+        var result = await _controller.GetDetails("1");
 
         Assert.IsType<UnauthorizedResult>(result.Result);
-        _serviceMock.Verify(s => s.GetDetailsAsync(It.IsAny<int>(), It.IsAny<int>()), Times.Never);
+        _serviceMock.Verify(s => s.GetDetailsAsync(It.IsAny<string>(), It.IsAny<int>()), Times.Never);
     }
 
     [Fact]
     public async Task GetDetails_DeploymentNotFound_ReturnsNotFound()
     {
         SetUser(userId: 7);
-        _serviceMock.Setup(s => s.GetDetailsAsync(99, 7)).ReturnsAsync((DeploymentDetailsResponse?)null);
+        _serviceMock.Setup(s => s.GetDetailsAsync("99", 7)).ReturnsAsync((DeploymentDetailsResponse?)null);
 
-        var result = await _controller.GetDetails(99);
+        var result = await _controller.GetDetails("99");
 
         Assert.IsType<NotFoundResult>(result.Result);
     }
@@ -116,9 +116,9 @@ public class DeploymentsControllerTests
                 new() { Level = "Error", Message = "Out of memory.", Timestamp = DateTime.UtcNow }
             }
         };
-        _serviceMock.Setup(s => s.GetDetailsAsync(8, 7)).ReturnsAsync(details);
+        _serviceMock.Setup(s => s.GetDetailsAsync("8", 7)).ReturnsAsync(details);
 
-        var result = await _controller.GetDetails(8);
+        var result = await _controller.GetDetails("8");
 
         var ok = Assert.IsType<OkObjectResult>(result.Result);
         var body = Assert.IsType<DeploymentDetailsResponse>(ok.Value);
@@ -131,9 +131,9 @@ public class DeploymentsControllerTests
     {
         // The service enforces ownership; it returns null for deployments owned by someone else.
         SetUser(userId: 99);
-        _serviceMock.Setup(s => s.GetDetailsAsync(8, 99)).ReturnsAsync((DeploymentDetailsResponse?)null);
+        _serviceMock.Setup(s => s.GetDetailsAsync("8", 99)).ReturnsAsync((DeploymentDetailsResponse?)null);
 
-        var result = await _controller.GetDetails(8);
+        var result = await _controller.GetDetails("8");
 
         Assert.IsType<NotFoundResult>(result.Result);
     }

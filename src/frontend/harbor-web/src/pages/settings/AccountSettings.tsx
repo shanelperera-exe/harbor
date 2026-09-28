@@ -12,6 +12,7 @@ import { LuCircleAlert } from "react-icons/lu";
 import UserAvatar from "../../components/ui/UserAvatar";
 import { clearAuthSession } from "../../services/authSession";
 import { useTheme } from "../../contexts/ThemeContext";
+import { Icon } from '../../components/icons';
 
 const authApiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 type ThemePreference = 'system' | 'light' | 'dark';
@@ -86,37 +87,21 @@ export default function AccountSettings() {
       value: 'system',
       label: 'System',
       icon: (
-        <svg fill="currentColor" className="w-4 h-4 shrink-0" width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
-          <path d="M8.00001 11C7.40666 11 6.82664 10.8241 6.3333 10.4944C5.83995 10.1648 5.45543 9.69623 5.22837 9.14805C5.00131 8.59987 4.9419 7.99667 5.05765 7.41473C5.17341 6.83279 5.45913 6.29824 5.87869 5.87868C6.29825 5.45912 6.83279 5.1734 7.41474 5.05764C7.99668 4.94189 8.59988 5.0013 9.14806 5.22836C9.69624 5.45542 10.1648 5.83994 10.4944 6.33329C10.8241 6.82664 11 7.40666 11 8C11.0043 8.39515 10.9296 8.78717 10.7803 9.15307C10.6311 9.51897 10.4102 9.85138 10.1308 10.1308C9.85139 10.4102 9.51898 10.6311 9.15308 10.7803C8.78718 10.9296 8.39516 11.0043 8.00001 11ZM8.00001 6C7.73572 5.99401 7.47297 6.04164 7.22761 6.14003C6.98225 6.23842 6.75937 6.38552 6.57245 6.57244C6.38552 6.75937 6.23843 6.98224 6.14004 7.2276C6.04165 7.47296 5.99401 7.73572 6.00001 8C5.99401 8.26428 6.04165 8.52704 6.14004 8.7724C6.23843 9.01776 6.38552 9.24063 6.57245 9.42756C6.75937 9.61448 6.98225 9.76158 7.22761 9.85997C7.47297 9.95836 7.73572 10.006 8.00001 10C8.26429 10.006 8.52705 9.95836 8.77241 9.85997C9.01777 9.76158 9.24064 9.61448 9.42757 9.42756C9.61449 9.24063 9.76159 9.01776 9.85998 8.7724C9.95837 8.52704 10.006 8.26428 10 8C10.006 7.73572 9.95837 7.47296 9.85998 7.2276C9.76159 6.98224 9.61449 6.75937 9.42757 6.57244C9.24064 6.38552 9.01777 6.23842 8.77241 6.14003C8.52705 6.04164 8.26429 5.99401 8.00001 6Z" />
-          <path d="M14.6524 5.522L13.4721 3.4781C13.3566 3.27775 13.1753 3.12364 12.9589 3.04207C12.7426 2.9605 12.5046 2.95652 12.2857 3.0308L11.0686 3.44245C10.8589 3.30119 10.6397 3.17451 10.4126 3.0633L10.1608 1.804C10.1154 1.57726 9.99295 1.37324 9.81413 1.22665C9.63532 1.08006 9.41123 0.999966 9.18001 1H6.82001C6.58879 0.999966 6.3647 1.08006 6.18588 1.22665C6.00707 1.37324 5.88458 1.57726 5.83926 1.804L5.58741 3.0633C5.35781 3.17331 5.13616 3.29919 4.92406 3.44L3.71436 3.0308C3.49539 2.95652 3.25744 2.9605 3.04109 3.04207C2.82473 3.12364 2.64338 3.27775 2.52796 3.4781L1.34766 5.522C1.23211 5.72224 1.18948 5.95631 1.22703 6.18443C1.26457 6.41254 1.37998 6.62061 1.55361 6.77325L2.51906 7.62165C2.51051 7.74735 2.50001 7.87235 2.50001 8C2.50001 8.1289 2.50501 8.25635 2.51391 8.3828L1.55361 9.2268C1.37998 9.37944 1.26457 9.58751 1.22703 9.81562C1.18948 10.0437 1.23211 10.2778 1.34766 10.4781L2.52796 12.522C2.64338 12.7224 2.82473 12.8765 3.04109 12.958C3.25744 13.0396 3.49539 13.0436 3.71436 12.9693L4.93141 12.5576C5.14108 12.699 5.36027 12.8257 5.58741 12.9368L5.83926 14.1961C5.8846 14.4228 6.0071 14.6268 6.18591 14.7734C6.36472 14.92 6.5888 15 6.82001 15H9.00001V14H6.82001L6.46501 12.2246C5.97398 12.0423 5.51815 11.7765 5.11761 11.4389L3.39391 12.022L2.21391 9.9781L3.57656 8.78055C3.48335 8.2635 3.48217 7.73406 3.57306 7.2166L2.21376 6.022L3.39431 3.9781L5.10766 4.55765C5.51098 4.21985 5.97024 3.95513 6.46471 3.77545L6.82001 2H9.18001L9.53501 3.7754C10.026 3.95776 10.4819 4.22355 10.8824 4.56105L12.6058 3.97805L13.7858 6.02195L12.3869 7.24805L13.0462 8L14.4462 6.7732C14.6198 6.6206 14.7353 6.41255 14.7729 6.18445C14.8104 5.95634 14.7679 5.72226 14.6524 5.522Z" />
-          <path d="M11.5 13.09L10.205 11.795L9.50001 12.5L11.5 14.5L15 11L14.295 10.295L11.5 13.09Z" />
-        </svg>
+        <Icon name="monitor" className="w-4 h-4 shrink-0" />
       ),
     },
     {
       value: 'light',
       label: 'Light',
       icon: (
-        <svg fill="currentColor" className="w-4 h-4 shrink-0" width="16" height="17" viewBox="0 0 16 17" xmlns="http://www.w3.org/2000/svg">
-          <path d="M8.5 1.51172H7.5V3.99172H8.5V1.51172Z" />
-          <path d="M12.597 3.20343L10.8433 4.95706L11.5504 5.66416L13.3041 3.91054L12.597 3.20343Z" />
-          <path d="M15 8.01172H12.52V9.01172H15V8.01172Z" />
-          <path d="M11.5534 11.3564L10.8463 12.0635L12.5999 13.8171L13.307 13.11L11.5534 11.3564Z" />
-          <path d="M8.5 13.0317H7.5V15.5117H8.5V13.0317Z" />
-          <path d="M4.45197 11.3593L2.69834 13.1129L3.40545 13.82L5.15907 12.0664L4.45197 11.3593Z" />
-          <path d="M3.48 8.01172H1V9.01172H3.48V8.01172Z" />
-          <path d="M3.40253 3.20635L2.69542 3.91346L4.44905 5.66708L5.15615 4.95998L3.40253 3.20635Z" />
-          <path d="M8 6.51172C8.39556 6.51172 8.78224 6.62902 9.11114 6.84878C9.44004 7.06854 9.69638 7.3809 9.84776 7.74635C9.99913 8.1118 10.0387 8.51394 9.96157 8.9019C9.8844 9.28986 9.69392 9.64623 9.41421 9.92593C9.13451 10.2056 8.77814 10.3961 8.39018 10.4733C8.00222 10.5505 7.60009 10.5109 7.23463 10.3595C6.86918 10.2081 6.55682 9.95176 6.33706 9.62286C6.1173 9.29396 6 8.90728 6 8.51172C6 7.98129 6.21071 7.47258 6.58579 7.09751C6.96086 6.72243 7.46957 6.51172 8 6.51172ZM8 5.51172C7.40666 5.51172 6.82664 5.68767 6.33329 6.01731C5.83994 6.34695 5.45542 6.81549 5.22836 7.36367C5.0013 7.91185 4.94189 8.51505 5.05764 9.09699C5.1734 9.67893 5.45912 10.2135 5.87868 10.633C6.29824 11.0526 6.83279 11.3383 7.41473 11.4541C7.99667 11.5698 8.59987 11.5104 9.14805 11.2834C9.69623 11.0563 10.1648 10.6718 10.4944 10.1784C10.8241 9.68508 11 9.10506 11 8.51172C11 7.71607 10.6839 6.95301 10.1213 6.3904C9.55871 5.82779 8.79565 5.51172 8 5.51172Z" />
-        </svg>
+        <Icon name="sun" className="w-4 h-4 shrink-0" />
       ),
     },
     {
       value: 'dark',
       label: 'Dark',
       icon: (
-        <svg fill="currentColor" className="w-4 h-4 shrink-0" width="16" height="17" viewBox="0 0 16 17" xmlns="http://www.w3.org/2000/svg">
-          <path d="M6.75126 3.21852C6.52204 4.19713 6.49085 5.21171 6.65953 6.20255C6.82821 7.1934 7.19334 8.1405 7.73346 8.98815C8.27357 9.83579 8.97776 10.5669 9.80458 11.1383C10.6314 11.7098 11.5642 12.1102 12.548 12.3158C12.0307 12.8509 11.4112 13.2767 10.7263 13.5678C10.0413 13.8589 9.30482 14.0094 8.56056 14.0105C8.49131 14.0105 8.42146 14.013 8.35166 14.0105C7.05599 13.9646 5.81731 13.4664 4.85075 12.6023C3.88418 11.7383 3.25081 10.5629 3.06063 9.28047C2.87044 7.99801 3.13547 6.68945 3.80967 5.58206C4.48387 4.47467 5.52466 3.63841 6.75126 3.21852ZM7.49001 2.01172C7.46074 2.01176 7.43153 2.01437 7.40271 2.01952C5.81059 2.30231 4.37942 3.16423 3.38485 4.43924C2.39029 5.71426 1.90269 7.3122 2.01597 8.92527C2.12925 10.5383 2.8354 12.0524 3.9984 13.1759C5.1614 14.2994 6.69899 14.9529 8.31501 15.0104C8.39706 15.0134 8.47911 15.0104 8.56046 15.0104C9.60987 15.0109 10.644 14.7588 11.5754 14.2753C12.5068 13.7918 13.308 13.0911 13.9115 12.2326C13.9604 12.1586 13.9889 12.073 13.9943 11.9845C13.9996 11.8959 13.9815 11.8076 13.9418 11.7283C13.902 11.6489 13.8421 11.5815 13.7681 11.5327C13.694 11.4839 13.6084 11.4555 13.5198 11.4504C12.5209 11.3627 11.5555 11.0466 10.6983 10.5263C9.84106 10.0061 9.11494 9.29572 8.57605 8.45009C8.03716 7.60446 7.69993 6.64624 7.59045 5.64949C7.48096 4.65274 7.60213 3.64416 7.94461 2.70172C7.97375 2.62632 7.98445 2.54504 7.97582 2.46467C7.96719 2.38429 7.93949 2.30714 7.89501 2.23964C7.85054 2.17214 7.79058 2.11624 7.72014 2.07659C7.64969 2.03695 7.57079 2.0147 7.49001 2.01172Z" />
-        </svg>
+        <Icon name="moon" className="w-4 h-4 shrink-0" />
       ),
     },
   ];
@@ -126,9 +111,7 @@ export default function AccountSettings() {
       value: 'match-dashboard',
       label: 'Match Dashboard (Default)',
       icon: (
-        <svg fill="currentColor" width="16" height="17" viewBox="0 0 16 17" xmlns="http://www.w3.org/2000/svg">
-          <path d="M14 2.51172H2C1.73478 2.51172 1.48043 2.61708 1.29289 2.80461C1.10536 2.99215 1 3.2465 1 3.51172V11.5117C1 11.7769 1.10536 12.0313 1.29289 12.2188C1.48043 12.4064 1.73478 12.5117 2 12.5117H6V14.5117H4V15.5117H12V14.5117H10V12.5117H14C14.2652 12.5117 14.5196 12.4064 14.7071 12.2188C14.8946 12.0313 15 11.7769 15 11.5117V3.51172C15 3.2465 14.8946 2.99215 14.7071 2.80461C14.5196 2.61708 14.2652 2.51172 14 2.51172ZM9 14.5117H7V12.5117H9V14.5117ZM14 11.5117H2V3.51172H14V11.5117Z"></path>
-        </svg>
+        <Icon name="screen" />
       ),
     },
     { ...themeOptions[1], value: 'light' },
@@ -709,7 +692,7 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                                     </div>
                                   ) : (
                                     <button type="button" onClick={() => setIsEditingName(true)} className="type-interface-01 button-ghost-text hover:button-ghost-background--hover hover:button-ghost-text--hover active:button-ghost-background--active active:button-ghost-text--active h-10 py-2.5 px-3 flex items-center group/button rounded-sm" >
-                                      <div className="inline-flex w-4 h-4 me-1.5"><svg fill="currentColor" width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M15 13H1V14H15V13Z"></path><path d="M12.7 4.5C13.1 4.1 13.1 3.5 12.7 3.1L10.9 1.3C10.5 0.9 9.9 0.9 9.5 1.3L2 8.8V12H5.2L12.7 4.5ZM10.2 2L12 3.8L10.5 5.3L8.7 3.5L10.2 2ZM3 11V9.2L8 4.2L9.8 6L4.8 11H3Z"></path></svg></div>
+                                      <div className="inline-flex w-4 h-4 me-1.5"><Icon name="editPencil" /></div>
                                       Edit
                                     </button>
                                   )}
@@ -758,7 +741,7 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                                     </div>
                                   ) : (
                                     <button type="button" onClick={() => setIsEditingEmail(true)} className="type-interface-01 button-ghost-text hover:button-ghost-background--hover hover:button-ghost-text--hover active:button-ghost-background--active active:button-ghost-text--active h-10 py-2.5 px-3 flex items-center group/button rounded-sm" >
-                                      <div className="inline-flex w-4 h-4 me-1.5"><svg fill="currentColor" width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M15 13H1V14H15V13Z"></path><path d="M12.7 4.5C13.1 4.1 13.1 3.5 12.7 3.1L10.9 1.3C10.5 0.9 9.9 0.9 9.5 1.3L2 8.8V12H5.2L12.7 4.5ZM10.2 2L12 3.8L10.5 5.3L8.7 3.5L10.2 2ZM3 11V9.2L8 4.2L9.8 6L4.8 11H3Z"></path></svg></div>
+                                      <div className="inline-flex w-4 h-4 me-1.5"><Icon name="editPencil" /></div>
                                       Edit
                                     </button>
                                   )}
@@ -783,7 +766,7 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                                   </span>
                                   <div className="inline-flex relative">
                                     <button data-testid="avatar-edit-button" type="button" id="menu-_r_3i_" aria-haspopup="true" aria-expanded="false" aria-controls="button-_r_3i_" className="type-interface-01 button-ghost-text hover:button-ghost-background--hover hover:button-ghost-text--hover active:button-ghost-background--active active:button-ghost-text--active h-10 py-2.5 px-3 flex items-center" >
-                                      <span className="flex items-center justify-between space-x-1.5"><svg fill="currentColor" aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M15 13H1V14H15V13Z"></path><path d="M12.7 4.5C13.1 4.1 13.1 3.5 12.7 3.1L10.9 1.3C10.5 0.9 9.9 0.9 9.5 1.3L2 8.8V12H5.2L12.7 4.5ZM10.2 2L12 3.8L10.5 5.3L8.7 3.5L10.2 2ZM3 11V9.2L8 4.2L9.8 6L4.8 11H3Z"></path></svg><span>Edit</span></span>
+                                      <span className="flex items-center justify-between space-x-1.5"><Icon name="editPencil" aria-hidden="true" /><span>Edit</span></span>
                                     </button>
                                   </div>
                                   <input data-testid="avatar-file-input" accept="image/png, image/jpeg" hidden type="file" />
@@ -884,7 +867,7 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                                         <span className="w-full truncate">{themeOptions.find(opt => opt.value === theme)?.label}</span>
                                       </span>
                                       {isEditingTheme && (
-                                        <svg fill="currentColor" aria-hidden="true" className={`absolute top-0 bottom-0 my-auto right-3 transition-transform ${themeDropdownOpen ? 'rotate-180' : ''}`} width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M8 10.9998L3 5.9998L3.7 5.2998L8 9.5998L12.3 5.2998L13 5.9998L8 10.9998Z"></path></svg>
+                                        <Icon name="chevronDown" className={`absolute top-0 bottom-0 my-auto right-3 transition-transform ${themeDropdownOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
                                       )}
                                     </button>
                                     
@@ -905,7 +888,7 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                                                 {opt.icon}
                                                 <span className="ml-2 flex-1 text-left">{opt.label}</span>
                                                 {theme === opt.value && (
-                                                  <svg fill="currentColor" className="w-4 h-4 shrink-0" viewBox="0 0 16 16"><path d="M6.5 12L2 7.49997L2.707 6.79297L6.5 10.5855L13.293 3.79297L14 4.49997L6.5 12Z" /></svg>
+                                                  <Icon name="check" className="w-4 h-4 shrink-0" />
                                                 )}
                                               </button>
                                             </li>
@@ -931,7 +914,7 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                                     </div>
                                   ) : (
                                     <button type="button" onClick={() => setIsEditingTheme(true)} className="type-interface-01 button-ghost-text hover:button-ghost-background--hover hover:button-ghost-text--hover active:button-ghost-background--active active:button-ghost-text--active h-10 py-2.5 px-3 flex items-center group/button rounded-sm" >
-                                      <div className="inline-flex w-4 h-4 me-1.5"><svg fill="currentColor" width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M15 13H1V14H15V13Z"></path><path d="M12.7 4.5C13.1 4.1 13.1 3.5 12.7 3.1L10.9 1.3C10.5 0.9 9.9 0.9 9.5 1.3L2 8.8V12H5.2L12.7 4.5ZM10.2 2L12 3.8L10.5 5.3L8.7 3.5L10.2 2ZM3 11V9.2L8 4.2L9.8 6L4.8 11H3Z"></path></svg></div>
+                                      <div className="inline-flex w-4 h-4 me-1.5"><Icon name="editPencil" /></div>
                                       Edit
                                     </button>
                                   )}
@@ -974,7 +957,7 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                                         <span className="w-full truncate">{logThemeOptions.find(opt => opt.value === logTheme)?.label}</span>
                                       </span>
                                       {isEditingLogTheme && (
-                                        <svg fill="currentColor" aria-hidden="true" className={`absolute top-0 bottom-0 my-auto right-3 transition-transform ${logThemeDropdownOpen ? 'rotate-180' : ''}`} width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M8 10.9998L3 5.9998L3.7 5.2998L8 9.5998L12.3 5.2998L13 5.9998L8 10.9998Z"></path></svg>
+                                        <Icon name="chevronDown" className={`absolute top-0 bottom-0 my-auto right-3 transition-transform ${logThemeDropdownOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
                                       )}
                                     </button>
                                     
@@ -1002,7 +985,7 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                                                       </span>
                                                       <span className="w-full text-left truncate">{opt.label}</span>
                                                       {isActive && (
-                                                        <svg fill="currentColor" aria-hidden="true" className="inline-flex ml-2" width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M6.5 12L2 7.49997L2.707 6.79297L6.5 10.5855L13.293 3.79297L14 4.49997L6.5 12Z" /></svg>
+                                                        <Icon name="check" className="inline-flex ml-2" aria-hidden="true" />
                                                       )}
                                                     </span>
                                                   </button>
@@ -1031,7 +1014,7 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                                     </div>
                                   ) : (
                                     <button type="button" onClick={() => setIsEditingLogTheme(true)} className="type-interface-01 button-ghost-text hover:button-ghost-background--hover hover:button-ghost-text--hover active:button-ghost-background--active active:button-ghost-text--active h-10 py-2.5 px-3 flex items-center group/button rounded-sm" >
-                                      <div className="inline-flex w-4 h-4 me-1.5"><svg fill="currentColor" width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M15 13H1V14H15V13Z"></path><path d="M12.7 4.5C13.1 4.1 13.1 3.5 12.7 3.1L10.9 1.3C10.5 0.9 9.9 0.9 9.5 1.3L2 8.8V12H5.2L12.7 4.5ZM10.2 2L12 3.8L10.5 5.3L8.7 3.5L10.2 2ZM3 11V9.2L8 4.2L9.8 6L4.8 11H3Z"></path></svg></div>
+                                      <div className="inline-flex w-4 h-4 me-1.5"><Icon name="editPencil" /></div>
                                       Edit
                                     </button>
                                   )}
@@ -1091,9 +1074,7 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                                 <section className="flex items-center gap-4">
                                   <div className="left flex flex-1 items-center gap-4 min-w-0">
                                     <div className="space-between flex w-full items-center gap-3">
-                                      <svg viewBox="0 0 16 16" height="28" width="28" data-slot="geist-icon" style={{ color: 'currentColor' }}>
-                                        <path fill="currentColor" fillRule="evenodd" d="M13.26 3.5H2.74L8 8.01zM1.5 4.42v7.08a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1V4.42L8.49 9.57 8 9.99l-.49-.42zM0 2h16v9.5a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 0 11.5V2" clipRule="evenodd"></path>
-                                      </svg>
+                                      <Icon name="mail" style={{ color: 'currentColor' }} data-slot="geist-icon" />
                                       <div className="flex flex-1 grow flex-col">
                                         <h4 className="text-[16px] font-medium">Email</h4>
                                         <p className="text-copy-14 text-gray-900 dark:text-[#f0f0f0]">{profile.email}</p>
@@ -1128,7 +1109,7 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                                               onClick={() => void disconnectLoginMethod('email')}
                                               className="w-full flex items-center gap-2 px-3 py-2 text-[14px] text-red-600 dark:text-[#f4b3b7] hover:bg-red-50 dark:hover:bg-[#390508] transition-colors"
                                             >
-                                              <svg fill="currentColor" className="w-4 h-4 shrink-0" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M2.49892 1.79373L1.79194 2.50096L3.4999 4.20832L4.20688 3.50109L2.49892 1.79373Z"></path><path d="M12.4979 11.789L11.7907 12.496L13.4981 14.2039L14.2053 13.4969L12.4979 11.789Z"></path><path d="M6.5 1H5.5V3H6.5V1Z"></path><path d="M3 5.5H1V6.5H3V5.5Z"></path><path d="M15 9.5H13V10.5H15V9.5Z"></path><path d="M10.5 13H9.5V15H10.5V13Z"></path><path d="M8.29 10.535L6.435 12.395C6.24918 12.5808 6.02858 12.7282 5.78579 12.8288C5.54301 12.9294 5.28279 12.9811 5.02 12.9811C4.75721 12.9811 4.49699 12.9294 4.25421 12.8288C4.01142 12.7282 3.79082 12.5808 3.605 12.395C3.22972 12.0197 3.01889 11.5107 3.01889 10.98C3.01889 10.4493 3.22972 9.94028 3.605 9.565L5.465 7.705L4.755 7L2.9 8.86C2.61533 9.13707 2.38853 9.46792 2.23275 9.83334C2.07697 10.1988 1.99531 10.5915 1.99252 10.9887C1.98973 11.386 2.06586 11.7798 2.21649 12.1474C2.36712 12.515 2.58925 12.849 2.87 13.13C3.15032 13.408 3.48277 13.628 3.84828 13.7773C4.21379 13.9266 4.60518 14.0023 5 14C5.40168 14.0004 5.79944 13.921 6.17023 13.7665C6.54101 13.612 6.87743 13.3855 7.16 13.1L9 11.245L8.29 10.535Z"></path><path d="M7.705 5.465L9.565 3.605C9.75082 3.41918 9.97142 3.27178 10.2142 3.17121C10.457 3.07065 10.7172 3.01889 10.98 3.01889C11.2428 3.01889 11.503 3.07065 11.7458 3.17121C11.9886 3.27178 12.2092 3.41918 12.395 3.605C12.5808 3.79082 12.7282 4.01142 12.8288 4.25421C12.9294 4.49699 12.9811 4.75721 12.9811 5.02C12.9811 5.28279 12.9294 5.54301 12.8288 5.78579C12.7282 6.02858 12.5808 6.24918 12.395 6.435L10.535 8.295L11.245 9L13.1 7.14C13.3847 6.86293 13.6115 6.53208 13.7673 6.16666C13.923 5.80123 14.0047 5.40851 14.0075 5.01127C14.0103 4.61404 13.9341 4.2202 13.7835 3.85262C13.6329 3.48505 13.4107 3.15104 13.13 2.87C12.8497 2.59196 12.5172 2.37198 12.1517 2.22269C11.7862 2.07339 11.3948 1.99772 11 2C10.5983 1.99961 10.2006 2.07897 9.82977 2.23346C9.45899 2.38795 9.12257 2.61451 8.84 2.9L7 4.755L7.705 5.465Z"></path></svg>
+                                              <Icon name="unlink" className="w-4 h-4 shrink-0" />
                                               Disconnect
                                             </button>
                                           </div>
@@ -1177,7 +1158,7 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                                                 onClick={() => void disconnectLoginMethod('google')}
                                                 className="w-full flex items-center gap-2 px-3 py-2 text-[14px] text-red-600 dark:text-[#f4b3b7] hover:bg-red-50 dark:hover:bg-[#390508] transition-colors"
                                               >
-                                                <svg fill="currentColor" className="w-4 h-4 shrink-0" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M2.49892 1.79373L1.79194 2.50096L3.4999 4.20832L4.20688 3.50109L2.49892 1.79373Z"></path><path d="M12.4979 11.789L11.7907 12.496L13.4981 14.2039L14.2053 13.4969L12.4979 11.789Z"></path><path d="M6.5 1H5.5V3H6.5V1Z"></path><path d="M3 5.5H1V6.5H3V5.5Z"></path><path d="M15 9.5H13V10.5H15V9.5Z"></path><path d="M10.5 13H9.5V15H10.5V13Z"></path><path d="M8.29 10.535L6.435 12.395C6.24918 12.5808 6.02858 12.7282 5.78579 12.8288C5.54301 12.9294 5.28279 12.9811 5.02 12.9811C4.75721 12.9811 4.49699 12.9294 4.25421 12.8288C4.01142 12.7282 3.79082 12.5808 3.605 12.395C3.22972 12.0197 3.01889 11.5107 3.01889 10.98C3.01889 10.4493 3.22972 9.94028 3.605 9.565L5.465 7.705L4.755 7L2.9 8.86C2.61533 9.13707 2.38853 9.46792 2.23275 9.83334C2.07697 10.1988 1.99531 10.5915 1.99252 10.9887C1.98973 11.386 2.06586 11.7798 2.21649 12.1474C2.36712 12.515 2.58925 12.849 2.87 13.13C3.15032 13.408 3.48277 13.628 3.84828 13.7773C4.21379 13.9266 4.60518 14.0023 5 14C5.40168 14.0004 5.79944 13.921 6.17023 13.7665C6.54101 13.612 6.87743 13.3855 7.16 13.1L9 11.245L8.29 10.535Z"></path><path d="M7.705 5.465L9.565 3.605C9.75082 3.41918 9.97142 3.27178 10.2142 3.17121C10.457 3.07065 10.7172 3.01889 10.98 3.01889C11.2428 3.01889 11.503 3.07065 11.7458 3.17121C11.9886 3.27178 12.2092 3.41918 12.395 3.605C12.5808 3.79082 12.7282 4.01142 12.8288 4.25421C12.9294 4.49699 12.9811 4.75721 12.9811 5.02C12.9811 5.28279 12.9294 5.54301 12.8288 5.78579C12.7282 6.02858 12.5808 6.24918 12.395 6.435L10.535 8.295L11.245 9L13.1 7.14C13.3847 6.86293 13.6115 6.53208 13.7673 6.16666C13.923 5.80123 14.0047 5.40851 14.0075 5.01127C14.0103 4.61404 13.9341 4.2202 13.7835 3.85262C13.6329 3.48505 13.4107 3.15104 13.13 2.87C12.8497 2.59196 12.5172 2.37198 12.1517 2.22269C11.7862 2.07339 11.3948 1.99772 11 2C10.5983 1.99961 10.2006 2.07897 9.82977 2.23346C9.45899 2.38795 9.12257 2.61451 8.84 2.9L7 4.755L7.705 5.465Z"></path></svg>
+                                                <Icon name="unlink" className="w-4 h-4 shrink-0" />
                                                 Disconnect
                                               </button>
                                             </div>
@@ -1235,7 +1216,7 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                                                 onClick={() => void disconnectLoginMethod('github')}
                                                 className="w-full flex items-center gap-2 px-3 py-2 text-[14px] text-red-600 dark:text-[#f4b3b7] hover:bg-red-50 dark:hover:bg-[#390508] transition-colors"
                                               >
-                                                <svg fill="currentColor" className="w-4 h-4 shrink-0" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M2.49892 1.79373L1.79194 2.50096L3.4999 4.20832L4.20688 3.50109L2.49892 1.79373Z"></path><path d="M12.4979 11.789L11.7907 12.496L13.4981 14.2039L14.2053 13.4969L12.4979 11.789Z"></path><path d="M6.5 1H5.5V3H6.5V1Z"></path><path d="M3 5.5H1V6.5H3V5.5Z"></path><path d="M15 9.5H13V10.5H15V9.5Z"></path><path d="M10.5 13H9.5V15H10.5V13Z"></path><path d="M8.29 10.535L6.435 12.395C6.24918 12.5808 6.02858 12.7282 5.78579 12.8288C5.54301 12.9294 5.28279 12.9811 5.02 12.9811C4.75721 12.9811 4.49699 12.9294 4.25421 12.8288C4.01142 12.7282 3.79082 12.5808 3.605 12.395C3.22972 12.0197 3.01889 11.5107 3.01889 10.98C3.01889 10.4493 3.22972 9.94028 3.605 9.565L5.465 7.705L4.755 7L2.9 8.86C2.61533 9.13707 2.38853 9.46792 2.23275 9.83334C2.07697 10.1988 1.99531 10.5915 1.99252 10.9887C1.98973 11.386 2.06586 11.7798 2.21649 12.1474C2.36712 12.515 2.58925 12.849 2.87 13.13C3.15032 13.408 3.48277 13.628 3.84828 13.7773C4.21379 13.9266 4.60518 14.0023 5 14C5.40168 14.0004 5.79944 13.921 6.17023 13.7665C6.54101 13.612 6.87743 13.3855 7.16 13.1L9 11.245L8.29 10.535Z"></path><path d="M7.705 5.465L9.565 3.605C9.75082 3.41918 9.97142 3.27178 10.2142 3.17121C10.457 3.07065 10.7172 3.01889 10.98 3.01889C11.2428 3.01889 11.503 3.07065 11.7458 3.17121C11.9886 3.27178 12.2092 3.41918 12.395 3.605C12.5808 3.79082 12.7282 4.01142 12.8288 4.25421C12.9294 4.49699 12.9811 4.75721 12.9811 5.02C12.9811 5.28279 12.9294 5.54301 12.8288 5.78579C12.7282 6.02858 12.5808 6.24918 12.395 6.435L10.535 8.295L11.245 9L13.1 7.14C13.3847 6.86293 13.6115 6.53208 13.7673 6.16666C13.923 5.80123 14.0047 5.40851 14.0075 5.01127C14.0103 4.61404 13.9341 4.2202 13.7835 3.85262C13.6329 3.48505 13.4107 3.15104 13.13 2.87C12.8497 2.59196 12.5172 2.37198 12.1517 2.22269C11.7862 2.07339 11.3948 1.99772 11 2C10.5983 1.99961 10.2006 2.07897 9.82977 2.23346C9.45899 2.38795 9.12257 2.61451 8.84 2.9L7 4.755L7.705 5.465Z"></path></svg>
+                                                <Icon name="unlink" className="w-4 h-4 shrink-0" />
                                                 Disconnect
                                               </button>
                                             </div>
@@ -1270,7 +1251,7 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                                 <div className="grid [grid-template-columns:1fr_auto] [grid-template-rows:auto_1fr] relative">
                                   <details className="group [grid-column:1/-1] [grid-row:1/3]">
                                     <summary className="border border-solid border-gray-300 dark:border-[#525252] py-3 px-3 grid grid-cols-[max-content_max-content_1fr_max-content] items-center gap-2 cursor-pointer text-gray-900 dark:text-[#e3e3e3] hover:text-black dark:hover:text-[#f0f0f0] bg-white dark:bg-[oklch(0.21_0.03_263.45)] hover:bg-gray-50 dark:hover:bg-[#1a1a1a] focus-visible:outline-none list-none marker:hidden [&::-webkit-details-marker]:hidden transition-colors rounded-sm">
-                                      <svg fill="currentColor" aria-hidden="true" className="group-open:rotate-180 w-4 h-4 transition-transform" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M8 10.9998L3 5.9998L3.7 5.2998L8 9.5998L12.3 5.2998L13 5.9998L8 10.9998Z"></path></svg>
+                                      <Icon name="chevronDown" className="group-open:rotate-180 w-4 h-4 transition-transform" aria-hidden="true" />
                                        <span className="block">
                                         <IoLogoGithub className="w-7 h-7 text-gray-900 dark:text-white flex-shrink-0" />
                                       </span>
@@ -1292,7 +1273,7 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                                                 <span className="truncate group-hover:underline">{repo.name}</span>
                                               </span>
                                               {(repo.private || repo.Private) && (
-                                                <svg fill="currentColor" className="w-3 h-3 text-gray-500 dark:text-[#b3b3b3] mx-1" width="16" height="17" viewBox="0 0 16 17" xmlns="http://www.w3.org/2000/svg"><path d="M12 7.51172H11V4.51172C11 3.71607 10.6839 2.95301 10.1213 2.3904C9.55871 1.82779 8.79565 1.51172 8 1.51172C7.20435 1.51172 6.44129 1.82779 5.87868 2.3904C5.31607 2.95301 5 3.71607 5 4.51172V7.51172H4C3.73478 7.51172 3.48043 7.61708 3.29289 7.80461C3.10536 7.99215 3 8.2465 3 8.51172V14.5117C3 14.7769 3.10536 15.0313 3.29289 15.2188C3.48043 15.4064 3.73478 15.5117 4 15.5117H12C12.2652 15.5117 12.5196 15.4064 12.7071 15.2188C12.8946 15.0313 13 14.7769 13 14.5117V8.51172C13 8.2465 12.8946 7.99215 12.7071 7.80461C12.5196 7.61708 12.2652 7.51172 12 7.51172ZM6 4.51172C6 3.98129 6.21071 3.47258 6.58579 3.09751C6.96086 2.72243 7.46957 2.51172 8 2.51172C8.53043 2.51172 9.03914 2.72243 9.41421 3.09751C9.78929 3.47258 10 3.98129 10 4.51172V7.51172H6V4.51172ZM4 8.51172H12V14.5117H4V8.51172Z"></path></svg>
+                                                <Icon name="lock" className="w-3 h-3 text-gray-500 dark:text-[#b3b3b3] mx-1" />
                                               )}
                                               {!(repo.private || repo.Private) && (
                                                 <MdOutlinePublic className="w-3 h-3 text-gray-500 dark:text-[#b3b3b3] mx-1" />
@@ -1317,13 +1298,13 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                                       <div className="min-w-[208px] p-4 bg-white dark:bg-[oklch(0.21_0.03_263.45)] shadow-lg border border-solid border-gray-300 dark:border-[#525252] outline-none absolute z-50 top-full right-0 mt-1 rounded-sm">
                                         <button type="button" onClick={() => { setCredentialOptionsOpen(false); window.open('https://github.com/settings/installations', '_blank'); }} className="w-full flex relative text-[14px] text-gray-900 dark:text-[#e3e3e3] py-2 px-3 whitespace-nowrap focus-visible:outline-none cursor-pointer hover:bg-gray-100 dark:hover:bg-[#272727] transition-colors rounded-sm">
                                           <div className="w-full flex items-center space-x-2.5">
-                                            <svg fill="currentColor" className="w-4 h-4 shrink-0" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M13 14H3C2.73489 13.9996 2.48075 13.8942 2.29329 13.7067C2.10583 13.5193 2.00036 13.2651 2 13V3C2.00036 2.73489 2.10583 2.48075 2.29329 2.29329C2.48075 2.10583 2.73489 2.00036 3 2H8V3H3V13H13V8H14V13C13.9996 13.2651 13.8942 13.5193 13.7067 13.7067C13.5193 13.8942 13.2651 13.9996 13 14Z"></path><path d="M10 1V2H13.293L9 6.293L9.707 7L14 2.707V6H15V1H10Z"></path></svg>
+                                            <Icon name="box" className="w-4 h-4 shrink-0" />
                                             <span className="flex-1 text-left truncate">Configure on GitHub</span>
                                           </div>
                                         </button>
                                         <button type="button" disabled={disconnectingProvider === 'github'} onClick={() => void disconnectLoginMethod('github')} className="w-full flex relative text-[14px] text-red-600 dark:text-[#f4b3b7] py-2 px-3 whitespace-nowrap focus-visible:outline-none cursor-pointer hover:bg-red-50 dark:hover:bg-[#390508] hover:text-red-700 dark:hover:text-[#fce9ea] disabled:opacity-50 disabled:cursor-not-allowed transition-colors rounded-sm">
                                           <div className="w-full flex items-center space-x-2.5">
-                                            <svg fill="currentColor" className="w-4 h-4 shrink-0" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M2.49892 1.79373L1.79194 2.50096L3.4999 4.20832L4.20688 3.50109L2.49892 1.79373Z"></path><path d="M12.4979 11.789L11.7907 12.496L13.4981 14.2039L14.2053 13.4969L12.4979 11.789Z"></path><path d="M6.5 1H5.5V3H6.5V1Z"></path><path d="M3 5.5H1V6.5H3V5.5Z"></path><path d="M15 9.5H13V10.5H15V9.5Z"></path><path d="M10.5 13H9.5V15H10.5V13Z"></path><path d="M8.29 10.535L6.435 12.395C6.24918 12.5808 6.02858 12.7282 5.78579 12.8288C5.54301 12.9294 5.28279 12.9811 5.02 12.9811C4.75721 12.9811 4.49699 12.9294 4.25421 12.8288C4.01142 12.7282 3.79082 12.5808 3.605 12.395C3.22972 12.0197 3.01889 11.5107 3.01889 10.98C3.01889 10.4493 3.22972 9.94028 3.605 9.565L5.465 7.705L4.755 7L2.9 8.86C2.61533 9.13707 2.38853 9.46792 2.23275 9.83334C2.07697 10.1988 1.99531 10.5915 1.99252 10.9887C1.98973 11.386 2.06586 11.7798 2.21649 12.1474C2.36712 12.515 2.58925 12.849 2.87 13.13C3.15032 13.408 3.48277 13.628 3.84828 13.7773C4.21379 13.9266 4.60518 14.0023 5 14C5.40168 14.0004 5.79944 13.921 6.17023 13.7665C6.54101 13.612 6.87743 13.3855 7.16 13.1L9 11.245L8.29 10.535Z"></path><path d="M7.705 5.465L9.565 3.605C9.75082 3.41918 9.97142 3.27178 10.2142 3.17121C10.457 3.07065 10.7172 3.01889 10.98 3.01889C11.2428 3.01889 11.503 3.07065 11.7458 3.17121C11.9886 3.27178 12.2092 3.41918 12.395 3.605C12.5808 3.79082 12.7282 4.01142 12.8288 4.25421C12.9294 4.49699 12.9811 4.75721 12.9811 5.02C12.9811 5.28279 12.9294 5.54301 12.8288 5.78579C12.7282 6.02858 12.5808 6.24918 12.395 6.435L10.535 8.295L11.245 9L13.1 7.14C13.3847 6.86293 13.6115 6.53208 13.7673 6.16666C13.923 5.80123 14.0047 5.40851 14.0075 5.01127C14.0103 4.61404 13.9341 4.2202 13.7835 3.85262C13.6329 3.48505 13.4107 3.15104 13.13 2.87C12.8497 2.59196 12.5172 2.37198 12.1517 2.22269C11.7862 2.07339 11.3948 1.99772 11 2C10.5983 1.99961 10.2006 2.07897 9.82977 2.23346C9.45899 2.38795 9.12257 2.61451 8.84 2.9L7 4.755L7.705 5.465Z"></path></svg>
+                                            <Icon name="unlink" className="w-4 h-4 shrink-0" />
                                             <span className="flex-1 text-left truncate">{disconnectingProvider === 'github' ? 'Disconnecting...' : 'Disconnect credential'}</span>
                                           </div>
                                         </button>
@@ -1349,7 +1330,7 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                               ) : isRefreshingGitHub ? (
                                 <div className="flex items-center gap-3">
                                   <div className="flex items-center text-[16px] text-gray-900 dark:text-[#e3e3e3] font-medium space-x-2.5">
-                                    <svg className="animate-spin h-5 w-5 text-gray-900 dark:text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                    <Icon name="spinner" className="animate-spin h-5 w-5 text-gray-900 dark:text-white" />
                                     <span>Syncing GitHub Installation...</span>
                                   </div>
                                 </div>
@@ -1406,7 +1387,7 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                       <p className="text-[14px] text-gray-500 dark:text-[#b3b3b3] mt-1">Once you delete your account, there is no going back. Please be certain.</p>
                     </div>
                     <button type="button" onClick={() => setIsDeleteModalOpen(true)} className="type-interface-01 bg-[#e23642] hover:bg-[#c0222d] text-white transition-colors h-10 py-2.5 px-3 flex items-center group/button rounded-sm whitespace-nowrap shrink-0">
-                      <div className="inline-flex w-4 h-4 me-1.5"><svg fill="currentColor" width="16" height="17" viewBox="0 0 16 17" xmlns="http://www.w3.org/2000/svg"><path d="M7 6.66699H6V12.667H7V6.66699Z"></path><path d="M10 6.66699H9V12.667H10V6.66699Z"></path><path d="M2 3.66699V4.66699H3V14.667C3 14.9322 3.10536 15.1866 3.29289 15.3741C3.48043 15.5616 3.73478 15.667 4 15.667H12C12.2652 15.667 12.5196 15.5616 12.7071 15.3741C12.8946 15.1866 13 14.9322 13 14.667V4.66699H14V3.66699H2ZM4 14.667V4.66699H12V14.667H4Z"></path><path d="M10 1.66699H6V2.66699H10V1.66699Z"></path></svg></div>
+                      <div className="inline-flex w-4 h-4 me-1.5"><Icon name="trash" /></div>
                       Delete Harbor Account
                     </button>
                   </div>
@@ -1466,13 +1447,9 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                           <div key={i} className={`flex items-center space-x-2 ${c.met ? 'text-green-600 dark:text-green-500' : 'text-gray-500 dark:text-[#8f8f8f]'}`}>
                             <div className={`flex items-center justify-center w-3.5 h-3.5 border flex-shrink-0 transition-colors duration-300 ${c.met ? 'bg-transparent border-green-600 dark:border-green-500 text-green-600 dark:text-green-500' : 'bg-transparent border-gray-400 dark:border-gray-500 text-gray-400 dark:text-gray-500'}`}>
                               {c.met ? (
-                                <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3.5}>
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                                </svg>
+                                <Icon name="checkStroke" className="w-2.5 h-2.5" />
                               ) : (
-                                <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3.5}>
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                                </svg>
+                                <Icon name="closeHeavy" className="w-2.5 h-2.5" />
                               )}
                             </div>
                             <span className="truncate">{c.label}</span>
@@ -1512,7 +1489,7 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                   <h1 className="text-[28px] leading-[32px] font-medium text-strong mb-1 font-['Roobert',sans-serif]">Delete Harbor Account</h1>
                 </div>
                 <button type="button" aria-label="Close modal" onClick={() => { setIsDeleteModalOpen(false); setDeleteConfirmationText(''); }} className="flex p-0 w-6 h-6 items-center justify-center text-gray-500 hover:text-gray-900 dark:text-[#8f8f8f] dark:hover:text-white absolute right-4 top-4">
-                  <svg fill="currentColor" aria-hidden="true" width="24" height="24" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M12 4.7L11.3 4L8 7.3L4.7 4L4 4.7L7.3 8L4 11.3L4.7 12L8 8.7L11.3 12L12 11.3L8.7 8L12 4.7Z"></path></svg>
+                  <Icon name="close" aria-hidden="true" />
                 </button>
               </div>
               
@@ -1561,7 +1538,7 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                     'Deleting...'
                   ) : (
                     <>
-                      <div className="inline-flex w-4 h-4 me-1.5"><svg fill="currentColor" width="16" height="17" viewBox="0 0 16 17" xmlns="http://www.w3.org/2000/svg"><path d="M7 6.66699H6V12.667H7V6.66699Z"></path><path d="M10 6.66699H9V12.667H10V6.66699Z"></path><path d="M2 3.66699V4.66699H3V14.667C3 14.9322 3.10536 15.1866 3.29289 15.3741C3.48043 15.5616 3.73478 15.667 4 15.667H12C12.2652 15.667 12.5196 15.5616 12.7071 15.3741C12.8946 15.1866 13 14.9322 13 14.667V4.66699H14V3.66699H2ZM4 14.667V4.66699H12V14.667H4Z"></path><path d="M10 1.66699H6V2.66699H10V1.66699Z"></path></svg></div>
+                      <div className="inline-flex w-4 h-4 me-1.5"><Icon name="trash" /></div>
                       Delete Harbor Account
                     </>
                   )}

@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { LuCircleAlert } from 'react-icons/lu';
+import { Icon } from '../icons';
 
 interface DeleteConfirmationModalProps {
   isOpen: boolean;
@@ -50,7 +51,7 @@ export function DeleteConfirmationModal({
               <h1 className="text-[28px] leading-[32px] font-medium text-strong mb-1 text-gray-900 dark:text-white font-['Roobert',sans-serif]">{title}</h1>
             </div>
             <button type="button" aria-label="Close modal" onClick={onClose} className="flex p-0 w-6 h-6 items-center justify-center text-gray-500 hover:text-gray-900 dark:text-[#8f8f8f] dark:hover:text-white absolute right-4 top-4">
-              <svg fill="currentColor" aria-hidden="true" width="24" height="24" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M12 4.7L11.3 4L8 7.3L4.7 4L4 4.7L7.3 8L4 11.3L4.7 12L8 8.7L11.3 12L12 11.3L8.7 8L12 4.7Z"></path></svg>
+              <Icon name="close" aria-hidden="true" />
             </button>
           </div>
           

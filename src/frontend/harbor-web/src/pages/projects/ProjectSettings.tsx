@@ -6,6 +6,7 @@ import { getProject, updateProject, archiveProject, type Project } from '../../s
 import { getEnvironments, type DeploymentEnvironment } from '../../services/environmentService';
 import { getServices, type Service } from '../../services/serviceService';
 import { DeleteConfirmationModal } from '../../components/ui/DeleteConfirmationModal';
+import { Icon } from '../../components/icons';
 
 export default function ProjectSettings() {
   const navigate = useNavigate();
@@ -266,7 +267,7 @@ export default function ProjectSettings() {
                                     </div>
                                   ) : (
                                     <button type="button" onClick={() => setIsEditingName(true)} className="h-10 py-2.5 px-3 flex items-center group/button rounded-sm text-gray-700 dark:text-[#c7c7c7] hover:bg-gray-100 dark:hover:bg-[#272727] hover:text-gray-900 dark:hover:text-white transition-colors" >
-                                      <div className="inline-flex w-4 h-4 me-1.5"><svg fill="currentColor" width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M15 13H1V14H15V13Z"></path><path d="M12.7 4.5C13.1 4.1 13.1 3.5 12.7 3.1L10.9 1.3C10.5 0.9 9.9 0.9 9.5 1.3L2 8.8V12H5.2L12.7 4.5ZM10.2 2L12 3.8L10.5 5.3L8.7 3.5L10.2 2ZM3 11V9.2L8 4.2L9.8 6L4.8 11H3Z"></path></svg></div>
+                                      <div className="inline-flex w-4 h-4 me-1.5"><Icon name="editPencil" /></div>
                                       Edit
                                     </button>
                                   )}
@@ -315,7 +316,7 @@ export default function ProjectSettings() {
                                     </div>
                                   ) : (
                                     <button type="button" onClick={() => setIsEditingDescription(true)} className="h-10 py-2.5 px-3 flex items-center group/button rounded-sm text-gray-700 dark:text-[#c7c7c7] hover:bg-gray-100 dark:hover:bg-[#272727] hover:text-gray-900 dark:hover:text-white transition-colors" >
-                                      <div className="inline-flex w-4 h-4 me-1.5"><svg fill="currentColor" width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M15 13H1V14H15V13Z"></path><path d="M12.7 4.5C13.1 4.1 13.1 3.5 12.7 3.1L10.9 1.3C10.5 0.9 9.9 0.9 9.5 1.3L2 8.8V12H5.2L12.7 4.5ZM10.2 2L12 3.8L10.5 5.3L8.7 3.5L10.2 2ZM3 11V9.2L8 4.2L9.8 6L4.8 11H3Z"></path></svg></div>
+                                      <div className="inline-flex w-4 h-4 me-1.5"><Icon name="editPencil" /></div>
                                       Edit
                                     </button>
                                   )}
@@ -342,7 +343,7 @@ export default function ProjectSettings() {
                       <p className="text-[14px] text-gray-500 dark:text-[#b3b3b3] mt-1">Once you delete your project, there is no going back. Please be certain.</p>
                     </div>
                     <button type="button" onClick={openDeleteModal} className="bg-[#e23642] hover:bg-[#c0222d] text-white transition-colors h-10 py-2.5 px-3 flex items-center group/button rounded-sm whitespace-nowrap shrink-0 font-medium">
-                      <div className="inline-flex w-4 h-4 me-1.5"><svg fill="currentColor" width="16" height="17" viewBox="0 0 16 17" xmlns="http://www.w3.org/2000/svg"><path d="M7 6.66699H6V12.667H7V6.66699Z"></path><path d="M10 6.66699H9V12.667H10V6.66699Z"></path><path d="M2 3.66699V4.66699H3V14.667C3 14.9322 3.10536 15.1866 3.29289 15.3741C3.48043 15.5616 3.73478 15.667 4 15.667H12C12.2652 15.667 12.5196 15.5616 12.7071 15.3741C12.8946 15.1866 13 14.9322 13 14.667V4.66699H14V3.66699H2ZM4 14.667V4.66699H12V14.667H4Z"></path><path d="M10 1.66699H6V2.66699H10V1.66699Z"></path></svg></div>
+                      <div className="inline-flex w-4 h-4 me-1.5"><Icon name="trash" /></div>
                       Delete Project
                     </button>
                   </div>
@@ -379,7 +380,7 @@ export default function ProjectSettings() {
                   {env.name.toLowerCase() === 'production' ? (
                     <BiSolidBolt className="shrink-0 size-4 mr-2 text-blue-500" />
                   ) : (
-                    <svg fill="currentColor" aria-hidden="true" className="shrink-0 size-4 mr-2 text-gray-700 dark:text-gray-300" width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M5.72573 2.18206L4.21915 3.07246L4.72795 3.93336L6.23453 3.04296L5.72573 2.18206Z"></path><path d="M3 6H2V4.95C2 4.6 2.2 4.25 2.5 4.1L3.25 3.65L3.75 4.5L3 4.95V6Z"></path><path d="M3 7H2V9H3V7Z"></path><path d="M3.25 12.35L2.5 11.9C2.2 11.7 2 11.4 2 11.05V10H3V11.05L3.75 11.5L3.25 12.35Z"></path><path d="M4.72447 12.0523L4.21577 12.9132L5.72235 13.8034L6.23105 12.9425L4.72447 12.0523Z"></path><path d="M8.75 13.55L8 14L7.25 13.55L6.75 14.4L7.5 14.85C7.65 14.95 7.85 15 8 15C8.2 15 8.35 14.95 8.5 14.85L9.25 14.4L8.75 13.55Z"></path><path d="M11.2676 12.063L9.76107 12.9534L10.2699 13.8143L11.7764 12.9239L11.2676 12.063Z"></path><path d="M12.6 12.45L12.1 11.6L13 11.1V10H14V11.05C14 11.4 13.8 11.75 13.5 11.9L12.6 12.45Z"></path><path d="M14 7H13V9H14V7Z"></path><path d="M14 6H13V4.95L12.1 4.45L12.6 3.6L13.5 4.1C13.8 4.3 14 4.6 14 4.95V6Z"></path><path d="M10.2343 2.15943L9.72561 3.02033L11.2322 3.91055L11.7409 3.04965L10.2343 2.15943Z"></path><path d="M8.75 2.45L8 2L7.25 2.45L6.75 1.6L7.5 1.15C7.65 1.05 7.8 1 8 1C8.2 1 8.35 1.05 8.5 1.15L9.25 1.6L8.75 2.45Z"></path></svg>
+                    <Icon name="environmentBurst" className="shrink-0 size-4 mr-2 text-gray-700 dark:text-gray-300" aria-hidden="true" />
                   )}
                   {env.name}
                 </div>

@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
+import { Icon } from '../icons';
 
 // ─── Sparkline chart component ────────────────────────────────────────────────
 function Sparkline({ color = '#2563eb', delay = 0 }: { color?: string; delay?: number }) {
@@ -204,12 +205,7 @@ export default function HeroDashboardIllustration() {
           >
             <ServiceCard
               icon={
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                  <circle cx="6" cy="6" r="5" stroke="currentColor" strokeWidth="1" />
-                  <line x1="6" y1="1" x2="6" y2="11" stroke="currentColor" strokeWidth="0.8" />
-                  <path d="M1 6 Q3 4 6 4 Q9 4 11 6" stroke="currentColor" strokeWidth="0.8" fill="none" />
-                  <path d="M1 6 Q3 8 6 8 Q9 8 11 6" stroke="currentColor" strokeWidth="0.8" fill="none" />
-                </svg>
+                <Icon name="heroOrb" />
               }
               name="app-backend"
               status="Available"
@@ -223,10 +219,7 @@ export default function HeroDashboardIllustration() {
             />
             <ServiceCard
               icon={
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                  <rect x="1" y="3" width="10" height="7" rx="1" stroke="currentColor" strokeWidth="1" />
-                  <line x1="3" y1="1" x2="9" y2="1" stroke="currentColor" strokeWidth="1" strokeLinecap="round" />
-                </svg>
+                <Icon name="heroPanel" />
               }
               name="app-backend"
               metrics={[
@@ -239,11 +232,7 @@ export default function HeroDashboardIllustration() {
             />
             <ServiceCard
               icon={
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                  <ellipse cx="6" cy="3" rx="5" ry="2" stroke="currentColor" strokeWidth="1" />
-                  <path d="M1 3 v6 c0 1.1 2.2 2 5 2 s5-.9 5-2 V3" stroke="currentColor" strokeWidth="1" fill="none" />
-                  <path d="M1 6 c0 1.1 2.2 2 5 2 s5-.9 5-2" stroke="currentColor" strokeWidth="0.8" fill="none" />
-                </svg>
+                <Icon name="heroBase" />
               }
               name="app-database"
               status="Available"
@@ -257,10 +246,7 @@ export default function HeroDashboardIllustration() {
             />
             <ServiceCard
               icon={
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                  <rect x="1" y="2" width="10" height="8" rx="1" stroke="currentColor" strokeWidth="1" />
-                  <line x1="1" y1="4" x2="11" y2="4" stroke="currentColor" strokeWidth="0.8" />
-                </svg>
+                <Icon name="heroFrame" />
               }
               name="app-frontend"
               metrics={[

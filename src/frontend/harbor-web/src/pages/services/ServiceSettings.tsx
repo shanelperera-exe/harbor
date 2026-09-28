@@ -1,6 +1,7 @@
 import { Settings as SettingsIcon } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import { Icon } from '../../components/icons';
 
 export default function ServiceSettings() {
   const { projectId, serviceId } = useParams();
@@ -280,9 +281,7 @@ export default function ServiceSettings() {
                 aria-label="Close modal"
                 onClick={closeDeleteModal}
               >
-                <svg fill="currentColor" aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 4.7L11.3 4L8 7.3L4.7 4L4 4.7L7.3 8L4 11.3L4.7 12L8 8.7L11.3 12L12 11.3L8.7 8L12 4.7Z"></path>
-                </svg>
+                <Icon name="close" aria-hidden="true" width="16" height="16" />
               </button>
             </div>
 

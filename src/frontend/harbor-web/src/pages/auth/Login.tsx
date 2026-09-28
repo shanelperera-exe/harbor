@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Key, Eye, EyeOff, User, AlertCircle } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { Icon } from '../../components/icons';
 
 const authApiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
@@ -80,9 +81,7 @@ export default function Login() {
                   onClick={() => startExternalLogin('github')}
                   className="group flex items-center justify-center space-x-2 h-10 px-4 bg-transparent border border-gray-300 dark:border-[#525252]/40 hover:bg-gray-100 dark:hover:bg-white text-black dark:text-[#e3e3e3] hover:text-black focus:outline-none rounded-sm transition-colors duration-200"
                 >
-                  <svg width="19" height="19" viewBox="0 0 24 23" xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 fill-black dark:fill-[#e3e3e3] group-hover:fill-black transition-colors">
-                    <path fillRule="evenodd" clipRule="evenodd" d="M12.0183 0.405518C5.73469 0.405518 0.655029 5.50047 0.655029 11.8036C0.655029 16.8421 3.90974 21.107 8.42489 22.6165C8.9894 22.73 9.19618 22.3712 9.19618 22.0695C9.19618 21.8052 9.17757 20.8995 9.17757 19.9558C6.01659 20.6352 5.35835 18.597 5.35835 18.597C4.85036 17.2761 4.09768 16.9365 4.09768 16.9365C3.06309 16.2383 4.17304 16.2383 4.17304 16.2383C5.32067 16.3138 5.92286 17.4083 5.92286 17.4083C6.9386 19.1443 8.57538 18.6538 9.23386 18.3518C9.32782 17.6158 9.62904 17.1063 9.94886 16.8233C7.42775 16.5591 4.77523 15.5778 4.77523 11.1996C4.77523 9.95415 5.22647 8.93516 5.94146 8.14266C5.82866 7.85966 5.43348 6.68944 6.05451 5.12321C6.05451 5.12321 7.01396 4.82122 9.17733 6.2932C10.1036 6.0437 11.0587 5.91677 12.0183 5.91571C12.9777 5.91571 13.9558 6.04794 14.8589 6.2932C17.0226 4.82122 17.982 5.12321 17.982 5.12321C18.603 6.68944 18.2076 7.85966 18.0948 8.14266C18.8287 8.93516 19.2613 9.95415 19.2613 11.1996C19.2613 15.5778 16.6088 16.5401 14.0688 16.8233C14.4828 17.1818 14.8401 17.861 14.8401 18.9368C14.8401 20.4653 14.8215 21.692 14.8215 22.0692C14.8215 22.3712 15.0285 22.73 15.5928 22.6167C20.1079 21.1068 23.3626 16.8421 23.3626 11.8036C23.3813 5.50047 18.283 0.405518 12.0183 0.405518Z"></path>
-                  </svg>
+                  <Icon name="githubMarkOutline" className="w-5 h-5 fill-black dark:fill-[#e3e3e3] group-hover:fill-black transition-colors" />
                   <span className="text-[15px] font-medium">GitHub</span>
                 </button>
 
@@ -91,12 +90,7 @@ export default function Login() {
                   onClick={() => startExternalLogin('google')}
                   className="group flex items-center justify-center space-x-2 h-10 px-4 bg-transparent border border-gray-300 dark:border-[#525252]/40 hover:bg-gray-100 dark:hover:bg-white text-black dark:text-[#e3e3e3] hover:text-black focus:outline-none rounded-sm transition-colors duration-200"
                 >
-                  <svg viewBox="0 0 17 16" className="w-5 h-5" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M15.706 8.167C15.706 7.647 15.6593 7.147 15.5727 6.667H8.666V9.507H12.6127C12.4393 10.4203 11.9193 11.1937 11.1393 11.7137V13.5603H13.5193C14.906 12.2803 15.706 10.4003 15.706 8.167Z" fill="#4285F4"></path>
-                    <path d="M8.666 15.667C10.646 15.667 12.3127 15.0137 13.5193 13.5603L11.1393 11.7137C10.486 12.1537 9.646 12.4137 8.666 12.4137C6.77267 12.4137 5.166 11.1337 4.586 9.42703H2.126V11.3337C3.326 13.7137 5.79267 15.667 8.666 15.667Z" fill="#34A853"></path>
-                    <path d="M4.586 9.42703C4.43933 8.98703 4.35267 8.5137 4.35267 8.0337C4.35267 7.5537 4.43933 7.08037 4.586 6.64037V4.7337H2.126C1.63267 5.7137 1.33267 6.8337 1.33267 8.0337C1.33267 9.2337 1.63267 10.3537 2.126 11.3337L4.586 9.42703Z" fill="#FBBC05"></path>
-                    <path d="M8.666 3.6537C9.746 3.6537 10.7127 4.02703 11.4727 4.7537L13.5793 2.64703C12.306 1.46037 10.6393 0.667032 8.666 0.667032C5.79267 0.667032 3.326 2.62037 2.126 5.00037L4.586 6.90703C5.166 5.20037 6.77267 3.6537 8.666 3.6537Z" fill="#EA4335"></path>
-                  </svg>
+                  <Icon name="google" className="w-5 h-5" />
                   <span className="text-[15px] font-medium">Google</span>
                 </button>
               </div>

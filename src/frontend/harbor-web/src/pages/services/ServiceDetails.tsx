@@ -14,6 +14,7 @@ import ServiceSettings from './ServiceSettings';
 import ServiceCiRuns from './ServiceCiRuns';
 import { createDeployment, CiGateError } from '../../services/deploymentService';
 import { getEnvironments, type DeploymentEnvironment } from '../../services/environmentService';
+import { Icon } from '../../components/icons';
 
 // ─── Deploy Modal ────────────────────────────────────────────────────────────
 interface DeployModalProps {
@@ -155,7 +156,7 @@ export function DeployModal({ service, projectId, onClose, onDeployed, mode = 'l
             {mode === 'latest' ? (
               <MdFiberNew className="w-7 h-7 text-white" />
             ) : (
-              <svg viewBox="0 0 16 16" height="24" width="24" data-slot="geist-icon" className="flex-none text-white" style={{ color: 'currentColor' }}><path fill="currentColor" fillRule="evenodd" d="M4.75 1.75V1h-1.5v8.09a3 3 0 1 0 3.67 3.6 6.75 6.75 0 0 0 5.77-5.77 3 3 0 1 0-1.52-.03 5.25 5.25 0 0 1-4.28 4.28A3 3 0 0 0 4.75 9.1zM13.5 4a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0M4 13.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3" clipRule="evenodd"></path></svg>
+              <Icon name="gitBranch" className="flex-none text-white" style={{ color: 'currentColor' }} data-slot="geist-icon" width="24" height="24" />
             )}
             <h1 className="text-[24px] font-medium text-white">{mode === 'latest' ? 'Deploy latest commit' : 'Deploy a specific commit'}</h1>
           </div>
@@ -165,9 +166,7 @@ export function DeployModal({ service, projectId, onClose, onDeployed, mode = 'l
             aria-label="Close modal"
             onClick={onClose}
           >
-            <svg fill="currentColor" aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 4.7L11.3 4L8 7.3L4.7 4L4 4.7L7.3 8L4 11.3L4.7 12L8 8.7L11.3 12L12 11.3L8.7 8L12 4.7Z"></path>
-            </svg>
+            <Icon name="close" aria-hidden="true" width="16" height="16" />
           </button>
         </div>
 
@@ -176,9 +175,7 @@ export function DeployModal({ service, projectId, onClose, onDeployed, mode = 'l
           {/* Service info */}
           <div className="flex items-center gap-2 p-3 bg-transparent border border-[#6b6b6b] rounded-sm">
             <div className="w-8 h-8 rounded-sm bg-transparent border border-[#6b6b6b] flex items-center justify-center flex-shrink-0 text-white">
-              <svg fill="currentColor" aria-hidden="true" className="flex-shrink-0 w-5 h-5" width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
-                <path d="M10.65 2.45L8.4 1.1C8.25 1.05 8.15 1 8 1C7.85 1 7.75 1.05 7.65 1.1L5.4 2.45C5.15 2.6 5 2.85 5 3.1V5.9C5 6.15 5.15 6.4 5.35 6.55L7.6 7.9C7.7 7.95 7.85 8 7.95 8C8.05 8 8.2 7.95 8.3 7.9L10.55 6.55C10.75 6.4 10.9 6.2 10.9 5.9V3.1C11 2.85 10.85 2.6 10.65 2.45ZM10 5.75L8 6.95L6 5.75V3.25L8 2.05L10 3.25V5.75Z"></path><path d="M14.65 9.45L12.4 8.1C12.25 8.05 12.15 8 12 8C11.85 8 11.75 8.05 11.65 8.1L9.4 9.45C9.2 9.6 9.05 9.8 9.05 10.1V12.9C9.05 13.15 9.2 13.4 9.4 13.55L11.65 14.9C11.75 14.95 11.9 15 12 15C12.1 15 12.25 14.95 12.35 14.9L14.6 13.55C14.8 13.4 14.95 13.2 14.95 12.9V10.1C15 9.85 14.85 9.6 14.65 9.45ZM14 12.75L12 13.95L10 12.75V10.25L12 9.05L14 10.25V12.75Z"></path><path d="M6.65 9.45L4.4 8.1C4.25 8.05 4.15 8 4 8C3.85 8 3.75 8.05 3.65 8.1L1.4 9.45C1.15 9.6 1 9.85 1 10.1V12.9C1 13.15 1.15 13.4 1.35 13.55L3.6 14.9C3.75 14.95 3.85 15 4 15C4.15 15 4.25 14.95 4.35 14.9L6.6 13.55C6.8 13.4 6.95 13.2 6.95 12.9V10.1C7 9.85 6.85 9.6 6.65 9.45ZM6 12.75L4 13.95L2 12.75V10.25L4 9.05L6 10.25V12.75Z"></path>
-              </svg>
+              <Icon name="projects" className="flex-shrink-0 w-5 h-5" aria-hidden="true" />
             </div>
             <div className="min-w-0">
               <div className="text-[15px] font-medium text-white truncate">{service?.name}</div>
@@ -212,7 +209,7 @@ export function DeployModal({ service, projectId, onClose, onDeployed, mode = 'l
                       const selEnvObj = environments.find(e => e.name === selectedEnv);
                       const type = selEnvObj ? selEnvObj.type.toLowerCase() : '';
                       if (type === 'production') return <BiSolidBolt className="w-4 h-4 shrink-0 text-[#f0f0f0]" />;
-                      return <svg fill="currentColor" aria-hidden="true" className="w-4 h-4 shrink-0 text-[#f0f0f0]" width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M5.72573 2.18206L4.21915 3.07246L4.72795 3.93336L6.23453 3.04296L5.72573 2.18206Z"></path><path d="M3 6H2V4.95C2 4.6 2.2 4.25 2.5 4.1L3.25 3.65L3.75 4.5L3 4.95V6Z"></path><path d="M3 7H2V9H3V7Z"></path><path d="M3.25 12.35L2.5 11.9C2.2 11.7 2 11.4 2 11.05V10H3V11.05L3.75 11.5L3.25 12.35Z"></path><path d="M4.72447 12.0523L4.21577 12.9132L5.72235 13.8034L6.23105 12.9425L4.72447 12.0523Z"></path><path d="M8.75 13.55L8 14L7.25 13.55L6.75 14.4L7.5 14.85C7.65 14.95 7.85 15 8 15C8.2 15 8.35 14.95 8.5 14.85L9.25 14.4L8.75 13.55Z"></path><path d="M11.2676 12.063L9.76107 12.9534L10.2699 13.8143L11.7764 12.9239L11.2676 12.063Z"></path><path d="M12.6 12.45L12.1 11.6L13 11.1V10H14V11.05C14 11.4 13.8 11.75 13.5 11.9L12.6 12.45Z"></path><path d="M14 7H13V9H14V7Z"></path><path d="M14 6H13V4.95L12.1 4.45L12.6 3.6L13.5 4.1C13.8 4.3 14 4.6 14 4.95V6Z"></path><path d="M10.2343 2.15943L9.72561 3.02033L11.2322 3.91055L11.7409 3.04965L10.2343 2.15943Z"></path><path d="M8.75 2.45L8 2L7.25 2.45L6.75 1.6L7.5 1.15C7.65 1.05 7.8 1 8 1C8.2 1 8.35 1.05 8.5 1.15L9.25 1.6L8.75 2.45Z"></path></svg>;
+                      return <Icon name="environmentBurst" className="w-4 h-4 shrink-0 text-[#f0f0f0]" aria-hidden="true" />;
                     })()}
                     <span>{selectedEnv || 'Select environment'}</span>
                   </div>
@@ -233,7 +230,7 @@ export function DeployModal({ service, projectId, onClose, onDeployed, mode = 'l
                           {isProduction ? (
                             <BiSolidBolt className="w-4 h-4 shrink-0 text-[#f0f0f0]" />
                           ) : (
-                            <svg fill="currentColor" aria-hidden="true" className="w-4 h-4 shrink-0 text-[#f0f0f0]" width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M5.72573 2.18206L4.21915 3.07246L4.72795 3.93336L6.23453 3.04296L5.72573 2.18206Z"></path><path d="M3 6H2V4.95C2 4.6 2.2 4.25 2.5 4.1L3.25 3.65L3.75 4.5L3 4.95V6Z"></path><path d="M3 7H2V9H3V7Z"></path><path d="M3.25 12.35L2.5 11.9C2.2 11.7 2 11.4 2 11.05V10H3V11.05L3.75 11.5L3.25 12.35Z"></path><path d="M4.72447 12.0523L4.21577 12.9132L5.72235 13.8034L6.23105 12.9425L4.72447 12.0523Z"></path><path d="M8.75 13.55L8 14L7.25 13.55L6.75 14.4L7.5 14.85C7.65 14.95 7.85 15 8 15C8.2 15 8.35 14.95 8.5 14.85L9.25 14.4L8.75 13.55Z"></path><path d="M11.2676 12.063L9.76107 12.9534L10.2699 13.8143L11.7764 12.9239L11.2676 12.063Z"></path><path d="M12.6 12.45L12.1 11.6L13 11.1V10H14V11.05C14 11.4 13.8 11.75 13.5 11.9L12.6 12.45Z"></path><path d="M14 7H13V9H14V7Z"></path><path d="M14 6H13V4.95L12.1 4.45L12.6 3.6L13.5 4.1C13.8 4.3 14 4.6 14 4.95V6Z"></path><path d="M10.2343 2.15943L9.72561 3.02033L11.2322 3.91055L11.7409 3.04965L10.2343 2.15943Z"></path><path d="M8.75 2.45L8 2L7.25 2.45L6.75 1.6L7.5 1.15C7.65 1.05 7.8 1 8 1C8.2 1 8.35 1.05 8.5 1.15L9.25 1.6L8.75 2.45Z"></path></svg>
+                            <Icon name="environmentBurst" className="w-4 h-4 shrink-0 text-[#f0f0f0]" aria-hidden="true" />
                           )}
                           {env.name}
                         </li>
@@ -252,7 +249,7 @@ export function DeployModal({ service, projectId, onClose, onDeployed, mode = 'l
             </label>
             <div className="relative flex">
               <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none flex items-center justify-center">
-                <svg viewBox="0 0 16 16" height="16" width="16" data-slot="geist-icon" className="text-[#8f8f8f]" style={{ color: 'currentColor' }}><path fill="currentColor" fillRule="evenodd" d="M4.75 1.75V1h-1.5v8.09a3 3 0 1 0 3.67 3.6 6.75 6.75 0 0 0 5.77-5.77 3 3 0 1 0-1.52-.03 5.25 5.25 0 0 1-4.28 4.28A3 3 0 0 0 4.75 9.1zM13.5 4a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0M4 13.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3" clipRule="evenodd"></path></svg>
+                <Icon name="gitBranch" className="text-[#8f8f8f]" style={{ color: 'currentColor' }} data-slot="geist-icon" />
               </div>
               <input
                 type="text"
@@ -270,7 +267,7 @@ export function DeployModal({ service, projectId, onClose, onDeployed, mode = 'l
             </label>
             <div className="relative flex">
               <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none flex items-center justify-center">
-                <svg viewBox="0 0 16 16" height="16" width="16" data-slot="geist-icon" className="text-[#8f8f8f]" style={{ color: 'currentColor' }}><path fill="currentColor" fillRule="evenodd" d="M8 10.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5M8 12a4 4 0 0 0 3.93-3.25H16v-1.5h-4.07a4 4 0 0 0-7.86 0H0v1.5h4.07A4 4 0 0 0 8 12" clipRule="evenodd"></path></svg>
+                <Icon name="gitCommit" className="text-[#8f8f8f]" style={{ color: 'currentColor' }} data-slot="geist-icon" />
               </div>
               <input
                 type="text"
@@ -298,7 +295,7 @@ export function DeployModal({ service, projectId, onClose, onDeployed, mode = 'l
                       onClick={() => { setBranch(commit.sha); setCommitDropdownOpen(false); }} 
                       className="px-3 py-2 hover:bg-[#ffffff1a] cursor-pointer flex items-center gap-2 text-[#f0f0f0] transition-colors border-b border-[#4d4d4d]/50 last:border-0"
                     >
-                      <svg viewBox="0 0 16 16" height="16" width="16" data-slot="geist-icon" className="text-[#8f8f8f] shrink-0" style={{ color: 'currentColor' }}><path fill="currentColor" fillRule="evenodd" d="M8 10.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5M8 12a4 4 0 0 0 3.93-3.25H16v-1.5h-4.07a4 4 0 0 0-7.86 0H0v1.5h4.07A4 4 0 0 0 8 12" clipRule="evenodd"></path></svg>
+                      <Icon name="gitCommit" className="text-[#8f8f8f] shrink-0" style={{ color: 'currentColor' }} data-slot="geist-icon" />
                       <div className="flex flex-col gap-0.5 truncate overflow-hidden w-full font-geist-mono">
                         <span className="text-[14px] truncate">{commit.message.split('\n')[0]}</span>
                         <span className="text-[12px] text-[#8f8f8f]">{commit.sha.substring(0, 7)}</span>

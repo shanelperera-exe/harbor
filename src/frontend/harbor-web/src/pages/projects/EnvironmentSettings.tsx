@@ -4,6 +4,7 @@ import { RiSaveLine } from 'react-icons/ri';
 import { getProject, type Project } from '../../services/projectService';
 import { getEnvironments, updateEnvironment, removeEnvironment, type DeploymentEnvironment } from '../../services/environmentService';
 import { DeleteConfirmationModal } from '../../components/ui/DeleteConfirmationModal';
+import { Icon } from '../../components/icons';
 
 export default function EnvironmentSettings() {
   const navigate = useNavigate();
@@ -238,7 +239,7 @@ export default function EnvironmentSettings() {
                                     </div>
                                   ) : (
                                     <button type="button" onClick={() => setIsEditing(true)} className="h-10 py-2.5 px-3 flex items-center group/button rounded-sm text-gray-700 dark:text-[#c7c7c7] hover:bg-gray-100 dark:hover:bg-[#272727] hover:text-gray-900 dark:hover:text-white transition-colors" >
-                                      <div className="inline-flex w-4 h-4 me-1.5"><svg fill="currentColor" width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M15 13H1V14H15V13Z"></path><path d="M12.7 4.5C13.1 4.1 13.1 3.5 12.7 3.1L10.9 1.3C10.5 0.9 9.9 0.9 9.5 1.3L2 8.8V12H5.2L12.7 4.5ZM10.2 2L12 3.8L10.5 5.3L8.7 3.5L10.2 2ZM3 11V9.2L8 4.2L9.8 6L4.8 11H3Z"></path></svg></div>
+                                      <div className="inline-flex w-4 h-4 me-1.5"><Icon name="editPencil" /></div>
                                       Edit
                                     </button>
                                   )}
@@ -265,7 +266,7 @@ export default function EnvironmentSettings() {
                       <p className="text-[14px] text-gray-500 dark:text-[#b3b3b3] mt-1">Once you delete your environment, there is no going back. Please be certain.</p>
                     </div>
                     <button type="button" onClick={openDeleteModal} className="bg-[#e23642] hover:bg-[#c0222d] text-white transition-colors h-10 py-2.5 px-3 flex items-center group/button rounded-sm whitespace-nowrap shrink-0 font-medium">
-                      <div className="inline-flex w-4 h-4 me-1.5"><svg fill="currentColor" width="16" height="17" viewBox="0 0 16 17" xmlns="http://www.w3.org/2000/svg"><path d="M7 6.66699H6V12.667H7V6.66699Z"></path><path d="M10 6.66699H9V12.667H10V6.66699Z"></path><path d="M2 3.66699V4.66699H3V14.667C3 14.9322 3.10536 15.1866 3.29289 15.3741C3.48043 15.5616 3.73478 15.667 4 15.667H12C12.2652 15.667 12.5196 15.5616 12.7071 15.3741C12.8946 15.1866 13 14.9322 13 14.667V4.66699H14V3.66699H2ZM4 14.667V4.66699H12V14.667H4Z"></path><path d="M10 1.66699H6V2.66699H10V1.66699Z"></path></svg></div>
+                      <div className="inline-flex w-4 h-4 me-1.5"><Icon name="trash" /></div>
                       Delete Environment
                     </button>
                   </div>

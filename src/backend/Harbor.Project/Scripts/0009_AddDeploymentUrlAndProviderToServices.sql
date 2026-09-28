@@ -1,0 +1,3 @@
+ALTER TABLE "Services" 
+ADD COLUMN IF NOT EXISTS "DeploymentUrl" text NULL,
+ADD COLUMN IF NOT EXISTS "Provider" text NULL;

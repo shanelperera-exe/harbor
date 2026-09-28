@@ -33,8 +33,15 @@ namespace Harbor.Project.Controllers
                 return BadRequest(new { message = "GitHub account not connected or token missing." });
             }
 
-            var repos = await _gitHubService.GetRepositoriesAsync(token);
-            return Ok(new { Data = repos });
+            try
+            {
+                var repos = await _gitHubService.GetRepositoriesAsync(token);
+                return Ok(new { Data = repos });
+            }
+            catch (GitHubApiException ex)
+            {
+                return StatusCode((int)ex.StatusCode, new { message = ex.Message });
+            }
         }
 
         [HttpGet("repositories/{owner}/{repo}/branches")]
@@ -51,8 +58,15 @@ namespace Harbor.Project.Controllers
                 return BadRequest(new { message = "GitHub account not connected or token missing." });
             }
 
-            var branches = await _gitHubService.GetBranchesAsync(token, owner, repo);
-            return Ok(new { Data = branches });
+            try
+            {
+                var branches = await _gitHubService.GetBranchesAsync(token, owner, repo);
+                return Ok(new { Data = branches });
+            }
+            catch (GitHubApiException ex)
+            {
+                return StatusCode((int)ex.StatusCode, new { message = ex.Message });
+            }
         }
 
         [HttpGet("repositories/{owner}/{repo}/branches/{branch}/commits")]
@@ -69,8 +83,15 @@ namespace Harbor.Project.Controllers
                 return BadRequest(new { message = "GitHub account not connected or token missing." });
             }
 
-            var commits = await _gitHubService.GetCommitsAsync(token, owner, repo, branch);
-            return Ok(new { Data = commits });
+            try
+            {
+                var commits = await _gitHubService.GetCommitsAsync(token, owner, repo, branch);
+                return Ok(new { Data = commits });
+            }
+            catch (GitHubApiException ex)
+            {
+                return StatusCode((int)ex.StatusCode, new { message = ex.Message });
+            }
         }
     }
 }

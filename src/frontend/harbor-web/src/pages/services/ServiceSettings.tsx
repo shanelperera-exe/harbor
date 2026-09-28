@@ -10,6 +10,8 @@ export default function ServiceSettings() {
   const [workflowFile, setWorkflowFile] = useState('deploy.yml');
   const [buildCommand, setBuildCommand] = useState('');
   const [startCommand, setStartCommand] = useState('');
+  const [deploymentUrls, setDeploymentUrls] = useState<{environment: string, url: string}[]>([]);
+  const [provider, setProvider] = useState('');
   const [saving, setSaving] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
@@ -34,6 +36,8 @@ export default function ServiceSettings() {
           setWorkflowFile(svc.workflowFile || 'deploy.yml');
           setBuildCommand(svc.buildCommand || '');
           setStartCommand(svc.startCommand || '');
+          setDeploymentUrls(svc.deploymentUrls && svc.deploymentUrls.length > 0 ? svc.deploymentUrls : [{ environment: 'Production', url: svc.deploymentUrl || '' }]);
+          setProvider(svc.provider || '');
         }
       } catch (err) {
         console.error('Failed to load service:', err);
@@ -60,7 +64,9 @@ export default function ServiceSettings() {
         body: JSON.stringify({ 
           workflowFile: workflowFile.trim() || 'deploy.yml',
           buildCommand: buildCommand.trim(),
-          startCommand: startCommand.trim()
+          startCommand: startCommand.trim(),
+          deploymentUrls: deploymentUrls.filter(u => u.url.trim() !== ''),
+          provider: provider.trim()
         })
       });
       if (!res.ok) {
@@ -175,6 +181,61 @@ export default function ServiceSettings() {
               value={startCommand}
               onChange={e => setStartCommand(e.target.value)}
             />
+          </div>
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium text-gray-700 dark:text-[#cccccc]">Deployment URLs</label>
+            {deploymentUrls.map((dUrl, idx) => (
+              <div key={idx} className="flex items-center gap-2">
+                <input 
+                  type="text" 
+                  className="w-1/3 h-10 px-3 bg-transparent border border-gray-300 dark:border-[#525252] rounded-sm focus:border-[#2563eb] focus:outline-none dark:text-white font-mono text-sm" 
+                  placeholder="Environment (e.g. Production)" 
+                  value={dUrl.environment}
+                  onChange={e => {
+                    const newUrls = [...deploymentUrls];
+                    newUrls[idx].environment = e.target.value;
+                    setDeploymentUrls(newUrls);
+                  }}
+                />
+                <input 
+                  type="text" 
+                  className="flex-1 h-10 px-3 bg-transparent border border-gray-300 dark:border-[#525252] rounded-sm focus:border-[#2563eb] focus:outline-none dark:text-white font-mono text-sm" 
+                  placeholder="URL (e.g. www.shanelperera.me)" 
+                  value={dUrl.url}
+                  onChange={e => {
+                    const newUrls = [...deploymentUrls];
+                    newUrls[idx].url = e.target.value;
+                    setDeploymentUrls(newUrls);
+                  }}
+                />
+                <button
+                  type="button"
+                  className="h-10 px-3 text-red-500 hover:text-red-700 transition-colors"
+                  onClick={() => setDeploymentUrls(deploymentUrls.filter((_, i) => i !== idx))}
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+            <button
+              type="button"
+              className="text-left text-sm text-[#2563eb] hover:underline mt-1 w-fit"
+              onClick={() => setDeploymentUrls([...deploymentUrls, { environment: 'Preview', url: '' }])}
+            >
+              + Add another URL
+            </button>
+            <p className="text-xs text-gray-500 dark:text-[#8f8f8f]">The URLs where this service will be accessible per environment</p>
+          </div>
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium text-gray-700 dark:text-[#cccccc]">Deployment Provider</label>
+            <input 
+              type="text" 
+              className="h-10 px-3 bg-transparent border border-gray-300 dark:border-[#525252] rounded-sm focus:border-[#2563eb] focus:outline-none dark:text-white font-mono text-sm" 
+              placeholder="e.g. Vercel, Render, AWS" 
+              value={provider}
+              onChange={e => setProvider(e.target.value)}
+            />
+            <p className="text-xs text-gray-500 dark:text-[#8f8f8f]">The platform hosting this service</p>
           </div>
           <div className="pt-2">
             <button onClick={handleSave} disabled={saving} className="h-10 px-4 bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-medium rounded-sm transition-colors disabled:opacity-50">

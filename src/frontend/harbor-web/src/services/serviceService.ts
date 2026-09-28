@@ -8,6 +8,13 @@ export interface Service {
   repositoryName?: string | null;
   repositoryBranch?: string | null;
   repositoryCommit?: string | null;
+  workflowFile?: string | null;
+  buildCommand?: string | null;
+  startCommand?: string | null;
+  deploymentUrl?: string | null;
+  deploymentUrls?: { environment: string; url: string }[];
+  provider?: string | null;
+  isPrivate?: boolean;
   createdAt: string;
 }
 

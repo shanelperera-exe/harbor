@@ -34,7 +34,10 @@ public sealed class DeploymentWebhookController(
         var rawBody = ms.ToArray();
 
         // Verify HMAC-SHA256 signature using the configured webhook secret
-        var webhookSecret = Environment.GetEnvironmentVariable("GITHUB_APP_WEBHOOK_SECRET");
+        // Check both GH_ prefixed (GitHub Environment) and GITHUB_ prefixed (legacy) env vars
+        var webhookSecret = Environment.GetEnvironmentVariable("GH_APP_WEBHOOK_SECRET") 
+            ?? Environment.GetEnvironmentVariable("GITHUB_APP_WEBHOOK_SECRET");
+        
         if (!string.IsNullOrWhiteSpace(webhookSecret))
         {
             if (!VerifySignature(rawBody, signature, webhookSecret))
@@ -45,7 +48,7 @@ public sealed class DeploymentWebhookController(
         }
         else
         {
-            logger.LogWarning("GITHUB_APP_WEBHOOK_SECRET is not configured — skipping signature verification.");
+            logger.LogWarning("Webhook secret (GH_APP_WEBHOOK_SECRET or GITHUB_APP_WEBHOOK_SECRET) is not configured — skipping signature verification.");
         }
 
         logger.LogDebug("Deployment webhook received: event={Event}, delivery={Delivery}", eventType, deliveryId);

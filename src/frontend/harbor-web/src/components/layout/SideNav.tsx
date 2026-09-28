@@ -3,6 +3,7 @@ import { Link, useLocation, useMatch } from 'react-router-dom';
 import { getProject, type Project } from '../../services/projectService';
 import { getService, type Service } from '../../services/serviceService';
 import { RxDashboard } from "react-icons/rx";
+import { Activity } from 'lucide-react';
 
 const NavItem = ({ icon, label, to, isFooter = false, isButton = false }: any) => {
   const location = useLocation();
@@ -183,13 +184,13 @@ export default function SideNav({
               <div className="flex flex-col space-y-6 py-2">
                 <ul>
                   <NavItem label="Deployments" to={`/projects/${serviceMatch.params.projectId}/services/${serviceId}/deploys`} icon={<IconServiceDeploys />} />
+                  <NavItem label="CI History" to={`/projects/${serviceMatch.params.projectId}/services/${serviceId}/ci-history`} icon={<Activity className="w-4 h-4" />} />
                   <NavItem label="Settings" to={`/projects/${serviceMatch.params.projectId}/services/${serviceId}/settings`} icon={<IconServiceSettings />} />
                 </ul>
                 
                 <div className="relative space-y-2">
                   <div className="text-[#b3b3b3] px-2.5 text-[15px] uppercase font-mono tracking-wider">Monitor</div>
                   <ul>
-                    <NavItem label="Events" to={`/projects/${serviceMatch.params.projectId}/services/${serviceId}/events`} icon={<IconServiceEvents />} />
                     <NavItem label="Logs" to={`/projects/${serviceMatch.params.projectId}/services/${serviceId}/logs`} icon={<IconServiceLogs />} />
                     <NavItem label="Metrics" to={`/projects/${serviceMatch.params.projectId}/services/${serviceId}/metrics`} icon={<IconServiceMetrics />} />
                   </ul>
@@ -198,7 +199,7 @@ export default function SideNav({
                 <div className="relative space-y-2">
                   <div className="text-[#b3b3b3] px-2.5 text-[15px] uppercase font-mono tracking-wider">Manage</div>
                   <ul>
-                    <NavItem label="Environment" to={`/projects/${serviceMatch.params.projectId}/services/${serviceId}/env`} icon={<IconServiceEnvironment />} />
+                    <NavItem label="Environment" to={`/projects/${serviceMatch.params.projectId}/services/${serviceId}/environment`} icon={<IconServiceEnvironment />} />
                   </ul>
                 </div>
               </div>
@@ -267,7 +268,7 @@ export default function SideNav({
 
               <NavSection title="Infrastructure">
                 <NavItem label="Environments" to="/environments" icon={<IconGroups />} />
-                <NavItem label="Deployments" to="/deployments" icon={<IconWebhooks />} />
+                <NavItem label="Deployments" to="/deployments" icon={<IconServiceDeploys />} />
               </NavSection>
 
               <NavSection title="Observability">

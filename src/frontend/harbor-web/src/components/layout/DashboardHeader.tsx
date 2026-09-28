@@ -135,7 +135,7 @@ function ProfileDropdown({
   return (
     <div
       role="listbox"
-      className="absolute right-0 top-full mt-1 z-50 w-[18rem] p-4 bg-white dark:bg-[oklch(0.21_0.03_263.45)] border border-gray-300 dark:border-[#525252] shadow-none dark:shadow-lg outline-none overflow-hidden rounded-sm"
+      className="absolute right-0 top-full mt-1 z-[9999] w-[18rem] p-4 bg-white dark:bg-[oklch(0.21_0.03_263.45)] border border-gray-300 dark:border-[#525252] shadow-none dark:shadow-lg outline-none overflow-hidden rounded-sm"
       style={{ animation: 'dropdownIn 0.1s ease-out' }}
     >
       <style>{`
@@ -324,7 +324,7 @@ export default function DashboardHeader({
       <header
         data-testid="ribbonnav"
         role="banner"
-        className="shrink-0 sticky top-0 z-[30] w-full flex h-14 pe-3 sm:pe-4 bg-white dark:bg-[oklch(0.21_0.03_263.45)] text-gray-900 dark:text-white border-b border-solid border-gray-300 dark:border-[#525252] transition-colors duration-300"
+        className="shrink-0 sticky top-0 z-[110] w-full flex h-14 pe-3 sm:pe-4 bg-white dark:bg-[oklch(0.21_0.03_263.45)] text-gray-900 dark:text-white border-b border-solid border-gray-300 dark:border-[#525252] transition-colors duration-300"
       >
       {/* Logo + workspace */}
       <div 

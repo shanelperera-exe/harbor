@@ -9,6 +9,7 @@ public class DeploymentEntity
     public string Environment { get; init; } = string.Empty;
     public string Version { get; init; } = string.Empty;
     public string? CommitSha { get; init; }
+    public string? CommitMessage { get; init; }
     public string Status { get; init; } = string.Empty;
     public DateTime StartedAt { get; init; }
     public DateTime? CompletedAt { get; init; }
@@ -22,5 +23,6 @@ public class DeploymentEntity
     // Joined properties for history view
     public string? ProjectName { get; init; }
     public string? ServiceName { get; init; }
+    public string? ServiceType { get; init; }
     public string? UserName { get; init; }
 }

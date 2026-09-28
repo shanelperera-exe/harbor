@@ -276,10 +276,17 @@ export default function ProjectEnvironments() {
                             <StatusBadge status="ready" label="Ready" />
                           </td>
                           <td className="px-4 text-[14px]">
-                            <a href={`https://${service.name}-${env.name.toLowerCase()}.harbor.app`} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="text-gray-900 dark:text-[#f0f0f0] hover:text-[#2563eb] dark:hover:text-[#3b82f6] hover:underline transition-colors flex items-center gap-1.5">
-                              {service.name}-{env.name.toLowerCase()}.harbor.app
-                              <svg fill="currentColor" viewBox="0 0 24 24" className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity"><path d="M14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7zm-2 16H5V5h7V3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h9c1.1 0 2-.9 2-2v-7h-2v7z"></path></svg>
-                            </a>
+                            {service.deploymentUrl ? (
+                              <a href={service.deploymentUrl.startsWith('http') ? service.deploymentUrl : `https://${service.deploymentUrl}`} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="text-gray-900 dark:text-[#f0f0f0] hover:text-[#2563eb] dark:hover:text-[#3b82f6] hover:underline transition-colors flex items-center gap-1.5">
+                                {service.deploymentUrl.replace(/^https?:\/\//, '')}
+                                <svg fill="currentColor" viewBox="0 0 24 24" className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity"><path d="M14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7zm-2 16H5V5h7V3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h9c1.1 0 2-.9 2-2v-7h-2v7z"></path></svg>
+                              </a>
+                            ) : (
+                              <a href={`https://${service.name}-${env.name.toLowerCase()}.harbor.app`} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="text-gray-900 dark:text-[#f0f0f0] hover:text-[#2563eb] dark:hover:text-[#3b82f6] hover:underline transition-colors flex items-center gap-1.5">
+                                {service.name}-{env.name.toLowerCase()}.harbor.app
+                                <svg fill="currentColor" viewBox="0 0 24 24" className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity"><path d="M14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7zm-2 16H5V5h7V3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h9c1.1 0 2-.9 2-2v-7h-2v7z"></path></svg>
+                              </a>
+                            )}
                           </td>
                           <td className="px-4 text-[14px] text-gray-500 dark:text-[#a1a1aa]">
                             <div className="flex flex-col gap-1">

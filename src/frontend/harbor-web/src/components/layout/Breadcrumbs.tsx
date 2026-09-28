@@ -3,11 +3,14 @@ import { useLocation, Link, useMatch } from 'react-router-dom';
 import { getProject, getProjects, type Project } from '../../services/projectService';
 import { getService, type Service } from '../../services/serviceService';
 import { BiSolidBolt } from 'react-icons/bi';
+import { Activity } from 'lucide-react';
 import {
   IconProjects, IconGroups, IconSettings, IconWebhooks,
   IconServiceDeploys, IconServiceEvents, IconServiceLogs,
-  IconServiceMetrics, IconServiceSettings
+  IconServiceMetrics, IconServiceSettings, IconServiceEnvironment
 } from './SideNav';
+
+const IconServiceActivity = () => <Activity className="shrink-0 w-4 h-4" />;
 
 const SeparatorIcon = () => (
   <svg fill="currentColor" className="size-3" width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
@@ -123,25 +126,27 @@ export const Breadcrumbs: React.FC<{ isMobile?: boolean }> = ({ isMobile }) => {
   else if (location.pathname.endsWith('/deployments')) currentProjectRouteLabel = 'Deployments';
 
   // Derive service route label + exact SideNav icon dynamically from URL
+  const servicePages: { segment: string; label: string; icon: any }[] = [
+    { segment: 'deploys', label: 'Deploys', icon: <IconServiceDeploys /> },
+    { segment: 'deployments', label: 'Deploys', icon: <IconServiceDeploys /> },
+    { segment: 'ci-history', label: 'CI History', icon: <IconServiceActivity /> },
+    { segment: 'events', label: 'Events', icon: <IconServiceEvents /> },
+    { segment: 'logs', label: 'Logs', icon: <IconServiceLogs /> },
+    { segment: 'metrics', label: 'Metrics', icon: <IconServiceMetrics /> },
+    { segment: 'environment', label: 'Environment', icon: <IconServiceEnvironment /> },
+    { segment: 'settings', label: 'Settings', icon: <IconServiceSettings /> },
+  ];
+
   let currentServiceRouteLabel = 'Deploys';
   let currentServiceRouteIcon = <IconServiceDeploys />;
   if (isServiceContext) {
-    const lastSegment = location.pathname.split('/').pop();
-    if (lastSegment === 'settings') {
-      currentServiceRouteLabel = 'Settings';
-      currentServiceRouteIcon = <IconServiceSettings />;
-    } else if (lastSegment === 'events') {
-      currentServiceRouteLabel = 'Events';
-      currentServiceRouteIcon = <IconServiceEvents />;
-    } else if (lastSegment === 'logs') {
-      currentServiceRouteLabel = 'Logs';
-      currentServiceRouteIcon = <IconServiceLogs />;
-    } else if (lastSegment === 'metrics') {
-      currentServiceRouteLabel = 'Metrics';
-      currentServiceRouteIcon = <IconServiceMetrics />;
-    } else {
-      currentServiceRouteLabel = 'Deploys';
-      currentServiceRouteIcon = <IconServiceDeploys />;
+    const pathSegments = location.pathname.split('/').filter(Boolean);
+    const serviceSegmentIndex = pathSegments.indexOf('services') + 1;
+    const routeSegment = pathSegments[serviceSegmentIndex + 1] || 'deploys';
+    const matchedPage = servicePages.find(p => p.segment === routeSegment);
+    if (matchedPage) {
+      currentServiceRouteLabel = matchedPage.label;
+      currentServiceRouteIcon = matchedPage.icon;
     }
   }
 
@@ -237,11 +242,12 @@ export const Breadcrumbs: React.FC<{ isMobile?: boolean }> = ({ isMobile }) => {
           setIsProjectDropdownOpen(false);
         },
         dropdownItems: [
-          { label: 'Deploys',  to: `/projects/${projectId}/services/${serviceId}/deploys`,  icon: <IconServiceDeploys />,  selected: currentServiceRouteLabel === 'Deploys' },
-          { label: 'Events',   to: `/projects/${projectId}/services/${serviceId}/events`,   icon: <IconServiceEvents />,   selected: currentServiceRouteLabel === 'Events' },
-          { label: 'Logs',     to: `/projects/${projectId}/services/${serviceId}/logs`,     icon: <IconServiceLogs />,     selected: currentServiceRouteLabel === 'Logs' },
-          { label: 'Metrics',  to: `/projects/${projectId}/services/${serviceId}/metrics`,  icon: <IconServiceMetrics />,  selected: currentServiceRouteLabel === 'Metrics' },
-          { label: 'Settings', to: `/projects/${projectId}/services/${serviceId}/settings`, icon: <IconServiceSettings />, selected: currentServiceRouteLabel === 'Settings' },
+          { label: 'Deploys',     to: `/projects/${projectId}/services/${serviceId}/deploys`,     icon: <IconServiceDeploys />,     selected: currentServiceRouteLabel === 'Deploys' },
+          { label: 'CI History',  to: `/projects/${projectId}/services/${serviceId}/ci-history`,  icon: <IconServiceActivity />,   selected: currentServiceRouteLabel === 'CI History' },
+          { label: 'Logs',        to: `/projects/${projectId}/services/${serviceId}/logs`,        icon: <IconServiceLogs />,        selected: currentServiceRouteLabel === 'Logs' },
+          { label: 'Metrics',     to: `/projects/${projectId}/services/${serviceId}/metrics`,     icon: <IconServiceMetrics />,     selected: currentServiceRouteLabel === 'Metrics' },
+          { label: 'Environment', to: `/projects/${projectId}/services/${serviceId}/environment`, icon: <IconServiceEnvironment />, selected: currentServiceRouteLabel === 'Environment' },
+          { label: 'Settings',    to: `/projects/${projectId}/services/${serviceId}/settings`,    icon: <IconServiceSettings />,    selected: currentServiceRouteLabel === 'Settings' },
         ]
       });
     } else if (isNewServiceRoute) {

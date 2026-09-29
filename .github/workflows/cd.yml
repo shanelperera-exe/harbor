@@ -144,8 +144,10 @@ jobs:
       matrix:
         include:
           - service: harbor-admin-ui
+            context: src/frontend/harbor-admin
             dockerfile: src/frontend/harbor-admin/Dockerfile
           - service: harbor-web-ui
+            context: src/frontend/harbor-web
             dockerfile: src/frontend/harbor-web/Dockerfile
 
     steps:
@@ -174,11 +176,15 @@ jobs:
 
       - name: Build and Push Frontend Image
         run: |
+          # The build context must be the app directory, not the repo root. Each frontend is a
+          # self-contained Vite project, so the root context made COPY package*.json pick up the
+          # repo-level package-lock.json (there is no root package.json) and left nginx.conf
+          # unreachable at the context root.
           docker build \
             --build-arg VITE_API_BASE_URL=$GATEWAY_URL/api \
             -f ${{ matrix.dockerfile }} \
             -t ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.service }}:${{ env.DEPLOY_SHA }} \
-            .
+            ${{ matrix.context }}
           docker push ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.service }}:${{ env.DEPLOY_SHA }}
 
       - name: Deploy to Azure Container Apps

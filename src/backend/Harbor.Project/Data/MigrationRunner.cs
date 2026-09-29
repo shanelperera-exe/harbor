@@ -14,6 +14,26 @@ namespace Harbor.Project.Data;
 public static class MigrationRunner
 {
     private const string ChecksumTable = "schema_checksums";
+    private const int MaxMigrationAttempts = 6;
+
+    private static readonly TimeSpan MigrationRetryDelay = TimeSpan.FromSeconds(5);
+
+    /// <summary>
+    /// Returns the underlying <see cref="PostgresException"/> when the upgrade failed
+    /// for a reason that another concurrent service is expected to resolve, otherwise null.
+    /// DbUp wraps the cause, so the exception chain is walked rather than just read
+    /// off the top of it.
+    /// </summary>
+    private static PostgresException? FindTransientError(Exception? error)
+    {
+        for (var current = error; current is not null; current = current.InnerException)
+        {
+            if (current is PostgresException pg && pg.SqlState is "23505" or "42P01")
+                return pg;
+        }
+
+        return null;
+    }
 
     public static void Run(string connectionString)
     {
@@ -26,7 +46,33 @@ public static class MigrationRunner
             .LogToConsole()
             .Build();
 
+        // Services share the "schemaversions" journal table and the
+        // "schema_checksums" table, so simultaneous starts race each other
+        // creating them (23505). A 42P01 means another service owns a table this
+        // script references and has not created it yet. Both clear on their own
+        // once that service finishes migrating, so retry instead of crashing.
+        // DbUp reports these through result.Error rather than by throwing, so the
+        // state has to be inspected on the result.
         var result = upgrader.PerformUpgrade();
+        var transient = FindTransientError(result.Error);
+
+        for (var attempt = 1; transient is not null && attempt < MaxMigrationAttempts; attempt++)
+        {
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine(
+                $"⚠  Migration attempt {attempt} failed with {transient.SqlState}; retrying in {MigrationRetryDelay.TotalSeconds:F0}s.");
+            Console.ResetColor();
+            Thread.Sleep(MigrationRetryDelay);
+
+            upgrader = DeployChanges.To
+                .PostgresqlDatabase(connectionString)
+                .WithScriptsEmbeddedInAssembly(Assembly.GetExecutingAssembly())
+                .LogToConsole()
+                .Build();
+
+            result = upgrader.PerformUpgrade();
+            transient = FindTransientError(result.Error);
+        }
 
         if (!result.Successful)
         {

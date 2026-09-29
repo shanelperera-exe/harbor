@@ -130,10 +130,11 @@ export default function ServiceSettings() {
             <label className="text-sm font-medium text-gray-700 dark:text-[#cccccc]">Service Name</label>
             <input 
               type="text" 
-              className="h-10 px-3 bg-transparent border border-gray-300 dark:border-[#525252] rounded-sm focus:border-[#2563eb] focus:outline-none dark:text-white" 
-              value={service.name}
-              onChange={e => setService({ ...service, name: e.target.value })}
+              readOnly
+              className="h-10 px-3 bg-gray-100 dark:bg-[#1f1f1f] border border-gray-300 dark:border-[#525252] rounded-sm text-gray-600 dark:text-[#a3a3a3] cursor-not-allowed" 
+              value={service.name || ''}
             />
+            <p className="text-xs text-gray-500 dark:text-[#8f8f8f]">The service name cannot be changed after creation</p>
           </div>
           <div className="flex flex-col gap-2">
             <label className="text-sm font-medium text-gray-700 dark:text-[#cccccc]">GitHub Actions Workflow File</label>

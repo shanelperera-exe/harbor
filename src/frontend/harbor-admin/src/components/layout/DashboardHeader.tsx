@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { 
   IconProjects, IconBlueprints, IconGroups, 
-  IconObservability, IconWebhooks, IconSettings 
+  IconMetrics, IconWebhooks, IconSettings 
 } from './SideNav';
 import UserAvatar from '../ui/UserAvatar';
 import { useTheme, type Theme } from '../../contexts/ThemeContext';
@@ -324,7 +324,7 @@ export default function DashboardHeader({
     '/projects':     { label: 'Projects',     icon: <IconProjects /> },
     '/environments': { label: 'Environments', icon: <IconGroups /> },
     '/deployments':  { label: 'Deployments',  icon: <IconWebhooks /> },
-    '/reports':      { label: 'Reports',      icon: <IconObservability /> },
+    '/reports':      { label: 'Reports',      icon: <IconMetrics /> },
     '/settings':     { label: 'Settings',     icon: <IconSettings /> },
   };
 

@@ -81,19 +81,15 @@ jobs:
         run: dotnet build --no-restore
 
       - name: Start Harbor Backend Services (Background)
+        # Startup order matters. Each service runs its own DbUp migrations at
+        # boot, and Harbor.Deployment/Scripts/0007_CreateCiRunsTable.sql has a
+        # foreign key onto "Services", which is created by Harbor.Project's
+        # 0003_CreateServicesTable.sql. Starting every service in parallel lets
+        # Harbor.Deployment reach migration 0007 before Harbor.Project has
+        # created "Services", and it dies with 42P01 on a fresh database.
+        # Authentication and Project own tables nothing else depends on, so they
+        # go first; Deployment and Environment only start once Project is up.
         run: |
-          dotnet run --project src/backend/Harbor.Authentication &
-          sleep 5
-          ReverseProxy__Clusters__authCluster__Destinations__destination1__Address=http://localhost:5196 \
-          ReverseProxy__Clusters__projectCluster__Destinations__destination1__Address=http://localhost:5079 \
-          ReverseProxy__Clusters__deploymentCluster__Destinations__destination1__Address=http://localhost:5288 \
-          ReverseProxy__Clusters__environmentCluster__Destinations__destination1__Address=http://localhost:5292 \
-          ReverseProxy__Clusters__reportingCluster__Destinations__destination1__Address=http://localhost:5243 \
-          dotnet run --project src/backend/Harbor.ApiGateway &
-          dotnet run --project src/backend/Harbor.Project &
-          dotnet run --project src/backend/Harbor.Deployment &
-          dotnet run --project src/backend/Harbor.Environment &
-
           wait_for_http() {
             local name="$1"
             local url="$2"
@@ -109,11 +105,25 @@ jobs:
             return 1
           }
 
+          dotnet run --project src/backend/Harbor.Authentication &
+          dotnet run --project src/backend/Harbor.Project &
           wait_for_http "Harbor.Authentication" "http://localhost:5196/swagger/v1/swagger.json"
-          wait_for_http "Harbor.ApiGateway"     "http://localhost:5053/health"
           wait_for_http "Harbor.Project"        "http://localhost:5079/swagger/v1/swagger.json"
+
+          # "Services" now exists, so Harbor.Deployment can apply migration 0007.
+          dotnet run --project src/backend/Harbor.Deployment &
+          dotnet run --project src/backend/Harbor.Environment &
+
+          ReverseProxy__Clusters__authCluster__Destinations__destination1__Address=http://localhost:5196 \
+          ReverseProxy__Clusters__projectCluster__Destinations__destination1__Address=http://localhost:5079 \
+          ReverseProxy__Clusters__deploymentCluster__Destinations__destination1__Address=http://localhost:5288 \
+          ReverseProxy__Clusters__environmentCluster__Destinations__destination1__Address=http://localhost:5292 \
+          ReverseProxy__Clusters__reportingCluster__Destinations__destination1__Address=http://localhost:5243 \
+          dotnet run --project src/backend/Harbor.ApiGateway &
+
           wait_for_http "Harbor.Deployment"     "http://localhost:5288/swagger/v1/swagger.json"
           wait_for_http "Harbor.Environment"    "http://localhost:5292/swagger/v1/swagger.json"
+          wait_for_http "Harbor.ApiGateway"     "http://localhost:5053/health"
 
       - name: Start Frontend Server (Background)
         working-directory: ./src/frontend

@@ -250,12 +250,28 @@ These are **not** repository variables. The workflow reads the Container Apps en
 | Value | Derived as | Used by |
 |-------|-----------|---------|
 | `API_GATEWAY_URL` | `https://harbor-api-gateway.<default-domain>` | OAuth `redirect_uri` origin, GitHub App OAuth origin |
-| `AUTH_SERVICE_URL` | `https://harbor-auth-api.internal.<default-domain>` | `Harbor.Deployment` → `Harbor.Authentication` internal call |
+| `AUTH_SERVICE_URL` | `http://harbor-auth-api` | `Harbor.Deployment` → `Harbor.Authentication` internal call |
 | `FRONTEND_URL` | `https://harbor-web-ui.<default-domain>` | Post-auth and GitHub-install redirect targets |
 | `ALLOWED_ORIGINS` | `https://harbor-admin-ui.<default-domain>,https://harbor-web-ui.<default-domain>` | Gateway CORS allowlist |
 | `VITE_API_BASE_URL` | `{API_GATEWAY_URL}/api` | Baked into both React bundles at build time |
+| `DISABLE_HTTPS_REDIRECTION` | `true` on the 5 backend APIs | See "Internal service-to-service traffic" below |
 
-> `AUTH_SERVICE_URL` must be the **internal** auth service address, not the gateway. The gateway has no route for `/api/internal/*`, so pointing it at the gateway makes every GitHub installation-token lookup return 404.
+#### Internal service-to-service traffic
+
+The gateway and the backend APIs talk to each other over **ACA's internal short-name DNS on plain
+HTTP** (`http://harbor-auth-api`), not over the internal FQDN. The environment's managed certificate
+covers the external FQDN but not the `.internal.` name, so calling
+`https://harbor-auth-api.internal.<default-domain>` fails the TLS handshake with
+`RemoteCertificateNameMismatch`, which the gateway surfaces as a 502.
+
+Short names resolve only inside the environment, and only to apps on internal ingress, so this does
+not expose the backends publicly. The traffic is still routed through the environment's Envoy proxy.
+
+Because the gateway now calls the backends over HTTP, each backend sets
+`DISABLE_HTTPS_REDIRECTION=true`. Without it, `UseHttpsRedirection()` would answer the gateway's
+request with a 307 to `https://harbor-auth-api/...`, a name the browser cannot resolve. The flag only
+suppresses that redirect on the internal hop — the gateway itself still redirects, because browsers
+reach it over HTTPS through its external ingress.
 
 GitHub sign-in uses a **GitHub App** (PKCE flow via `GitHubAppOAuthClient`), not a separate GitHub OAuth app, so there is no `GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET` to register and no callback URL to pre-register with GitHub. Only Google needs an external OAuth application:
 

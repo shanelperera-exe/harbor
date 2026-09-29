@@ -117,10 +117,11 @@ jobs:
                 "GH_API_BASE_URL=${{ vars.GH_API_BASE_URL }}" \
                 "GOOGLE_CLIENT_ID=${{ vars.GOOGLE_CLIENT_ID }}" \
                 "GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET" \
-                "AUTH_SERVICE_URL=https://harbor-auth-api.internal.$DOMAIN" \
+                "AUTH_SERVICE_URL=http://harbor-auth-api" \
                 "FRONTEND_URL=https://harbor-web-ui.$DOMAIN" \
                 "API_GATEWAY_URL=https://harbor-api-gateway.$DOMAIN" \
                 "ALLOWED_ORIGINS=https://harbor-admin-ui.$DOMAIN,https://harbor-web-ui.$DOMAIN" \
+                "DISABLE_HTTPS_REDIRECTION=true" \
               --min-replicas 0 \
               --max-replicas 1 \
               --cpu 0.5 \
@@ -266,11 +267,11 @@ jobs:
               --name harbor-api-gateway \
               --resource-group ${{ env.RESOURCE_GROUP }} \
               --set-env-vars \
-                "ReverseProxy__Clusters__authCluster__Destinations__destination1__Address=https://harbor-auth-api.internal.$DOMAIN" \
-                "ReverseProxy__Clusters__projectCluster__Destinations__destination1__Address=https://harbor-project-api.internal.$DOMAIN" \
-                "ReverseProxy__Clusters__environmentCluster__Destinations__destination1__Address=https://harbor-env-api.internal.$DOMAIN" \
-                "ReverseProxy__Clusters__deploymentCluster__Destinations__destination1__Address=https://harbor-deploy-api.internal.$DOMAIN" \
-                "ReverseProxy__Clusters__reportingCluster__Destinations__destination1__Address=https://harbor-report-api.internal.$DOMAIN" \
+                "ReverseProxy__Clusters__authCluster__Destinations__destination1__Address=http://harbor-auth-api" \
+                "ReverseProxy__Clusters__projectCluster__Destinations__destination1__Address=http://harbor-project-api" \
+                "ReverseProxy__Clusters__environmentCluster__Destinations__destination1__Address=http://harbor-env-api" \
+                "ReverseProxy__Clusters__deploymentCluster__Destinations__destination1__Address=http://harbor-deploy-api" \
+                "ReverseProxy__Clusters__reportingCluster__Destinations__destination1__Address=http://harbor-report-api" \
                 "ALLOWED_ORIGINS=https://harbor-admin-ui.$DOMAIN,https://harbor-web-ui.$DOMAIN" \
                 "FRONTEND_URL=https://harbor-web-ui.$DOMAIN" \
               --min-replicas 0 \

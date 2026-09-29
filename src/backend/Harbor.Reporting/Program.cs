@@ -36,7 +36,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("DefaultPolicy");
-app.UseHttpsRedirection();
+if (!builder.Configuration.GetValue("DisableHttpsRedirection", false))
+    app.UseHttpsRedirection();
 
 app.UseAuthorization();
 

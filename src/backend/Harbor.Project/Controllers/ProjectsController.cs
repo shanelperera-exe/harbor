@@ -22,7 +22,7 @@ namespace Harbor.Project.Controllers
         /// <summary>
         /// Creates a new project owned by the authenticated user.
         /// </summary>
-        /// <param name="request">The project name, optional description, and optional repository URL.</param>
+        /// <param name="request">The project name, and optional description.</param>
         /// <response code="201">The project was created successfully.</response>
         /// <response code="400">The request failed validation (e.g. missing name, duplicate name).</response>
         /// <response code="401">The caller is not authenticated.</response>
@@ -69,7 +69,7 @@ namespace Harbor.Project.Controllers
         }
 
         /// <summary>
-        /// Updates an existing project's name, description, and repository URL.
+        /// Updates an existing project's name and description.
         /// </summary>
         /// <param name="id">The id of the project to update.</param>
         /// <param name="request">The updated project fields.</param>
@@ -77,12 +77,27 @@ namespace Harbor.Project.Controllers
         /// <response code="400">The request failed validation, the project was not found, or it is archived.</response>
         /// <response code="401">The caller is not authenticated.</response>
         /// <response code="403">The caller does not have permission to update this project.</response>
+        [HttpGet("{id}")]
+        [ProducesResponseType(typeof(ApiResponse<ProjectResponse>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> GetById(string id)
+        {
+            var userId = GetUserId();
+            if (userId is null) return Unauthorized();
+
+            var project = await _projectService.GetByIdAsync(id);
+            if (project == null) return NotFound(new { error = "Project not found." });
+
+            return Ok(new ApiResponse<ProjectResponse> { Data = project });
+        }
+
         [HttpPut("{id}")]
         [ProducesResponseType(typeof(ApiResponse<ProjectResponse>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
-        public async Task<IActionResult> Update(int id, [FromBody] UpdateProjectRequest request)
+        public async Task<IActionResult> Update(string id, [FromBody] UpdateProjectRequest request)
         {
             var userId = GetUserId();
             if (userId is null) return Unauthorized();
@@ -102,20 +117,12 @@ namespace Harbor.Project.Controllers
             return Ok(new ApiResponse<ProjectResponse> { Data = data });
         }
 
-        /// <summary>
-        /// Archives a project, removing it from active project listings while preserving its history.
-        /// </summary>
-        /// <param name="id">The id of the project to archive.</param>
-        /// <response code="200">The project was archived successfully.</response>
-        /// <response code="400">The project was not found or is already archived.</response>
-        /// <response code="401">The caller is not authenticated.</response>
-        /// <response code="403">The caller does not have permission to archive this project.</response>
         [HttpPost("{id}/archive")]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
-        public async Task<IActionResult> Archive(int id)
+        public async Task<IActionResult> Archive(string id)
         {
             var userId = GetUserId();
             if (userId is null) return Unauthorized();

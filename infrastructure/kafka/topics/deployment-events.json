@@ -1,0 +1,50 @@
+{
+  "name": "deployment-events",
+  "description": "Carries Harbor.Deployment.DeploymentLifecycleEvent messages. Produced by Harbor.Deployment on every deployment status change and consumed by the same service to reconcile status written by GitHub Actions webhooks.",
+  "producer": "Harbor.Deployment (KafkaProducerService)",
+  "consumer": "Harbor.Deployment (KafkaConsumerService)",
+  "consumerGroup": "harbor-deployment-group",
+  "key": "DeploymentId (string, ensures per-deployment ordering)",
+  "value": "DeploymentLifecycleEvent serialized to JSON",
+  "eventStatusValues": [
+    "DeploymentStarted",
+    "DeploymentSucceeded",
+    "DeploymentFailed"
+  ],
+  "partitions": {
+    "note": "Partition count is immutable on the Event Hubs Standard tier, so it is fixed at creation time. Partitions are not billed.",
+    "local": 1,
+    "azureEventHubs": 1,
+    "guidance": "Partitions cap consumer parallelism. Raise only if sustained ingress exceeds ~1,000 events/sec, and prefer migrating to Premium/Dedicated first, where partitions can be added after creation."
+  },
+  "retention": {
+    "local": "7d (Apache Kafka broker default; the compose broker in docker-compose.yml does not override KAFKA_LOG_RETENTION_HOURS)",
+    "azureEventHubs": "1d",
+    "guidance": "The consumer is a status reconciler, not an audit log. Events older than the retention window are intentionally dropped rather than replayed, because the PostgreSQL deployments table is the system of record."
+  },
+  "environments": {
+    "local": {
+      "bootstrapServers": "kafka:9092",
+      "securityProtocol": "Plaintext",
+      "saslMechanism": "Plain",
+      "configuredVia": [
+        "KAFKA_BOOTSTRAP_SERVERS",
+        "KAFKA_DEPLOYMENT_TOPIC",
+        "KAFKA_CONSUMER_GROUP_ID"
+      ]
+    },
+    "azure": {
+      "service": "Azure Event Hubs (Standard tier, 1 throughput unit)",
+      "bootstrapServers": "<namespace>.servicebus.windows.net:9093",
+      "securityProtocol": "SaslSsl",
+      "saslMechanism": "Plain",
+      "configuredVia": [
+        "KAFKA_CONNECTION_STRING"
+      ],
+      "connectionStringShape": "Endpoint=sb://<namespace>.servicebus.windows.net/;SharedAccessKeyName=harbor-kafka-policy;SharedAccessKey=<key>;EntityPath=deployment-events",
+      "entityPathRequired": true,
+      "entityPathNote": "KafkaOptions.ApplyConnectionString() derives the topic from EntityPath, so the Event Hubs name and the value of KAFKA_DEPLOYMENT_TOPIC must be identical. A namespace-level connection string without EntityPath silently disables both the producer and the consumer.",
+      "provisioning": "docs/azure-deployment-guide.md, Step 5"
+    }
+  }
+}

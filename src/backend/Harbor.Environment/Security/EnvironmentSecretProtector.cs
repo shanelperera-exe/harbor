@@ -17,9 +17,13 @@ public class EnvironmentSecretProtector : IEnvironmentSecretProtector
 
     public EnvironmentSecretProtector(IConfiguration configuration)
     {
-        var keyValue = configuration["ENVIRONMENT_SECRETS_KEY"]
-            ?? System.Environment.GetEnvironmentVariable("ENVIRONMENT_SECRETS_KEY")
-            ?? throw new InvalidOperationException("ENVIRONMENT_SECRETS_KEY is not configured.");
+        // IsNullOrWhiteSpace, not "??": an unset ENVIRONMENT_SECRETS_KEY arrives as an empty
+        // string, which decodes to zero bytes and misreports the cause.
+        var keyValue = configuration["ENVIRONMENT_SECRETS_KEY"];
+        if (string.IsNullOrWhiteSpace(keyValue))
+            keyValue = System.Environment.GetEnvironmentVariable("ENVIRONMENT_SECRETS_KEY");
+        if (string.IsNullOrWhiteSpace(keyValue))
+            throw new InvalidOperationException("ENVIRONMENT_SECRETS_KEY is not configured.");
 
         try
         {

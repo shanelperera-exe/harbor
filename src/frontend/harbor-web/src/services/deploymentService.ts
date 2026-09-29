@@ -1,14 +1,26 @@
+import { type StatusType } from '../components/ui/StatusBadge';
+
 const deploymentApiBase = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api') + '/deployments';
 
 export interface Deployment {
   id: number;
-  projectId: number;
+  publicId?: string;
+  hash?: string;
+  serviceId?: number | string;
   environment: string;
   version: string;
   commitSha?: string | null;
+  commitMessage?: string | null;
   status: string;
   startedAt: string;
   completedAt?: string | null;
+  workflowFile?: string | null;
+  workflowRef?: string | null;
+  workflowRunUrl?: string | null;
+  projectName?: string | null;
+  serviceName?: string | null;
+  serviceType?: string | null;
+  userName?: string | null;
 }
 
 export interface DeploymentLog {
@@ -19,6 +31,9 @@ export interface DeploymentLog {
 
 export interface DeploymentDetails extends Deployment {
   failureReason?: string | null;
+  triggerError?: string | null;
+  workflowRunUrl?: string | null;
+  deploymentUrl?: string | null;
   logs: DeploymentLog[];
 }
 
@@ -29,9 +44,54 @@ export interface DeploymentHistory {
   totalCount: number;
 }
 
+export interface CiRun {
+  id: number;
+  serviceId: number;
+  workflowName: string;
+  workflowFile: string;
+  branch: string;
+  commitSha?: string | null;
+  conclusion?: string | null;
+  status: string;
+  githubRunId: number;
+  githubRunUrl?: string | null;
+  startedAt: string;
+  completedAt?: string | null;
+}
+
+export interface CiRunHistory {
+  items: CiRun[];
+  page: number;
+  pageSize: number;
+  totalCount: number;
+}
+
+/** Thrown when the CI gate blocks a deployment. The `message` contains the reason. */
+export class CiGateError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'CiGateError';
+  }
+}
+
+export interface CreateDeploymentRequest {
+  serviceId: string;
+  environment: string;
+  version: string;
+  commitSha?: string | null;
+  commitMessage?: string | null;
+  branch?: string | null;
+  /** Pass true to bypass the CI gate check and deploy even when CI is failing. */
+  overrideCiGate?: boolean;
+}
+
 function headers(): HeadersInit {
   const token = localStorage.getItem('harbor_token');
-  return token ? { Authorization: `Bearer ${token}` } : {};
+  return {
+    'Content-Type': 'application/json',
+    'ngrok-skip-browser-warning': 'true',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
 }
 
 async function readResponse<T>(response: Response, fallback: string): Promise<T> {
@@ -40,28 +100,75 @@ async function readResponse<T>(response: Response, fallback: string): Promise<T>
   return body as T;
 }
 
-export async function getDeploymentHistory(filters: { projectId?: number; status?: string; page?: number } = {}): Promise<DeploymentHistory> {
-  const query = new URLSearchParams({ page: String(filters.page ?? 1), pageSize: '20' });
+export async function getDeploymentHistory(
+  filters: { serviceId?: number | string; projectId?: number | string; environment?: string; status?: string; page?: number; pageSize?: number } = {},
+): Promise<DeploymentHistory> {
+  const query = new URLSearchParams({ page: String(filters.page ?? 1), pageSize: String(filters.pageSize ?? 20) });
+  if (filters.serviceId) query.set('serviceId', String(filters.serviceId));
   if (filters.projectId) query.set('projectId', String(filters.projectId));
+  if (filters.environment) query.set('environment', filters.environment);
   if (filters.status) query.set('status', filters.status);
-  return readResponse<DeploymentHistory>(await fetch(`${deploymentApiBase}?${query}`, { headers: headers() }), 'Unable to load deployment history.');
+  return readResponse<DeploymentHistory>(
+    await fetch(`${deploymentApiBase}?${query}`, { headers: headers() }),
+    'Unable to load deployment history.',
+  );
 }
 
-export async function getDeploymentDetails(id: number): Promise<DeploymentDetails> {
-  return readResponse<DeploymentDetails>(await fetch(`${deploymentApiBase}/${id}`, { headers: headers() }), 'Unable to load deployment details.');
-}
-
-export interface CreateDeploymentRequest {
-  projectId: number;
-  environment: string;
-  version: string;
-  commitSha?: string | null;
+export async function getDeploymentDetails(id: number | string): Promise<DeploymentDetails> {
+  return readResponse<DeploymentDetails>(
+    await fetch(`${deploymentApiBase}/${id}`, { headers: headers() }),
+    'Unable to load deployment details.',
+  );
 }
 
 export async function createDeployment(request: CreateDeploymentRequest): Promise<Deployment> {
-  return readResponse<Deployment>(await fetch(deploymentApiBase, {
+  const response = await fetch(deploymentApiBase, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...headers() },
+    headers: headers(),
     body: JSON.stringify(request),
-  }), 'Unable to create deployment.');
+  });
+  const body = await response.json().catch(() => ({}));
+
+  // 422 = CI gate blocked — throw CiGateError so caller can prompt "Deploy anyway?"
+  if (response.status === 422 && body?.status === 'CiGate') {
+    throw new CiGateError(body?.ciWarning || 'CI checks are failing on this branch.');
+  }
+  // 201 = Running / 502 = GitHub rejected but record created
+  if (!response.ok && response.status !== 502) {
+    throw new Error(body?.detail || body?.title || 'Unable to create deployment.');
+  }
+  return body as Deployment;
 }
+
+export async function redeployDeployment(deploymentId: number | string): Promise<Deployment> {
+  const response = await fetch(`${deploymentApiBase}/${deploymentId}/redeploy`, {
+    method: 'POST',
+    headers: headers(),
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok && response.status !== 502) {
+    throw new Error(body?.detail || body?.title || 'Unable to redeploy deployment.');
+  }
+  return body as Deployment;
+}
+
+export async function getCiRunHistory(
+  serviceId: number | string,
+  page = 1,
+  pageSize = 20,
+): Promise<CiRunHistory> {
+  const query = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+  query.set('serviceId', String(serviceId));
+  return readResponse<CiRunHistory>(
+    await fetch(`${deploymentApiBase}/ci-runs?${query}`, { headers: headers() }),
+    'Unable to load CI run history.',
+  );
+}
+
+export const mapDeployStatus = (status: string): { type: StatusType, label: string } => {
+  const s = status.toLowerCase();
+  if (s === 'succeeded' || s === 'ready') return { type: 'ready', label: 'Success' };
+  if (s === 'failed' || s === 'error') return { type: 'error', label: 'Failed' };
+  if (s === 'running' || s === 'pending' || s === 'queued') return { type: 'running', label: 'Running' };
+  return { type: 'stopped', label: status.charAt(0).toUpperCase() + status.slice(1) };
+};

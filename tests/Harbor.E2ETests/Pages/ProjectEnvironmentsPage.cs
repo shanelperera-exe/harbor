@@ -3,6 +3,15 @@ using OpenQA.Selenium.Support.UI;
 
 namespace Harbor.E2ETests.Pages
 {
+    /// <summary>
+    /// Project environments screen at /projects/{id}/environments.
+    ///
+    /// The UI no longer offers an inline create form, an environment "type" dropdown, or
+    /// per-card Edit/Remove/Configure controls. Environments are created through a modal
+    /// that only asks for a name (the backend type is inferred from that name - see
+    /// handleCreateEnvironment in ProjectEnvironments.tsx), and every other operation now
+    /// lives on the environment's own Settings page.
+    /// </summary>
     public class ProjectEnvironmentsPage
     {
         private readonly IWebDriver _driver;
@@ -18,94 +27,64 @@ namespace Harbor.E2ETests.Pages
 
         private void ScrollToAndClick(IWebElement element)
         {
-            ((IJavaScriptExecutor)_driver).ExecuteScript("arguments[0].scrollIntoView(true);", element);
+            ((IJavaScriptExecutor)_driver).ExecuteScript("arguments[0].scrollIntoView({block:'center'});", element);
             _wait.Until(d => element.Displayed && element.Enabled);
             element.Click();
         }
 
-        public void Create(string name, string type)
+        /// <summary>
+        /// Creates an environment through the "Add environment" modal. The type is not
+        /// selectable in the UI any more - it is derived from the name - so <paramref name="type"/>
+        /// is accepted only to keep callers readable and is deliberately unused.
+        /// </summary>
+        public void Create(string name, string type = "")
         {
-            _wait.Until(d => d.FindElements(By.CssSelector("[data-testid='create-environment-form']")).Count > 0);
+            var addButton = _wait.Until(d => d.FindElement(By.CssSelector("[data-testid='add-environment-button']")));
+            ScrollToAndClick(addButton);
 
-            var form = _driver.FindElement(By.CssSelector("[data-testid='create-environment-form']"));
-            var nameInput = form.FindElement(By.CssSelector("input"));
-            var select = form.FindElement(By.CssSelector("select"));
-            var submitButton = form.FindElement(By.CssSelector("button"));
+            var form = _wait.Until(d => d.FindElement(By.CssSelector("[data-testid='create-environment-form']")));
+            var nameInput = _wait.Until(d => d.FindElement(By.CssSelector("[data-testid='create-environment-name-input']")));
 
             nameInput.Clear();
             nameInput.SendKeys(name);
-            new SelectElement(select).SelectByText(type);
 
-            // Wait for button to be clickable before clicking
-            _wait.Until(d => submitButton.Enabled && submitButton.Displayed);
-            ScrollToAndClick(submitButton);
+            var submit = _wait.Until(d => d.FindElement(By.CssSelector("[data-testid='create-environment-submit']")));
+            _wait.Until(d => submit.Enabled);
+            ScrollToAndClick(submit);
 
-            // Wait for the saving state to complete (button becomes re-enabled)
-            _wait.Until(d =>
-            {
-                try
-                {
-                    var btn = _driver.FindElement(By.CssSelector("[data-testid='create-environment-form'] button"));
-                    return !(btn.GetAttribute("disabled") ?? "").Contains("disabled") ||
-                           btn.Text.Contains("Create environment");
-                }
-                catch
-                {
-                    return false;
-                }
-            });
-
-            // Wait for the card to appear with explicit retry and visibility check
-            _extendedWait.Until(d =>
-            {
-                try
-                {
-                    var cards = d.FindElements(By.CssSelector("[data-testid='environments-list'] > div"));
-                    return cards.Any(card =>
-                    {
-                        try
-                        {
-                            return card.Displayed && card.Text.Contains(name);
-                        }
-                        catch
-                        {
-                            return false;
-                        }
-                    });
-                }
-                catch
-                {
-                    return false;
-                }
-            });
+            WaitForEnvironment(name);
         }
 
-        public bool HasEnvironment(string name, string type)
+        private IWebElement GetSection(string name)
         {
-            try
+            return _extendedWait.Until(d =>
             {
-                return _extendedWait.Until(d =>
+                var sections = d.FindElements(By.CssSelector("[data-testid='environment-section']"));
+                return sections.FirstOrDefault(s =>
                 {
                     try
                     {
-                        var cards = d.FindElements(By.CssSelector("[data-testid='environments-list'] > div"));
-                        return cards.Any(card =>
-                        {
-                            try
-                            {
-                                return card.Displayed && card.Text.Contains(name);
-                            }
-                            catch
-                            {
-                                return false;
-                            }
-                        });
+                        return s.GetAttribute("data-env-name") == name && s.Displayed;
                     }
-                    catch
+                    catch (StaleElementReferenceException)
                     {
                         return false;
                     }
                 });
+            });
+        }
+
+        public void WaitForEnvironment(string name)
+        {
+            GetSection(name);
+        }
+
+        public bool HasEnvironment(string name, string type = "")
+        {
+            try
+            {
+                GetSection(name);
+                return true;
             }
             catch (WebDriverTimeoutException)
             {
@@ -113,116 +92,84 @@ namespace Harbor.E2ETests.Pages
             }
         }
 
+        /// <summary>Opens the environment's Settings page (name edit + delete).</summary>
+        public void OpenSettings(string name)
+        {
+            var section = GetSection(name);
+            ScrollToAndClick(section.FindElement(By.CssSelector("[data-testid='environment-settings-button']")));
+            _wait.Until(d => d.Url.Contains("/settings"));
+        }
+
+        /// <summary>Returns to the environments list after the settings screen has navigated back.</summary>
+        public void NavigateBackToEnvironments()
+        {
+            _wait.Until(d => d.Url.Contains("/environments") && !d.Url.Contains("/settings"));
+        }
+
         public string GetError()
         {
-            var error = _wait.Until(d => d.FindElement(By.CssSelector("[data-testid='environment-error']")));
-            return error.Text;
+            return _wait.Until(d => d.FindElement(By.CssSelector("[data-testid='environment-error']"))).Text;
+        }
+    }
+
+    /// <summary>Environment settings screen at /projects/{id}/environments/{envId}/settings.</summary>
+    public class EnvironmentSettingsPage
+    {
+        private readonly IWebDriver _driver;
+        private readonly WebDriverWait _wait;
+
+        public EnvironmentSettingsPage(IWebDriver driver)
+        {
+            _driver = driver;
+            _wait = new WebDriverWait(driver, TimeSpan.FromSeconds(20));
         }
 
-        public string GetNotice()
+        private IWebElement NameInput => _wait.Until(d => d.FindElement(By.CssSelector("[data-testid='environment-name-input']")));
+        private IWebElement EditNameButton => _wait.Until(d => d.FindElement(By.CssSelector("[data-testid='edit-environment-name-button']")));
+        private IWebElement SaveButton => _wait.Until(d => d.FindElement(By.CssSelector("[data-testid='save-environment-button']")));
+        private IWebElement DeleteButton => _wait.Until(d => d.FindElement(By.CssSelector("[data-testid='delete-environment-button']")));
+
+        public string GetName()
         {
-            var notice = _wait.Until(d => d.FindElement(By.CssSelector("[data-testid='environment-notice']")));
-            return notice.Text;
+            return NameInput.GetAttribute("value") ?? "";
         }
 
-        public bool HasNotice()
+        public void RenameTo(string newName)
         {
-            return _driver.FindElements(By.CssSelector("[data-testid='environment-notice']")).Count > 0;
-        }
+            EditNameButton.Click();
 
-        private IWebElement GetCard(string name)
-        {
-            return _extendedWait.Until(d =>
-            {
-                try
-                {
-                    var cards = d.FindElements(By.CssSelector("[data-testid='environments-list'] > div"));
-                    var card = cards.FirstOrDefault(c =>
-                    {
-                        try
-                        {
-                            return c.Displayed && c.Text.Contains(name);
-                        }
-                        catch
-                        {
-                            return false;
-                        }
-                    });
-                    return card;
-                }
-                catch
-                {
-                    return null;
-                }
-            });
-        }
-
-        public void StartEdit(string name)
-        {
-            var card = GetCard(name);
-            var editButton = card.FindElement(By.XPath(".//button[contains(., 'Edit')]"));
-            _wait.Until(d => editButton.Displayed && editButton.Enabled);
-            ScrollToAndClick(editButton);
-
-            _wait.Until(d => d.FindElements(By.CssSelector("input[aria-label='Environment name']")).Count > 0);
-        }
-
-        public void SaveEdit(string newName, string newType)
-        {
-            var nameInput = _wait.Until(d => d.FindElement(By.CssSelector("input[aria-label='Environment name']")));
-            nameInput.Clear();
-            nameInput.SendKeys(newName);
-
-            new SelectElement(_driver.FindElement(By.CssSelector("select[aria-label='Environment type']"))).SelectByText(newType);
-
-            var saveButton = _driver.FindElement(By.XPath("//button[contains(., 'Save')]"));
-            _wait.Until(d => saveButton.Displayed && saveButton.Enabled);
-            ScrollToAndClick(saveButton);
-
-            // Wait for saving to complete (edit mode exits when saving finishes)
-            _wait.Until(d => d.FindElements(By.CssSelector("input[aria-label='Environment name']")).Count == 0);
-        }
-
-        /// <summary>Opens the US-11 "Configure deployment" screen for the named environment.</summary>
-        public void OpenConfiguration(string name)
-        {
-            var card = GetCard(name);
-            var link = card.FindElement(By.XPath(".//a[contains(., 'Configure deployment')]"));
-            ScrollToAndClick(link);
-
-            _wait.Until(d => d.Url.Contains("/configure"));
-        }
-
-        /// <summary>The visible text of an environment card — used to assert the deployment URL / provider summary.</summary>
-        public string GetCardText(string name)
-        {
-            return GetCard(name).Text;
-        }
-
-        public void Remove(string name)
-        {
-            var card = GetCard(name);
-            var removeButton = card.FindElement(By.XPath(".//button[contains(., 'Remove')]"));
-            _wait.Until(d => removeButton.Displayed && removeButton.Enabled);
-            ScrollToAndClick(removeButton);
-
-            _wait.Until(d => d.SwitchTo().Alert() != null);
-            _driver.SwitchTo().Alert().Accept();
-
-            // Wait for the removal to complete (card disappears or list updates)
             _wait.Until(d =>
             {
-                var cards = d.FindElements(By.CssSelector("[data-testid='environments-list'] > div"));
-                if (cards.Count == 0) return true;
-                try
-                {
-                    return !cards.Any(c => c.Text.Contains(name));
-                }
-                catch (StaleElementReferenceException)
-                {
-                    return false;
-                }
+                var input = d.FindElement(By.CssSelector("[data-testid='environment-name-input']"));
+                var readOnly = input.GetAttribute("readonly");
+                return readOnly is null || !readOnly.Contains("true");
             });
+
+            var field = NameInput;
+            field.Clear();
+            field.SendKeys(newName);
+
+            SaveButton.Click();
+            _wait.Until(d => d.FindElements(By.CssSelector("[data-testid='edit-environment-name-button']")).Count > 0);
+        }
+
+        /// <summary>
+        /// Deletes the environment. The modal dictates the exact phrase to type, so it is read
+        /// from the rendered hint rather than re-derived here (the project equivalent is
+        /// "delete project {name}" and the environment one is "sudo delete environment {name}").
+        /// </summary>
+        public void Delete()
+        {
+            DeleteButton.Click();
+
+            var expected = _wait.Until(d => d.FindElement(By.CssSelector("[data-testid='expected-confirm-text']")).Text.Trim());
+
+            var confirmInput = _wait.Until(d => d.FindElement(By.CssSelector("[data-testid='confirm-text-input']")));
+            confirmInput.Clear();
+            confirmInput.SendKeys(expected);
+
+            _wait.Until(d => d.FindElement(By.CssSelector("[data-testid='confirm-delete-button']")).Enabled);
+            _driver.FindElement(By.CssSelector("[data-testid='confirm-delete-button']")).Click();
         }
     }
 }

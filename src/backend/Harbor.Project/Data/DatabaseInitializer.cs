@@ -1,53 +1,30 @@
-using System.Reflection;
-using DbUp;
 using Microsoft.Extensions.Configuration;
-using System;
 
-namespace Harbor.Project.Data
+namespace Harbor.Project.Data;
+
+public static class DatabaseInitializer
 {
-    public static class DatabaseInitializer
+    public static void Initialize(IConfiguration configuration)
     {
-        public static void Initialize(IConfiguration configuration)
-        {
-            var connectionString = configuration.GetConnectionString("HarborDb");
+        var connectionString = ResolveConnectionString(configuration);
+        MigrationRunner.Run(connectionString);
+    }
 
-            if (string.IsNullOrWhiteSpace(connectionString))
-            {
-                connectionString = Environment.GetEnvironmentVariable("HarborDb");
-            }
+    private static string ResolveConnectionString(IConfiguration configuration)
+    {
+        var cs = configuration.GetConnectionString("HarborDb");
+        if (!string.IsNullOrWhiteSpace(cs)) return cs;
 
-            if (string.IsNullOrWhiteSpace(connectionString))
-            {
-                var host = Environment.GetEnvironmentVariable("POSTGRES_SERVER") ?? "localhost";
-                var port = Environment.GetEnvironmentVariable("POSTGRES_PORT") ?? "5432";
-                var database = Environment.GetEnvironmentVariable("POSTGRES_DATABASE") ?? "harbor_db";
-                var username = Environment.GetEnvironmentVariable("POSTGRES_USER") ?? "harboruser";
-                var password = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD") ?? "harbor@1234";
-                var sslMode = Environment.GetEnvironmentVariable("POSTGRES_SSL_MODE") ?? "Require";
+        cs = Environment.GetEnvironmentVariable("HarborDb");
+        if (!string.IsNullOrWhiteSpace(cs)) return cs;
 
-                connectionString = $"Host={host};Port={port};Database={database};Username={username};Password={password};Ssl Mode={sslMode};Trust Server Certificate=true;";
-            }
+        var host     = Environment.GetEnvironmentVariable("POSTGRES_SERVER")   ?? "localhost";
+        var port     = Environment.GetEnvironmentVariable("POSTGRES_PORT")      ?? "5432";
+        var database = Environment.GetEnvironmentVariable("POSTGRES_DATABASE")  ?? "harbor_db";
+        var username = Environment.GetEnvironmentVariable("POSTGRES_USER")      ?? "harboruser";
+        var password = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD")  ?? "harbor@1234";
+        var sslMode  = Environment.GetEnvironmentVariable("POSTGRES_SSL_MODE")  ?? "Require";
 
-            var upgrader =
-                DeployChanges.To
-                    .PostgresqlDatabase(connectionString)
-                    .WithScriptsEmbeddedInAssembly(Assembly.GetExecutingAssembly())
-                    .LogToConsole()
-                    .Build();
-
-            var result = upgrader.PerformUpgrade();
-
-            if (!result.Successful)
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine(result.Error);
-                Console.ResetColor();
-                throw new Exception("Database migration failed.", result.Error);
-            }
-
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine("Success! Database migrations are up to date.");
-            Console.ResetColor();
-        }
+        return $"Host={host};Port={port};Database={database};Username={username};Password={password};Ssl Mode={sslMode};Trust Server Certificate=true;";
     }
 }

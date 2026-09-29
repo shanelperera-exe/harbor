@@ -116,8 +116,8 @@ export default function Home() {
         
         <div className="mt-10 lg:mt-12 flex items-center">
           <Link 
-            to={isLoggedIn ? "/dashboard" : "/register"} 
-            className="ease transition-colors group relative z-[1] flex cursor-pointer items-center overflow-hidden whitespace-nowrap justify-between motion-safe:duration-150 motion-reduce:duration-0 lg:motion-safe:duration-300 lg:motion-reduce:duration-0 bg-gray-900 dark:bg-white text-white dark:text-black hover:text-white dark:hover:text-white lg:hover:text-white dark:lg:hover:text-white h-[70px] text-[20px] py-[20px] px-[24px] gap-[15px] lg:[--button-arrow-offset:2px] font-sans"
+            to={isLoggedIn ? "/projects" : "/register"} 
+            className="ease transition-colors group relative z-[1] flex cursor-pointer items-center overflow-hidden whitespace-nowrap justify-between motion-safe:duration-150 motion-reduce:duration-0 lg:motion-safe:duration-300 lg:motion-reduce:duration-0 bg-gray-900 dark:bg-white text-white dark:text-black hover:text-white dark:hover:text-white lg:hover:text-white dark:lg:hover:text-white h-[70px] text-[20px] py-[20px] px-[24px] gap-[15px] lg:[--button-arrow-offset:2px] font-sans rounded-sm"
             style={{ letterSpacing: '0.2px', lineHeight: '150%' }}
           >
             {/* Animated Background Layer */}

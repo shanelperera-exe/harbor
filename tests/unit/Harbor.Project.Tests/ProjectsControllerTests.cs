@@ -166,12 +166,12 @@ namespace Harbor.Project.Tests
             var request = new UpdateProjectRequest { Name = "new-name" };
 
             // Act
-            var result = await _controller.Update(1, request);
+            var result = await _controller.Update("1", request);
 
             // Assert
             Assert.IsType<UnauthorizedResult>(result);
             _projectServiceMock.Verify(
-                s => s.UpdateAsync(It.IsAny<int>(), It.IsAny<UpdateProjectRequest>(), It.IsAny<int>(), It.IsAny<bool>()),
+                s => s.UpdateAsync(It.IsAny<string>(), It.IsAny<UpdateProjectRequest>(), It.IsAny<int>(), It.IsAny<bool>()),
                 Times.Never);
         }
 
@@ -184,11 +184,11 @@ namespace Harbor.Project.Tests
             var expected = new ProjectResponse { Id = 5, Name = "renamed-project", OwnerId = 1 };
 
             _projectServiceMock
-                .Setup(s => s.UpdateAsync(5, request, 1, false))
+                .Setup(s => s.UpdateAsync("5", request, 1, false))
                 .ReturnsAsync((true, (string?)null, false, expected));
 
             // Act
-            var result = await _controller.Update(5, request);
+            var result = await _controller.Update("5", request);
 
             // Assert
             var okResult = Assert.IsType<OkObjectResult>(result);
@@ -205,15 +205,15 @@ namespace Harbor.Project.Tests
             var expected = new ProjectResponse { Id = 5, Name = "renamed-project", OwnerId = 1 };
 
             _projectServiceMock
-                .Setup(s => s.UpdateAsync(5, request, 99, true))
+                .Setup(s => s.UpdateAsync("5", request, 99, true))
                 .ReturnsAsync((true, (string?)null, false, expected));
 
             // Act
-            var result = await _controller.Update(5, request);
+            var result = await _controller.Update("5", request);
 
             // Assert
             Assert.IsType<OkObjectResult>(result);
-            _projectServiceMock.Verify(s => s.UpdateAsync(5, request, 99, true), Times.Once);
+            _projectServiceMock.Verify(s => s.UpdateAsync("5", request, 99, true), Times.Once);
         }
 
         [Fact]
@@ -224,11 +224,11 @@ namespace Harbor.Project.Tests
             var request = new UpdateProjectRequest { Name = "" };
 
             _projectServiceMock
-                .Setup(s => s.UpdateAsync(5, request, 1, false))
+                .Setup(s => s.UpdateAsync("5", request, 1, false))
                 .ReturnsAsync((false, "Project name is required.", false, (ProjectResponse?)null));
 
             // Act
-            var result = await _controller.Update(5, request);
+            var result = await _controller.Update("5", request);
 
             // Assert
             var objectResult = Assert.IsType<ObjectResult>(result);
@@ -245,11 +245,11 @@ namespace Harbor.Project.Tests
             var request = new UpdateProjectRequest { Name = "new-name" };
 
             _projectServiceMock
-                .Setup(s => s.UpdateAsync(5, request, 20, false))
+                .Setup(s => s.UpdateAsync("5", request, 20, false))
                 .ReturnsAsync((false, "You do not have permission to update this project.", true, (ProjectResponse?)null));
 
             // Act
-            var result = await _controller.Update(5, request);
+            var result = await _controller.Update("5", request);
 
             // Assert
             var objectResult = Assert.IsType<ObjectResult>(result);
@@ -265,12 +265,12 @@ namespace Harbor.Project.Tests
             SetUser(userId: null);
 
             // Act
-            var result = await _controller.Archive(1);
+            var result = await _controller.Archive("1");
 
             // Assert
             Assert.IsType<UnauthorizedResult>(result);
             _projectServiceMock.Verify(
-                s => s.ArchiveAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>()), Times.Never);
+                s => s.ArchiveAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<bool>()), Times.Never);
         }
 
         [Fact]
@@ -279,11 +279,11 @@ namespace Harbor.Project.Tests
             // Arrange
             SetUser(userId: 1);
             _projectServiceMock
-                .Setup(s => s.ArchiveAsync(5, 1, false))
+                .Setup(s => s.ArchiveAsync("5", 1, false))
                 .ReturnsAsync((true, (string?)null, false));
 
             // Act
-            var result = await _controller.Archive(5);
+            var result = await _controller.Archive("5");
 
             // Assert
             var okResult = Assert.IsType<OkObjectResult>(result);
@@ -297,15 +297,15 @@ namespace Harbor.Project.Tests
             // Arrange
             SetUser(userId: 99, role: Roles.Admin);
             _projectServiceMock
-                .Setup(s => s.ArchiveAsync(5, 99, true))
+                .Setup(s => s.ArchiveAsync("5", 99, true))
                 .ReturnsAsync((true, (string?)null, false));
 
             // Act
-            var result = await _controller.Archive(5);
+            var result = await _controller.Archive("5");
 
             // Assert
             Assert.IsType<OkObjectResult>(result);
-            _projectServiceMock.Verify(s => s.ArchiveAsync(5, 99, true), Times.Once);
+            _projectServiceMock.Verify(s => s.ArchiveAsync("5", 99, true), Times.Once);
         }
 
         [Fact]
@@ -314,11 +314,11 @@ namespace Harbor.Project.Tests
             // Arrange
             SetUser(userId: 1);
             _projectServiceMock
-                .Setup(s => s.ArchiveAsync(5, 1, false))
+                .Setup(s => s.ArchiveAsync("5", 1, false))
                 .ReturnsAsync((false, "Project is already archived.", false));
 
             // Act
-            var result = await _controller.Archive(5);
+            var result = await _controller.Archive("5");
 
             // Assert
             var objectResult = Assert.IsType<ObjectResult>(result);
@@ -333,11 +333,11 @@ namespace Harbor.Project.Tests
             // Arrange
             SetUser(userId: 20);
             _projectServiceMock
-                .Setup(s => s.ArchiveAsync(5, 20, false))
+                .Setup(s => s.ArchiveAsync("5", 20, false))
                 .ReturnsAsync((false, "You do not have permission to archive this project.", true));
 
             // Act
-            var result = await _controller.Archive(5);
+            var result = await _controller.Archive("5");
 
             // Assert
             var objectResult = Assert.IsType<ObjectResult>(result);

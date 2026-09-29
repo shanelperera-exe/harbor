@@ -38,6 +38,20 @@ jobs:
           echo "SMTP_FROM_EMAIL=ci@harbor.local" >> .env
           echo "ENVIRONMENT_SECRETS_KEY=$(openssl rand -base64 32)" >> .env
           echo "ALLOWED_ORIGINS=http://localhost:5173,http://localhost:5174,http://localhost:8080,http://localhost:8081" >> .env
+          echo "AUTH_SERVICE_URL=http://localhost:5053" >> .env
+          echo "FRONTEND_URL=http://localhost:5173" >> .env
+          echo "GOOGLE_CLIENT_ID=test-google-client-id" >> .env
+          echo "GOOGLE_CLIENT_SECRET=test-google-client-secret" >> .env
+          echo "GH_APP_CLIENT_ID=test-gh-client-id" >> .env
+          echo "GH_APP_CLIENT_SECRET=test-gh-client-secret" >> .env
+          echo "GH_APP_PRIVATE_KEY_BASE64=" >> .env
+          echo "GH_APP_SLUG=harbor-test" >> .env
+          echo "GH_APP_WEBHOOK_SECRET=test-gh-webhook-secret" >> .env
+          echo "GH_API_BASE_URL=https://api.github.com/" >> .env
+          echo "GITHUB_WEBHOOK_SECRET=test-github-webhook-secret" >> .env
+          echo "KAFKA_BOOTSTRAP_SERVERS=localhost:9092" >> .env
+          echo "KAFKA_DEPLOYMENT_TOPIC=deployment-events" >> .env
+          echo "KAFKA_CONSUMER_GROUP_ID=harbor-ci-group" >> .env
 
       - name: Start PostgreSQL Database
         run: docker compose up -d postgres
@@ -45,7 +59,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Install Frontend Dependencies
         working-directory: ./src/frontend
@@ -67,9 +81,12 @@ jobs:
         run: dotnet build --no-restore
 
       - name: Start Harbor Backend Services (Background)
+        # Services share the "schemaversions" journal table, and Harbor.Deployment
+        # migration 0007 has a foreign key onto "Services", which Harbor.Project
+        # creates. Starting everything at once races on both, so MigrationRunner
+        # retries the transient 23505/42P01 until the other service finishes.
         run: |
           dotnet run --project src/backend/Harbor.Authentication &
-          sleep 5
           ReverseProxy__Clusters__authCluster__Destinations__destination1__Address=http://localhost:5196 \
           ReverseProxy__Clusters__projectCluster__Destinations__destination1__Address=http://localhost:5079 \
           ReverseProxy__Clusters__deploymentCluster__Destinations__destination1__Address=http://localhost:5288 \
@@ -135,7 +152,16 @@ jobs:
         run: |
           sleep 5
           dotnet test --no-build --verbosity normal \
-            --filter "FullyQualifiedName!~Harbor.E2ETests"
+            --filter "FullyQualifiedName!~Harbor.E2ETests" \
+            --logger "trx;LogFileName=unit.trx"
+
+      - name: Upload Unit and Integration Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-unit
+          path: "**/TestResults/unit.trx"
+          if-no-files-found: ignore
 
       - name: Run E2E Tests
         # Runs after the Testcontainers-backed integration tests (which spin up
@@ -149,4 +175,13 @@ jobs:
         # unrelated to any application or test-code bug.
         run: |
           dotnet test --no-build --verbosity normal \
-            tests/Harbor.E2ETests/Harbor.E2ETests.csproj
+            tests/Harbor.E2ETests/Harbor.E2ETests.csproj \
+            --logger "trx;LogFileName=e2e.trx"
+
+      - name: Upload E2E Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-e2e
+          path: "tests/Harbor.E2ETests/TestResults/e2e.trx"
+          if-no-files-found: ignore

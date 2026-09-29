@@ -1,14 +1,29 @@
 using DotNetEnv;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.AspNetCore.HttpOverrides;
 using System.Text;
 using Dapper;
+using Harbor.GitHub;
+using Harbor.GitHub.Services;
+using Harbor.Authentication.Services;
+using Harbor.Authentication.Models;
+using Harbor.Authentication.Repositories;
 Env.TraversePath().Load();
 
 var builder = WebApplication.CreateBuilder(args);
 
 
 builder.Services.AddControllers();
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedHost | ForwardedHeaders.XForwardedProto;
+    options.KnownIPNetworks.Clear();
+    options.KnownProxies.Clear();
+});
 
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
 if (allowedOrigins == null || allowedOrigins.Length == 0)
@@ -21,13 +36,15 @@ builder.Services.AddCors(options =>
     {
         policy.WithOrigins(allowedOrigins)
               .AllowAnyHeader()
-              .AllowAnyMethod();
+              .AllowAnyMethod()
+              .AllowCredentials();
     });
     options.AddDefaultPolicy(policy =>
     {
         policy.WithOrigins(allowedOrigins)
               .AllowAnyHeader()
-              .AllowAnyMethod();
+              .AllowAnyMethod()
+              .AllowCredentials();
     });
 });
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
@@ -61,11 +78,25 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 
-var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET")!;
-var jwtIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER") ?? "HarborAuth";
-var jwtAudience = Environment.GetEnvironmentVariable("JWT_AUDIENCE") ?? "HarborClients";
+var jwtSecret = builder.Configuration["JWT_SECRET"] ?? throw new InvalidOperationException("JWT_SECRET is not configured.");
+var jwtIssuer = builder.Configuration["JWT_ISSUER"] ?? "harbor";
+var jwtAudience = builder.Configuration["JWT_AUDIENCE"] ?? "harbor-api";
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddCookie("External", options =>
+    {
+        options.ExpireTimeSpan = TimeSpan.FromMinutes(5);
+        options.Cookie.Name = "harbor.external";
+        options.Cookie.SameSite = SameSiteMode.None;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    })
+    .AddCookie("ExternalLink", options =>
+    {
+        options.ExpireTimeSpan = TimeSpan.FromMinutes(5);
+        options.Cookie.Name = "harbor.external-link";
+        options.Cookie.SameSite = SameSiteMode.None;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    })
     .AddJwtBearer(options =>
     {
         options.TokenValidationParameters = new TokenValidationParameters
@@ -80,6 +111,62 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
+var googleClientId = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID");
+var googleClientSecret = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET");
+var publicApiOrigin = Environment.GetEnvironmentVariable("API_GATEWAY_URL") ?? "http://localhost:5000";
+
+static string UsePublicCallbackOrigin(string authorizeUrl, string publicOrigin, PathString callbackPath)
+{
+    var uri = new Uri(authorizeUrl);
+    var query = QueryHelpers.ParseQuery(uri.Query)
+        .ToDictionary(pair => pair.Key, pair => (string?)pair.Value.ToString());
+    query["redirect_uri"] = $"{publicOrigin.TrimEnd('/')}{callbackPath}";
+    return QueryHelpers.AddQueryString(uri.GetLeftPart(UriPartial.Path), query);
+}
+
+if (!string.IsNullOrWhiteSpace(googleClientId) && !string.IsNullOrWhiteSpace(googleClientSecret))
+{
+    builder.Services.AddAuthentication().AddGoogle("Google", options =>
+    {
+        options.ClientId = googleClientId;
+        options.ClientSecret = googleClientSecret;
+        options.SignInScheme = "External";
+        options.CallbackPath = "/api/auth/external/google/callback";
+        options.Events.OnRedirectToAuthorizationEndpoint = context =>
+        {
+            context.Response.Redirect(UsePublicCallbackOrigin(context.RedirectUri, publicApiOrigin, options.CallbackPath));
+            return Task.CompletedTask;
+        };
+        options.Events.OnTicketReceived = context =>
+        {
+            context.ReturnUri = "/api/auth/external/google/complete";
+            return Task.CompletedTask;
+        };
+    });
+}
+
+// GitHub App authentication replaces the previous OAuth App flow.
+// One GitHub App handles both user login (user access token) and
+// deployments (installation access token).
+builder.Services.AddHarborGitHubApp();
+
+builder.Services.AddHttpClient("GitHubAppEmails", client =>
+{
+    client.BaseAddress = new Uri("https://api.github.com/");
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("Harbor");
+    client.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
+});
+
+builder.Services.AddScoped<Harbor.Authentication.Services.IEncryptionService, Harbor.Authentication.Services.EncryptionService>();
+
+// Only register the GitHub App auth service and internal endpoints if the App is configured
+if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("GH_APP_CLIENT_ID") ?? Environment.GetEnvironmentVariable("GITHUB_APP_CLIENT_ID"))
+    && !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("GH_APP_CLIENT_SECRET") ?? Environment.GetEnvironmentVariable("GITHUB_APP_CLIENT_SECRET"))
+    && !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("GH_APP_PRIVATE_KEY_BASE64") ?? Environment.GetEnvironmentVariable("GITHUB_APP_PRIVATE_KEY_BASE64")))
+{
+    builder.Services.AddScoped<Harbor.Authentication.Services.IGitHubAppAuthService, Harbor.Authentication.Services.GitHubAppAuthService>();
+}
+
 builder.Services.AddAuthorization();
 
 
@@ -88,6 +175,8 @@ builder.Services.AddScoped<Harbor.Authentication.Repositories.IUserRepository, H
 builder.Services.AddScoped<Harbor.Authentication.Services.IAuthService, Harbor.Authentication.Services.AuthService>();
 builder.Services.AddScoped<Harbor.Authentication.Services.IJwtService, Harbor.Authentication.Services.JwtService>();
 builder.Services.AddScoped<Harbor.Authentication.Services.IEmailService, Harbor.Authentication.Services.EmailService>();
+builder.Services.AddScoped<Harbor.Authentication.Services.IExternalAuthService, Harbor.Authentication.Services.ExternalAuthService>();
+builder.Services.AddScoped<Harbor.Authentication.Services.IEncryptionService, Harbor.Authentication.Services.EncryptionService>();
 
 var app = builder.Build();
 
@@ -132,6 +221,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("DefaultPolicy");
+app.UseForwardedHeaders();
 app.UseHttpsRedirection();
 
 app.UseAuthentication();

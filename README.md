@@ -53,18 +53,22 @@ Harbor follows a **microservices architecture**: one ASP.NET Core Web API per bu
              ▼               ▼             ▼               ▼              ▼
      Harbor.Authentication  Harbor.Project  Harbor.Environment  Harbor.Deployment  Harbor.Reporting
       (users, JWT, roles)   (projects)      (envs + config)     (deployments)      (planned)
-             │               │             │               │
-             └───────────────┴─────────────┴───────────────┘
-                                 │
-                                 ▼
-                          PostgreSQL (harbor_db)
+             │               │             │               │              │
+             └───────────────┴─────────────┴───────────────┘              │
+                                 │                                        │
+                                 ▼                                        ▼
+                          PostgreSQL (harbor_db)                     Apache Kafka
+                                                                   (Event Streaming)
+```
+
+**Apache Kafka Integration**: Harbor uses Apache Kafka as an event streaming platform to decouple microservices. The `Harbor.Deployment` service acts as a Producer, publishing `DeploymentLifecycleEvent` messages to a Kafka topic (`deployment-events`) whenever a deployment's state changes. It also runs a Consumer (`KafkaConsumerService`, consumer group `harbor-deployment-group`) against the same topic, which reconciles the `deployments` table with the terminal state reported by the GitHub Actions run. Further consumers (for example Reporting or Notification) can subscribe to the same events to react asynchronously without creating tight coupling or blocking the Deployment service. Locally the broker is the `kafka` service in `docker-compose.yml`; on Azure it is Azure Event Hubs, reached over its Kafka-compatible endpoint.
                      one schema, per-service tables,
                      accessed via ADO.NET (Npgsql) — no ORM
 
-     ┌─────────────────────────────┐        ┌───────────────────────────────┐
-     │ Kafka (reserved, not wired) │        │ Prometheus / Grafana (reserved) │
-     │ future deployment events    │        │ future metrics & dashboards     │
-     └─────────────────────────────┘        └───────────────────────────────┘
+                                            ┌───────────────────────────────┐
+                                            │ Prometheus / Grafana (reserved) │
+                                            │ future metrics & dashboards     │
+                                            └───────────────────────────────┘
 ```
 
 **Design summary:**
@@ -74,7 +78,7 @@ Harbor follows a **microservices architecture**: one ASP.NET Core Web API per bu
 - All services share **one PostgreSQL database** (`harbor_db`) but each service owns its own tables and never queries another service's tables directly — cross-service data needs go through HTTP, preserving service boundaries even though the database is physically shared.
 - Data access is raw SQL via `Npgsql`/ADO.NET behind a Repository interface — there is intentionally no ORM (see [Implementation Decisions](#architecture--implementation-decisions)).
 - `Harbor.Authentication` is the identity provider: it issues JWTs that every other service independently validates using a shared `JWT_SECRET`/`JWT_ISSUER`/`JWT_AUDIENCE` — no service-to-service call is needed to verify a token.
-- Kafka and Prometheus/Grafana directories exist under `infrastructure/` as **reserved integration points** for future event-driven notifications and observability; they are not yet wired into any service (see [Known Limitations](#known-limitations--roadmap)).
+- Prometheus/Grafana directories exist under `infrastructure/` as **reserved integration points** for future observability; they are not yet wired into any service (see [Known Limitations](#known-limitations--roadmap)).
 
 ---
 
@@ -93,7 +97,7 @@ Harbor follows a **microservices architecture**: one ASP.NET Core Web API per bu
 | Config | DotNetEnv (`.env`, git-ignored) |
 | Testing | xUnit + Moq (unit), Testcontainers (integration), Selenium (E2E), JMeter (performance) |
 | CI/CD | GitHub Actions, Docker, Azure Container Apps |
-| Messaging (reserved) | Apache Kafka |
+| Messaging / Events | Apache Kafka |
 | Observability (reserved) | Prometheus, Grafana |
 
 ---
@@ -119,7 +123,7 @@ harbor/
 │   ├── docker/                      # Standalone Dockerfiles per service (reference copies)
 │   ├── docker-compose/              # Alternate compose files (dev variant)
 │   ├── database/                    # schema/seed/migrations placeholders
-│   ├── kafka/                       # reserved config/topics (not yet wired)
+│   ├── kafka/                       # Kafka/Event Hubs topic definitions + reserved config
 │   └── monitoring/                  # Prometheus config + Grafana provisioning (reserved)
 ├── tests/
 │   ├── unit/                        # One xUnit project per backend service
@@ -229,7 +233,8 @@ All backend services read configuration from a single root-level `.env` file (vi
 | `JWT_SECRET` | All services | Symmetric HMAC-SHA256 key used to **sign** (Authentication) and **validate** (every other service) tokens — must be identical everywhere |
 | `JWT_ISSUER`, `JWT_AUDIENCE` | All services | Must match between the issuer and every validator |
 | `JWT_EXPIRY_MINUTES` | Harbor.Authentication | Token lifetime |
-| `KAFKA_BOOTSTRAP_SERVERS`, `KAFKA_DEPLOYMENT_TOPIC` | Harbor.Deployment (reserved) | Not yet consumed by application code — placeholder for future event publishing |
+| `KAFKA_CONNECTION_STRING` | Harbor.Deployment | Azure Event Hubs connection string. Takes priority over every other Kafka setting; `EntityPath` supplies the topic name |
+| `KAFKA_BOOTSTRAP_SERVERS`, `KAFKA_DEPLOYMENT_TOPIC`, `KAFKA_CONSUMER_GROUP_ID`, `KAFKA_SASL_USERNAME`, `KAFKA_SASL_PASSWORD`, `KAFKA_SECURITY_PROTOCOL`, `KAFKA_SASL_MECHANISM`, `KAFKA_AUTO_OFFSET_RESET` | Harbor.Deployment | Individual Kafka client settings. Used by the local plaintext compose broker; ignored for the topic when a connection string is present |
 | `GITHUB_TOKEN`, `GITHUB_WEBHOOK_SECRET` | Harbor.Deployment (reserved) | Placeholder for future GitHub Actions/webhook integration |
 | `API_GATEWAY_URL` | Deployment tooling / CD | Base URL the frontend build points at in a given environment |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM_NAME`, `SMTP_FROM_EMAIL` | Harbor.Authentication | Password-reset emails (Mailpit locally, Brevo in production) |
@@ -450,18 +455,19 @@ Key decisions made so far, with rationale, so future contributors don't have to 
 | **Stateless JWT validation shared by secret, not a central auth call per request** | Every service validates tokens locally with the shared `JWT_SECRET`/`Issuer`/`Audience`, avoiding a network round-trip to Authentication on every authorized request. |
 | **DTOs never expose entities directly** | Prevents fields like `PasswordHash` or raw secret values from ever serializing into an API response. |
 | **AES-256-GCM for environment secret values, not plaintext** | Environment configuration commonly holds credentials/API keys; storing them encrypted limits blast radius of a database-only compromise. |
-| **Kafka and Prometheus/Grafana scaffolded but not wired** | Directory structure and config files are reserved ahead of the sprint that implements event-driven deployment notifications and metrics dashboards, so the eventual integration doesn't require restructuring the repo. |
+| **Kafka broker swapped per environment behind one `KafkaOptions` boundary, with an Azure Event Hubs connection string taking priority** | Local development stays free of Azure dependencies, while production needs a managed, TLS+SASL broker. `KafkaOptions.ApplyConnectionString()` collapses the Azure-specific connection-string format into the same client settings Confluent.Kafka expects, so `KafkaProducerService` and `KafkaConsumerService` contain no Azure code. |
+| **Prometheus/Grafana scaffolded but not wired** | Config is reserved ahead of the sprint that implements metrics dashboards, so the eventual integration doesn't require restructuring the repo. |
 | **E2E tests run as a separate `dotnet test` invocation from unit/integration in CI** | Avoids CPU contention between parallel MSBuild test nodes and Selenium/Testcontainers, which was the actual cause of intermittent E2E flakiness (not application bugs). |
 | **Frontend reads API base URL from `VITE_API_BASE_URL`, not a hardcoded file** | Removes the earlier need to manually edit a `services/api.js` file per developer/environment when a backend port changed — one env var per environment instead. |
 
-For architectural diagrams beyond this README (C4 context, deployment lifecycle, event flow once Kafka is wired), see [`docs/architecture/`](docs/architecture/).
+For architectural diagrams beyond this README (C4 context, deployment lifecycle, event flow), see [`docs/architecture/`](docs/architecture/).
 
 ---
 
 ## Known Limitations & Roadmap
 
 - `Harbor.Reporting` is scaffolded (Program.cs, project file, Dockerfile) but has **no controllers or endpoints implemented yet** — the Gateway route exists and will 404 until it does.
-- Kafka (`infrastructure/kafka/`) and the `Harbor.Deployment/Kafka` and `Harbor.Deployment/GitHub` folders are placeholders — no event publishing or GitHub webhook handling is implemented yet.
+- Kafka is wired in `Harbor.Deployment`: `KafkaProducerService` publishes `DeploymentLifecycleEvent` on every deployment status change and the `KafkaConsumerService` hosted service consumes from the same topic to reconcile status. Locally it runs against the compose broker over plaintext; on Azure it targets **Azure Event Hubs** (Standard tier — the Basic tier has no Kafka endpoint) via the `KAFKA_CONNECTION_STRING` secret. See [`docs/azure-deployment-guide.md`](docs/azure-deployment-guide.md) Step 5 and [`infrastructure/kafka/topics/deployment-events.json`](infrastructure/kafka/topics/deployment-events.json). `Harbor.Deployment/GitHub` is still a placeholder — no GitHub webhook handling is implemented yet.
 - Prometheus/Grafana (`infrastructure/monitoring/`) configuration exists but no service currently exposes metrics for it to scrape.
 - `infrastructure/database/{schema,seed,migrations}` are placeholders; the authoritative migrations are the numbered SQL scripts inside each service's own `Scripts/` folder.
 - `docs/architecture/*.md` and `docs/database/database-design.md` are still placeholders pending a dedicated documentation pass — this README is the interim authoritative source for architecture and configuration until those are filled in (tracked under RETRO-01, see below).

@@ -10,8 +10,5 @@ namespace Harbor.Project.DTOs
 
         /// <summary>Optional free-text description, up to 500 characters.</summary>
         public string? Description { get; set; }
-
-        /// <summary>Optional link to the project's source repository.</summary>
-        public string? RepositoryUrl { get; set; }
     }
 }

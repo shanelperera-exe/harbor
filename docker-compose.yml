@@ -20,6 +20,24 @@ services:
       - "1025:1025"
     restart: unless-stopped
 
+  kafka:
+    image: apache/kafka:latest
+    container_name: harbor-kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+    restart: unless-stopped
+
   api-gateway:
     build:
       context: .
@@ -28,6 +46,8 @@ services:
     env_file: .env
     ports:
       - "5000:8080"
+    volumes:
+      - dp_keys:/root/.aspnet/DataProtection-Keys
     restart: unless-stopped
 
   authentication-service:
@@ -43,6 +63,8 @@ services:
       SMTP_PORT: 1025
     ports:
       - "5001:8080"
+    volumes:
+      - dp_keys:/root/.aspnet/DataProtection-Keys
     depends_on:
       - postgres
     restart: unless-stopped
@@ -56,8 +78,21 @@ services:
     environment:
       POSTGRES_SERVER: postgres
       POSTGRES_PORT: 5432
+      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL:-http://authentication-service:8080}
     ports:
       - "5002:8080"
+    volumes:
+      - dp_keys:/root/.aspnet/DataProtection-Keys
+    healthcheck:
+      # There is no /health endpoint in this service and the runtime image has
+      # no curl. A listening TCP port is the correct signal: DatabaseInitializer
+      # runs before app.Run(), so the port only opens once migrations have
+      # completed and the "Services" table exists for deployment-service.
+      test: ["CMD-SHELL", "timeout 2 bash -c '</dev/tcp/127.0.0.1/8080' || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
     depends_on:
       - postgres
     restart: unless-stopped
@@ -73,6 +108,8 @@ services:
       POSTGRES_PORT: 5432
     ports:
       - "5003:8080"
+    volumes:
+      - dp_keys:/root/.aspnet/DataProtection-Keys
     depends_on:
       - postgres
     restart: unless-stopped
@@ -86,10 +123,26 @@ services:
     environment:
       POSTGRES_SERVER: postgres
       POSTGRES_PORT: 5432
+      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL:-http://authentication-service:8080}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_DEPLOYMENT_TOPIC: ${KAFKA_DEPLOYMENT_TOPIC:-deployment-events}
     ports:
       - "5004:8080"
+    volumes:
+      - dp_keys:/root/.aspnet/DataProtection-Keys
     depends_on:
-      - postgres
+      postgres:
+        condition: service_started
+      kafka:
+        condition: service_started
+      # Harbor.Deployment migration 0007 has a foreign key onto "Services",
+      # which project-service creates. Starting them together makes the
+      # fresh-database migration race, and Harbor.Deployment exits with
+      # 42P01: relation "Services" does not exist. depends_on only orders
+      # container start, not migration completion, so wait for the healthcheck
+      # that fires after DatabaseInitializer has finished.
+      project-service:
+        condition: service_healthy
     restart: unless-stopped
 
   reporting-service:
@@ -103,6 +156,8 @@ services:
       POSTGRES_PORT: 5432
     ports:
       - "5005:8080"
+    volumes:
+      - dp_keys:/root/.aspnet/DataProtection-Keys
     depends_on:
       - postgres
     restart: unless-stopped
@@ -127,3 +182,4 @@ services:
 
 volumes:
   postgres_data:
+  dp_keys:

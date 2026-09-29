@@ -1,7 +1,8 @@
 import { useEffect, useState, useRef } from 'react';
+import { Icon } from '../icons';
 
 // ─── Sparkline chart component ────────────────────────────────────────────────
-function Sparkline({ color = '#8a05ff', delay = 0 }: { color?: string; delay?: number }) {
+function Sparkline({ color = '#2563eb', delay = 0 }: { color?: string; delay?: number }) {
   const [offset, setOffset] = useState(0);
   const pathRef = useRef<SVGPathElement>(null);
 
@@ -60,7 +61,7 @@ function ServiceCard({
 
   return (
     <div
-      className={`border border-[#272727] bg-[#0d0d0d] transition-all duration-700 ${
+      className={`border border-[#272727] bg-[oklch(0.21_0.03_263.45)] transition-all duration-700 ${
         visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
       }`}
     >
@@ -89,7 +90,7 @@ function ServiceCard({
           >
             <div className="text-[8px] text-[#858585] uppercase tracking-widest mb-1">{m.label}</div>
             <div className="h-5">
-              <Sparkline color={m.color || '#8a05ff'} delay={i * 200 + delay} />
+              <Sparkline color={m.color || '#2563eb'} delay={i * 200 + delay} />
             </div>
           </div>
         ))}
@@ -204,18 +205,13 @@ export default function HeroDashboardIllustration() {
           >
             <ServiceCard
               icon={
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                  <circle cx="6" cy="6" r="5" stroke="currentColor" strokeWidth="1" />
-                  <line x1="6" y1="1" x2="6" y2="11" stroke="currentColor" strokeWidth="0.8" />
-                  <path d="M1 6 Q3 4 6 4 Q9 4 11 6" stroke="currentColor" strokeWidth="0.8" fill="none" />
-                  <path d="M1 6 Q3 8 6 8 Q9 8 11 6" stroke="currentColor" strokeWidth="0.8" fill="none" />
-                </svg>
+                <Icon name="heroOrb" />
               }
               name="app-backend"
               status="Available"
               metrics={[
-                { label: 'Memory', color: '#8a05ff' },
-                { label: 'CPU', color: '#8a05ff' },
+                { label: 'Memory', color: '#2563eb' },
+                { label: 'CPU', color: '#2563eb' },
                 { label: 'Instances' },
                 { label: 'Requests' },
               ]}
@@ -223,15 +219,12 @@ export default function HeroDashboardIllustration() {
             />
             <ServiceCard
               icon={
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                  <rect x="1" y="3" width="10" height="7" rx="1" stroke="currentColor" strokeWidth="1" />
-                  <line x1="3" y1="1" x2="9" y2="1" stroke="currentColor" strokeWidth="1" strokeLinecap="round" />
-                </svg>
+                <Icon name="heroPanel" />
               }
               name="app-backend"
               metrics={[
-                { label: 'Memory', color: '#8a05ff' },
-                { label: 'CPU', color: '#8a05ff' },
+                { label: 'Memory', color: '#2563eb' },
+                { label: 'CPU', color: '#2563eb' },
                 { label: 'Instances' },
                 { label: 'Requests' },
               ]}
@@ -239,17 +232,13 @@ export default function HeroDashboardIllustration() {
             />
             <ServiceCard
               icon={
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                  <ellipse cx="6" cy="3" rx="5" ry="2" stroke="currentColor" strokeWidth="1" />
-                  <path d="M1 3 v6 c0 1.1 2.2 2 5 2 s5-.9 5-2 V3" stroke="currentColor" strokeWidth="1" fill="none" />
-                  <path d="M1 6 c0 1.1 2.2 2 5 2 s5-.9 5-2" stroke="currentColor" strokeWidth="0.8" fill="none" />
-                </svg>
+                <Icon name="heroBase" />
               }
               name="app-database"
               status="Available"
               metrics={[
-                { label: 'Memory', color: '#8a05ff' },
-                { label: 'CPU', color: '#8a05ff' },
+                { label: 'Memory', color: '#2563eb' },
+                { label: 'CPU', color: '#2563eb' },
                 { label: 'Storage' },
                 { label: 'Connections' },
               ]}
@@ -257,14 +246,11 @@ export default function HeroDashboardIllustration() {
             />
             <ServiceCard
               icon={
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                  <rect x="1" y="2" width="10" height="8" rx="1" stroke="currentColor" strokeWidth="1" />
-                  <line x1="1" y1="4" x2="11" y2="4" stroke="currentColor" strokeWidth="0.8" />
-                </svg>
+                <Icon name="heroFrame" />
               }
               name="app-frontend"
               metrics={[
-                { label: 'Bandwidth', color: '#8a05ff' },
+                { label: 'Bandwidth', color: '#2563eb' },
               ]}
               delay={1100}
             />

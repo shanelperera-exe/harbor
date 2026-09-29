@@ -37,7 +37,7 @@ namespace Harbor.E2ETests.Tests
             createAccountPage.CreateAccount(username, email, password);
 
             var wait = new WebDriverWait(Driver, TimeSpan.FromSeconds(20));
-            wait.Until(d => d.Url.Contains("/dashboard"));
+            wait.Until(d => d.Url.Contains("/projects"));
 
             // Log out
             Driver.Manage().Cookies.DeleteAllCookies();
@@ -65,14 +65,14 @@ namespace Harbor.E2ETests.Tests
             // Wait for redirection to dashboard
             var wait = new WebDriverWait(Driver, TimeSpan.FromSeconds(20));
             try {
-                wait.Until(d => d.Url.Contains("/dashboard"));
+                wait.Until(d => d.Url.Contains("/projects"));
             } catch (WebDriverTimeoutException) {
                 var error = "";
                 try { error = createAccountPage.GetErrorMessage(); } catch {}
                 Assert.Fail($"Failed to redirect to dashboard. Error on page: {error}");
             }
 
-            Assert.That(Driver.Url, Does.Contain("/dashboard"));
+            Assert.That(Driver.Url, Does.Contain("/projects"));
         }
 
         [Test]
@@ -90,7 +90,7 @@ namespace Harbor.E2ETests.Tests
 
             var wait = new WebDriverWait(Driver, TimeSpan.FromSeconds(20));
             try {
-                wait.Until(d => d.Url.Contains("/dashboard"));
+                wait.Until(d => d.Url.Contains("/projects"));
             } catch (WebDriverTimeoutException) {
                 var error = "";
                 try { error = createAccountPage.GetErrorMessage(); } catch {}
@@ -107,8 +107,8 @@ namespace Harbor.E2ETests.Tests
 
             loginPage.Login(username, password);
 
-            wait.Until(d => d.Url.Contains("/dashboard"));
-            Assert.That(Driver.Url, Does.Contain("/dashboard"));
+            wait.Until(d => d.Url.Contains("/projects"));
+            Assert.That(Driver.Url, Does.Contain("/projects"));
         }
     }
 }

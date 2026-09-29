@@ -12,7 +12,17 @@ namespace Harbor.Authentication.Tests
             Environment.SetEnvironmentVariable("JWT_SECRET", "test-secret-key-thats-long-enough-for-hmac");
             Environment.SetEnvironmentVariable("JWT_ISSUER", "TestIssuer");
             Environment.SetEnvironmentVariable("JWT_AUDIENCE", "TestAudience");
-            return new ConfigurationBuilder().Build();
+            
+            var configData = new Dictionary<string, string?>
+            {
+                {"JWT_SECRET", "test-secret-key-thats-long-enough-for-hmac"},
+                {"JWT_ISSUER", "TestIssuer"},
+                {"JWT_AUDIENCE", "TestAudience"}
+            };
+
+            return new ConfigurationBuilder()
+                .AddInMemoryCollection(configData)
+                .Build();
         }
 
         [Fact]

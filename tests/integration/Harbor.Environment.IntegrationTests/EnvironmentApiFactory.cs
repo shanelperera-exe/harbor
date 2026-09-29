@@ -42,15 +42,36 @@ public class EnvironmentApiFactory : WebApplicationFactory<global::Program>, IAs
         await _container.StartAsync();
         await using var connection = new NpgsqlConnection(_container.GetConnectionString());
         await connection.OpenAsync();
+
+        // These tables belong to other services (Project/Deployment), so this fixture
+        // creates just enough of them for the Environment service to resolve project
+        // ownership. The columns must match what EnvironmentRepository actually selects,
+        // including "PublicId", which it uses to resolve a project by its public id.
         await using var command = new NpgsqlCommand("""
             CREATE TABLE "Projects" (
-                "Id" SERIAL PRIMARY KEY, "Name" VARCHAR(100) NOT NULL, "OwnerId" INTEGER NOT NULL,
-                "CreatedAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, "IsArchived" BOOLEAN NOT NULL DEFAULT FALSE
+                "Id" SERIAL PRIMARY KEY,
+                "PublicId" VARCHAR(50) NOT NULL DEFAULT '',
+                "Name" VARCHAR(100) NOT NULL,
+                "OwnerId" INTEGER NOT NULL,
+                "CreatedAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                "IsArchived" BOOLEAN NOT NULL DEFAULT FALSE
             );
             CREATE TABLE "Deployments" (
-                "Id" SERIAL PRIMARY KEY, "ProjectId" INTEGER NOT NULL, "OwnerId" INTEGER NOT NULL,
-                "Environment" VARCHAR(100) NOT NULL, "Version" VARCHAR(200) NOT NULL,
-                "Status" VARCHAR(30) NOT NULL, "StartedAt" TIMESTAMPTZ NOT NULL
+                "Id" SERIAL PRIMARY KEY,
+                "PublicId" VARCHAR(50) NOT NULL DEFAULT '',
+                "ProjectId" INTEGER NOT NULL,
+                "OwnerId" INTEGER NOT NULL,
+                "ServiceId" INTEGER,
+                "Environment" VARCHAR(100) NOT NULL,
+                "Version" VARCHAR(200) NOT NULL,
+                "Status" VARCHAR(30) NOT NULL,
+                "StartedAt" TIMESTAMPTZ NOT NULL
+            );
+            CREATE TABLE "Services" (
+                "Id" SERIAL PRIMARY KEY,
+                "PublicId" VARCHAR(50) NOT NULL DEFAULT '',
+                "ProjectId" INTEGER NOT NULL,
+                "Name" VARCHAR(200) NOT NULL
             );
             """, connection);
         await command.ExecuteNonQueryAsync();

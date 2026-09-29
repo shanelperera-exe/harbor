@@ -3,13 +3,26 @@ namespace Harbor.Deployment.Models;
 public class DeploymentEntity
 {
     public int Id { get; init; }
-    public int ProjectId { get; init; }
+    public string PublicId { get; init; } = string.Empty;
+    public int ServiceId { get; init; }
     public int OwnerId { get; init; }
     public string Environment { get; init; } = string.Empty;
     public string Version { get; init; } = string.Empty;
     public string? CommitSha { get; init; }
+    public string? CommitMessage { get; init; }
     public string Status { get; init; } = string.Empty;
     public DateTime StartedAt { get; init; }
     public DateTime? CompletedAt { get; init; }
     public string? FailureReason { get; init; }
+    public string? WorkflowFile { get; init; }
+    public string? WorkflowRef { get; init; }
+    public string? TriggerError { get; init; }
+    public long? WorkflowRunId { get; init; }
+    public string? WorkflowRunUrl { get; init; }
+
+    // Joined properties for history view
+    public string? ProjectName { get; init; }
+    public string? ServiceName { get; init; }
+    public string? ServiceType { get; init; }
+    public string? UserName { get; init; }
 }

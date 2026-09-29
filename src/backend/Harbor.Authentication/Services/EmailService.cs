@@ -20,7 +20,9 @@ namespace Harbor.Authentication.Services
         {
             var host = Environment.GetEnvironmentVariable("SMTP_HOST") ?? _config["Smtp:Host"];
             var portString = Environment.GetEnvironmentVariable("SMTP_PORT") ?? _config["Smtp:Port"];
-            var port = int.Parse(portString ?? "587");
+            // TryParse, not Parse: an unset SMTP_PORT arrives as an empty string, and
+            // int.Parse("") throws FormatException before the "SMTP is not configured" guard below.
+            var port = int.TryParse(portString, out var parsedPort) ? parsedPort : 587;
             var username = Environment.GetEnvironmentVariable("SMTP_USERNAME") ?? _config["Smtp:Username"];
             var password = Environment.GetEnvironmentVariable("SMTP_PASSWORD") ?? _config["Smtp:Password"];
             var fromName = Environment.GetEnvironmentVariable("SMTP_FROM_NAME") ?? _config["Smtp:FromName"] ?? "Harbor Team";

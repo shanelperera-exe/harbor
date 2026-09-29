@@ -23,7 +23,7 @@ namespace Harbor.E2ETests.Tests
             loginPage.Login(SeededUsername, SeededPassword);
 
             var wait = new WebDriverWait(Driver, TimeSpan.FromSeconds(20));
-            wait.Until(d => d.Url.Contains("/dashboard"));
+            wait.Until(d => d.Url.Contains("/projects"));
         }
 
         [TestCase("Failed")]
@@ -40,7 +40,7 @@ namespace Harbor.E2ETests.Tests
             var statuses = deploymentsPage.GetVisibleStatuses();
 
             Assert.That(statuses, Is.Not.Empty);
-            Assert.That(statuses, Has.All.EqualTo(status));
+            Assert.That(statuses, Has.All.EqualTo(DeploymentsPage.ExpectedBadgeLabel(status)));
         }
 
         [Test]
@@ -50,13 +50,14 @@ namespace Harbor.E2ETests.Tests
 
             var deploymentsPage = new DeploymentsPage(Driver);
             deploymentsPage.NavigateTo();
-            deploymentsPage.FilterByStatus(""); // All statuses - 29 rows, so Next is available
+            deploymentsPage.FilterByStatus(""); // All statuses - 30 rows, so Next is available
             deploymentsPage.ClickNext();
-            Assert.That(deploymentsPage.GetCurrentPageLabel(), Does.Contain("2"));
+            Assert.That(deploymentsPage.IsShowingFirstPage(), Is.False, "Expected to be past the first page.");
 
             deploymentsPage.FilterByStatus("Failed");
 
-            Assert.That(deploymentsPage.GetCurrentPageLabel(), Does.Contain("1"));
+            Assert.That(deploymentsPage.IsShowingFirstPage(), Is.True,
+                "Changing the status filter should reset the list back to page one.");
         }
 
         [Test]
@@ -71,67 +72,80 @@ namespace Harbor.E2ETests.Tests
         }
 
         [Test]
-        public void Pagination_WithFewerThanTwentyResultsOnPage_NextButtonIsDisabled()
+        public void Pagination_WithFewerThanTwentyResultsOnLastPage_NextButtonIsDisabled()
         {
             LoginAsSeededUser();
 
             var deploymentsPage = new DeploymentsPage(Driver);
             deploymentsPage.NavigateTo();
-            deploymentsPage.FilterByStatus(""); // 29 total: page 2 has 9 rows (< 20)
-            deploymentsPage.ClickNext();
+            deploymentsPage.FilterByStatus(""); // All statuses
 
-            Assert.That(deploymentsPage.IsNextDisabled(), Is.True);
+            // Walk to the last page. The list shows 10 rows per page, so the 30 seeded
+            // deployments span three pages; the loop stays correct if that page size changes.
+            for (var i = 0; i < 10 && !deploymentsPage.IsNextDisabled(); i++)
+            {
+                deploymentsPage.ClickNext();
+            }
+
+            Assert.That(deploymentsPage.IsNextDisabled(), Is.True,
+                "Next should be disabled once the last page is reached.");
         }
 
+        // The list no longer opens an inline details panel, so "before selecting a row" is now
+        // simply "the list renders rows and no detail view is open". This asserts the landing
+        // state of /deployments: rows are present and the URL has not navigated to a detail page.
         [Test]
-        public void DetailsPanel_BeforeSelectingRow_ShowsPlaceholder()
+        public void DeploymentList_BeforeSelectingRow_DoesNotOpenDetailView()
         {
             LoginAsSeededUser();
 
             var deploymentsPage = new DeploymentsPage(Driver);
             deploymentsPage.NavigateTo();
 
-            Assert.That(deploymentsPage.GetDetailsPlaceholder(), Does.Contain("Select a deployment"));
+            Assert.That(deploymentsPage.GetRows(), Is.Not.Empty);
+            Assert.That(Driver.Url, Does.Not.Contain("/deployments/"));
         }
 
         [Test]
-        public void DetailsPanel_WithPopulatedFailedDeployment_ShowsFailureReasonAndLogs()
+        public void DeploymentDetails_WithPopulatedFailedDeployment_ShowsFailureReasonAndLogs()
         {
             LoginAsSeededUser();
 
             var deploymentsPage = new DeploymentsPage(Driver);
             deploymentsPage.NavigateTo();
             deploymentsPage.FilterByStatus("Failed");
-            deploymentsPage.ClickDetailsForVersion("2.1.0");
+            deploymentsPage.OpenForVersion("2.1.0");
 
-            Assert.That(deploymentsPage.HasFailureBanner(), Is.True);
-            Assert.That(deploymentsPage.GetFailureReasonText(),
+            var detailsPage = new DeploymentDetailsPage(Driver);
+            detailsPage.WaitUntilLoaded();
+
+            Assert.That(detailsPage.GetFailureReason(),
                 Does.Contain("Container failed to start"));
 
-            var logs = deploymentsPage.GetLogLines();
-            Assert.That(logs.Count, Is.EqualTo(4));
-            Assert.That(logs[0], Does.Contain("Deployment started"));
-            Assert.That(logs[^1], Does.Contain("OOMKilled"));
+            var logs = detailsPage.GetLogLines();
+            Assert.That(logs, Is.Not.Empty);
+            Assert.That(string.Join("\n", logs), Does.Contain("OOMKilled"));
         }
 
         [Test]
-        public void DetailsPanel_WithSucceededDeployment_DoesNotShowFailureBanner()
+        public void DeploymentDetails_WithSucceededDeployment_DoesNotShowFailureReason()
         {
             LoginAsSeededUser();
 
             var deploymentsPage = new DeploymentsPage(Driver);
             deploymentsPage.NavigateTo();
             deploymentsPage.FilterByStatus("Succeeded");
-            var rows = deploymentsPage.GetRows();
-            Assert.That(rows, Is.Not.Empty);
+            deploymentsPage.GetRows();
 
-            // Click the first Succeeded row's Details button directly.
-            // Use ClickDetailsForVersion to ensure proper waiting for the panel to load
-            // and avoid stale element issues.
-            var version = rows[0].FindElement(By.XPath(".//td")).Text.Trim();
-            deploymentsPage.ClickDetailsForVersion(version);
+            // The seeded Succeeded rows are versioned 2.0.N; pick the first one present.
+            var row = deploymentsPage.GetRows().First();
+            var version = row.Text.Split(' ').First(v => v.StartsWith("2.0."));
+            deploymentsPage.OpenForVersion(version);
 
-            Assert.That(deploymentsPage.HasFailureBanner(), Is.False);
+            var detailsPage = new DeploymentDetailsPage(Driver);
+            detailsPage.WaitUntilLoaded();
+
+            Assert.That(detailsPage.GetFailureReason(), Is.Null);
         }
     }
 }

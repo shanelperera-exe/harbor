@@ -13,7 +13,7 @@ export default function Navbar() {
   const isLoggedIn = !!localStorage.getItem('harbor_token');
 
   return (
-    <nav className="w-full bg-white dark:bg-[#0b0b0b] text-[15px] lg:text-[16px] leading-[112%] text-gray-900 dark:text-white pl-4 lg:pl-6 flex items-stretch justify-between border-b border-black dark:border-white h-[47px] lg:h-[66px] transition-colors duration-300">
+    <nav className="w-full bg-white dark:bg-[oklch(0.21_0.03_263.45)] text-[15px] lg:text-[16px] leading-[112%] text-gray-900 dark:text-white pl-4 lg:pl-6 flex items-stretch justify-between border-b border-gray-300 dark:border-[#525252] h-[47px] lg:h-[66px] transition-colors duration-300">
       {/* Left side */}
       <div className="flex items-center lg:gap-8">
         {/* Mobile menu button */}
@@ -27,7 +27,8 @@ export default function Navbar() {
 
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2.5 group">
-          <img src="/logos/harbor_primary.svg" alt="Harbor Logo" className="h-7 lg:h-10 w-auto group-hover:opacity-80 transition-opacity dark:invert-0 invert" />
+          <img src="/logos/harbor_light_notext.svg" alt="Harbor Logo" className="h-7 lg:h-10 w-auto group-hover:opacity-80 transition-opacity dark:hidden" />
+          <img src="/logos/harbor_dark_notext.png" alt="Harbor Logo" className="h-7 lg:h-10 w-auto group-hover:opacity-80 transition-opacity hidden dark:block" />
           <span className="text-2xl lg:text-4xl font-medium tracking-tight text-gray-900 dark:text-white transition-colors duration-300 lowercase" style={{ fontFamily: 'Roobert, sans-serif' }}>harbor</span>
         </Link>
 
@@ -41,7 +42,7 @@ export default function Navbar() {
             <NavLink to="/login">Sign In</NavLink>
           </div>
         )}
-        <Link to={isLoggedIn ? "/dashboard" : "/register"} className="group relative z-[1] cursor-pointer bg-gray-900 dark:bg-white px-5 lg:px-[30px] flex items-center h-full font-normal transition-colors duration-300 text-white dark:text-black hover:text-white overflow-hidden">
+        <Link to={isLoggedIn ? "/projects" : "/register"} className="group relative z-[1] cursor-pointer bg-gray-900 dark:bg-white px-5 lg:px-[30px] flex items-center h-full font-normal transition-colors duration-300 text-white dark:text-black hover:text-white overflow-hidden">
           <div className="pointer-events-none absolute inset-0 z-[0] h-full w-full scale-x-0 bg-[#2563eb] transition-transform duration-300 ease-out origin-right group-hover:origin-left group-hover:scale-x-100"></div>
           <span className="relative z-[1]">{isLoggedIn ? 'Dashboard' : 'Get Started'}</span>
         </Link>

@@ -9,7 +9,7 @@ namespace Harbor.Environment.Controllers;
 
 /// <summary>Creates and manages deployment environments for a project.</summary>
 [ApiController]
-[Route("api/projects/{projectId:int}/environments")]
+[Route("api/projects/{projectId}/environments")]
 [Authorize]
 public class EnvironmentsController(
     IEnvironmentService environmentService,
@@ -26,7 +26,7 @@ public class EnvironmentsController(
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> Create(
-        int projectId,
+        string projectId,
         [FromBody] CreateEnvironmentRequest request)
     {
         var userId = GetUserId();
@@ -68,7 +68,7 @@ public class EnvironmentsController(
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> GetByProject(int projectId)
+    public async Task<IActionResult> GetByProject(string projectId)
     {
         var userId = GetUserId();
 
@@ -103,7 +103,7 @@ public class EnvironmentsController(
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> Update(
-        int projectId,
+        string projectId,
         int environmentId,
         [FromBody] UpdateEnvironmentRequest request)
     {
@@ -142,7 +142,7 @@ public class EnvironmentsController(
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> Remove(
-        int projectId,
+        string projectId,
         int environmentId)
     {
         var userId = GetUserId();
@@ -188,7 +188,7 @@ public class EnvironmentsController(
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> GetConfiguration(
-        int projectId,
+        string projectId,
         int environmentId)
     {
         var userId = GetUserId();
@@ -234,7 +234,7 @@ public class EnvironmentsController(
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> Configure(
-        int projectId,
+        string projectId,
         int environmentId,
         [FromBody] ConfigureEnvironmentRequest request)
     {

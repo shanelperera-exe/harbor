@@ -2,9 +2,11 @@ using DotNetEnv;
 using Harbor.Deployment.Data;
 using Harbor.Deployment.Repositories;
 using Harbor.Deployment.Services;
+using Harbor.GitHub;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using Harbor.Deployment.Kafka;
 
 if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("JWT_SECRET")))
 {
@@ -24,9 +26,9 @@ if (allowedOrigins == null || allowedOrigins.Length == 0)
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("DefaultPolicy", policy =>
-        policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod());
+        policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod().AllowCredentials());
     options.AddDefaultPolicy(policy =>
-        policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod());
+        policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod().AllowCredentials());
 });
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
@@ -60,8 +62,8 @@ builder.Services.AddSwaggerGen(options =>
 
 var jwtSecret = builder.Configuration["JWT_SECRET"]
     ?? throw new InvalidOperationException("JWT_SECRET is not configured.");
-var jwtIssuer = builder.Configuration["JWT_ISSUER"] ?? "harbor-auth";
-var jwtAudience = builder.Configuration["JWT_AUDIENCE"] ?? "harbor-web";
+var jwtIssuer = builder.Configuration["JWT_ISSUER"] ?? "harbor";
+var jwtAudience = builder.Configuration["JWT_AUDIENCE"] ?? "harbor-api";
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options => options.TokenValidationParameters = new TokenValidationParameters
     {
@@ -77,6 +79,59 @@ builder.Services.AddAuthorization();
 builder.Services.AddSingleton<DbConnectionFactory>();
 builder.Services.AddScoped<IDeploymentRepository, DeploymentRepository>();
 builder.Services.AddScoped<IDeploymentService, DeploymentService>();
+builder.Services.AddScoped<IInstallationTokenResolver, InstallationTokenResolver>();
+
+builder.Services.Configure<KafkaOptions>(options =>
+{
+    // Option 1: Azure Event Hubs connection string (production)
+    options.ConnectionString = builder.Configuration["KAFKA_CONNECTION_STRING"] ?? string.Empty;
+    
+    // Option 2: Individual settings (local dev, Confluent Cloud, etc.)
+    options.BootstrapServers = builder.Configuration["KAFKA_BOOTSTRAP_SERVERS"] ?? string.Empty;
+    options.DeploymentTopic = builder.Configuration["KAFKA_DEPLOYMENT_TOPIC"] ?? string.Empty;
+    options.SaslUsername = builder.Configuration["KAFKA_SASL_USERNAME"] ?? string.Empty;
+    options.SaslPassword = builder.Configuration["KAFKA_SASL_PASSWORD"] ?? string.Empty;
+    options.SecurityProtocol = builder.Configuration["KAFKA_SECURITY_PROTOCOL"] ?? "Plaintext";
+    options.SaslMechanism = builder.Configuration["KAFKA_SASL_MECHANISM"] ?? "Plain";
+    options.AutoOffsetReset = builder.Configuration["KAFKA_AUTO_OFFSET_RESET"] ?? "Latest";
+    
+    options.ConsumerGroupId = builder.Configuration["KAFKA_CONSUMER_GROUP_ID"] ?? "harbor-deployment-group";
+    
+    // Connection string takes priority and overwrites individual settings
+    options.ApplyConnectionString();
+});
+builder.Services.AddSingleton<IKafkaProducerService, KafkaProducerService>();
+builder.Services.AddHostedService<KafkaConsumerService>();
+
+builder.Services.AddHarborGitHubApp();
+builder.Services.Configure<GitHubActionsOptions>(options =>
+{
+    // IsNullOrWhiteSpace, not "??": a container runtime and GitHub Actions both materialise an
+    // unset variable as an empty string, which "??" would pass straight through. An empty
+    // ApiBaseUrl then reaches "new Uri("")" and throws UriFormatException on first use.
+    options.ApiBaseUrl = FirstNonBlank(
+        builder.Configuration["GH_API_BASE_URL"],
+        builder.Configuration["GITHUB_API_BASE_URL"]) ?? "https://api.github.com/";
+    options.DefaultWorkflowFile = FirstNonBlank(builder.Configuration["GITHUB_ACTIONS_WORKFLOW"]) ?? "deploy.yml";
+    options.AuthServiceClientUrl = FirstNonBlank(builder.Configuration["AUTH_SERVICE_URL"]) ?? "http://authentication-service:8080";
+
+    static string? FirstNonBlank(params string?[] candidates) =>
+        candidates.FirstOrDefault(c => !string.IsNullOrWhiteSpace(c));
+});
+builder.Services.AddHttpClient<IGitHubActionsClient, GitHubActionsClient>((services, client) =>
+{
+    var options = services.GetRequiredService<Microsoft.Extensions.Options.IOptions<GitHubActionsOptions>>().Value;
+    client.BaseAddress = new Uri(options.ApiBaseUrl);
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("Harbor-Deployment-Service");
+    client.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
+});
+builder.Services.AddHttpClient<IInstallationTokenResolver, InstallationTokenResolver>((services, client) =>
+{
+    var options = services.GetRequiredService<Microsoft.Extensions.Options.IOptions<GitHubActionsOptions>>().Value;
+    client.BaseAddress = new Uri(options.AuthServiceClientUrl ?? "http://authentication-service:8080");
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("Harbor-Deployment-Service");
+    client.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
+});
 
 var app = builder.Build();
 DatabaseInitializer.Initialize(app.Configuration);

@@ -145,7 +145,8 @@ public class DeploymentsController(IDeploymentService deploymentService) : Contr
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> UpdateStatus(int id)
     {
-        var secret = Environment.GetEnvironmentVariable("GITHUB_WEBHOOK_SECRET");
+        var secret = Environment.GetEnvironmentVariable("GITHUB_APP_WEBHOOK_SECRET")
+            ?? Environment.GetEnvironmentVariable("GITHUB_WEBHOOK_SECRET");
         if (string.IsNullOrWhiteSpace(secret)) return Unauthorized();
         var signature = Request.Headers["X-Harbor-Signature"].ToString();
         using var reader = new StreamReader(Request.Body);

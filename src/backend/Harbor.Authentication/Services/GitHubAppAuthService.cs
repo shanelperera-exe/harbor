@@ -39,7 +39,7 @@ public sealed class GitHubAppAuthService : IGitHubAppAuthService
 
     public Task<GitHubAppAuthStartResponse?> StartAuthFlowAsync()
     {
-        var appId = Environment.GetEnvironmentVariable("GITHUB_APP_CLIENT_ID");
+        var appId = Environment.GetEnvironmentVariable("GH_APP_CLIENT_ID") ?? Environment.GetEnvironmentVariable("GITHUB_APP_CLIENT_ID");
         if (string.IsNullOrWhiteSpace(appId))
             return Task.FromResult<GitHubAppAuthStartResponse?>(null);
 

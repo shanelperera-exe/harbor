@@ -160,9 +160,9 @@ builder.Services.AddHttpClient("GitHubAppEmails", client =>
 builder.Services.AddScoped<Harbor.Authentication.Services.IEncryptionService, Harbor.Authentication.Services.EncryptionService>();
 
 // Only register the GitHub App auth service and internal endpoints if the App is configured
-if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("GITHUB_APP_CLIENT_ID"))
-    && !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("GITHUB_APP_CLIENT_SECRET"))
-    && !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("GITHUB_APP_PRIVATE_KEY_BASE64")))
+if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("GH_APP_CLIENT_ID") ?? Environment.GetEnvironmentVariable("GITHUB_APP_CLIENT_ID"))
+    && !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("GH_APP_CLIENT_SECRET") ?? Environment.GetEnvironmentVariable("GITHUB_APP_CLIENT_SECRET"))
+    && !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("GH_APP_PRIVATE_KEY_BASE64") ?? Environment.GetEnvironmentVariable("GITHUB_APP_PRIVATE_KEY_BASE64")))
 {
     builder.Services.AddScoped<Harbor.Authentication.Services.IGitHubAppAuthService, Harbor.Authentication.Services.GitHubAppAuthService>();
 }

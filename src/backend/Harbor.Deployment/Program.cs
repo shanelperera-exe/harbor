@@ -106,7 +106,7 @@ builder.Services.AddHostedService<KafkaConsumerService>();
 builder.Services.AddHarborGitHubApp();
 builder.Services.Configure<GitHubActionsOptions>(options =>
 {
-    options.ApiBaseUrl = builder.Configuration["GITHUB_API_BASE_URL"] ?? "https://api.github.com/";
+    options.ApiBaseUrl = builder.Configuration["GH_API_BASE_URL"] ?? builder.Configuration["GITHUB_API_BASE_URL"] ?? "https://api.github.com/";
     options.DefaultWorkflowFile = builder.Configuration["GITHUB_ACTIONS_WORKFLOW"] ?? "deploy.yml";
     options.AuthServiceClientUrl = builder.Configuration["AUTH_SERVICE_URL"] ?? "http://authentication-service:8080";
 });

@@ -38,6 +38,20 @@ jobs:
           echo "SMTP_FROM_EMAIL=ci@harbor.local" >> .env
           echo "ENVIRONMENT_SECRETS_KEY=$(openssl rand -base64 32)" >> .env
           echo "ALLOWED_ORIGINS=http://localhost:5173,http://localhost:5174,http://localhost:8080,http://localhost:8081" >> .env
+          echo "AUTH_SERVICE_URL=http://localhost:5053" >> .env
+          echo "FRONTEND_URL=http://localhost:5173" >> .env
+          echo "GOOGLE_CLIENT_ID=test-google-client-id" >> .env
+          echo "GOOGLE_CLIENT_SECRET=test-google-client-secret" >> .env
+          echo "GH_APP_CLIENT_ID=test-gh-client-id" >> .env
+          echo "GH_APP_CLIENT_SECRET=test-gh-client-secret" >> .env
+          echo "GH_APP_PRIVATE_KEY_BASE64=" >> .env
+          echo "GH_APP_SLUG=harbor-test" >> .env
+          echo "GH_APP_WEBHOOK_SECRET=test-gh-webhook-secret" >> .env
+          echo "GH_API_BASE_URL=https://api.github.com/" >> .env
+          echo "GITHUB_WEBHOOK_SECRET=test-github-webhook-secret" >> .env
+          echo "KAFKA_BOOTSTRAP_SERVERS=localhost:9092" >> .env
+          echo "KAFKA_DEPLOYMENT_TOPIC=deployment-events" >> .env
+          echo "KAFKA_CONSUMER_GROUP_ID=harbor-ci-group" >> .env
 
       - name: Start PostgreSQL Database
         run: docker compose up -d postgres

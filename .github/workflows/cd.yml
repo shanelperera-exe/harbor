@@ -80,6 +80,7 @@ jobs:
             GH_API_BASE_URL=${{ vars.GH_API_BASE_URL }}
             GOOGLE_CLIENT_ID=${{ vars.GOOGLE_CLIENT_ID }}
             GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
+            GITHUB_WEBHOOK_SECRET=${{ secrets.GH_WEBHOOK_SECRET }}
             AUTH_SERVICE_URL=${{ vars.API_GATEWAY_URL }}
             FRONTEND_URL=${{ vars.FRONTEND_URL }}
             API_GATEWAY_URL=${{ vars.API_GATEWAY_URL }}
@@ -93,6 +94,7 @@ jobs:
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
           ENVIRONMENT_SECRETS_KEY: ${{ secrets.ENVIRONMENT_SECRETS_KEY }}
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GITHUB_WEBHOOK_SECRET: ${{ secrets.GH_WEBHOOK_SECRET }}
           GH_APP_CLIENT_SECRET: ${{ secrets.GH_APP_CLIENT_SECRET }}
           GH_APP_PRIVATE_KEY_BASE64: ${{ secrets.GH_APP_PRIVATE_KEY_BASE64 }}
           GH_APP_WEBHOOK_SECRET: ${{ secrets.GH_APP_WEBHOOK_SECRET }}
@@ -134,6 +136,7 @@ jobs:
                 "AUTH_SERVICE_URL=${{ vars.API_GATEWAY_URL }}" \
                 "FRONTEND_URL=${{ vars.FRONTEND_URL }}" \
                 "API_GATEWAY_URL=${{ vars.API_GATEWAY_URL }}" \
+                "GITHUB_WEBHOOK_SECRET=$GITHUB_WEBHOOK_SECRET" \
                 "ALLOWED_ORIGINS=${{ vars.ALLOWED_ORIGINS }}"; then
               exit 0
             fi

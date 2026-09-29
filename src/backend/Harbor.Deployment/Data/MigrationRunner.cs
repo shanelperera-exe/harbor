@@ -28,7 +28,7 @@ public static class MigrationRunner
     {
         for (var current = error; current is not null; current = current.InnerException)
         {
-            if (current is PostgresException pg && pg.SqlState is "23505" or "42P01")
+            if (current is PostgresException pg && pg.SqlState is "23505" or "42P01" or "42P07")
                 return pg;
         }
 
@@ -48,9 +48,12 @@ public static class MigrationRunner
 
         // Services share the "schemaversions" journal table and the
         // "schema_checksums" table, so simultaneous starts race each other
-        // creating them (23505). A 42P01 means another service owns a table this
-        // script references and has not created it yet. Both clear on their own
-        // once that service finishes migrating, so retry instead of crashing.
+        // creating them. DbUp creates the journal with a plain CREATE TABLE, so
+        // the loser of that race gets 42P07 (duplicate_table) rather than the
+        // 23505 seen when two services insert the same journal row. A 42P01 means
+        // another service owns a table this script references and has not created
+        // it yet. All three clear on their own once that service finishes
+        // migrating, so retry instead of crashing.
         // DbUp reports these through result.Error rather than by throwing, so the
         // state has to be inspected on the result.
         var result = upgrader.PerformUpgrade();

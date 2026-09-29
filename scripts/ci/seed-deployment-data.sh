@@ -48,12 +48,48 @@ fi
 
 echo "Seeding deployment data for ${SEED_USERNAME} (OwnerId=${OWNER_ID}) ..."
 
-docker exec -i "$POSTGRES_CONTAINER" psql -U "$POSTGRES_USER" -d "$POSTGRES_DATABASE" <<SQL
+# ON_ERROR_STOP is required: without it psql prints errors but still exits 0, so a
+# broken INSERT (e.g. a column that no longer exists) silently seeds nothing and the
+# Deployments E2E tests fail later with confusing "no rows" assertions.
+docker exec -i "$POSTGRES_CONTAINER" psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DATABASE" <<SQL
+-- Deployment history is queried through
+--   d."ServiceId" IN (SELECT s."Id" FROM "Services" s JOIN "Projects" p ON s."ProjectId" = p."Id" WHERE p."OwnerId" = ...)
+-- so every seeded Deployment must hang off a Service that belongs to a Project owned
+-- by the seeded user. "Deployments" has no "ProjectId" column of its own.
+DO \$\$
+DECLARE
+    v_project_id INTEGER;
+    v_service_id INTEGER;
+BEGIN
+    SELECT "Id" INTO v_project_id FROM "Projects" WHERE "Name" = 'qa_seeded_project';
+    IF v_project_id IS NULL THEN
+        INSERT INTO "Projects" ("Name","Description","OwnerId","PublicId")
+        VALUES ('qa_seeded_project','Seeded project for deployment history E2E tests',${OWNER_ID},'qa_seed_proj_001')
+        RETURNING "Id" INTO v_project_id;
+    END IF;
+
+    SELECT "Id" INTO v_service_id FROM "Services" WHERE "ProjectId" = v_project_id;
+    IF v_service_id IS NULL THEN
+        INSERT INTO "Services" ("ProjectId","Name","Type","RepositoryName","RepositoryBranch","PublicId","WorkflowFile")
+        VALUES (v_project_id,'qa_seeded_service','api','qa-seeded-service','main','qa_seed_svc_001','deploy.yml')
+        RETURNING "Id" INTO v_service_id;
+    END IF;
+END
+\$\$;
+
+-- Make the script re-runnable: clear any previous seed rows (and their logs) first.
+-- "Deployments"."PublicId" is uniquely indexed, so without this a second run aborts.
+DELETE FROM "DeploymentLogs" WHERE "DeploymentId" IN (
+    SELECT "Id" FROM "Deployments" WHERE "PublicId" LIKE 'qa_seed_dep_%'
+);
+DELETE FROM "Deployments" WHERE "PublicId" LIKE 'qa_seed_dep_%';
+
 -- 29 varied background rows so filter/pagination tests have enough data
 -- (mirrors the manually-seeded local dataset: mix of statuses/environments/versions).
-INSERT INTO "Deployments" ("ProjectId","OwnerId","Environment","Version","CommitSha","Status","StartedAt","CompletedAt","FailureReason")
+INSERT INTO "Deployments" ("PublicId","ServiceId","OwnerId","Environment","Version","CommitSha","Status","StartedAt","CompletedAt","FailureReason")
 SELECT
-    1,
+    'qa_seed_dep_' || n,
+    s."Id",
     ${OWNER_ID},
     (ARRAY['development','staging','production'])[1 + (n % 3)],
     '2.0.' || n,
@@ -62,15 +98,17 @@ SELECT
     NOW() - (n || ' hours')::interval,
     CASE WHEN (n % 3) <> 2 THEN NOW() - (n || ' hours')::interval + INTERVAL '5 minutes' ELSE NULL END,
     CASE WHEN (n % 3) = 1 THEN 'Seeded failure for automated test coverage.' ELSE NULL END
-FROM generate_series(1, 29) AS n;
+FROM generate_series(1, 29) AS n
+JOIN "Services" s ON s."PublicId" = 'qa_seed_svc_001';
 
 -- One specific Failed deployment with a real failure reason and real logs,
 -- required by DeploymentsTests.DetailsPanel_WithPopulatedFailedDeployment_ShowsFailureReasonAndLogs.
 WITH inserted AS (
-    INSERT INTO "Deployments" ("ProjectId","OwnerId","Environment","Version","CommitSha","Status","StartedAt","CompletedAt","FailureReason")
-    VALUES (1, ${OWNER_ID}, 'production', '2.1.0', 'f9a8b7c6d5e4', 'Failed',
+    INSERT INTO "Deployments" ("PublicId","ServiceId","OwnerId","Environment","Version","CommitSha","Status","StartedAt","CompletedAt","FailureReason")
+    SELECT 'qa_seed_dep_failed', s."Id", ${OWNER_ID}, 'production', '2.1.0', 'f9a8b7c6d5e4', 'Failed',
             NOW() - INTERVAL '3 hours', NOW() - INTERVAL '3 hours' + INTERVAL '4 minutes',
-            'Container failed to start: exit code 137 (out of memory).')
+            'Container failed to start: exit code 137 (out of memory).'
+    FROM "Services" s WHERE s."PublicId" = 'qa_seed_svc_001'
     RETURNING "Id"
 )
 INSERT INTO "DeploymentLogs" ("DeploymentId","Timestamp","Level","Message")

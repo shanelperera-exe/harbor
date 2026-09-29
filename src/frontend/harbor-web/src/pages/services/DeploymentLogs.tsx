@@ -330,6 +330,7 @@ export function DeploymentLogs({ deployment }: DeploymentLogsProps) {
 
           {/* Expand / Collapse All */}
           <button
+            data-testid="expand-all-logs-button"
             onClick={expandAll}
             className="h-8 px-2.5 text-xs font-[Geist] font-medium rounded-md border border-gray-300 dark:border-[#30363d] bg-white dark:bg-[#0d1117] text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#161b22] transition-colors"
           >
@@ -425,6 +426,7 @@ export function DeploymentLogs({ deployment }: DeploymentLogsProps) {
                       return (
                         <div 
                           key={idx} 
+                          data-testid="deployment-log-line"
                           className={`flex items-start hover:bg-white/[0.04] transition-colors py-[3px] px-2 text-[13.5px] sm:text-[14px] leading-6 group ${line.isHeader ? 'cursor-pointer select-none' : ''}`}
                           onClick={line.isHeader && line.groupId ? () => toggleGroup(line.groupId!) : undefined}
                         >

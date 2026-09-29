@@ -134,13 +134,18 @@ public async Task<bool> DeleteAsync(int environmentId, int projectId)
                     await deleteServicesCmd.ExecuteNonQueryAsync();
                 }
 
-                // Then delete deployments associated with this environment
+                // Then delete deployments associated with this environment.
+                // "Deployments" has no "ProjectId" column - a deployment belongs to a Service,
+                // and a Service to a Project - so ownership is resolved through that chain
+                // (the same shape the read path uses in GetByIdAsync).
                 await using (var deleteDeploymentsCmd = connection.CreateCommand())
                 {
                     deleteDeploymentsCmd.Transaction = transaction;
                     deleteDeploymentsCmd.CommandText = """
                         DELETE FROM "Deployments" 
-                        WHERE "ProjectId" = @projectId
+                        WHERE "ServiceId" IN (
+                            SELECT s."Id" FROM "Services" s WHERE s."ProjectId" = @projectId
+                        )
                         AND "Environment" IN (
                             SELECT "Name" FROM "Environments" WHERE "Id" = @environmentId AND "ProjectId" = @projectId
                         );

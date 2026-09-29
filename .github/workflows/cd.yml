@@ -14,11 +14,12 @@ env:
   ACR_LOGIN_SERVER: ${{ vars.ACR_LOGIN_SERVER }}
   RESOURCE_GROUP: rg-harbor-centralindia
   ACA_ENVIRONMENT: harbor-env
+  DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
 
 jobs:
   deploy-backend-apis:
     name: Deploy Backend APIs
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
     environment: Production
     strategy:
@@ -38,6 +39,8 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ env.DEPLOY_SHA }}
 
       - name: Azure Login
         uses: azure/login@v1
@@ -54,7 +57,7 @@ jobs:
           containerAppName: ${{ matrix.service }}
           resourceGroup: ${{ env.RESOURCE_GROUP }}
           containerAppEnvironment: ${{ env.ACA_ENVIRONMENT }}
-          imageToBuild: ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.service }}:${{ github.sha }}
+          imageToBuild: ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.service }}:${{ env.DEPLOY_SHA }}
           dockerfilePath: ${{ matrix.dockerfile }}
           ingress: internal
           targetPort: 8080
@@ -153,7 +156,7 @@ jobs:
 
   deploy-frontends:
     name: Deploy Frontend UIs
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
     environment: Production
     strategy:
@@ -167,6 +170,8 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ env.DEPLOY_SHA }}
 
       - name: Azure Login
         uses: azure/login@v1
@@ -181,9 +186,9 @@ jobs:
           docker build \
             --build-arg VITE_API_BASE_URL=${{ vars.API_GATEWAY_URL }}/api \
             -f ${{ matrix.dockerfile }} \
-            -t ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.service }}:${{ github.sha }} \
+            -t ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.service }}:${{ env.DEPLOY_SHA }} \
             .
-          docker push ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.service }}:${{ github.sha }}
+          docker push ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.service }}:${{ env.DEPLOY_SHA }}
 
       - name: Deploy to Azure Container Apps
         uses: azure/container-apps-deploy-action@v1
@@ -194,19 +199,21 @@ jobs:
           containerAppName: ${{ matrix.service }}
           resourceGroup: ${{ env.RESOURCE_GROUP }}
           containerAppEnvironment: ${{ env.ACA_ENVIRONMENT }}
-          imageToDeploy: ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.service }}:${{ github.sha }}
+          imageToDeploy: ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.service }}:${{ env.DEPLOY_SHA }}
           ingress: external
           targetPort: 80
 
   deploy-api-gateway:
     name: Deploy API Gateway
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
     needs: deploy-backend-apis
     environment: Production
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ env.DEPLOY_SHA }}
 
       - name: Azure Login
         uses: azure/login@v1
@@ -229,7 +236,7 @@ jobs:
           containerAppName: harbor-api-gateway
           resourceGroup: ${{ env.RESOURCE_GROUP }}
           containerAppEnvironment: ${{ env.ACA_ENVIRONMENT }}
-          imageToBuild: ${{ env.ACR_LOGIN_SERVER }}/harbor-api-gateway:${{ github.sha }}
+          imageToBuild: ${{ env.ACR_LOGIN_SERVER }}/harbor-api-gateway:${{ env.DEPLOY_SHA }}
           dockerfilePath: src/backend/Harbor.ApiGateway/Dockerfile
           ingress: external
           targetPort: 8080

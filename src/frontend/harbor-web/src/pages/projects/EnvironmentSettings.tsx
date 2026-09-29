@@ -213,6 +213,7 @@ export default function EnvironmentSettings() {
                                   <div className="flex relative">
                                     <input 
                                       id="name" 
+                                      data-testid="environment-name-input"
                                       readOnly={!isEditing} 
                                       className={`h-10 truncate type-interface-01 w-full m-0 py-2.5 px-3 placeholder:input-text--placeholder border border-solid border-gray-300 dark:border-[#525252] rounded-sm appearance-none outline-none transition-colors ${
                                         isEditing 
@@ -232,13 +233,13 @@ export default function EnvironmentSettings() {
                                       <button type="button" onClick={() => { setIsEditing(false); setName(environment.name); }} className="h-10 py-2.5 px-3 flex items-center border border-solid border-gray-300 dark:border-[#525252] hover:bg-gray-100 dark:hover:bg-[#272727] text-gray-900 dark:text-[#f0f0f0] rounded-sm transition-colors">
                                         Cancel
                                       </button>
-                                      <button type="submit" disabled={isSubmitting || name.trim() === environment.name || !name.trim()} className="h-10 py-2.5 px-4 flex items-center space-x-2 rounded-sm font-medium text-black bg-white hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                                      <button type="submit" data-testid="save-environment-button" disabled={isSubmitting || name.trim() === environment.name || !name.trim()} className="h-10 py-2.5 px-4 flex items-center space-x-2 rounded-sm font-medium text-black bg-white hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                                         <RiSaveLine className="w-5 h-5" />
                                         <span>Save changes</span>
                                       </button>
                                     </div>
                                   ) : (
-                                    <button type="button" onClick={() => setIsEditing(true)} className="h-10 py-2.5 px-3 flex items-center group/button rounded-sm text-gray-700 dark:text-[#c7c7c7] hover:bg-gray-100 dark:hover:bg-[#272727] hover:text-gray-900 dark:hover:text-white transition-colors" >
+                                    <button type="button" data-testid="edit-environment-name-button" onClick={() => setIsEditing(true)} className="h-10 py-2.5 px-3 flex items-center group/button rounded-sm text-gray-700 dark:text-[#c7c7c7] hover:bg-gray-100 dark:hover:bg-[#272727] hover:text-gray-900 dark:hover:text-white transition-colors" >
                                       <div className="inline-flex w-4 h-4 me-1.5"><Icon name="editPencil" /></div>
                                       Edit
                                     </button>
@@ -265,7 +266,7 @@ export default function EnvironmentSettings() {
                       <h4 className="text-[16px] font-medium text-gray-900 dark:text-[#f0f0f0]">Delete Environment</h4>
                       <p className="text-[14px] text-gray-500 dark:text-[#b3b3b3] mt-1">Once you delete your environment, there is no going back. Please be certain.</p>
                     </div>
-                    <button type="button" onClick={openDeleteModal} className="bg-[#e23642] hover:bg-[#c0222d] text-white transition-colors h-10 py-2.5 px-3 flex items-center group/button rounded-sm whitespace-nowrap shrink-0 font-medium">
+                    <button type="button" data-testid="delete-environment-button" onClick={openDeleteModal} className="bg-[#e23642] hover:bg-[#c0222d] text-white transition-colors h-10 py-2.5 px-3 flex items-center group/button rounded-sm whitespace-nowrap shrink-0 font-medium">
                       <div className="inline-flex w-4 h-4 me-1.5"><Icon name="trash" /></div>
                       Delete Environment
                     </button>

@@ -27,7 +27,7 @@ export function StatusBadge({ status = 'ready', label, className = '' }: StatusB
           }`}></span>
         )}
       </span>
-      <span>{displayLabel}</span>
+      <span data-testid="status-badge-label">{displayLabel}</span>
     </div>
   );
 }

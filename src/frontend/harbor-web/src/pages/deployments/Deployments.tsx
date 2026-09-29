@@ -74,7 +74,11 @@ export default function Deployments() {
         projectId: projectId || undefined,
         environment: environment || undefined,
         status: status || undefined, 
-        page,
+        // This list paginates on the client (see PAGE_SIZE / paginatedDeployments), so the
+        // server is always asked for the first, largest slice. Sending the client-side `page`
+        // here with pageSize: 100 made "Next" request server page 2, which comes back empty and
+        // blanked the whole list.
+        page: 1,
         pageSize: 100
       });
       setHistory(result.items);
@@ -274,6 +278,7 @@ export default function Deployments() {
               options={statusOptions}
               placeholder="All statuses"
               className={dropdownClass}
+              testId="status-filter"
             />
 
             <FilterDropdown
@@ -349,6 +354,7 @@ export default function Deployments() {
                 return (
                   <div 
                     key={deploy.id} 
+                    data-testid="deployment-row"
                     onClick={() => projId && navigate(`/projects/${projId}/services/${deploy.serviceId}/deployments/${deploy.publicId || deploy.id}`)}
                     className={`group/deployment-row relative flex flex-row items-center gap-4 xl:gap-8 cursor-pointer bg-transparent transition-colors hover:bg-gray-50 dark:hover:bg-white/[0.04] px-4 h-[56px] ${index !== paginatedDeployments.length - 1 ? 'border-b border-gray-300 dark:border-[#525252]' : ''}`}
                   >
@@ -378,7 +384,7 @@ export default function Deployments() {
                     </div>
 
                     {/* Column 3: Status & Duration */}
-                    <div className="w-[120px] flex items-center gap-2 shrink-0 z-20 text-[14px] font-[Geist]">
+                    <div data-testid="deployment-row-status" className="w-[120px] flex items-center gap-2 shrink-0 z-20 text-[14px] font-[Geist]">
                       <StatusBadge status={mappedStatus.type} label={mappedStatus.label} />
                       <span className="text-gray-900 dark:text-white tabular-nums whitespace-nowrap hidden lg:inline">
                         {duration(deploy)}
@@ -423,7 +429,7 @@ export default function Deployments() {
               {/* Pagination Bar */}
               {filteredHistory.length > 0 && (
                 <div className="flex flex-wrap items-center justify-between gap-4 px-4 py-3.5 border-t border-gray-300 dark:border-[#525252] bg-gray-50 dark:bg-white/[0.02] text-xs font-[Geist]">
-                  <div className="text-gray-500 dark:text-[#8f8f8f]">
+                  <div data-testid="pagination-label" className="text-gray-500 dark:text-[#8f8f8f]">
                     Showing <span className="font-medium text-gray-900 dark:text-white">{(safePage - 1) * PAGE_SIZE + 1}</span> to{' '}
                     <span className="font-medium text-gray-900 dark:text-white">
                       {Math.min(safePage * PAGE_SIZE, filteredHistory.length)}
@@ -433,6 +439,7 @@ export default function Deployments() {
 
                   <div className="flex items-center gap-1.5">
                     <button
+                      data-testid="previous-page-button"
                       disabled={safePage <= 1}
                       onClick={() => setPage((p) => Math.max(1, p - 1))}
                       className="px-3 py-1.5 rounded-sm border border-gray-300 dark:border-[#525252] font-medium text-gray-700 dark:text-[#c9c9c9] hover:bg-gray-100 dark:hover:bg-[#202020] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
@@ -473,6 +480,7 @@ export default function Deployments() {
                       })}
 
                     <button
+                      data-testid="next-page-button"
                       disabled={safePage >= totalPages}
                       onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                       className="px-3 py-1.5 rounded-sm border border-gray-300 dark:border-[#525252] font-medium text-gray-700 dark:text-[#c9c9c9] hover:bg-gray-100 dark:hover:bg-[#202020] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"

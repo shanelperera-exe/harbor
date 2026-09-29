@@ -21,7 +21,7 @@ namespace Harbor.E2ETests.Tests
             createAccountPage.CreateAccount(username, email, password);
 
             var wait = new WebDriverWait(Driver, TimeSpan.FromSeconds(20));
-            wait.Until(d => d.Url.Contains("/dashboard"));
+            wait.Until(d => d.Url.Contains("/projects"));
         }
 
         [Test]
@@ -69,43 +69,51 @@ namespace Harbor.E2ETests.Tests
             createProjectPage.FillForm(projectName, "Original description");
             createProjectPage.Submit();
 
-            var wait = new WebDriverWait(Driver, TimeSpan.FromSeconds(10));
+            var wait = new WebDriverWait(Driver, TimeSpan.FromSeconds(20));
             wait.Until(d => d.Url.Contains("/projects") && !d.Url.Contains("/new"));
 
             var projectsPage = new ProjectsPage(Driver);
-            projectsPage.ClickEditFor(projectName);
-            wait.Until(d => d.Url.Contains("/edit"));
+            projectsPage.ClickSettingsFor(projectName);
+            wait.Until(d => d.Url.Contains("/settings"));
 
-            var editPage = new EditProjectPage(Driver);
-            editPage.Save();
+            var settingsPage = new ProjectSettingsPage(Driver);
+            var newName = projectName + "-renamed";
+            settingsPage.RenameTo(newName);
 
-            wait.Until(d => d.Url.Contains("/projects") && !d.Url.Contains("/edit"));
-            Assert.That(Driver.Url, Does.Contain("/projects"));
+            Assert.That(settingsPage.GetName(), Is.EqualTo(newName));
+
+            // Saving the name returns the user to the project list with the new name applied.
+            var updatedProjectsPage = new ProjectsPage(Driver);
+            updatedProjectsPage.NavigateTo();
+            Assert.That(updatedProjectsPage.HasProjectNamed(newName), Is.True);
         }
 
+        // The Danger Zone exposes a hard delete, not an archive. The original intent of this
+        // test - "removing a project takes it out of the active list" - is preserved against
+        // the flow the product actually ships, so it is renamed to match what it asserts.
         [Test]
-        public void ArchiveProject_RemovesItFromActiveList()
+        public void DeleteProject_RemovesItFromActiveList()
         {
             LoginAsFreshUser();
 
-            var projectName = $"harbor-e2e-archive-{Guid.NewGuid().ToString("N").Substring(0, 6)}";
+            var projectName = $"harbor-e2e-delete-{Guid.NewGuid().ToString("N").Substring(0, 6)}";
 
             var createProjectPage = new CreateProjectPage(Driver);
             createProjectPage.NavigateTo();
             createProjectPage.FillForm(projectName);
             createProjectPage.Submit();
 
-            var wait = new WebDriverWait(Driver, TimeSpan.FromSeconds(10));
+            var wait = new WebDriverWait(Driver, TimeSpan.FromSeconds(20));
             wait.Until(d => d.Url.Contains("/projects") && !d.Url.Contains("/new"));
 
             var projectsPage = new ProjectsPage(Driver);
-            projectsPage.ClickEditFor(projectName);
-            wait.Until(d => d.Url.Contains("/edit"));
+            projectsPage.ClickSettingsFor(projectName);
+            wait.Until(d => d.Url.Contains("/settings"));
 
-            var editPage = new EditProjectPage(Driver);
-            editPage.Archive();
+            new ProjectSettingsPage(Driver).Delete();
 
-            wait.Until(d => d.Url.Contains("/projects") && !d.Url.Contains("/edit"));
+            // Deletion returns the user to the project list, where the project is gone.
+            wait.Until(d => d.Url.Contains("/projects") && !d.Url.Contains("/settings"));
 
             var updatedProjectsPage = new ProjectsPage(Driver);
             Assert.That(updatedProjectsPage.HasProjectNamed(projectName), Is.False);

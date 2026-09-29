@@ -23,7 +23,7 @@ namespace Harbor.E2ETests.Tests
             createAccountPage.CreateAccount(username, email, password);
 
             var wait = new WebDriverWait(Driver, TimeSpan.FromSeconds(20));
-            wait.Until(d => d.Url.Contains("/dashboard"));
+            wait.Until(d => d.Url.Contains("/projects"));
         }
 
         private ProjectEnvironmentsPage CreateProjectAndOpenEnvironments(string projectName)
@@ -44,8 +44,12 @@ namespace Harbor.E2ETests.Tests
         }
 
         // Names deliberately don't share a substring (unlike e.g. "Staging" -> "QA Staging"),
-        // because HasEnvironment() matches on Contains(), and a renamed card's text would
-        // otherwise still satisfy a check for the old name, masking a real regression here.
+        // because HasEnvironment() matches on the environment's data-env-name, and a renamed
+        // card's text would otherwise still satisfy a check for the old name, masking a real
+        // regression here.
+        //
+        // Editing an environment is no longer an inline card interaction - the environments
+        // list only offers a Settings link, and the rename form lives on that page.
         [Test]
         public void EditEnvironment_WithValidData_UpdatesCardInPlace()
         {
@@ -56,11 +60,20 @@ namespace Harbor.E2ETests.Tests
             environmentsPage.Create("OriginalEnv", "Staging");
             Assert.That(environmentsPage.HasEnvironment("OriginalEnv", "Staging"), Is.True);
 
-            environmentsPage.StartEdit("OriginalEnv");
-            environmentsPage.SaveEdit("RenamedEnv", "Staging");
+            environmentsPage.OpenSettings("OriginalEnv");
+            var settingsPage = new EnvironmentSettingsPage(Driver);
+            settingsPage.RenameTo("RenamedEnv");
 
-            Assert.That(environmentsPage.HasEnvironment("RenamedEnv", "Staging"), Is.True);
-            Assert.That(environmentsPage.HasEnvironment("OriginalEnv", "Staging"), Is.False);
+            Assert.That(settingsPage.GetName(), Is.EqualTo("RenamedEnv"));
+
+            // Renaming does not navigate, so go back to the list explicitly and confirm the
+            // section reflects the new name and no longer answers to the old one.
+            Driver.Navigate().Back();
+            var updatedEnvironmentsPage = new ProjectEnvironmentsPage(Driver);
+            updatedEnvironmentsPage.NavigateBackToEnvironments();
+
+            Assert.That(updatedEnvironmentsPage.HasEnvironment("RenamedEnv", "Staging"), Is.True);
+            Assert.That(updatedEnvironmentsPage.HasEnvironment("OriginalEnv", "Staging"), Is.False);
         }
 
         [Test]
@@ -73,10 +86,13 @@ namespace Harbor.E2ETests.Tests
             environmentsPage.Create("Development", "Development");
             Assert.That(environmentsPage.HasEnvironment("Development", "Development"), Is.True);
 
-            environmentsPage.Remove("Development");
+            environmentsPage.OpenSettings("Development");
+            new EnvironmentSettingsPage(Driver).Delete();
+
+            var wait = new WebDriverWait(Driver, TimeSpan.FromSeconds(20));
+            wait.Until(d => d.Url.Contains("/environments") && !d.Url.Contains("/settings"));
 
             Assert.That(environmentsPage.HasEnvironment("Development", "Development"), Is.False);
-            Assert.That(environmentsPage.HasNotice(), Is.False);
         }
 
         // Note: this test only exercises the "no history" removal path via the UI, since

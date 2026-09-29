@@ -133,7 +133,7 @@ export default function Projects() {
                       {/* Project name & date */}
                       <div className="flex items-start justify-between mb-2">
                         <div className="max-w-[85%]">
-                          <h6 className="text-2xl font-regular text-gray-900 dark:text-[#f0f0f0] truncate">
+                          <h6 data-testid="project-name" className="text-2xl font-regular text-gray-900 dark:text-[#f0f0f0] truncate">
                             {project.name}
                           </h6>
                           <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
@@ -161,6 +161,7 @@ export default function Projects() {
                     
                     {/* Settings Button */}
                     <button
+                      data-testid="project-settings-button"
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();

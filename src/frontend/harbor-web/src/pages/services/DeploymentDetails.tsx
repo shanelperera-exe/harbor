@@ -107,6 +107,20 @@ export default function DeploymentDetails() {
 
   return (
     <div className="flex flex-col w-full">
+      {/* Failure reason: previously only surfaced through the no-logs fallback in
+          DeploymentLogs, so a failed deployment that produced log output showed no reason
+          at all on this page. */}
+      {deployment.status?.toLowerCase() === 'failed' && (deployment.failureReason || deployment.triggerError) && (
+        <div className="px-4 md:px-12 pt-6">
+          <div
+            data-testid="deployment-failure-reason"
+            className="rounded-md border border-red-500 dark:border-red-600/50 bg-red-50 dark:bg-red-950/30 px-4 py-3"
+          >
+            <strong className="block text-sm font-medium text-red-700 dark:text-red-400 mb-1">Deployment failed</strong>
+            <p className="text-sm text-red-700 dark:text-red-300">{deployment.failureReason || deployment.triggerError}</p>
+          </div>
+        </div>
+      )}
       <div className="pt-8 border-b border-gray-300 dark:border-[#525252]">
         <header className="px-4 md:px-12 space-y-4">
           <div className="flex items-center justify-between">

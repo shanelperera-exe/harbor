@@ -14,7 +14,20 @@ namespace Harbor.E2ETests.Tests
     //
     // Each test registers a fresh user and creates its own project + environment, so no state
     // leaks between runs and the tests can run in any order.
+    //
+    // [Ignore] The environment-level "Configure deployment" screen these tests drive no longer
+    // exists. ProjectEnvironments.tsx no longer renders a "Configure deployment" link (the card
+    // only offers Settings -> /environments/{id}/settings, which handles rename + delete), and
+    // EnvironmentSettings.tsx has no deployment URL, provider, config-key or secure-value form.
+    // That configuration now lives on the service-level environment tab
+    // (ServiceDetails.tsx route "environment" -> ServiceEnvironment.tsx, which does own
+    // "Environment Variables"/"Environment Secrets"). Re-pointing these tests there requires a
+    // service to exist, and the new-service flow is GitHub-App backed and not reachable for a
+    // freshly registered E2E user, so they are parked rather than deleted. Re-enable them once
+    // that flow is reachable, or cover the same ACs against the service environment tab.
     [TestFixture]
+    [Ignore("Environment-level deployment configuration UI was removed; see fixture comment. " +
+            "The equivalent surface is ServiceEnvironment.tsx, reachable only with a service.")]
     public class EnvironmentConfigurationTests : BaseTest
     {
         private const string ValidUrl = "https://api.staging.harbor.example.com";
@@ -32,7 +45,7 @@ namespace Harbor.E2ETests.Tests
                 "ValidPassword123!");
 
             var wait = new WebDriverWait(Driver, TimeSpan.FromSeconds(20));
-            wait.Until(d => d.Url.Contains("/dashboard"));
+            wait.Until(d => d.Url.Contains("/projects"));
         }
 
         private ProjectEnvironmentsPage CreateProjectAndOpenEnvironments(string projectName)
@@ -52,7 +65,13 @@ namespace Harbor.E2ETests.Tests
             return new ProjectEnvironmentsPage(Driver);
         }
 
-        /// <summary>Registers a user, creates a project + one environment, and opens its configuration screen.</summary>
+        /// <summary>
+        /// Registers a user and creates a project + one environment. The configuration screen
+        /// this used to open no longer exists, so the navigation step is dropped and the
+        /// environment's Settings page is opened instead. The fixture is [Ignore]d, so this is
+        /// only here to keep the tests compiling until they are re-pointed at the service
+        /// environment tab.
+        /// </summary>
         private (ProjectEnvironmentsPage environments, EnvironmentConfigurationPage configuration, string environmentName)
             OpenConfigurationForNewEnvironment(string slug)
         {
@@ -65,12 +84,23 @@ namespace Harbor.E2ETests.Tests
             var environmentsPage = CreateProjectAndOpenEnvironments(projectName);
             environmentsPage.Create(environmentName, "Staging");
 
-            environmentsPage.OpenConfiguration(environmentName);
+            throw new NotSupportedException(
+                "The environment configuration screen was removed from the UI. " +
+                "These tests are ignored until they are re-pointed at ServiceEnvironment.tsx.");
 
-            var configurationPage = new EnvironmentConfigurationPage(Driver);
-            configurationPage.WaitUntilLoaded();
+#pragma warning disable CS0162
+            return (environmentsPage, null!, environmentName);
+#pragma warning restore CS0162
+        }
 
-            return (environmentsPage, configurationPage, environmentName);
+        /// <summary>Visible text of the named environment's section (used for the deployment summary assertion).</summary>
+        private string GetCardText(ProjectEnvironmentsPage environments, string environmentName)
+        {
+            return environments.HasEnvironment(environmentName)
+                ? environmentName
+                : throw new NotSupportedException(
+                    "Environment cards no longer render a configuration summary; " +
+                    "the deployment URL/provider summary moved to the service environment tab.");
         }
 
         // ------------------------------------------------------------------
@@ -121,9 +151,9 @@ namespace Harbor.E2ETests.Tests
             Driver.Navigate().Back();
 
             var wait = new OpenQA.Selenium.Support.UI.WebDriverWait(Driver, TimeSpan.FromSeconds(20));
-            wait.Until(d => environments.GetCardText(environmentName).Contains(ValidUrl));
+            wait.Until(d => GetCardText(environments, environmentName).Contains(ValidUrl));
 
-            var cardText = environments.GetCardText(environmentName);
+            var cardText = GetCardText(environments, environmentName);
 
             Assert.Multiple(() =>
             {

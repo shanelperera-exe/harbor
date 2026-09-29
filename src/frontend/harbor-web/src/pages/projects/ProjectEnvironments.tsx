@@ -146,6 +146,7 @@ export default function ProjectEnvironments() {
             <div className="inline-flex flex-wrap gap-4">
               <button 
                 type="button"
+                data-testid="add-environment-button"
                 onClick={() => setIsAddEnvironmentModalOpen(true)}
                 className="flex items-center gap-2 h-10 px-3 py-2.5 text-[14px] font-medium text-gray-700 dark:text-[#e3e3e3] hover:text-gray-900 dark:hover:text-[oklch(0.21_0.03_263.45)] hover:bg-gray-100 dark:hover:bg-white border border-gray-300 dark:border-[#525252] hover:border-gray-400 dark:hover:border-transparent transition-colors group disabled:opacity-50 rounded-sm"
               >
@@ -163,9 +164,9 @@ export default function ProjectEnvironments() {
       {/* Main Content */}
       <main className="w-full max-w-[1920px] mx-auto px-4 md:px-12 space-y-20 mb-20">
         {environments.map(env => (
-          <section key={env.id} className="transition duration-500">
+          <section key={env.id} data-testid="environment-section" data-env-name={env.name} className="transition duration-500">
             <div className="scroll-mt-20">
-              <h2 className="flex items-center gap-2 text-[20px] font-medium text-gray-900 dark:text-[#f0f0f0] mb-4">
+              <h2 data-testid="environment-name" className="flex items-center gap-2 text-[20px] font-medium text-gray-900 dark:text-[#f0f0f0] mb-4">
                 {env.name}
               </h2>
             </div>
@@ -188,6 +189,7 @@ export default function ProjectEnvironments() {
                 
                 <div className="flex">
                   <button
+                    data-testid="environment-settings-button"
                     className="flex items-center justify-center h-8 px-3 text-gray-700 dark:text-[#e3e3e3] hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-[#ffffff1a] transition-colors rounded-sm border border-gray-300 dark:border-[#525252] text-[13px] font-medium gap-2"
                     title="Settings"
                     onClick={() => navigate(`/projects/${projectId}/environments/${env.id}/settings`)}
@@ -379,6 +381,7 @@ export default function ProjectEnvironments() {
           <div className="inline-block w-full text-left align-middle transform bg-[oklch(0.21_0.03_263.45)] border border-[#4d4d4d] max-w-2xl rounded-sm">
             <form 
               noValidate 
+              data-testid="create-environment-form"
               onSubmit={handleCreateEnvironment}
             >
               <div className="flex flex-col gap-2 items-start border-b border-[#4d4d4d] p-6 relative">
@@ -404,6 +407,7 @@ export default function ProjectEnvironments() {
                   <div className="flex relative">
                     <input 
                       id="new-environment-name-field" 
+                      data-testid="create-environment-name-input"
                       placeholder="e.g. Staging" 
                       className="h-10 truncate w-full m-0 py-2.5 px-3 bg-transparent border border-[#6b6b6b] hover:border-[#b3b3b3] focus:border-[#2563eb] focus:ring-1 focus:ring-[#2563eb] outline-none text-[#f0f0f0] text-[16px] placeholder:text-[#8f8f8f] transition-colors disabled:opacity-50 rounded-sm" 
                       type="text" 
@@ -415,7 +419,7 @@ export default function ProjectEnvironments() {
                     />
                   </div>
                   {createError && (
-                    <div className="mt-2 text-red-400 text-sm">{createError}</div>
+                    <div data-testid="environment-error" className="mt-2 text-red-400 text-sm">{createError}</div>
                   )}
                 </div>
               </div>
@@ -423,6 +427,7 @@ export default function ProjectEnvironments() {
               <div className="w-full flex justify-start space-x-3 p-6 border-t border-[#4d4d4d] bg-[oklch(0.21_0.03_263.45)]">
                 <button 
                   type="submit" 
+                  data-testid="create-environment-submit"
                   disabled={!newEnvironmentName.trim() || isCreating} 
                   className="h-10 py-2.5 px-4 bg-white text-black hover:bg-[#2563eb] hover:text-white disabled:bg-[#272727] disabled:text-[#4d4d4d] disabled:cursor-not-allowed font-medium text-[15px] transition-colors flex items-center rounded-sm"
                 >

@@ -19,6 +19,7 @@ interface FilterDropdownProps {
   icon?: React.ReactNode;
   className?: string;
   footerSlot?: React.ReactNode;
+  testId?: string;
 }
 
 const FilterDropdown = ({
@@ -30,6 +31,7 @@ const FilterDropdown = ({
   icon,
   className,
   footerSlot,
+  testId,
 }: FilterDropdownProps) => {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -57,6 +59,7 @@ const FilterDropdown = ({
       <motion.div animate={open ? "open" : "closed"} className="relative">
         <button
           onClick={() => setOpen((pv) => !pv)}
+          data-testid={testId}
           className={className || "flex items-center justify-between gap-2 h-8 px-3 text-sm border border-gray-300 dark:border-[#525252] bg-white dark:bg-[#0b1221] text-gray-700 dark:text-[#c9c9c9] rounded-md hover:bg-gray-50 dark:hover:bg-[#111c33] transition-colors min-w-[140px]"}
         >
           <div className="flex items-center gap-2 overflow-hidden">
@@ -69,6 +72,7 @@ const FilterDropdown = ({
         </button>
 
         <motion.ul
+          data-testid={testId ? `${testId}-options` : undefined}
           initial={wrapperVariants.closed}
           variants={wrapperVariants}
           style={{ 

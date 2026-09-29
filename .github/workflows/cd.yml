@@ -50,11 +50,23 @@ jobs:
       # Every URL below is derived from the environment's default domain instead of being
       # configured by hand. A Container App FQDN is always {appName}.{envDefaultDomain},
       # so these values are deterministic once harbor-env exists.
-      - name: Get ACA Environment Domain
+      - name: Resolve environment domain and auth FQDN
         id: get-domain
         run: |
           DOMAIN=$(az containerapp env show -n ${{ env.ACA_ENVIRONMENT }} -g ${{ env.RESOURCE_GROUP }} --query properties.defaultDomain -o tsv | tr -d '[:space:]')
           echo "DOMAIN=$DOMAIN" >> $GITHUB_ENV
+
+          # Read the auth API's FQDN from Azure rather than constructing it. The short name does
+          # not resolve from another container app, and the documented .internal. FQDN resolves
+          # but presents a certificate issued for the non-internal name. On the very first deploy
+          # harbor-auth-api may not exist yet, so fall back to the constructed form.
+          AUTH_FQDN=$(az containerapp show -n harbor-auth-api -g ${{ env.RESOURCE_GROUP }} \
+            --query properties.configuration.ingress.fqdn -o tsv 2>/dev/null | tr -d '[:space:]')
+          if [ -z "$AUTH_FQDN" ]; then
+            AUTH_FQDN="harbor-auth-api.$DOMAIN"
+            echo "::warning::harbor-auth-api not found yet; falling back to $AUTH_FQDN"
+          fi
+          echo "AUTH_SERVICE_URL=https://$AUTH_FQDN" >> $GITHUB_ENV
 
       - name: Deploy to Azure Container Apps
         uses: azure/container-apps-deploy-action@v1
@@ -117,7 +129,7 @@ jobs:
                 "GH_API_BASE_URL=${{ vars.GH_API_BASE_URL }}" \
                 "GOOGLE_CLIENT_ID=${{ vars.GOOGLE_CLIENT_ID }}" \
                 "GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET" \
-                "AUTH_SERVICE_URL=http://harbor-auth-api" \
+                "AUTH_SERVICE_URL=$AUTH_SERVICE_URL" \
                 "FRONTEND_URL=https://harbor-web-ui.$DOMAIN" \
                 "API_GATEWAY_URL=https://harbor-api-gateway.$DOMAIN" \
                 "ALLOWED_ORIGINS=https://harbor-admin-ui.$DOMAIN,https://harbor-web-ui.$DOMAIN" \
@@ -248,15 +260,36 @@ jobs:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Get ACA Environment Domain
-        id: get-domain
         run: |
           DOMAIN=$(az containerapp env show -n ${{ env.ACA_ENVIRONMENT }} -g ${{ env.RESOURCE_GROUP }} --query properties.defaultDomain -o tsv | tr -d '[:space:]')
           echo "DOMAIN=$DOMAIN" >> $GITHUB_ENV
 
-      # The reverse proxy destinations and CORS allowlist are set as the app is created, not
-      # patched afterwards. Without this the first revision boots with the compose defaults from
-      # appsettings.json (http://authentication-service:8080) and every proxied route 502s until
-      # the follow-up update lands.
+      # Ask Azure for each backend's FQDN instead of constructing it.
+      #
+      # Two earlier attempts failed, both from guessing the name. The short name
+      # (http://harbor-auth-api) does not resolve from another container app, and the
+      # documented internal FQDN (harbor-auth-api.internal.<domain>) resolves but presents a
+      # certificate issued for the non-internal name, giving RemoteCertificateNameMismatch.
+      # The FQDN the control plane actually reports matches the certificate, and because
+      # ingress is internal the app stays unreachable from outside the environment.
+      - name: Resolve backend FQDNs
+        run: |
+          resolve () {
+            local fqdn
+            fqdn=$(az containerapp show -n "$1" -g ${{ env.RESOURCE_GROUP }} \
+              --query properties.configuration.ingress.fqdn -o tsv 2>/dev/null | tr -d '[:space:]')
+            if [ -z "$fqdn" ]; then
+              fqdn="$1.$DOMAIN"
+              echo "::warning::$1 has no reported FQDN yet; falling back to $fqdn"
+            fi
+            echo "$2=https://$fqdn" >> $GITHUB_ENV
+          }
+          resolve harbor-auth-api AUTH_FQDN
+          resolve harbor-project-api PROJECT_FQDN
+          resolve harbor-env-api ENV_FQDN
+          resolve harbor-deploy-api DEPLOY_FQDN
+          resolve harbor-report-api REPORTING_FQDN
+
       - name: Deploy API Gateway to ACA
         uses: azure/container-apps-deploy-action@v1
         with:
@@ -279,11 +312,11 @@ jobs:
               --name harbor-api-gateway \
               --resource-group ${{ env.RESOURCE_GROUP }} \
               --set-env-vars \
-                "ReverseProxy__Clusters__authCluster__Destinations__destination1__Address=http://harbor-auth-api" \
-                "ReverseProxy__Clusters__projectCluster__Destinations__destination1__Address=http://harbor-project-api" \
-                "ReverseProxy__Clusters__environmentCluster__Destinations__destination1__Address=http://harbor-env-api" \
-                "ReverseProxy__Clusters__deploymentCluster__Destinations__destination1__Address=http://harbor-deploy-api" \
-                "ReverseProxy__Clusters__reportingCluster__Destinations__destination1__Address=http://harbor-report-api" \
+                "ReverseProxy__Clusters__authCluster__Destinations__destination1__Address=$AUTH_FQDN" \
+                "ReverseProxy__Clusters__projectCluster__Destinations__destination1__Address=$PROJECT_FQDN" \
+                "ReverseProxy__Clusters__environmentCluster__Destinations__destination1__Address=$ENV_FQDN" \
+                "ReverseProxy__Clusters__deploymentCluster__Destinations__destination1__Address=$DEPLOY_FQDN" \
+                "ReverseProxy__Clusters__reportingCluster__Destinations__destination1__Address=$REPORTING_FQDN" \
                 "ALLOWED_ORIGINS=https://harbor-admin-ui.$DOMAIN,https://harbor-web-ui.$DOMAIN" \
                 "FRONTEND_URL=https://harbor-web-ui.$DOMAIN" \
               --min-replicas 0 \
@@ -303,17 +336,23 @@ jobs:
             --query "properties.template.containers[0].env[?starts_with(name,'ReverseProxy')].value" -o tsv)
           echo "Active destinations:"
           echo "$DESTINATIONS"
+          # A bare short name does not resolve, and a .internal. FQDN fails certificate
+          # validation. The destination must be the FQDN the control plane reports.
           if echo "$DESTINATIONS" | grep -q '\.internal\.'; then
-            echo "::error::gateway still points at .internal. FQDNs, which fail TLS name validation. The short names were not applied."
+            echo "::error::gateway points at a .internal. FQDN, which fails TLS name validation."
+            exit 1
+          fi
+          if echo "$DESTINATIONS" | grep -qv '^https://'; then
+            echo "::error::every destination must be an https:// FQDN that matches the environment certificate."
             exit 1
           fi
           for app in harbor-auth-api harbor-project-api harbor-env-api harbor-deploy-api harbor-report-api; do
-            if ! echo "$DESTINATIONS" | grep -qx "http://$app"; then
-              echo "::error::expected destination http://$app not found among the active destinations"
+            if ! echo "$DESTINATIONS" | grep -q "://$app\."; then
+              echo "::error::no destination for $app among the active destinations"
               exit 1
             fi
           done
-          echo "All five destinations use ACA internal short names."
+          echo "All five destinations are certificate-matching FQDNs."
 
 
 

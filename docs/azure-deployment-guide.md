@@ -250,7 +250,7 @@ These are **not** repository variables. The workflow reads the Container Apps en
 | Value | Derived as | Used by |
 |-------|-----------|---------|
 | `API_GATEWAY_URL` | `https://harbor-api-gateway.<default-domain>` | OAuth `redirect_uri` origin, GitHub App OAuth origin |
-| `AUTH_SERVICE_URL` | `http://harbor-auth-api` | `Harbor.Deployment` → `Harbor.Authentication` internal call |
+| `AUTH_SERVICE_URL` | `https://harbor-auth-api.<default-domain>`, read from Azure | `Harbor.Deployment` → `Harbor.Authentication` internal call |
 | `FRONTEND_URL` | `https://harbor-web-ui.<default-domain>` | Post-auth and GitHub-install redirect targets |
 | `ALLOWED_ORIGINS` | `https://harbor-admin-ui.<default-domain>,https://harbor-web-ui.<default-domain>` | Gateway CORS allowlist |
 | `VITE_API_BASE_URL` | `{API_GATEWAY_URL}/api` | Baked into both React bundles at build time |
@@ -258,20 +258,30 @@ These are **not** repository variables. The workflow reads the Container Apps en
 
 #### Internal service-to-service traffic
 
-The gateway and the backend APIs talk to each other over **ACA's internal short-name DNS on plain
-HTTP** (`http://harbor-auth-api`), not over the internal FQDN. The environment's managed certificate
-covers the external FQDN but not the `.internal.` name, so calling
-`https://harbor-auth-api.internal.<default-domain>` fails the TLS handshake with
-`RemoteCertificateNameMismatch`, which the gateway surfaces as a 502.
+The gateway and the backend APIs call each other over **HTTPS using the FQDN that Azure reports for
+each app**, read at deploy time:
 
-Short names resolve only inside the environment, and only to apps on internal ingress, so this does
-not expose the backends publicly. The traffic is still routed through the environment's Envoy proxy.
+```bash
+az containerapp show -n harbor-auth-api -g rg-harbor-centralindia \
+  --query properties.configuration.ingress.fqdn -o tsv
+```
 
-Because the gateway now calls the backends over HTTP, each backend sets
-`DISABLE_HTTPS_REDIRECTION=true`. Without it, `UseHttpsRedirection()` would answer the gateway's
-request with a 307 to `https://harbor-auth-api/...`, a name the browser cannot resolve. The flag only
-suppresses that redirect on the internal hop — the gateway itself still redirects, because browsers
-reach it over HTTPS through its external ingress.
+Do not construct this name by hand. Two earlier attempts both failed, each in a different way:
+
+| Attempt | Result |
+|---|---|
+| `http://harbor-auth-api` (short name) | `Name or service not known` — the short name does not resolve from another container app. Microsoft notes this path relies on a sidecar with known unreliability and advises using the FQDN. |
+| `https://harbor-auth-api.internal.<default-domain>` | `RemoteCertificateNameMismatch` — resolves and connects, but the environment certificate is issued for the non-internal name, so TLS name validation fails and the gateway returns 502. |
+
+The reported FQDN matches the environment's certificate, and because the backend apps use **internal**
+ingress they remain unreachable from outside the environment. The CD workflow reads the FQDN for each
+app rather than assembling it, so it cannot drift from what Azure actually issued.
+
+Because ACA terminates TLS at its proxy and forwards plain HTTP to the container, each backend also
+sets `DISABLE_HTTPS_REDIRECTION=true`. Without it, `UseHttpsRedirection()` would answer the gateway's
+request with a 307, and the backends do not call `UseForwardedHeaders()` to recover the original
+scheme. The flag suppresses the redirect only on that internal hop — the gateway still redirects,
+because browsers reach it over HTTPS on its external ingress.
 
 GitHub sign-in uses a **GitHub App** (PKCE flow via `GitHubAppOAuthClient`), not a separate GitHub OAuth app, so there is no `GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET` to register and no callback URL to pre-register with GitHub. Only Google needs an external OAuth application:
 

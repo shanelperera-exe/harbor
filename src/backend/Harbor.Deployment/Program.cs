@@ -106,9 +106,17 @@ builder.Services.AddHostedService<KafkaConsumerService>();
 builder.Services.AddHarborGitHubApp();
 builder.Services.Configure<GitHubActionsOptions>(options =>
 {
-    options.ApiBaseUrl = builder.Configuration["GH_API_BASE_URL"] ?? builder.Configuration["GITHUB_API_BASE_URL"] ?? "https://api.github.com/";
-    options.DefaultWorkflowFile = builder.Configuration["GITHUB_ACTIONS_WORKFLOW"] ?? "deploy.yml";
-    options.AuthServiceClientUrl = builder.Configuration["AUTH_SERVICE_URL"] ?? "http://authentication-service:8080";
+    // IsNullOrWhiteSpace, not "??": a container runtime and GitHub Actions both materialise an
+    // unset variable as an empty string, which "??" would pass straight through. An empty
+    // ApiBaseUrl then reaches "new Uri("")" and throws UriFormatException on first use.
+    options.ApiBaseUrl = FirstNonBlank(
+        builder.Configuration["GH_API_BASE_URL"],
+        builder.Configuration["GITHUB_API_BASE_URL"]) ?? "https://api.github.com/";
+    options.DefaultWorkflowFile = FirstNonBlank(builder.Configuration["GITHUB_ACTIONS_WORKFLOW"]) ?? "deploy.yml";
+    options.AuthServiceClientUrl = FirstNonBlank(builder.Configuration["AUTH_SERVICE_URL"]) ?? "http://authentication-service:8080";
+
+    static string? FirstNonBlank(params string?[] candidates) =>
+        candidates.FirstOrDefault(c => !string.IsNullOrWhiteSpace(c));
 });
 builder.Services.AddHttpClient<IGitHubActionsClient, GitHubActionsClient>((services, client) =>
 {

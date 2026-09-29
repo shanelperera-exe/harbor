@@ -9,9 +9,14 @@ public sealed class EncryptionService : IEncryptionService
 
     public EncryptionService(IConfiguration configuration)
     {
-        var keyBase64 = configuration["ENVIRONMENT_SECRETS_KEY"]
-            ?? Environment.GetEnvironmentVariable("ENVIRONMENT_SECRETS_KEY")
-            ?? throw new InvalidOperationException("ENVIRONMENT_SECRETS_KEY is not configured. Cannot encrypt GitHub tokens.");
+        // IsNullOrWhiteSpace, not "??": an unset ENVIRONMENT_SECRETS_KEY arrives as an empty
+        // string, which would otherwise decode to zero bytes and report the misleading
+        // "must be a base64-encoded 32-byte key" instead of "not configured".
+        var keyBase64 = configuration["ENVIRONMENT_SECRETS_KEY"];
+        if (string.IsNullOrWhiteSpace(keyBase64))
+            keyBase64 = Environment.GetEnvironmentVariable("ENVIRONMENT_SECRETS_KEY");
+        if (string.IsNullOrWhiteSpace(keyBase64))
+            throw new InvalidOperationException("ENVIRONMENT_SECRETS_KEY is not configured. Cannot encrypt GitHub tokens.");
 
         _key = Convert.FromBase64String(keyBase64);
         if (_key.Length != 32)

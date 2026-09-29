@@ -47,6 +47,15 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+      # Every URL below is derived from the environment's default domain instead of being
+      # configured by hand. A Container App FQDN is always {appName}.{envDefaultDomain},
+      # so these values are deterministic once harbor-env exists.
+      - name: Get ACA Environment Domain
+        id: get-domain
+        run: |
+          DOMAIN=$(az containerapp env show -n ${{ env.ACA_ENVIRONMENT }} -g ${{ env.RESOURCE_GROUP }} --query properties.defaultDomain -o tsv | tr -d '[:space:]')
+          echo "DOMAIN=$DOMAIN" >> $GITHUB_ENV
+
       - name: Deploy to Azure Container Apps
         uses: azure/container-apps-deploy-action@v1
         with:
@@ -89,11 +98,10 @@ jobs:
             GH_API_BASE_URL=${{ vars.GH_API_BASE_URL }}
             GOOGLE_CLIENT_ID=${{ vars.GOOGLE_CLIENT_ID }}
             GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
-            GITHUB_WEBHOOK_SECRET=${{ secrets.GH_WEBHOOK_SECRET }}
-            AUTH_SERVICE_URL=${{ vars.API_GATEWAY_URL }}
-            FRONTEND_URL=${{ vars.FRONTEND_URL }}
-            API_GATEWAY_URL=${{ vars.API_GATEWAY_URL }}
-            ALLOWED_ORIGINS=${{ vars.ALLOWED_ORIGINS }}
+            AUTH_SERVICE_URL=https://harbor-auth-api.internal.${{ env.DOMAIN }}
+            FRONTEND_URL=https://harbor-web-ui.${{ env.DOMAIN }}
+            API_GATEWAY_URL=https://harbor-api-gateway.${{ env.DOMAIN }}
+            ALLOWED_ORIGINS=https://harbor-admin-ui.${{ env.DOMAIN }},https://harbor-web-ui.${{ env.DOMAIN }}
 
       - name: Apply backend runtime configuration
         env:
@@ -103,7 +111,6 @@ jobs:
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
           ENVIRONMENT_SECRETS_KEY: ${{ secrets.ENVIRONMENT_SECRETS_KEY }}
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
-          GITHUB_WEBHOOK_SECRET: ${{ secrets.GH_WEBHOOK_SECRET }}
           GH_APP_CLIENT_SECRET: ${{ secrets.GH_APP_CLIENT_SECRET }}
           GH_APP_PRIVATE_KEY_BASE64: ${{ secrets.GH_APP_PRIVATE_KEY_BASE64 }}
           GH_APP_WEBHOOK_SECRET: ${{ secrets.GH_APP_WEBHOOK_SECRET }}
@@ -142,11 +149,14 @@ jobs:
                 "GH_API_BASE_URL=${{ vars.GH_API_BASE_URL }}" \
                 "GOOGLE_CLIENT_ID=${{ vars.GOOGLE_CLIENT_ID }}" \
                 "GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET" \
-                "AUTH_SERVICE_URL=${{ vars.API_GATEWAY_URL }}" \
-                "FRONTEND_URL=${{ vars.FRONTEND_URL }}" \
-                "API_GATEWAY_URL=${{ vars.API_GATEWAY_URL }}" \
-                "GITHUB_WEBHOOK_SECRET=$GITHUB_WEBHOOK_SECRET" \
-                "ALLOWED_ORIGINS=${{ vars.ALLOWED_ORIGINS }}"; then
+                "AUTH_SERVICE_URL=https://harbor-auth-api.internal.$DOMAIN" \
+                "FRONTEND_URL=https://harbor-web-ui.$DOMAIN" \
+                "API_GATEWAY_URL=https://harbor-api-gateway.$DOMAIN" \
+                "ALLOWED_ORIGINS=https://harbor-admin-ui.$DOMAIN,https://harbor-web-ui.$DOMAIN" \
+              --min-replicas 0 \
+              --max-replicas 1 \
+              --cpu 0.5 \
+              --memory 1Gi; then
               exit 0
             fi
             echo "Azure Container Apps update failed (attempt $attempt/3); retrying..."
@@ -158,6 +168,9 @@ jobs:
     name: Deploy Frontend UIs
     if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
+    # The frontends bake the gateway origin into the bundle at build time, so they must be
+    # built after the gateway app exists and its FQDN can be read back from Azure.
+    needs: deploy-api-gateway
     environment: Production
     strategy:
       matrix:
@@ -178,13 +191,23 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+      - name: Resolve API Gateway URL
+        id: get-gateway
+        run: |
+          GATEWAY_FQDN=$(az containerapp show --name harbor-api-gateway --resource-group ${{ env.RESOURCE_GROUP }} --query properties.configuration.ingress.fqdn -o tsv | tr -d '[:space:]')
+          if [ -z "$GATEWAY_FQDN" ]; then
+            echo "::error::harbor-api-gateway has no external FQDN. Check that ingress is external and the environment is publicly accessible."
+            exit 1
+          fi
+          echo "GATEWAY_URL=https://$GATEWAY_FQDN" >> $GITHUB_ENV
+
       - name: Log in to ACR
         run: docker login ${{ env.ACR_LOGIN_SERVER }} -u ${{ secrets.ACR_USERNAME }} -p ${{ secrets.ACR_PASSWORD }}
 
       - name: Build and Push Frontend Image
         run: |
           docker build \
-            --build-arg VITE_API_BASE_URL=${{ vars.API_GATEWAY_URL }}/api \
+            --build-arg VITE_API_BASE_URL=$GATEWAY_URL/api \
             -f ${{ matrix.dockerfile }} \
             -t ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.service }}:${{ env.DEPLOY_SHA }} \
             .
@@ -202,6 +225,23 @@ jobs:
           imageToDeploy: ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.service }}:${{ env.DEPLOY_SHA }}
           ingress: external
           targetPort: 80
+
+      - name: Cap frontend scaling
+        run: |
+          for attempt in 1 2 3; do
+            if az containerapp update \
+              --name "${{ matrix.service }}" \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --min-replicas 0 \
+              --max-replicas 1 \
+              --cpu 0.5 \
+              --memory 1Gi; then
+              exit 0
+            fi
+            echo "Azure Container Apps update failed (attempt $attempt/3); retrying..."
+            sleep 15
+          done
+          exit 1
 
   deploy-api-gateway:
     name: Deploy API Gateway
@@ -226,6 +266,10 @@ jobs:
           DOMAIN=$(az containerapp env show -n ${{ env.ACA_ENVIRONMENT }} -g ${{ env.RESOURCE_GROUP }} --query properties.defaultDomain -o tsv | tr -d '[:space:]')
           echo "DOMAIN=$DOMAIN" >> $GITHUB_ENV
 
+      # The reverse proxy destinations and CORS allowlist are set as the app is created, not
+      # patched afterwards. Without this the first revision boots with the compose defaults from
+      # appsettings.json (http://authentication-service:8080) and every proxied route 502s until
+      # the follow-up update lands.
       - name: Deploy API Gateway to ACA
         uses: azure/container-apps-deploy-action@v1
         with:
@@ -240,6 +284,14 @@ jobs:
           dockerfilePath: src/backend/Harbor.ApiGateway/Dockerfile
           ingress: external
           targetPort: 8080
+          environmentVariables: |
+            ReverseProxy__Clusters__authCluster__Destinations__destination1__Address=https://harbor-auth-api.internal.${{ env.DOMAIN }}
+            ReverseProxy__Clusters__projectCluster__Destinations__destination1__Address=https://harbor-project-api.internal.${{ env.DOMAIN }}
+            ReverseProxy__Clusters__environmentCluster__Destinations__destination1__Address=https://harbor-env-api.internal.${{ env.DOMAIN }}
+            ReverseProxy__Clusters__deploymentCluster__Destinations__destination1__Address=https://harbor-deploy-api.internal.${{ env.DOMAIN }}
+            ReverseProxy__Clusters__reportingCluster__Destinations__destination1__Address=https://harbor-report-api.internal.${{ env.DOMAIN }}
+            ALLOWED_ORIGINS=https://harbor-admin-ui.${{ env.DOMAIN }},https://harbor-web-ui.${{ env.DOMAIN }}
+            FRONTEND_URL=https://harbor-web-ui.${{ env.DOMAIN }}
 
       - name: Configure API Gateway environment variables
         run: |
@@ -248,12 +300,17 @@ jobs:
               --name harbor-api-gateway \
               --resource-group ${{ env.RESOURCE_GROUP }} \
               --set-env-vars \
-                "ReverseProxy__Clusters__authCluster__Destinations__destination1__Address=https://harbor-auth-api.internal.${{ env.DOMAIN }}" \
-                "ReverseProxy__Clusters__projectCluster__Destinations__destination1__Address=https://harbor-project-api.internal.${{ env.DOMAIN }}" \
-                "ReverseProxy__Clusters__environmentCluster__Destinations__destination1__Address=https://harbor-env-api.internal.${{ env.DOMAIN }}" \
-                "ReverseProxy__Clusters__deploymentCluster__Destinations__destination1__Address=https://harbor-deploy-api.internal.${{ env.DOMAIN }}" \
-                "ReverseProxy__Clusters__reportingCluster__Destinations__destination1__Address=https://harbor-report-api.internal.${{ env.DOMAIN }}" \
-                "ALLOWED_ORIGINS=${{ vars.ALLOWED_ORIGINS }}"; then
+                "ReverseProxy__Clusters__authCluster__Destinations__destination1__Address=https://harbor-auth-api.internal.$DOMAIN" \
+                "ReverseProxy__Clusters__projectCluster__Destinations__destination1__Address=https://harbor-project-api.internal.$DOMAIN" \
+                "ReverseProxy__Clusters__environmentCluster__Destinations__destination1__Address=https://harbor-env-api.internal.$DOMAIN" \
+                "ReverseProxy__Clusters__deploymentCluster__Destinations__destination1__Address=https://harbor-deploy-api.internal.$DOMAIN" \
+                "ReverseProxy__Clusters__reportingCluster__Destinations__destination1__Address=https://harbor-report-api.internal.$DOMAIN" \
+                "ALLOWED_ORIGINS=https://harbor-admin-ui.$DOMAIN,https://harbor-web-ui.$DOMAIN" \
+                "FRONTEND_URL=https://harbor-web-ui.$DOMAIN" \
+              --min-replicas 0 \
+              --max-replicas 1 \
+              --cpu 0.5 \
+              --memory 1Gi; then
               exit 0
             fi
             echo "Azure API Gateway update failed (attempt $attempt/3); retrying..."

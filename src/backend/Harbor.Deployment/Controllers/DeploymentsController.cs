@@ -145,7 +145,11 @@ public class DeploymentsController(IDeploymentService deploymentService) : Contr
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> UpdateStatus(int id)
     {
-        var secret = Environment.GetEnvironmentVariable("GITHUB_APP_WEBHOOK_SECRET")
+        // GH_APP_WEBHOOK_SECRET is the single webhook secret for the whole app: it signs inbound
+        // GitHub deliveries (see GitHubAppOptionsSetup) and also signs Harbor's own status
+        // callbacks back into this endpoint. The GITHUB_-prefixed names are legacy fallbacks.
+        var secret = Environment.GetEnvironmentVariable("GH_APP_WEBHOOK_SECRET")
+            ?? Environment.GetEnvironmentVariable("GITHUB_APP_WEBHOOK_SECRET")
             ?? Environment.GetEnvironmentVariable("GITHUB_WEBHOOK_SECRET");
         if (string.IsNullOrWhiteSpace(secret)) return Unauthorized();
         var signature = Request.Headers["X-Harbor-Signature"].ToString();

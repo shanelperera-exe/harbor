@@ -133,6 +133,18 @@ jobs:
           done
           exit 1
 
+      # Without this, a silently skipped or partially-applied job leaves the previous revision
+      # running, and the only symptom is a 502 from the gateway at login time.
+      - name: Verify runtime configuration was applied
+        run: |
+          REDIRECT=$(az containerapp show -n ${{ matrix.service }} -g ${{ env.RESOURCE_GROUP }} \
+            --query "properties.template.containers[0].env[?name=='DISABLE_HTTPS_REDIRECTION'].value" -o tsv)
+          if [ "$REDIRECT" != "true" ]; then
+            echo "::error::${{ matrix.service }} is missing DISABLE_HTTPS_REDIRECTION=true. It would answer the gateway's internal HTTP call with a 307 to https://harbor-auth-api, a name a browser cannot resolve."
+            exit 1
+          fi
+          echo "DISABLE_HTTPS_REDIRECTION=true is active."
+
   deploy-frontends:
     name: Deploy Frontend UIs
     if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
@@ -284,6 +296,24 @@ jobs:
             sleep 15
           done
           exit 1
+
+      - name: Verify reverse proxy destinations were applied
+        run: |
+          DESTINATIONS=$(az containerapp show -n harbor-api-gateway -g ${{ env.RESOURCE_GROUP }} \
+            --query "properties.template.containers[0].env[?starts_with(name,'ReverseProxy')].value" -o tsv)
+          echo "Active destinations:"
+          echo "$DESTINATIONS"
+          if echo "$DESTINATIONS" | grep -q '\.internal\.'; then
+            echo "::error::gateway still points at .internal. FQDNs, which fail TLS name validation. The short names were not applied."
+            exit 1
+          fi
+          for app in harbor-auth-api harbor-project-api harbor-env-api harbor-deploy-api harbor-report-api; do
+            if ! echo "$DESTINATIONS" | grep -qx "http://$app"; then
+              echo "::error::expected destination http://$app not found among the active destinations"
+              exit 1
+            fi
+          done
+          echo "All five destinations use ACA internal short names."
 
 
 

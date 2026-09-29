@@ -1,13 +1,14 @@
 import { Settings as SettingsIcon } from 'lucide-react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useOutletContext } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { Icon } from '../../components/icons';
+import ServiceHeader from './ServiceHeader';
 
 export default function ServiceSettings() {
-  const { projectId, serviceId } = useParams();
+  const { projectId } = useParams();
   const navigate = useNavigate();
-  const [service, setService] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const context = useOutletContext<{ service: any; deployRefreshKey: number }>();
+  const service = context?.service;
   const [workflowFile, setWorkflowFile] = useState('deploy.yml');
   const [buildCommand, setBuildCommand] = useState('');
   const [startCommand, setStartCommand] = useState('');
@@ -19,35 +20,14 @@ export default function ServiceSettings() {
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    async function loadService() {
-      try {
-        const token = localStorage.getItem('harbor_token');
-        if (!token) return;
-        const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
-        const res = await fetch(`${apiBase}/projects/${projectId}/services/${serviceId}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'ngrok-skip-browser-warning': 'true'
-          }
-        });
-        if (res.ok) {
-          const json = await res.json();
-          const svc = json.data;
-          setService(svc);
-          setWorkflowFile(svc.workflowFile || 'deploy.yml');
-          setBuildCommand(svc.buildCommand || '');
-          setStartCommand(svc.startCommand || '');
-          setDeploymentUrls(svc.deploymentUrls && svc.deploymentUrls.length > 0 ? svc.deploymentUrls : [{ environment: 'Production', url: svc.deploymentUrl || '' }]);
-          setProvider(svc.provider || '');
-        }
-      } catch (err) {
-        console.error('Failed to load service:', err);
-      } finally {
-        setLoading(false);
-      }
+    if (service) {
+      setWorkflowFile(service.workflowFile || 'deploy.yml');
+      setBuildCommand(service.buildCommand || '');
+      setStartCommand(service.startCommand || '');
+      setDeploymentUrls(service.deploymentUrls && service.deploymentUrls.length > 0 ? service.deploymentUrls : [{ environment: 'Production', url: service.deploymentUrl || '' }]);
+      setProvider(service.provider || '');
     }
-    loadService();
-  }, [projectId, serviceId]);
+  }, [service]);
 
   const handleSave = async () => {
     const token = localStorage.getItem('harbor_token');
@@ -55,7 +35,7 @@ export default function ServiceSettings() {
     setSaving(true);
     try {
       const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
-      const res = await fetch(`${apiBase}/projects/${projectId}/services/${serviceId}`, {
+      const res = await fetch(`${apiBase}/projects/${projectId}/services/${service?.publicId || service?.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -73,9 +53,13 @@ export default function ServiceSettings() {
       if (!res.ok) {
         throw new Error('Failed to save');
       }
-      // Refresh service data
       const json = await res.json();
-      setService(json.data);
+      const svc = json.data;
+      setWorkflowFile(svc.workflowFile || 'deploy.yml');
+      setBuildCommand(svc.buildCommand || '');
+      setStartCommand(svc.startCommand || '');
+      setDeploymentUrls(svc.deploymentUrls && svc.deploymentUrls.length > 0 ? svc.deploymentUrls : [{ environment: 'Production', url: svc.deploymentUrl || '' }]);
+      setProvider(svc.provider || '');
     } catch (err) {
       console.error(err);
     } finally {
@@ -105,7 +89,7 @@ export default function ServiceSettings() {
       const token = localStorage.getItem('harbor_token');
       if (!token) return;
       const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
-      const res = await fetch(`${apiBase}/projects/${projectId}/services/${serviceId}`, {
+      const res = await fetch(`${apiBase}/projects/${projectId}/services/${service?.publicId || service?.id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -124,17 +108,16 @@ export default function ServiceSettings() {
     }
   };
 
-  if (loading) {
-    return <div className="p-12 text-center text-gray-500">Loading service settings...</div>;
-  }
-
   if (!service) {
     return <div className="p-12 text-center text-red-500">Service not found</div>;
   }
 
   return (
-    <div className="flex flex-col flex-1 w-full max-w-[1920px] mx-auto px-4 md:px-12 mt-8 mb-20 space-y-8">
-      <div className="flex items-center gap-2 border-b border-gray-300 dark:border-[#525252] pb-4">
+    <div className="flex flex-col flex-1 w-full max-w-[1920px] mx-auto">
+      <ServiceHeader />
+
+      <main className="px-4 md:px-12 mt-8 mb-20 space-y-8">
+        <div className="flex items-center gap-2 border-b border-gray-300 dark:border-[#525252] pb-4">
         <SettingsIcon className="w-5 h-5 text-gray-500" />
         <h2 className="text-xl font-medium text-gray-900 dark:text-white">Settings</h2>
       </div>
@@ -342,6 +325,7 @@ export default function ServiceSettings() {
           </div>
         </div>
       )}
+      </main>
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { XCircle, CheckCircle, Clock, Loader2, RefreshCw, GitCommit, GitBranch }
 import { FaGithub } from 'react-icons/fa';
 import { formatDistanceToNow } from 'date-fns';
 import { getCiRunHistory, type CiRun } from '../../services/deploymentService';
+import ServiceHeader from './ServiceHeader';
 
 const POLL_INTERVAL_MS = 5000;
 
@@ -122,7 +123,10 @@ export default function ServiceCiRuns() {
   const canNext = page < totalPages;
 
   return (
-    <div className="flex flex-col flex-1 w-full max-w-[1920px] mx-auto px-4 md:px-12 mt-8 mb-20">
+    <div className="flex flex-col flex-1 w-full max-w-[1920px] mx-auto">
+      <ServiceHeader />
+
+      <main className="px-4 md:px-12 mt-8 mb-20">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-medium text-gray-900 dark:text-white flex items-center gap-2">
           <Clock className="w-5 h-5 text-gray-500" />
@@ -287,6 +291,7 @@ export default function ServiceCiRuns() {
           </div>
         </div>
       )}
+      </main>
     </div>
   );
 }

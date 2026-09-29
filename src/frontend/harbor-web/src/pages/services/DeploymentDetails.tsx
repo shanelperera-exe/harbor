@@ -191,14 +191,14 @@ export default function DeploymentDetails() {
                   <div className="flex items-center gap-4">
                     <div className="flex items-center text-gray-900 dark:text-white fill-current">
                       {deployment.commitSha ? (
-                        <a href={service.repositoryUrl && service.repositoryBranch ? `${service.repositoryUrl}/commit/${deployment.commitSha}` : "#"} rel="noopener noreferrer" target="_blank" data-zone="null" className="cursor-pointer focus-visible:outline-2 outline-[#2563eb] outline-offset-4 relative z-[2] flex items-center gap-1.5 shrink-0 w-fit text-[14px] font-mono text-gray-900 dark:text-white no-underline hover:underline">
+                        <a href={service.repositoryUrl && service.repositoryBranch ? `${service.repositoryUrl}/commit/${deployment.commitSha}` : "#"} rel="noopener noreferrer" target="_blank" data-zone="null" className="cursor-pointer focus-visible:outline-2 outline-[#2563eb] outline-offset-4 relative z-[2] flex items-center gap-1.5 shrink-0 w-fit text-[14px] font-geist-mono text-gray-900 dark:text-white no-underline hover:underline">
                           <span className="inline-flex h-fit items-center" data-testid="legacy/tooltip-trigger" data-version="v1" tabIndex={0}>
                             <Icon name="gitCommit" className="shrink-0" style={{ color: 'currentcolor' }} data-slot="geist-icon" />
                           </span>
                           <span className="whitespace-nowrap">{deployment.commitSha.substring(0, 7)}</span>
                         </a>
                       ) : (
-                        <span className="flex items-center gap-1.5 text-[14px] font-mono text-gray-900 dark:text-white">
+                        <span className="flex items-center gap-1.5 text-[14px] font-geist-mono text-gray-900 dark:text-white">
                           <Icon name="gitCommit" className="shrink-0" style={{ color: 'currentcolor' }} data-slot="geist-icon" />
                           -
                         </span>
@@ -207,12 +207,12 @@ export default function DeploymentDetails() {
 
                     <div className="flex items-center text-gray-900 dark:text-white fill-current">
                       {service.repositoryBranch ? (
-                        <a href={`${service.repositoryUrl}/tree/${service.repositoryBranch}`} rel="noopener noreferrer" target="_blank" className="flex items-center gap-1.5 text-[14px] font-mono truncate hover:underline cursor-pointer">
+                        <a href={`${service.repositoryUrl}/tree/${service.repositoryBranch}`} rel="noopener noreferrer" target="_blank" className="flex items-center gap-1.5 text-[14px] font-geist-mono truncate hover:underline cursor-pointer">
                           <Icon name="gitBranch" className="flex-none" style={{ color: 'currentcolor' }} data-slot="geist-icon" />
                           {service.repositoryBranch}
                         </a>
                       ) : (
-                        <span className="text-[14px] font-mono text-gray-900 dark:text-white">-</span>
+                        <span className="text-[14px] font-geist-mono text-gray-900 dark:text-white">-</span>
                       )}
                     </div>
                   </div>

@@ -19,6 +19,37 @@ public sealed class GitHubAppJwtProvider : IGitHubAppJwtProvider
     {
         _options = options.Value;
         _logger = logger ?? NullLogger<GitHubAppJwtProvider>.Instance;
+
+        LogConfiguredIdentity();
+    }
+
+    // Records which App the loaded key belongs to, without logging the key. A key generated for a
+    // different App is indistinguishable from a valid key until GitHub rejects the JWT, so the
+    // fingerprint is the only way to confirm the pairing after a deploy.
+    private void LogConfiguredIdentity()
+    {
+        if (_options.AppId == 0)
+        {
+            _logger.LogWarning(
+                "GitHub App is not configured: GITHUB_APP_ID/GH_APP_ID is unset, so App JWTs cannot be minted.");
+            return;
+        }
+
+        string fingerprint;
+        try
+        {
+            fingerprint = PublicKeyFingerprint(GetRsa());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                "GitHub App private key could not be loaded: {Reason}", ex.Message);
+            return;
+        }
+
+        _logger.LogInformation(
+            "GitHub App configured: AppId={AppId} Slug={Slug} ClientId={ClientId} KeyFingerprint={Fingerprint}",
+            _options.AppId, _options.Slug, _options.ClientId, fingerprint);
     }
 
     private RSA GetRsa()
@@ -29,9 +60,20 @@ public sealed class GitHubAppJwtProvider : IGitHubAppJwtProvider
             throw new InvalidOperationException("GITHUB_APP_PRIVATE_KEY_BASE64 is not configured.");
 
         var keyPem = Encoding.UTF8.GetString(Convert.FromBase64String(_options.PrivateKeyBase64));
-        _rsa = RSA.Create();
-        _rsa.ImportFromPem(keyPem.ToCharArray());
-        return _rsa;
+        var rsa = RSA.Create();
+        try
+        {
+            rsa.ImportFromPem(keyPem.ToCharArray());
+        }
+        catch
+        {
+            // Do not cache a half-initialised key: a later call would reuse it and report success.
+            rsa.Dispose();
+            throw;
+        }
+
+        _rsa = rsa;
+        return rsa;
     }
 
     public string GenerateAppJwt()
@@ -61,70 +103,16 @@ public sealed class GitHubAppJwtProvider : IGitHubAppJwtProvider
 
         var jwt = $"{headerB64}.{payloadB64}.{Base64Url(signature)}";
 
-        LogDiagnostics(jwt, rsa, now);
-
         return jwt;
-    }
-
-    // TEMPORARY DIAGNOSTIC. Logs only non-secret metadata so a production 401 from
-    // GitHub can be attributed to the token's shape, claims, or signing key without ever
-    // emitting the JWT, its signature, the private key, or an Authorization header.
-    // Remove this method and its call site once the production cause is identified.
-    private void LogDiagnostics(string jwt, RSA rsa, long now)
-    {
-        try
-        {
-            var segments = jwt.Split('.');
-            var headerJson = Base64UrlDecode(segments[0]);
-            var payloadJson = Base64UrlDecode(segments[1]);
-            using var header = JsonDocument.Parse(headerJson);
-            using var payload = JsonDocument.Parse(payloadJson);
-
-            var issElement = payload.RootElement.GetProperty("iss");
-            var iat = payload.RootElement.GetProperty("iat").GetInt64();
-            var exp = payload.RootElement.GetProperty("exp").GetInt64();
-
-            _logger.LogInformation(
-                "GITHUB_APP_JWT_DIAGNOSTIC AppId={AppId} Segments={Segments} Header={Header} Payload={Payload} " +
-                "IssKind={IssKind} Iss={Iss} Iat={Iat} Exp={Exp} CurrentUnixTime={Now} " +
-                "LifetimeSeconds={Lifetime} ClockOffsetSeconds={ClockOffset} JwtLength={JwtLength} " +
-                "SignatureSegmentLength={SignatureLength} HasStdBase64Chars={HasStdBase64Chars} " +
-                "RsaKeySize={KeySize} PublicKeyFingerprint={Fingerprint}",
-                _options.AppId,
-                segments.Length,
-                headerJson,
-                payloadJson,
-                issElement.ValueKind,
-                issElement.ValueKind == JsonValueKind.String ? issElement.GetString() : issElement.GetRawText(),
-                iat,
-                exp,
-                now,
-                exp - iat,
-                now - iat,
-                jwt.Length,
-                segments.Length > 2 ? segments[2].Length : 0,
-                jwt.Any(c => c is '+' or '/' or '='),
-                rsa.KeySize,
-                PublicKeyFingerprint(rsa));
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning("GITHUB_APP_JWT_DIAGNOSTIC failed to decode token metadata: {Reason}", ex.Message);
-        }
     }
 
     // SHA-256 over the SubjectPublicKeyInfo DER, matching the fingerprint format GitHub
     // shows on the app's private key page. Derived from the loaded private key; the private
-    // key material itself is never logged.
+    // key material itself is never logged. Logged at startup so a deployment can be checked
+    // against the app whose key was uploaded, which is the usual cause of GitHub's
+    // "A JSON web token could not be decoded" rejection.
     private static string PublicKeyFingerprint(RSA rsa) =>
         "SHA256:" + Convert.ToBase64String(SHA256.HashData(rsa.ExportSubjectPublicKeyInfo()));
-
-    private static string Base64UrlDecode(string input)
-    {
-        var standard = input.Replace('-', '+').Replace('_', '/');
-        return Encoding.UTF8.GetString(Convert.FromBase64String(
-            standard.PadRight(standard.Length + (4 - standard.Length % 4) % 4, '=')));
-    }
 
     private static string Base64Url(string input) =>
         Convert.ToBase64String(Encoding.UTF8.GetBytes(input))

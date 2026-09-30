@@ -42,11 +42,11 @@ public class KafkaOptions
             BootstrapServers = $"{host}:9093";
         }
 
-        if (dict.TryGetValue("SharedAccessKeyName", out var keyName))
-            SaslUsername = keyName;
-
-        if (dict.TryGetValue("SharedAccessKey", out var key))
-            SaslPassword = key;
+        // Azure Event Hubs Kafka authentication requires the literal username "$ConnectionString"
+        // and the full connection string as the password. Using just the SharedAccessKeyName /
+        // SharedAccessKey is incorrect and causes "Invalid SASL PLAIN user name" rejections.
+        SaslUsername = "$ConnectionString";
+        SaslPassword = ConnectionString;
 
         if (dict.TryGetValue("EntityPath", out var entityPath))
             DeploymentTopic = entityPath;

@@ -254,7 +254,7 @@ These are **not** repository variables. The workflow reads the Container Apps en
 | `FRONTEND_URL` | `https://harbor-web-ui.<default-domain>` | Post-auth and GitHub-install redirect targets |
 | `ALLOWED_ORIGINS` | `https://harbor-admin-ui.<default-domain>,https://harbor-web-ui.<default-domain>` | Gateway CORS allowlist |
 | `VITE_API_BASE_URL` | `{API_GATEWAY_URL}/api` | Baked into both React bundles at build time |
-| `DISABLE_HTTPS_REDIRECTION` | `true` on the 5 backend APIs | See "Internal service-to-service traffic" below |
+| `VITE_GITHUB_APP_SLUG` | `${{ vars.GH_APP_SLUG }}` | Baked into the web bundle; the "Install GitHub App" link |
 
 #### Internal service-to-service traffic
 
@@ -277,11 +277,12 @@ The reported FQDN matches the environment's certificate, and because the backend
 ingress they remain unreachable from outside the environment. The CD workflow reads the FQDN for each
 app rather than assembling it, so it cannot drift from what Azure actually issued.
 
-Because ACA terminates TLS at its proxy and forwards plain HTTP to the container, each backend also
-sets `DISABLE_HTTPS_REDIRECTION=true`. Without it, `UseHttpsRedirection()` would answer the gateway's
-request with a 307, and the backends do not call `UseForwardedHeaders()` to recover the original
-scheme. The flag suppresses the redirect only on that internal hop — the gateway still redirects,
-because browsers reach it over HTTPS on its external ingress.
+Every hop is therefore `https://`, and ACA's proxy sets `X-Forwarded-Proto: https` on the way to the
+container, so each backend's `UseForwardedHeaders()` recovers an HTTPS scheme and
+`UseHttpsRedirection()` is a no-op. A destination left on `http://` is what breaks this: ACA reports
+`X-Forwarded-Proto: http`, the backend answers `301` to `https://<backend-fqdn><path>`, and the
+browser follows it straight past the gateway to the backend origin, where CORS then fails. The
+workflow's verification step fails the deploy if any destination is not an `https://` FQDN.
 
 GitHub sign-in uses a **GitHub App** (PKCE flow via `GitHubAppOAuthClient`), not a separate GitHub OAuth app, so there is no `GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET` to register and no callback URL to pre-register with GitHub. Only Google needs an external OAuth application:
 

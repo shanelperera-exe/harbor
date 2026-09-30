@@ -15,6 +15,15 @@ import { useTheme } from "../../contexts/ThemeContext";
 import { Icon } from '../../components/icons';
 
 const authApiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+// The GitHub App to install is per-environment, so the slug is supplied at build time
+// (--build-arg VITE_GITHUB_APP_SLUG, or VITE_GITHUB_APP_SLUG in .env). Installing a
+// different app than the one the backend holds credentials for yields an installation the
+// backend never sees. Without a slug, fall back to the account's installation list instead of
+// a link to a nonexistent app.
+const githubAppSlug = import.meta.env.VITE_GITHUB_APP_SLUG?.trim();
+const githubAppInstallUrl = githubAppSlug
+  ? `https://github.com/apps/${encodeURIComponent(githubAppSlug)}/installations/new`
+  : 'https://github.com/settings/installations';
 type ThemePreference = 'system' | 'light' | 'dark';
 type LogThemePreference = 'match-dashboard' | 'light' | 'dark';
 
@@ -1341,7 +1350,7 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                                     <span>GitHub Authorized (Install Required)</span>
                                   </div>
                                   <a
-                                    href="https://github.com/apps/harbordev/installations/new"
+                                    href={githubAppInstallUrl}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="text-[17px] font-medium text-white bg-[#24292e] hover:bg-[#1b1f23] dark:bg-white dark:text-black dark:hover:bg-gray-200 py-1.5 px-3 flex items-center transition-all rounded-sm outline-none"

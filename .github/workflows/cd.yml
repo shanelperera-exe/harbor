@@ -133,7 +133,6 @@ jobs:
                 "FRONTEND_URL=https://harbor-web-ui.$DOMAIN" \
                 "API_GATEWAY_URL=https://harbor-api-gateway.$DOMAIN" \
                 "ALLOWED_ORIGINS=https://harbor-admin-ui.$DOMAIN,https://harbor-web-ui.$DOMAIN" \
-                "DISABLE_HTTPS_REDIRECTION=true" \
               --min-replicas 0 \
               --max-replicas 1 \
               --cpu 0.5 \
@@ -144,18 +143,6 @@ jobs:
             sleep 15
           done
           exit 1
-
-      # Without this, a silently skipped or partially-applied job leaves the previous revision
-      # running, and the only symptom is a 502 from the gateway at login time.
-      - name: Verify runtime configuration was applied
-        run: |
-          REDIRECT=$(az containerapp show -n ${{ matrix.service }} -g ${{ env.RESOURCE_GROUP }} \
-            --query "properties.template.containers[0].env[?name=='DISABLE_HTTPS_REDIRECTION'].value" -o tsv)
-          if [ "$REDIRECT" != "true" ]; then
-            echo "::error::${{ matrix.service }} is missing DISABLE_HTTPS_REDIRECTION=true. It would answer the gateway's internal HTTP call with a 307 to https://harbor-auth-api, a name a browser cannot resolve."
-            exit 1
-          fi
-          echo "DISABLE_HTTPS_REDIRECTION=true is active."
 
   deploy-frontends:
     name: Deploy Frontend UIs
@@ -207,6 +194,7 @@ jobs:
           # unreachable at the context root.
           docker build \
             --build-arg VITE_API_BASE_URL=$GATEWAY_URL/api \
+            --build-arg VITE_GITHUB_APP_SLUG=${{ vars.GH_APP_SLUG }} \
             -f ${{ matrix.dockerfile }} \
             -t ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.service }}:${{ env.DEPLOY_SHA }} \
             ${{ matrix.context }}

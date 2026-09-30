@@ -94,6 +94,25 @@ environment.
 
 Store the private key as a secret, never as a plaintext variable.
 
+The web UI builds its "Install GitHub App" link from the same app, so the frontend bundle
+needs the slug too. It is baked in at build time, not read at runtime:
+
+```dockerfile
+ARG VITE_GITHUB_APP_SLUG
+ENV VITE_GITHUB_APP_SLUG=$VITE_GITHUB_APP_SLUG
+```
+
+```bash
+docker build --build-arg VITE_GITHUB_APP_SLUG=<app-slug> ...
+```
+
+Set it as the `GH_APP_SLUG` variable in the GitHub repository or `Production` environment — the
+same variable the services read, so the UI and the backend always name the same app — and keep it
+identical to the slug whose App ID and private key the services hold. Installing a different app
+produces an installation the backend can never read, and GitHub sends the user to that other app's
+Setup URL. If the variable is unset the build still succeeds, and the UI falls back to linking the
+account's GitHub installation list instead of an app install page.
+
 ### `GITHUB_WEBHOOK_SECRET`
 
 This is a shared secret for the optional workflow-to-Harbor status callback. It

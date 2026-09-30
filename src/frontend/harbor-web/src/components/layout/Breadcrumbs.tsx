@@ -99,9 +99,10 @@ export const Breadcrumbs: React.FC<{ isMobile?: boolean }> = ({ isMobile }) => {
 
   const serviceMatch = useMatch('/projects/:projectId/services/:serviceId/*');
   const serviceId = serviceMatch?.params.serviceId;
-  const isServiceContext = !!serviceId;
+  // "new" is a frontend route segment, not a real service ID – exclude it
+  const isServiceContext = !!serviceId && serviceId !== 'new';
 
-  const isNewServiceRoute = location.pathname.includes('/services/new/');
+  const isNewServiceRoute = location.pathname.includes('/services/new');
 
   let currentProjectRouteLabel = 'Environments';
   if (location.pathname.endsWith('/settings')) currentProjectRouteLabel = 'Settings';

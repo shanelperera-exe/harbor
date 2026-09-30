@@ -71,7 +71,8 @@ export default function SideNav({
   
   const serviceMatch = useMatch('/projects/:projectId/services/:serviceId/*');
   const serviceId = serviceMatch?.params?.serviceId;
-  const isServiceContext = !!serviceId;
+  // "new" is a frontend route segment, not a real service ID – exclude it
+  const isServiceContext = !!serviceId && serviceId !== 'new';
   
   const isProjectContext = !!projectId && !isServiceContext;
 

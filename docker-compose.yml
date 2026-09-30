@@ -44,15 +44,10 @@ services:
       dockerfile: src/backend/Harbor.ApiGateway/Dockerfile
     container_name: harbor-api-gateway
     env_file: .env
-    environment:
-      POSTGRES_SERVER: postgres
-      POSTGRES_PORT: 5432
     ports:
       - "5000:8080"
     volumes:
       - dp_keys:/root/.aspnet/DataProtection-Keys
-    depends_on:
-      - postgres
     restart: unless-stopped
 
   authentication-service:

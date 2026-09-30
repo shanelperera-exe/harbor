@@ -163,5 +163,105 @@ namespace Harbor.Project.Tests
 
             Assert.Contains("authentication-service", handler.LastRequest!.RequestUri!.Host);
         }
+
+        // ---------- GetGitHubTokenResultAsync: installation path ----------
+
+        [Fact]
+        public async Task GetGitHubTokenResultAsync_InstallationTokenAvailable_DoesNotCallOAuthEndpoint()
+        {
+            var handler = new FakeHttpMessageHandler("""{ "token": "ghs_installation" }""");
+            var service = new TokenService(new HttpClient(handler), BuildConfiguration());
+
+            var result = await service.GetGitHubTokenResultAsync(7);
+
+            Assert.True(result.HasToken);
+            Assert.Equal("ghs_installation", result.Token);
+            Assert.Equal(GitHubTokenSource.Installation, result.Source);
+            Assert.Equal(1, handler.CallCount);
+            Assert.EndsWith("/installation-token", handler.RequestUris[0].ToString());
+        }
+
+        [Fact]
+        public async Task GetGitHubTokenResultAsync_UpstreamError_SurfacesStatusAndBody()
+        {
+            var handler = new FakeHttpMessageHandler(
+                """{ "message": "Failed to create installation token: Unauthorized" }""",
+                HttpStatusCode.InternalServerError);
+            var service = new TokenService(new HttpClient(handler), BuildConfiguration());
+
+            var result = await service.GetGitHubTokenResultAsync(7);
+
+            Assert.False(result.HasToken);
+            // A credential problem must not be reported as "not connected".
+            Assert.False(result.IsNotConnected);
+            Assert.Contains("500", result.FailureReason);
+            Assert.Contains("Unauthorized", result.FailureReason);
+        }
+
+        // ---------- GetGitHubTokenResultAsync: OAuth fallback ----------
+
+        [Fact]
+        public async Task GetGitHubTokenResultAsync_InstallationFails_FallsBackToUserOAuthToken()
+        {
+            var handler = FakeHttpMessageHandler.Sequence(
+                (HttpStatusCode.InternalServerError, """{ "message": "Failed to create installation token" }"""),
+                (HttpStatusCode.OK, """{ "token": "ghu_usertoken" }"""));
+            var service = new TokenService(new HttpClient(handler), BuildConfiguration());
+
+            var result = await service.GetGitHubTokenResultAsync(7);
+
+            Assert.True(result.HasToken);
+            Assert.Equal("ghu_usertoken", result.Token);
+            Assert.Equal(GitHubTokenSource.UserOAuth, result.Source);
+            Assert.Equal(2, handler.CallCount);
+            Assert.EndsWith("/installation-token", handler.RequestUris[0].ToString());
+            Assert.EndsWith("/tokens/github", handler.RequestUris[1].ToString());
+        }
+
+        [Fact]
+        public async Task GetGitHubTokenResultAsync_NoInstallation_FallsBackToUserOAuthToken()
+        {
+            var handler = FakeHttpMessageHandler.Sequence(
+                (HttpStatusCode.NotFound, """{ "message": "No GitHub App installation found" }"""),
+                (HttpStatusCode.OK, """{ "token": "ghu_usertoken" }"""));
+            var service = new TokenService(new HttpClient(handler), BuildConfiguration());
+
+            var result = await service.GetGitHubTokenResultAsync(7);
+
+            Assert.True(result.HasToken);
+            Assert.Equal(GitHubTokenSource.UserOAuth, result.Source);
+            // The installation failure is retained so logs can explain the degradation.
+            Assert.Contains("installation", result.InstallationTokenFailure, StringComparison.OrdinalIgnoreCase);
+        }
+
+        [Fact]
+        public async Task GetGitHubTokenResultAsync_BothCredentialsFail_ReportsBothReasons()
+        {
+            var handler = FakeHttpMessageHandler.Sequence(
+                (HttpStatusCode.InternalServerError, """{ "message": "installation token rejected" }"""),
+                (HttpStatusCode.NotFound, "not found"));
+            var service = new TokenService(new HttpClient(handler), BuildConfiguration());
+
+            var result = await service.GetGitHubTokenResultAsync(7);
+
+            Assert.False(result.HasToken);
+            Assert.False(result.IsNotConnected);
+            Assert.Contains("500", result.FailureReason);
+            Assert.Contains("also failed", result.FailureReason);
+        }
+
+        [Fact]
+        public async Task GetGitHubTokenResultAsync_NoInstallationAndNoOAuthAccount_ReportsNotConnected()
+        {
+            var handler = FakeHttpMessageHandler.Sequence(
+                (HttpStatusCode.NotFound, "not found"),
+                (HttpStatusCode.NotFound, "not found"));
+            var service = new TokenService(new HttpClient(handler), BuildConfiguration());
+
+            var result = await service.GetGitHubTokenResultAsync(7);
+
+            Assert.False(result.HasToken);
+            Assert.True(result.IsNotConnected);
+        }
     }
 }

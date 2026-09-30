@@ -43,7 +43,10 @@ const NewServiceRepoSelection: React.FC = () => {
         });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
-          throw new Error(data?.title || data?.detail || data?.message || 'Failed to fetch repositories.');
+          // detail carries the server-side cause (e.g. a GitHub credential failure); message alone
+          // hides it behind a generic title.
+          const reason = data?.detail || data?.title || data?.message || 'Failed to fetch repositories.';
+          throw new Error(reason);
         }
         
         // Map the backend structure to what the UI expects

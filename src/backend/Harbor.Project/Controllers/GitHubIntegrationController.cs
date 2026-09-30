@@ -38,9 +38,19 @@ namespace Harbor.Project.Controllers
                 return TokenFailure(tokenResult);
             }
 
+            if (tokenResult.Source == GitHubTokenSource.UserOAuth && tokenResult.InstallationTokenFailure is not null)
+            {
+                _logger.LogWarning(
+                    "Falling back to the account's GitHub OAuth token; the GitHub App installation token " +
+                    "was unavailable: {Reason}",
+                    tokenResult.InstallationTokenFailure);
+            }
+
             try
             {
-                var repos = await _gitHubService.GetRepositoriesAsync(tokenResult.Token!);
+                var repos = tokenResult.Source == GitHubTokenSource.UserOAuth
+                    ? await _gitHubService.GetUserRepositoriesAsync(tokenResult.Token!)
+                    : await _gitHubService.GetRepositoriesAsync(tokenResult.Token!);
                 return Ok(new { Data = repos });
             }
             catch (GitHubApiException ex)

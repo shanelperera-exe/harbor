@@ -7,6 +7,7 @@ namespace Harbor.Project.Services
     public interface IGitHubService
     {
         Task<List<GitHubRepository>> GetRepositoriesAsync(string token);
+        Task<List<GitHubRepository>> GetUserRepositoriesAsync(string userAccessToken);
         Task<List<GitHubBranch>> GetBranchesAsync(string token, string owner, string repo);
         Task<List<GitHubCommit>> GetCommitsAsync(string token, string owner, string repo, string branch);
     }
@@ -78,6 +79,68 @@ namespace Harbor.Project.Services
                     HtmlUrl = element.GetProperty("html_url").GetString() ?? string.Empty,
                     CloneUrl = element.GetProperty("clone_url").GetString() ?? string.Empty,
                     Private = element.GetProperty("private").GetBoolean(),
+                    DefaultBranch = element.TryGetProperty("default_branch", out var db) ? db.GetString() ?? "main" : "main",
+                    UpdatedAt = element.TryGetProperty("updated_at", out var ua) && ua.ValueKind != JsonValueKind.Null ? ua.GetDateTime() : null
+                });
+            }
+
+            return repos;
+        }
+
+        /// <summary>
+        /// Lists repositories using the user's OAuth token. The installation endpoint
+        /// (installation/repositories) rejects user tokens, so the fallback lists what the user can
+        /// personally reach instead. GitHub paginates; follow pages so the list is not silently
+        /// truncated at 100.
+        /// </summary>
+        public async Task<List<GitHubRepository>> GetUserRepositoriesAsync(string userAccessToken)
+        {
+            var repos = new List<GitHubRepository>();
+            const int perPage = 100;
+            var totalPages = 5;
+
+            for (var page = 1; page <= totalPages; page++)
+            {
+                var pageItems = await GetUserRepositoryPageAsync(userAccessToken, page, perPage);
+                repos.AddRange(pageItems);
+                if (pageItems.Count < perPage) break;
+            }
+
+            return repos;
+        }
+
+        private async Task<List<GitHubRepository>> GetUserRepositoryPageAsync(string userAccessToken, int page, int perPage)
+        {
+            using var request = new HttpRequestMessage(
+                HttpMethod.Get,
+                $"user/repos?per_page={perPage}&page={page}&affiliation=owner,collaborator,organization_member&sort=updated");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", userAccessToken);
+
+            using var response = await _httpClient.SendAsync(request);
+            if (!response.IsSuccessStatusCode)
+                throw new GitHubApiException(response.StatusCode, await response.Content.ReadAsStringAsync());
+
+            var content = await response.Content.ReadAsStringAsync();
+            using var document = JsonDocument.Parse(content);
+            var repos = new List<GitHubRepository>();
+
+            if (document.RootElement.ValueKind != JsonValueKind.Array)
+                return repos;
+
+            foreach (var element in document.RootElement.EnumerateArray())
+            {
+                if (!element.TryGetProperty("owner", out var ownerElement)) continue;
+                if (!ownerElement.TryGetProperty("login", out var loginElement)) continue;
+
+                repos.Add(new GitHubRepository
+                {
+                    Id = element.TryGetProperty("id", out var id) ? id.GetInt64() : 0,
+                    Name = element.TryGetProperty("name", out var n) ? n.GetString() ?? string.Empty : string.Empty,
+                    FullName = element.TryGetProperty("full_name", out var fn) ? fn.GetString() ?? string.Empty : string.Empty,
+                    Owner = loginElement.GetString() ?? string.Empty,
+                    HtmlUrl = element.TryGetProperty("html_url", out var hu) ? hu.GetString() ?? string.Empty : string.Empty,
+                    CloneUrl = element.TryGetProperty("clone_url", out var cu) ? cu.GetString() ?? string.Empty : string.Empty,
+                    Private = element.TryGetProperty("private", out var p) && p.ValueKind == JsonValueKind.True,
                     DefaultBranch = element.TryGetProperty("default_branch", out var db) ? db.GetString() ?? "main" : "main",
                     UpdatedAt = element.TryGetProperty("updated_at", out var ua) && ua.ValueKind != JsonValueKind.Null ? ua.GetDateTime() : null
                 });

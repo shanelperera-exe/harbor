@@ -100,7 +100,7 @@ public class DeploymentServiceTests
     public async Task GetDetailsAsync_SuccessfulDeployment_DoesNotReturnFailureReason()
     {
         var deployment = new DeploymentEntity { Id = 5, OwnerId = 7, ServiceId = 13, Environment = "production", Version = "1.0.0", Status = "Succeeded", StartedAt = DateTime.UtcNow, FailureReason = "should be hidden" };
-        _repository.Setup(r => r.GetEntityByIdentifierAsync("5", 7)).ReturnsAsync(deployment);
+        _repository.Setup(r => r.GetEntityByIdentifierAsync("5", 7, false)).ReturnsAsync(deployment);
         _repository.Setup(r => r.GetLogsAsync(5)).ReturnsAsync(new List<DeploymentLogEntity>());
 
         var result = await _service.GetDetailsAsync("5", 7);
@@ -114,7 +114,7 @@ public class DeploymentServiceTests
     public async Task GetDetailsAsync_FailedDeployment_ReturnsFailureReasonAndLogs()
     {
         var deployment = new DeploymentEntity { Id = 8, OwnerId = 7, ServiceId = 13, Environment = "staging", Version = "1.5.0", Status = "Failed", StartedAt = DateTime.UtcNow, FailureReason = "Health check did not become ready." };
-        _repository.Setup(r => r.GetEntityByIdentifierAsync("8", 7)).ReturnsAsync(deployment);
+        _repository.Setup(r => r.GetEntityByIdentifierAsync("8", 7, false)).ReturnsAsync(deployment);
         _repository.Setup(r => r.GetLogsAsync(8)).ReturnsAsync(new List<DeploymentLogEntity>
         {
             new() { DeploymentId = 8, Timestamp = deployment.StartedAt, Level = "Error", Message = "Readiness probe timed out." }
@@ -133,7 +133,7 @@ public class DeploymentServiceTests
     [Fact]
     public async Task GetDetailsAsync_UnknownOrOtherUsersDeployment_ReturnsNull()
     {
-        _repository.Setup(r => r.GetEntityByIdentifierAsync("99", 7)).ReturnsAsync((DeploymentEntity?)null);
+        _repository.Setup(r => r.GetEntityByIdentifierAsync("99", 7, false)).ReturnsAsync((DeploymentEntity?)null);
 
         var result = await _service.GetDetailsAsync("99", 7);
 
@@ -142,21 +142,39 @@ public class DeploymentServiceTests
     }
 
     [Fact]
+    public async Task GetDetailsAsync_AdminFlagIsPassedToRepositoryAccessCheck()
+    {
+        var deployment = new DeploymentEntity { Id = 11, ServiceId = 13, Environment = "production", Version = "1.0.0", Status = "Succeeded", StartedAt = DateTime.UtcNow };
+        _repository.Setup(r => r.GetEntityByIdentifierAsync("dep-11", 42, true)).ReturnsAsync(deployment);
+        _repository.Setup(r => r.GetLogsAsync(11)).ReturnsAsync(new List<DeploymentLogEntity>());
+
+        var result = await _service.GetDetailsAsync("dep-11", 42, isAdmin: true);
+
+        Assert.NotNull(result);
+        _repository.Verify(r => r.GetEntityByIdentifierAsync("dep-11", 42, true), Times.Once);
+    }
+
+    [Fact]
     public async Task GetDetailsAsync_DeploymentWithMultipleLogs_ReturnsAllLogs()
     {
         var now = DateTime.UtcNow;
         var deployment = new DeploymentEntity { Id = 3, OwnerId = 1, ServiceId = 2, Environment = "staging", Version = "1.0.0", Status = "Failed", StartedAt = now, FailureReason = "OOM" };
-        _repository.Setup(r => r.GetEntityByIdentifierAsync("3", 1)).ReturnsAsync(deployment);
+        _repository.Setup(r => r.GetEntityByIdentifierAsync("3", 1, false)).ReturnsAsync(deployment);
         _repository.Setup(r => r.GetLogsAsync(3)).ReturnsAsync(new List<DeploymentLogEntity>
         {
             new() { DeploymentId = 3, Timestamp = now, Level = "Info", Message = "Starting deployment." },
-            new() { DeploymentId = 3, Timestamp = now.AddSeconds(1), Level = "Error", Message = "Out of memory." }
+            new() { DeploymentId = 3, Timestamp = now.AddSeconds(1), Level = "Error", Message = "PASSWORD=hunter2 Authorization: Bearer abc123" },
+            new() { DeploymentId = 3, Timestamp = now.AddSeconds(2), Level = "Info", Message = "{\"apiKey\":\"secret-api\"}" }
         });
 
         var result = await _service.GetDetailsAsync("3", 1);
 
         Assert.NotNull(result);
-        Assert.Equal(2, result!.Logs.Count);
+        Assert.Equal(3, result!.Logs.Count);
+        Assert.DoesNotContain("hunter2", result.Logs[1].Message);
+        Assert.DoesNotContain("abc123", result.Logs[1].Message);
+        Assert.Contains("[REDACTED]", result.Logs[1].Message);
+        Assert.DoesNotContain("secret-api", result.Logs[2].Message);
     }
 
     // ---------- CreateAsync: Valid requests ----------

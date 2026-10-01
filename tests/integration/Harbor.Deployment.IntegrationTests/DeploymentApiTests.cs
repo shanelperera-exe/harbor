@@ -255,6 +255,64 @@ public class DeploymentApiTests : IClassFixture<DeploymentApiFactory>
         Assert.Null(body!.FailureReason);
     }
 
+    [Fact]
+    public async Task GetDetails_RedactsSensitiveValuesFromLogsAndFailureReason()
+    {
+        var client = CreateClient(SeedOwner);
+        var created = await CreateDeploymentAsync(client, new CreateDeploymentRequest
+            { ServiceId = SeedSvc.ToString(), Environment = "staging", Version = "redaction-test", CommitSha = "abc123" });
+
+        await using (var connection = new Npgsql.NpgsqlConnection(_factory._db.GetConnectionString()))
+        {
+            await connection.OpenAsync();
+            await using var command = new Npgsql.NpgsqlCommand("""
+                UPDATE "Deployments" SET "Status" = 'Failed', "FailureReason" = 'password=failure-secret'
+                WHERE "Id" = @id;
+                INSERT INTO "DeploymentLogs" ("DeploymentId", "Timestamp", "Level", "Message")
+                VALUES (@id, @timestamp, 'Error', '{"apiKey":"log-secret"} Authorization: Bearer bearer-secret');
+                """, connection);
+            command.Parameters.AddWithValue("id", created.Id);
+            command.Parameters.AddWithValue("timestamp", DateTime.UtcNow);
+            await command.ExecuteNonQueryAsync();
+        }
+
+        var response = await client.GetAsync($"/api/deployments/{created.Id}");
+        var body = await response.Content.ReadFromJsonAsync<DeploymentDetailsResponse>();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.NotNull(body);
+        Assert.DoesNotContain("failure-secret", body!.FailureReason);
+        Assert.DoesNotContain("log-secret", body.Logs[0].Message);
+        Assert.DoesNotContain("bearer-secret", body.Logs[0].Message);
+        Assert.Contains("[REDACTED]", body.Logs[0].Message);
+    }
+
+    [Fact]
+    public async Task GetDetails_ProjectOwnerCanViewDeploymentCreatedByAdmin()
+    {
+        var adminClient = CreateClient(userId: 88011, role: "Admin");
+        var ownerClient = CreateClient(SeedOwner);
+        var created = await CreateDeploymentAsync(adminClient, new CreateDeploymentRequest
+            { ServiceId = SeedSvc.ToString(), Environment = "staging", Version = "admin-created", CommitSha = "abc123" });
+
+        var response = await ownerClient.GetAsync($"/api/deployments/{created.Id}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetDetails_AdminCanViewDeploymentFromAnotherProject()
+    {
+        var ownerClient = CreateClient(SeedOwner);
+        var adminClient = CreateClient(userId: 88012, role: "Admin");
+        var created = await CreateDeploymentAsync(ownerClient, new CreateDeploymentRequest
+            { ServiceId = SeedSvc.ToString(), Environment = "production", Version = "admin-visible", CommitSha = "abc123" });
+
+        var response = await adminClient.GetAsync($"/api/deployments/{created.Id}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
     // =========================================================================
     // POST /api/deployments  (create)
     // =========================================================================

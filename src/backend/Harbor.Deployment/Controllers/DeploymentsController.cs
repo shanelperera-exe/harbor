@@ -35,12 +35,13 @@ public class DeploymentsController(IDeploymentService deploymentService) : Contr
     }
     [HttpGet("{id}")]
     [ProducesResponseType(typeof(DeploymentDetailsResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<DeploymentDetailsResponse>> GetDetails(string id)
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
-        var deployment = await deploymentService.GetDetailsAsync(id, userId.Value);
+        var deployment = await deploymentService.GetDetailsAsync(id, userId.Value, User.IsInRole("Admin"));
         return deployment is null ? NotFound() : Ok(deployment);
     }
 

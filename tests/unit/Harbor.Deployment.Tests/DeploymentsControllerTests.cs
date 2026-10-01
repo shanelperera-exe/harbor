@@ -89,14 +89,14 @@ public class DeploymentsControllerTests
         var result = await _controller.GetDetails("1");
 
         Assert.IsType<UnauthorizedResult>(result.Result);
-        _serviceMock.Verify(s => s.GetDetailsAsync(It.IsAny<string>(), It.IsAny<int>()), Times.Never);
+        _serviceMock.Verify(s => s.GetDetailsAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<bool>()), Times.Never);
     }
 
     [Fact]
     public async Task GetDetails_DeploymentNotFound_ReturnsNotFound()
     {
         SetUser(userId: 7);
-        _serviceMock.Setup(s => s.GetDetailsAsync("99", 7)).ReturnsAsync((DeploymentDetailsResponse?)null);
+        _serviceMock.Setup(s => s.GetDetailsAsync("99", 7, false)).ReturnsAsync((DeploymentDetailsResponse?)null);
 
         var result = await _controller.GetDetails("99");
 
@@ -116,7 +116,7 @@ public class DeploymentsControllerTests
                 new() { Level = "Error", Message = "Out of memory.", Timestamp = DateTime.UtcNow }
             }
         };
-        _serviceMock.Setup(s => s.GetDetailsAsync("8", 7)).ReturnsAsync(details);
+        _serviceMock.Setup(s => s.GetDetailsAsync("8", 7, false)).ReturnsAsync(details);
 
         var result = await _controller.GetDetails("8");
 
@@ -127,11 +127,24 @@ public class DeploymentsControllerTests
     }
 
     [Fact]
+    public async Task GetDetails_AdminPassesAdminAccessToService()
+    {
+        SetUser(userId: 42, isAdmin: true);
+        _serviceMock.Setup(s => s.GetDetailsAsync("dep-abc", 42, true))
+            .ReturnsAsync(new DeploymentDetailsResponse { Id = 8, Status = "Succeeded" });
+
+        var result = await _controller.GetDetails("dep-abc");
+
+        Assert.IsType<OkObjectResult>(result.Result);
+        _serviceMock.Verify(s => s.GetDetailsAsync("dep-abc", 42, true), Times.Once);
+    }
+
+    [Fact]
     public async Task GetDetails_OtherUsersDeployment_ReturnsNotFound()
     {
-        // The service enforces ownership; it returns null for deployments owned by someone else.
+        // The service returns null when the caller cannot access the deployment's project.
         SetUser(userId: 99);
-        _serviceMock.Setup(s => s.GetDetailsAsync("8", 99)).ReturnsAsync((DeploymentDetailsResponse?)null);
+        _serviceMock.Setup(s => s.GetDetailsAsync("8", 99, false)).ReturnsAsync((DeploymentDetailsResponse?)null);
 
         var result = await _controller.GetDetails("8");
 

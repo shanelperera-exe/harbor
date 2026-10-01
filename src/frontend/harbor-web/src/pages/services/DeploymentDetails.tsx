@@ -32,6 +32,11 @@ function getDuration(deploy: IDeploymentDetails): string {
   return `${Math.floor(secs / 60)}m ${secs % 60}s`;
 }
 
+function readStoredUser() {
+  try { return JSON.parse(localStorage.getItem('harbor_user') ?? '{}'); }
+  catch { return {}; }
+}
+
 export default function DeploymentDetails() {
   const { service, deployRefreshKey } = useOutletContext<{ service: any; deployRefreshKey: number }>();
   const { deploymentId } = useParams();
@@ -39,10 +44,9 @@ export default function DeploymentDetails() {
   const [loading, setLoading] = useState(true);
   const [redeploying, setRedeploying] = useState(false);
 
-  const [storedUser] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('harbor_user') ?? '{}'); }
-    catch { return {}; }
-  });
+  const storedUser = readStoredUser();
+  const currentUsername: string = storedUser.username ?? '';
+  const currentAvatarSvg: string | null = storedUser.avatarSvg ?? null;
 
   useEffect(() => {
     if (!deploymentId) {
@@ -177,6 +181,12 @@ export default function DeploymentDetails() {
                       <Icon name="environmentBurst" className="w-3.5 h-3.5 mr-1.5 shrink-0" aria-hidden="true" />
                     )}
                     {deployment.environment || 'Production'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-500 dark:text-[#8f8f8f] font-[Geist]">Project:</span>
+                  <span data-testid="deployment-project-name" className="text-gray-900 dark:text-[#f0f0f0] font-[Geist]">
+                    {deployment.projectName || 'Unknown'}
                   </span>
                 </div>
               </div>
@@ -315,10 +325,15 @@ export default function DeploymentDetails() {
               {/* Created and Duration */}
               <div className="flex flex-wrap items-center gap-4 text-[15px] pt-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-gray-500 dark:text-[#8f8f8f]">Created</span>
+                  <span className="text-gray-500 dark:text-[#8f8f8f]">Created by</span>
                   <span className="flex items-center gap-1.5 text-gray-900 dark:text-[#f0f0f0] font-medium">
-                    <span>{storedUser.username || 'Unknown'}</span>
-                    <UserAvatar svgString={storedUser.avatarSvg} username={storedUser.username || 'Unknown'} size={18} className="rounded-full" />
+                    <span data-testid="deployment-user-name">{deployment.userName || 'Unknown'}</span>
+                    <UserAvatar
+                      username={deployment.userName || 'Unknown'}
+                      svgString={deployment.userName && deployment.userName === currentUsername ? currentAvatarSvg : null}
+                      size={18}
+                      className="rounded-full"
+                    />
                   </span>
                 </div>
                 <div className="flex items-center gap-1.5">

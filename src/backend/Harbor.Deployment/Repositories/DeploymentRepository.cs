@@ -111,7 +111,7 @@ public class DeploymentRepository(DbConnectionFactory dbFactory) : IDeploymentRe
         return (await ReadDeploymentsAsync(command)).SingleOrDefault();
     }
 
-    public async Task<DeploymentEntity?> GetEntityByIdentifierAsync(string identifier, int ownerId)
+    public async Task<DeploymentEntity?> GetEntityByIdentifierAsync(string identifier, int userId, bool isAdmin)
     {
         await using var connection = dbFactory.CreateConnection();
         await connection.OpenAsync();
@@ -121,9 +121,10 @@ public class DeploymentRepository(DbConnectionFactory dbFactory) : IDeploymentRe
                                 JOIN ""Services"" s ON d.""ServiceId"" = s.""Id"" 
                                 JOIN ""Projects"" p ON s.""ProjectId"" = p.""Id"" 
                                 LEFT JOIN ""Users"" u ON d.""OwnerId"" = u.""Id"" 
-                                WHERE (d.""Id""::text = @identifier OR d.""PublicId"" = @identifier) AND d.""OwnerId"" = @ownerId";
+                                WHERE (d.""Id""::text = @identifier OR d.""PublicId"" = @identifier) AND (@isAdmin OR p.""OwnerId"" = @userId)";
         command.Parameters.AddWithValue("identifier", identifier);
-        command.Parameters.AddWithValue("ownerId", ownerId);
+        command.Parameters.AddWithValue("userId", userId);
+        command.Parameters.AddWithValue("isAdmin", isAdmin);
         var result = new List<DeploymentEntity>();
         await using var reader = await command.ExecuteReaderAsync();
         if (await reader.ReadAsync())

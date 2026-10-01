@@ -59,9 +59,9 @@ public class DeploymentService : IDeploymentService
         public Task PublishDeploymentEventAsync(DeploymentLifecycleEvent @event) => Task.CompletedTask;
     }
 
-    public async Task<DeploymentDetailsResponse?> GetDetailsAsync(string identifier, int ownerId)
+    public async Task<DeploymentDetailsResponse?> GetDetailsAsync(string identifier, int userId, bool isAdmin = false)
     {
-        var deployment = await repository.GetEntityByIdentifierAsync(identifier, ownerId);
+        var deployment = await repository.GetEntityByIdentifierAsync(identifier, userId, isAdmin);
         if (deployment is null) return null;
         var logs = await repository.GetLogsAsync(deployment.Id);
         
@@ -91,14 +91,14 @@ public class DeploymentService : IDeploymentService
             WorkflowRef = deployment.WorkflowRef, 
             WorkflowRunUrl = deployment.WorkflowRunUrl, 
             DeploymentUrl = deploymentUrl,
-            FailureReason = string.Equals(deployment.Status, "Failed", StringComparison.OrdinalIgnoreCase) ? deployment.FailureReason : null, 
-            TriggerError = deployment.TriggerError, 
+            FailureReason = string.Equals(deployment.Status, "Failed", StringComparison.OrdinalIgnoreCase) ? DeploymentLogSanitizer.Sanitize(deployment.FailureReason) : null,
+            TriggerError = DeploymentLogSanitizer.Sanitize(deployment.TriggerError),
             ProjectName = deployment.ProjectName,
             ServiceName = deployment.ServiceName,
             ServiceType = deployment.ServiceType,
             UserName = deployment.UserName,
             CommitMessage = deployment.CommitMessage,
-            Logs = logs.Select(log => new DeploymentLogResponse { Timestamp = log.Timestamp, Level = log.Level, Message = log.Message }).ToList() 
+            Logs = logs.Select(log => new DeploymentLogResponse { Timestamp = log.Timestamp, Level = log.Level, Message = DeploymentLogSanitizer.Sanitize(log.Message) }).ToList()
         };
     }
 

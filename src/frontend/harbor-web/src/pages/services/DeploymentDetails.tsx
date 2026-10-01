@@ -32,21 +32,12 @@ function getDuration(deploy: IDeploymentDetails): string {
   return `${Math.floor(secs / 60)}m ${secs % 60}s`;
 }
 
-function readStoredUser() {
-  try { return JSON.parse(localStorage.getItem('harbor_user') ?? '{}'); }
-  catch { return {}; }
-}
-
 export default function DeploymentDetails() {
   const { service, deployRefreshKey } = useOutletContext<{ service: any; deployRefreshKey: number }>();
   const { deploymentId } = useParams();
   const [deployment, setDeployment] = useState<IDeploymentDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [redeploying, setRedeploying] = useState(false);
-
-  const storedUser = readStoredUser();
-  const currentUsername: string = storedUser.username ?? '';
-  const currentAvatarSvg: string | null = storedUser.avatarSvg ?? null;
 
   useEffect(() => {
     if (!deploymentId) {
@@ -328,12 +319,7 @@ export default function DeploymentDetails() {
                   <span className="text-gray-500 dark:text-[#8f8f8f]">Created by</span>
                   <span className="flex items-center gap-1.5 text-gray-900 dark:text-[#f0f0f0] font-medium">
                     <span data-testid="deployment-user-name">{deployment.userName || 'Unknown'}</span>
-                    <UserAvatar
-                      username={deployment.userName || 'Unknown'}
-                      svgString={deployment.userName && deployment.userName === currentUsername ? currentAvatarSvg : null}
-                      size={18}
-                      className="rounded-full"
-                    />
+                    <UserAvatar username={deployment.userName || 'Unknown'} size={18} className="rounded-full" />
                   </span>
                 </div>
                 <div className="flex items-center gap-1.5">

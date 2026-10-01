@@ -264,14 +264,20 @@ jobs:
             exit 1
           fi
 
+      - name: Install postgresql-client
+        run: sudo apt-get install -y --no-install-recommends postgresql-client
+
       - name: Seed deployment test data
         run: |
           chmod +x scripts/ci/seed-deployment-data.sh
           ./scripts/ci/seed-deployment-data.sh
         env:
           AUTH_URL: http://localhost:5196
-          POSTGRES_CONTAINER: harbor-postgres
+          POSTGRES_CONTAINER: ""      # empty → use system psql, not docker exec
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: "5432"
           POSTGRES_USER: harboruser
+          POSTGRES_PASSWORD: harborpass
           POSTGRES_DATABASE: harbor_db
 
       - name: Run unit and integration tests

@@ -31,7 +31,7 @@ public sealed class GitHubAppOAuthClient : IGitHubAppOAuthClient
     {
         var query = new QueryHelperBuilder($"{_oauthBaseUrl}/login/oauth/authorize")
             .Add("client_id", _options.ClientId)
-            .Add("redirect_uri", $"{GetApiOrigin()}/api/auth/external/github/callback")
+            .Add("redirect_uri", $"{_options.ApiOrigin.TrimEnd('/')}/api/auth/external/github/callback")
             .Add("state", state)
             .Add("code_challenge", codeChallenge)
             .Add("code_challenge_method", "S256")
@@ -53,7 +53,7 @@ public sealed class GitHubAppOAuthClient : IGitHubAppOAuthClient
             ["code"] = code,
             ["state"] = state,
             ["code_verifier"] = codeVerifier,
-            ["redirect_uri"] = $"{GetApiOrigin()}/api/auth/external/github/callback"
+            ["redirect_uri"] = $"{_options.ApiOrigin.TrimEnd('/')}/api/auth/external/github/callback"
         };
         request.Content = new FormUrlEncodedContent(form);
 
@@ -110,11 +110,6 @@ public sealed class GitHubAppOAuthClient : IGitHubAppOAuthClient
         return baseUri.ToString().TrimEnd('/');
     }
 
-    private static string GetApiOrigin()
-    {
-        var origin = Environment.GetEnvironmentVariable("API_GATEWAY_URL") ?? "http://localhost:5000";
-        return origin.TrimEnd('/');
-    }
 
     private sealed class QueryHelperBuilder
     {

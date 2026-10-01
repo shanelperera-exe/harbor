@@ -20,7 +20,7 @@
 set -euo pipefail
 
 AUTH_URL="${AUTH_URL:-http://localhost:5196}"
-POSTGRES_CONTAINER="${POSTGRES_CONTAINER:-harbor-postgres}"
+POSTGRES_CONTAINER="${POSTGRES_CONTAINER-harbor-postgres}"
 POSTGRES_USER="${POSTGRES_USER:-harboruser}"
 POSTGRES_DATABASE="${POSTGRES_DATABASE:-harbor_db}"
 POSTGRES_HOST="${POSTGRES_HOST:-localhost}"

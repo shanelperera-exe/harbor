@@ -14,7 +14,11 @@ namespace Harbor.E2ETests.Pages
         public DeploymentsPage(IWebDriver driver)
         {
             _driver = driver;
-            _wait = new WebDriverWait(driver, TimeSpan.FromSeconds(20));
+            // 30 s gives headroom on slow CI runners: after FilterByStatus("Running") the
+            // component fetches, renders, then immediately starts a 5-second live-poll cycle
+            // (because all returned rows are active), adding an extra React render before the
+            // wait condition is first satisfied. 20 s was too tight in shared-runner CI.
+            _wait = new WebDriverWait(driver, TimeSpan.FromSeconds(30));
             // React re-renders can swap the element out between "found" and "read" -
             // treat that as "not ready yet" and keep polling, same as NotFound.
             _wait.IgnoreExceptionTypes(typeof(NoSuchElementException), typeof(StaleElementReferenceException));

@@ -1,4 +1,5 @@
 using DotNetEnv;
+using Harbor.Caching.Extensions;
 
 // Load .env file configurations
 Env.Load();
@@ -8,6 +9,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 
 builder.Services.AddControllers();
+builder.Services.AddHarborCaching(builder.Configuration);
 
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
 if (allowedOrigins == null || allowedOrigins.Length == 0)

@@ -38,16 +38,30 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
     restart: unless-stopped
 
+  redis:
+    image: redis:7-alpine
+    container_name: harbor-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    restart: unless-stopped
+
   api-gateway:
     build:
       context: .
       dockerfile: src/backend/Harbor.ApiGateway/Dockerfile
     container_name: harbor-api-gateway
     env_file: .env
+    environment:
+      REDIS_CONNECTION_STRING: redis:6379
     ports:
       - "5000:8080"
     volumes:
       - dp_keys:/root/.aspnet/DataProtection-Keys
+    depends_on:
+      - redis
     restart: unless-stopped
 
   authentication-service:
@@ -61,12 +75,14 @@ services:
       POSTGRES_PORT: 5432
       SMTP_HOST: mailpit
       SMTP_PORT: 1025
+      REDIS_CONNECTION_STRING: redis:6379
     ports:
       - "5001:8080"
     volumes:
       - dp_keys:/root/.aspnet/DataProtection-Keys
     depends_on:
       - postgres
+      - redis
     restart: unless-stopped
 
   project-service:
@@ -79,6 +95,7 @@ services:
       POSTGRES_SERVER: postgres
       POSTGRES_PORT: 5432
       AUTH_SERVICE_URL: ${AUTH_SERVICE_URL:-http://authentication-service:8080}
+      REDIS_CONNECTION_STRING: redis:6379
     ports:
       - "5002:8080"
     volumes:
@@ -95,6 +112,7 @@ services:
       start_period: 20s
     depends_on:
       - postgres
+      - redis
     restart: unless-stopped
 
   environment-service:
@@ -106,12 +124,14 @@ services:
     environment:
       POSTGRES_SERVER: postgres
       POSTGRES_PORT: 5432
+      REDIS_CONNECTION_STRING: redis:6379
     ports:
       - "5003:8080"
     volumes:
       - dp_keys:/root/.aspnet/DataProtection-Keys
     depends_on:
       - postgres
+      - redis
     restart: unless-stopped
 
   deployment-service:
@@ -126,6 +146,7 @@ services:
       AUTH_SERVICE_URL: ${AUTH_SERVICE_URL:-http://authentication-service:8080}
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       KAFKA_DEPLOYMENT_TOPIC: ${KAFKA_DEPLOYMENT_TOPIC:-deployment-events}
+      REDIS_CONNECTION_STRING: redis:6379
     ports:
       - "5004:8080"
     volumes:
@@ -134,6 +155,8 @@ services:
       postgres:
         condition: service_started
       kafka:
+        condition: service_started
+      redis:
         condition: service_started
       # Harbor.Deployment migration 0007 has a foreign key onto "Services",
       # which project-service creates. Starting them together makes the
@@ -154,12 +177,14 @@ services:
     environment:
       POSTGRES_SERVER: postgres
       POSTGRES_PORT: 5432
+      REDIS_CONNECTION_STRING: redis:6379
     ports:
       - "5005:8080"
     volumes:
       - dp_keys:/root/.aspnet/DataProtection-Keys
     depends_on:
       - postgres
+      - redis
     restart: unless-stopped
 
   harbor-web:
@@ -183,3 +208,4 @@ services:
 volumes:
   postgres_data:
   dp_keys:
+  redis_data:

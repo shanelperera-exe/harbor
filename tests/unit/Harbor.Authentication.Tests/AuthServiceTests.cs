@@ -5,6 +5,8 @@ using Harbor.Authentication.Models;
 using Harbor.Authentication.Repositories;
 using Harbor.Authentication.Services;
 
+using Harbor.Caching;
+
 namespace Harbor.Authentication.Tests
 {
     public class AuthServiceTests
@@ -12,6 +14,7 @@ namespace Harbor.Authentication.Tests
         private readonly Mock<IUserRepository> _userRepositoryMock;
         private readonly Mock<IJwtService> _jwtServiceMock;
         private readonly Mock<IEmailService> _emailServiceMock;
+        private readonly Mock<ICacheService> _cacheMock;
         private readonly AuthService _authService;
 
         public AuthServiceTests()
@@ -19,7 +22,8 @@ namespace Harbor.Authentication.Tests
             _userRepositoryMock = new Mock<IUserRepository>();
             _jwtServiceMock = new Mock<IJwtService>();
             _emailServiceMock = new Mock<IEmailService>();
-            _authService = new AuthService(_userRepositoryMock.Object, _jwtServiceMock.Object, _emailServiceMock.Object);
+            _cacheMock = new Mock<ICacheService>();
+            _authService = new AuthService(_userRepositoryMock.Object, _jwtServiceMock.Object, _emailServiceMock.Object, _cacheMock.Object);
         }
 
         // ---------- RegisterAsync tests ----------

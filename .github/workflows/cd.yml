@@ -128,6 +128,8 @@ jobs:
                 "FRONTEND_URL=https://harborapp.tech" \
                 "API_GATEWAY_URL=https://api.harborapp.tech" \
                 "ALLOWED_ORIGINS=https://harborapp.tech,https://admin.harborapp.tech" \
+                "REDIS_CONNECTION_STRING=${{ vars.REDIS_CONNECTION_STRING }}" \
+                "REDIS_INSTANCE_NAME=${{ vars.REDIS_INSTANCE_NAME }}" \
               --min-replicas 0 \
               --max-replicas 1 \
               --cpu 0.5 \

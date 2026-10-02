@@ -54,29 +54,14 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # The internal FQDN for each Container App is {appName}.internal.{envDefaultDomain}.
-      # Backend APIs use internal ingress; only they (and other apps in the same ACA
-      # environment) can reach them via this hostname. The gateway must use these
-      # internal FQDNs — not the public ones — so that traffic never leaves the ACA
-      # environment boundary for service-to-service calls.
-      - name: Resolve environment domain
-        id: get-domain
+      # Backend APIs use internal ingress in the same ACA environment.
+      # Service-to-service communication uses the application names directly.
+      - name: Configure backend URLs
         run: |
-          DOMAIN=$(az containerapp env show \
-            -n "$ACA_ENVIRONMENT" -g "$RESOURCE_GROUP" \
-            --query properties.defaultDomain -o tsv | tr -d '[:space:]')
-          echo "DOMAIN=$DOMAIN" >> $GITHUB_ENV
-
           # AUTH_SERVICE_URL is consumed by Harbor.Deployment for service-to-service
-          # calls to the Auth API (JWT validation). Use the internal FQDN so that
-          # this call stays within the ACA environment and never traverses the public
-          # internet or requires an external ingress on harbor-auth-api.
-          # Warn (but don't fail) if the auth API doesn't exist yet on first deploy.
-          if ! az containerapp show -n harbor-auth-api -g "$RESOURCE_GROUP" \
-                 --query id -o tsv 2>/dev/null | grep -q .; then
-            echo "::warning::harbor-auth-api not found yet; AUTH_SERVICE_URL will use constructed internal FQDN"
-          fi
-          echo "AUTH_SERVICE_URL=https://harbor-auth-api.internal.$DOMAIN" >> $GITHUB_ENV
+          # calls to the Auth API (JWT validation). Use the internal service name so that
+          # this call stays within the ACA environment.
+          echo "AUTH_SERVICE_URL=http://harbor-auth-api" >> $GITHUB_ENV
 
       - name: Build and deploy to Azure Container Apps
         uses: azure/container-apps-deploy-action@v1
@@ -178,39 +163,16 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Resolve environment domain
+      # Backend APIs run with internal ingress in the same ACA environment.
+      # The gateway must reach them via their internal ACA service names.
+      # Do NOT use the public FQDN or .internal. FQDNs for these calls.
+      - name: Resolve backend internal URLs
         run: |
-          DOMAIN=$(az containerapp env show \
-            -n "$ACA_ENVIRONMENT" -g "$RESOURCE_GROUP" \
-            --query properties.defaultDomain -o tsv | tr -d '[:space:]')
-          echo "DOMAIN=$DOMAIN" >> $GITHUB_ENV
-
-      # Backend APIs run with internal ingress, so the gateway must reach them via
-      # their ACA internal FQDN: {appName}.internal.{envDefaultDomain}.
-      # This hostname resolves only within the ACA environment (private DNS) and
-      # keeps all service-to-service traffic inside the environment boundary.
-      #
-      # Do NOT use the public FQDN ({appName}.{envDefaultDomain}) for these calls;
-      # backend apps have internal ingress and are not reachable on the public FQDN.
-      - name: Resolve backend internal FQDNs
-        run: |
-          resolve () {
-            local app="$1" var="$2"
-            # Confirm the app exists; warn (but don't fail) so first-deploy still proceeds.
-            if ! az containerapp show -n "$app" -g "$RESOURCE_GROUP" \
-                   --query id -o tsv 2>/dev/null | grep -q .; then
-              echo "::warning::$app not found in Azure yet; proceeding with constructed internal FQDN"
-            fi
-            # Internal FQDN: {appName}.internal.{envDefaultDomain}
-            # This is the ACA-private hostname for internal-ingress apps and is the
-            # correct address for YARP to proxy to from within the same environment.
-            echo "$var=https://$app.internal.$DOMAIN" >> $GITHUB_ENV
-          }
-          resolve harbor-auth-api    AUTH_FQDN
-          resolve harbor-project-api PROJECT_FQDN
-          resolve harbor-env-api     ENV_FQDN
-          resolve harbor-deploy-api  DEPLOY_FQDN
-          resolve harbor-report-api  REPORTING_FQDN
+          echo "AUTH_FQDN=http://harbor-auth-api" >> $GITHUB_ENV
+          echo "PROJECT_FQDN=http://harbor-project-api" >> $GITHUB_ENV
+          echo "ENV_FQDN=http://harbor-env-api" >> $GITHUB_ENV
+          echo "DEPLOY_FQDN=http://harbor-deploy-api" >> $GITHUB_ENV
+          echo "REPORTING_FQDN=http://harbor-report-api" >> $GITHUB_ENV
 
       - name: Build and deploy API Gateway to ACA
         uses: azure/container-apps-deploy-action@v1
@@ -261,40 +223,21 @@ jobs:
           echo "Active destinations:"
           echo "$DESTINATIONS"
 
-          # Every YARP destination must:
-          #   1. Start with https://
-          #   2. Contain .internal. (ACA private-DNS hostname for internal-ingress apps)
-          #   3. Belong to the current ACA environment domain (prevents config drift to
-          #      wrong environments or external addresses)
-          #   4. Reference the expected service name
-
-          # 1. All must start with https://
-          if echo "$DESTINATIONS" | grep -qv '^https://'; then
-            echo "::error::Every destination must begin with https://"
-            exit 1
-          fi
-
-          # 2. All must use the .internal. ACA hostname (backend-internal routing).
-          #    A public FQDN would not resolve for internal-ingress apps.
-          if echo "$DESTINATIONS" | grep -qv '\.internal\.'; then
-            echo "::error::Gateway destinations do not all use ACA internal FQDNs (.internal.)."
-            exit 1
-          fi
-
-          # 3. Every destination must belong to the current ACA environment domain.
-          if echo "$DESTINATIONS" | grep -qv "\.internal\.$DOMAIN"; then
-            echo "::error::One or more destinations do not match the current ACA environment domain ($DOMAIN)."
-            exit 1
-          fi
-
-          # 4. One destination per expected backend service.
+          # Every YARP destination must be the internal ACA service name over HTTP.
           for app in harbor-auth-api harbor-project-api harbor-env-api harbor-deploy-api harbor-report-api; do
-            if ! echo "$DESTINATIONS" | grep -q "://$app\.internal\."; then
-              echo "::error::No internal destination for $app found among active destinations."
+            if ! echo "$DESTINATIONS" | grep -q "^http://$app$"; then
+              echo "::error::No internal destination for http://$app found among active destinations."
               exit 1
             fi
           done
-          echo "All five destinations are valid ACA internal FQDNs for environment $DOMAIN. ✓"
+
+          # Ensure there are no accidental public or .internal. FQDNs.
+          if echo "$DESTINATIONS" | grep -q '\.azurecontainerapps\.io'; then
+            echo "::error::Destinations must not use public or .internal. azurecontainerapps.io FQDNs."
+            exit 1
+          fi
+
+          echo "All five destinations are valid ACA internal service names. ✓"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Job 3 — Deploy frontend UIs (depends on gateway so the FQDN can be read back)

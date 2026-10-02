@@ -254,6 +254,11 @@ jobs:
               curl -sf "http://localhost:5173/src/main.tsx" > /dev/null || true
               curl -sf "http://localhost:5173/src/pages/auth/Login.tsx" > /dev/null || true
               curl -sf "http://localhost:5173/src/pages/auth/CreateAccount.tsx" > /dev/null || true
+              # Pre-warm the Deployments route so its modules are compiled before the
+              # StatusFilter E2E test navigates there; a cold compile can consume most
+              # of Selenium's wait budget and cause a spurious 20-second timeout.
+              curl -sf "http://localhost:5173/src/pages/deployments/Deployments.tsx" > /dev/null || true
+              curl -sf "http://localhost:5173/src/components/ui/FilterDropdown.tsx" > /dev/null || true
               sleep 3
               break
             fi

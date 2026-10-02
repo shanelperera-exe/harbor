@@ -79,6 +79,10 @@ namespace Harbor.E2ETests.Pages
                 throw new InvalidOperationException($"Could not open the status filter option '{target}'.");
             }
 
+            // Wait for framer-motion dropdown open animation (200ms) to finish.
+            // Otherwise, Selenium attempts to click while the element is still moving.
+            System.Threading.Thread.Sleep(300);
+
             ((IJavaScriptExecutor)_driver).ExecuteScript("arguments[0].scrollIntoView({block:'center'});", option);
             option.Click();
 

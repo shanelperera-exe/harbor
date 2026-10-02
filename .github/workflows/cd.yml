@@ -136,9 +136,9 @@ jobs:
                 "GOOGLE_CLIENT_ID=${{ vars.GOOGLE_CLIENT_ID }}" \
                 "GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET" \
                 "AUTH_SERVICE_URL=$AUTH_SERVICE_URL" \
-                "FRONTEND_URL=https://harbor-web-ui.$DOMAIN" \
-                "API_GATEWAY_URL=https://harbor-api-gateway.$DOMAIN" \
-                "ALLOWED_ORIGINS=https://harbor-admin-ui.$DOMAIN,https://harbor-web-ui.$DOMAIN" \
+                "FRONTEND_URL=https://harborapp.tech" \
+                "API_GATEWAY_URL=https://api.harborapp.tech" \
+                "ALLOWED_ORIGINS=https://harborapp.tech,https://admin.harborapp.tech" \
               --min-replicas 0 \
               --max-replicas 1 \
               --cpu 0.5 \
@@ -238,8 +238,8 @@ jobs:
                 "ReverseProxy__Clusters__environmentCluster__Destinations__destination1__Address=$ENV_FQDN" \
                 "ReverseProxy__Clusters__deploymentCluster__Destinations__destination1__Address=$DEPLOY_FQDN" \
                 "ReverseProxy__Clusters__reportingCluster__Destinations__destination1__Address=$REPORTING_FQDN" \
-                "ALLOWED_ORIGINS=https://harbor-admin-ui.$DOMAIN,https://harbor-web-ui.$DOMAIN" \
-                "FRONTEND_URL=https://harbor-web-ui.$DOMAIN" \
+                "ALLOWED_ORIGINS=https://harborapp.tech,https://admin.harborapp.tech" \
+                "FRONTEND_URL=https://harborapp.tech" \
               --min-replicas 0 \
               --max-replicas 1 \
               --cpu 0.5 \
@@ -315,16 +315,7 @@ jobs:
 
       - name: Resolve API Gateway URL
         run: |
-          # The gateway has external ingress, so ingress.fqdn is the correct non-.internal. FQDN.
-          GATEWAY_FQDN=$(az containerapp show \
-            --name harbor-api-gateway \
-            --resource-group "$RESOURCE_GROUP" \
-            --query properties.configuration.ingress.fqdn -o tsv | tr -d '[:space:]')
-          if [ -z "$GATEWAY_FQDN" ]; then
-            echo "::error::harbor-api-gateway has no external FQDN. Verify that ingress is external."
-            exit 1
-          fi
-          echo "GATEWAY_URL=https://$GATEWAY_FQDN" >> $GITHUB_ENV
+          echo "GATEWAY_URL=https://api.harborapp.tech" >> $GITHUB_ENV
 
       - name: Log in to ACR
         run: docker login "$ACR_LOGIN_SERVER" -u "${{ secrets.ACR_USERNAME }}" -p "${{ secrets.ACR_PASSWORD }}"

@@ -12,12 +12,14 @@ using Harbor.GitHub.Services;
 using Harbor.Authentication.Services;
 using Harbor.Authentication.Models;
 using Harbor.Authentication.Repositories;
+using Harbor.Caching.Extensions;
 Env.TraversePath().Load();
 
 var builder = WebApplication.CreateBuilder(args);
 
 
 builder.Services.AddControllers();
+builder.Services.AddHarborCaching(builder.Configuration);
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedHost | ForwardedHeaders.XForwardedProto;
@@ -226,6 +228,7 @@ if (!builder.Configuration.GetValue("DisableHttpsRedirection", false))
     app.UseHttpsRedirection();
 
 app.UseAuthentication();
+app.UseMiddleware<Harbor.Caching.Middleware.TokenBlacklistMiddleware>();
 app.UseAuthorization();
 
 app.MapControllers();

@@ -1,6 +1,7 @@
 using Harbor.Project.DTOs;
 using Harbor.Project.Models;
 using Harbor.Project.Repositories;
+using Harbor.Caching;
 
 namespace Harbor.Project.Services
 {
@@ -8,11 +9,13 @@ namespace Harbor.Project.Services
     {
         private readonly IServiceRepository _serviceRepository;
         private readonly IProjectRepository _projectRepository;
+        private readonly ICacheService _cache;
 
-        public ServiceService(IServiceRepository serviceRepository, IProjectRepository projectRepository)
+        public ServiceService(IServiceRepository serviceRepository, IProjectRepository projectRepository, ICacheService cache)
         {
             _serviceRepository = serviceRepository;
             _projectRepository = projectRepository;
+            _cache = cache;
         }
 
         public async Task<(bool Success, string? Error, ServiceResponse? Data)> CreateAsync(string projectId, CreateServiceRequest request, int userId, bool isAdmin)
@@ -50,6 +53,8 @@ namespace Harbor.Project.Services
 
             var id = await _serviceRepository.CreateAsync(serviceEntity);
             var service = await _serviceRepository.GetByIdAsync(id);
+            
+            await _cache.RemoveAsync(CacheKeys.ServicesByProject(project.Id));
 
             return (true, null, ToResponse(service!));
         }
@@ -60,8 +65,12 @@ namespace Harbor.Project.Services
             if (project == null) return (false, "Project not found.", null);
             if (!isAdmin && project.OwnerId != userId) return (false, "You do not have permission to view this project's services.", null);
 
-            var services = await _serviceRepository.GetByProjectIdAsync(project.Id);
-            return (true, null, services.Select(ToResponse).ToList());
+            var services = await _cache.GetOrSetAsync(
+                CacheKeys.ServicesByProject(project.Id),
+                () => _serviceRepository.GetByProjectIdAsync(project.Id),
+                CacheTtl.ServiceList
+            );
+            return (true, null, (services ?? new List<ServiceEntity>()).Select(ToResponse).ToList());
         }
 
         public async Task<(bool Success, string? Error)> DeleteAsync(string serviceId, int userId, bool isAdmin)
@@ -75,6 +84,8 @@ namespace Harbor.Project.Services
 
             var deleted = await _serviceRepository.DeleteAsync(service.Id);
             if (!deleted) return (false, "Failed to delete service.");
+
+            await _cache.RemoveAsync(CacheKeys.ServicesByProject(project.Id));
 
             return (true, null);
         }
@@ -131,6 +142,8 @@ namespace Harbor.Project.Services
 
             var updated = await _serviceRepository.UpdateAsync(service);
             if (!updated) return (false, "Failed to update service.", null);
+
+            await _cache.RemoveAsync(CacheKeys.ServicesByProject(project.Id));
 
             var updatedService = await _serviceRepository.GetByIdAsync(service.Id);
             return (true, null, ToResponse(updatedService!));

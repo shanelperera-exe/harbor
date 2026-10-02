@@ -10,12 +10,14 @@ namespace Harbor.Project.Tests
     public class ProjectServiceTests
     {
         private readonly Mock<IProjectRepository> _projectRepositoryMock;
+        private readonly TestCacheService _cacheService;
         private readonly ProjectService _projectService;
 
         public ProjectServiceTests()
         {
             _projectRepositoryMock = new Mock<IProjectRepository>();
-            _projectService = new ProjectService(_projectRepositoryMock.Object);
+            _cacheService = new TestCacheService();
+            _projectService = new ProjectService(_projectRepositoryMock.Object, _cacheService);
         }
 
         // ---------- CreateAsync: Scenario 1 - Create project (valid data) ----------

@@ -2,6 +2,7 @@ using DotNetEnv;
 using Microsoft.AspNetCore.HttpOverrides;
 using Npgsql;
 using Yarp.ReverseProxy.Transforms;
+using Harbor.Caching.Extensions;
 
 // Load .env file configurations by traversing up the directory tree
 Env.TraversePath().Load();
@@ -11,6 +12,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 
 builder.Services.AddControllers();
+builder.Services.AddHarborCaching(builder.Configuration);
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();

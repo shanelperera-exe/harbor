@@ -11,13 +11,14 @@ namespace Harbor.Project.Tests
     {
         private readonly Mock<IServiceRepository> _serviceRepository = new();
         private readonly Mock<IProjectRepository> _projectRepository = new();
+        private readonly TestCacheService _cacheService = new();
         private readonly ServiceService _service;
 
         private const int OwnerId = 7;
 
         public ServiceServiceTests()
         {
-            _service = new ServiceService(_serviceRepository.Object, _projectRepository.Object);
+            _service = new ServiceService(_serviceRepository.Object, _projectRepository.Object, _cacheService);
         }
 
         private void SetupProject(ProjectEntity? project)

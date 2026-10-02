@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Harbor.GitHub;
 using System.Text;
+using Harbor.Caching.Extensions;
 
 if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("JWT_SECRET")))
 {
@@ -12,6 +13,7 @@ if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("JWT_SECRET")))
 var builder = WebApplication.CreateBuilder(args);
 // duplicate builder removed
 builder.Services.AddControllers();
+builder.Services.AddHarborCaching(builder.Configuration);
 
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
 if (allowedOrigins == null || allowedOrigins.Length == 0)
@@ -127,6 +129,7 @@ if (!builder.Configuration.GetValue("DisableHttpsRedirection", false))
     app.UseHttpsRedirection();
 
 app.UseAuthentication();
+app.UseMiddleware<Harbor.Caching.Middleware.TokenBlacklistMiddleware>();
 app.UseAuthorization();
 
 app.MapControllers();

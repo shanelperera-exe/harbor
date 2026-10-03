@@ -592,4 +592,159 @@ public class DeploymentRepository(DbConnectionFactory dbFactory) : IDeploymentRe
         command.Parameters.AddWithValue("workflowRunUrl", (object?)source.WorkflowRunUrl ?? DBNull.Value);
         return Convert.ToInt32(await command.ExecuteScalarAsync());
     }
+
+    public async Task<IReadOnlyList<DashboardProjectEntity>> GetDashboardProjectsAsync(int userId, bool isAdmin)
+    {
+        await using var connection = dbFactory.CreateConnection();
+        await connection.OpenAsync();
+        await using var command = connection.CreateCommand();
+        command.CommandText = @"
+            SELECT p.""Id"", p.""PublicId"", p.""Name"", p.""OwnerId"", p.""CreatedAt"",
+                   COUNT(d.""Id"") AS ""TotalDeployments"",
+                   (
+                       SELECT d2.""Status""
+                       FROM ""Deployments"" d2
+                       JOIN ""Services"" s2 ON d2.""ServiceId"" = s2.""Id""
+                       WHERE s2.""ProjectId"" = p.""Id""
+                       ORDER BY d2.""StartedAt"" DESC, d2.""Id"" DESC
+                       LIMIT 1
+                   ) AS ""LatestStatus"",
+                   (
+                       SELECT d2.""StartedAt""
+                       FROM ""Deployments"" d2
+                       JOIN ""Services"" s2 ON d2.""ServiceId"" = s2.""Id""
+                       WHERE s2.""ProjectId"" = p.""Id""
+                       ORDER BY d2.""StartedAt"" DESC, d2.""Id"" DESC
+                       LIMIT 1
+                   ) AS ""LatestDeploymentTime""
+            FROM ""Projects"" p
+            LEFT JOIN ""Services"" s ON p.""Id"" = s.""ProjectId""
+            LEFT JOIN ""Deployments"" d ON s.""Id"" = d.""ServiceId""
+            WHERE p.""IsArchived"" = FALSE
+              AND (@isAdmin OR p.""OwnerId"" = @userId)
+            GROUP BY p.""Id"", p.""PublicId"", p.""Name"", p.""OwnerId"", p.""CreatedAt""
+            ORDER BY p.""CreatedAt"" DESC, p.""Id"" DESC;";
+        command.Parameters.AddWithValue("userId", userId);
+        command.Parameters.AddWithValue("isAdmin", isAdmin);
+
+        var list = new List<DashboardProjectEntity>();
+        await using var reader = await command.ExecuteReaderAsync();
+        while (await reader.ReadAsync())
+        {
+            list.Add(new DashboardProjectEntity
+            {
+                Id = reader.GetInt32(0),
+                PublicId = reader.IsDBNull(1) ? string.Empty : reader.GetString(1),
+                Name = reader.GetString(2),
+                OwnerId = reader.GetInt32(3),
+                CreatedAt = reader.GetDateTime(4),
+                TotalDeployments = Convert.ToInt32(reader.GetInt64(5)),
+                LatestStatus = reader.IsDBNull(6) ? null : reader.GetString(6),
+                LatestDeploymentTime = reader.IsDBNull(7) ? null : reader.GetDateTime(7)
+            });
+        }
+        return list;
+    }
+
+    public async Task<IReadOnlyList<DashboardDeploymentEntity>> GetDashboardRecentDeploymentsAsync(int userId, bool isAdmin, int limit = 10)
+    {
+        await using var connection = dbFactory.CreateConnection();
+        await connection.OpenAsync();
+        await using var command = connection.CreateCommand();
+        command.CommandText = @"
+            SELECT d.""Id"", d.""PublicId"", d.""ServiceId"", d.""OwnerId"", d.""Environment"", d.""Version"",
+                   d.""CommitSha"", d.""Status"", d.""StartedAt"", d.""CompletedAt"", d.""FailureReason"",
+                   d.""WorkflowFile"", d.""WorkflowRef"", d.""TriggerError"", d.""WorkflowRunId"", d.""WorkflowRunUrl"",
+                   p.""Name"" AS ""ProjectName"", s.""Name"" AS ""ServiceName"", s.""Type"" AS ""ServiceType"",
+                   u.""Username"" AS ""UserName"", d.""CommitMessage"", p.""Id"" AS ""ProjectId""
+            FROM ""Deployments"" d
+            JOIN ""Services"" s ON d.""ServiceId"" = s.""Id""
+            JOIN ""Projects"" p ON s.""ProjectId"" = p.""Id""
+            LEFT JOIN ""Users"" u ON d.""OwnerId"" = u.""Id""
+            WHERE p.""IsArchived"" = FALSE
+              AND (@isAdmin OR p.""OwnerId"" = @userId)
+            ORDER BY d.""StartedAt"" DESC, d.""Id"" DESC
+            LIMIT @limit;";
+        command.Parameters.AddWithValue("userId", userId);
+        command.Parameters.AddWithValue("isAdmin", isAdmin);
+        command.Parameters.AddWithValue("limit", Math.Max(1, Math.Min(limit, 100)));
+
+        var list = new List<DashboardDeploymentEntity>();
+        await using var reader = await command.ExecuteReaderAsync();
+        while (await reader.ReadAsync())
+        {
+            list.Add(new DashboardDeploymentEntity
+            {
+                Id = reader.GetInt32(0),
+                PublicId = reader.IsDBNull(1) ? string.Empty : reader.GetString(1),
+                ServiceId = reader.GetInt32(2),
+                OwnerId = reader.GetInt32(3),
+                Environment = reader.GetString(4),
+                Version = reader.GetString(5),
+                CommitSha = reader.IsDBNull(6) ? null : reader.GetString(6),
+                Status = reader.GetString(7),
+                StartedAt = reader.GetDateTime(8),
+                CompletedAt = reader.IsDBNull(9) ? null : reader.GetDateTime(9),
+                FailureReason = reader.IsDBNull(10) ? null : reader.GetString(10),
+                WorkflowFile = reader.IsDBNull(11) ? null : reader.GetString(11),
+                WorkflowRef = reader.IsDBNull(12) ? null : reader.GetString(12),
+                TriggerError = reader.IsDBNull(13) ? null : reader.GetString(13),
+                WorkflowRunId = reader.IsDBNull(14) ? null : reader.GetInt64(14),
+                WorkflowRunUrl = reader.IsDBNull(15) ? null : reader.GetString(15),
+                ProjectName = reader.IsDBNull(16) ? null : reader.GetString(16),
+                ServiceName = reader.IsDBNull(17) ? null : reader.GetString(17),
+                ServiceType = reader.IsDBNull(18) ? null : reader.GetString(18),
+                UserName = reader.IsDBNull(19) ? null : reader.GetString(19),
+                CommitMessage = reader.IsDBNull(20) ? null : reader.GetString(20),
+                ProjectId = reader.GetInt32(21)
+            });
+        }
+        return list;
+    }
+
+    public async Task<DashboardMetricsEntity> GetDashboardMetricsAsync(int userId, bool isAdmin)
+    {
+        await using var connection = dbFactory.CreateConnection();
+        await connection.OpenAsync();
+
+        await using var projectCmd = connection.CreateCommand();
+        projectCmd.CommandText = @"
+            SELECT COUNT(1)
+            FROM ""Projects""
+            WHERE ""IsArchived"" = FALSE
+              AND (@isAdmin OR ""OwnerId"" = @userId);";
+        projectCmd.Parameters.AddWithValue("userId", userId);
+        projectCmd.Parameters.AddWithValue("isAdmin", isAdmin);
+        var totalProjects = Convert.ToInt32(await projectCmd.ExecuteScalarAsync());
+
+        await using var deployCmd = connection.CreateCommand();
+        deployCmd.CommandText = @"
+            SELECT
+                COUNT(1) AS ""TotalDeployments"",
+                COUNT(1) FILTER (WHERE LOWER(d.""Status"") IN ('succeeded', 'ready')) AS ""SuccessfulDeployments"",
+                COUNT(1) FILTER (WHERE LOWER(d.""Status"") IN ('running', 'pending', 'queued')) AS ""RunningDeployments"",
+                COUNT(1) FILTER (WHERE LOWER(d.""Status"") IN ('failed', 'error')) AS ""FailedDeployments""
+            FROM ""Deployments"" d
+            JOIN ""Services"" s ON d.""ServiceId"" = s.""Id""
+            JOIN ""Projects"" p ON s.""ProjectId"" = p.""Id""
+            WHERE p.""IsArchived"" = FALSE
+              AND (@isAdmin OR p.""OwnerId"" = @userId);";
+        deployCmd.Parameters.AddWithValue("userId", userId);
+        deployCmd.Parameters.AddWithValue("isAdmin", isAdmin);
+
+        await using var reader = await deployCmd.ExecuteReaderAsync();
+        if (await reader.ReadAsync())
+        {
+            return new DashboardMetricsEntity
+            {
+                TotalProjects = totalProjects,
+                TotalDeployments = Convert.ToInt32(reader.GetInt64(0)),
+                SuccessfulDeployments = Convert.ToInt32(reader.GetInt64(1)),
+                RunningDeployments = Convert.ToInt32(reader.GetInt64(2)),
+                FailedDeployments = Convert.ToInt32(reader.GetInt64(3))
+            };
+        }
+
+        return new DashboardMetricsEntity { TotalProjects = totalProjects };
+    }
 }

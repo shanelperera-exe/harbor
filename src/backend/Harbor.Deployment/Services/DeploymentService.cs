@@ -332,4 +332,71 @@ public class DeploymentService : IDeploymentService
             logger.LogError(ex, "Failed to publish deployment lifecycle event for deployment {DeploymentId}", deploymentId);
         }
     }
+
+    public async Task<DashboardSummaryResponse> GetDashboardAsync(int userId, bool isAdmin = false)
+    {
+        var projectsTask = repository.GetDashboardProjectsAsync(userId, isAdmin);
+        var deploymentsTask = repository.GetDashboardRecentDeploymentsAsync(userId, isAdmin, limit: 10);
+        var metricsTask = repository.GetDashboardMetricsAsync(userId, isAdmin);
+
+        await Task.WhenAll(projectsTask, deploymentsTask, metricsTask);
+
+        var projects = (await projectsTask).Select(p => new DashboardProjectDto
+        {
+            Id = p.Id,
+            PublicId = p.PublicId,
+            Name = p.Name,
+            Description = p.Description,
+            RepositoryUrl = p.RepositoryUrl,
+            OwnerId = p.OwnerId,
+            CreatedAt = p.CreatedAt,
+            TotalDeployments = p.TotalDeployments,
+            LatestStatus = p.LatestStatus,
+            LatestDeploymentTime = p.LatestDeploymentTime
+        }).ToList();
+
+        var recentDeployments = (await deploymentsTask).Select(d =>
+        {
+            var publicId = string.IsNullOrEmpty(d.PublicId) ? d.Id.ToString() : d.PublicId;
+            var hash = !string.IsNullOrEmpty(d.PublicId) && d.PublicId.StartsWith("dep-")
+                ? (d.PublicId.Length >= 13 ? d.PublicId.Substring(4, 9) : d.PublicId.Substring(4))
+                : d.Id.ToString();
+
+            return new DashboardDeploymentDto
+            {
+                Id = d.Id,
+                PublicId = publicId,
+                Hash = hash,
+                ServiceId = d.ServiceId,
+                ServiceName = d.ServiceName,
+                ProjectId = d.ProjectId,
+                ProjectName = d.ProjectName,
+                Environment = d.Environment,
+                Version = d.Version,
+                CommitSha = d.CommitSha,
+                CommitMessage = d.CommitMessage,
+                Status = d.Status,
+                StartedAt = d.StartedAt,
+                CompletedAt = d.CompletedAt,
+                UserName = d.UserName
+            };
+        }).ToList();
+
+        var metricsEntity = await metricsTask;
+        var metrics = new DashboardMetricsDto
+        {
+            TotalProjects = metricsEntity.TotalProjects,
+            TotalDeployments = metricsEntity.TotalDeployments,
+            SuccessfulDeployments = metricsEntity.SuccessfulDeployments,
+            RunningDeployments = metricsEntity.RunningDeployments,
+            FailedDeployments = metricsEntity.FailedDeployments
+        };
+
+        return new DashboardSummaryResponse
+        {
+            Projects = projects,
+            RecentDeployments = recentDeployments,
+            Metrics = metrics
+        };
+    }
 }

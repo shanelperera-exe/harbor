@@ -1,11 +1,12 @@
 import './App.css';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import Home from './pages/home/Home';
 import CreateAccount from './pages/auth/CreateAccount';
 import Login from './pages/auth/Login';
 import PasswordReset from './pages/auth/PasswordReset';
 import MainLayout from './components/layout/MainLayout';
 import DashboardLayout from './components/layout/DashboardLayout';
+import Dashboard from './pages/dashboard/Dashboard';
 import Projects from './pages/projects/Projects';
 import CreateProject from './pages/projects/CreateProject';
 import ProjectSettings from './pages/projects/ProjectSettings';
@@ -32,7 +33,9 @@ function App() {
         <Route path="/oauth/callback" element={<ExternalAuthCallback />} />
         <Route path="/github/install/callback" element={<GitHubAppInstallCallback />} />
       </Route>
-      <Route path="/dashboard" element={<Navigate to="/projects" replace />} />
+      <Route path="/dashboard" element={<DashboardLayout />}>
+        <Route index element={<Dashboard />} />
+      </Route>
       <Route path="/projects" element={<DashboardLayout />}>
         <Route index element={<Projects />} />
         <Route path="new" element={<CreateProject />} />

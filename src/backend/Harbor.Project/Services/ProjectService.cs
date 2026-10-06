@@ -1,16 +1,19 @@
 using Harbor.Project.DTOs;
 using Harbor.Project.Models;
 using Harbor.Project.Repositories;
+using Harbor.Caching;
 
 namespace Harbor.Project.Services
 {
     public class ProjectService : IProjectService
     {
         private readonly IProjectRepository _projectRepository;
+        private readonly ICacheService _cache;
 
-        public ProjectService(IProjectRepository projectRepository)
+        public ProjectService(IProjectRepository projectRepository, ICacheService cache)
         {
             _projectRepository = projectRepository;
+            _cache = cache;
         }
 
         public async Task<(bool Success, string? Error, ProjectResponse? Data)> CreateAsync(CreateProjectRequest request, int ownerId)
@@ -47,21 +50,45 @@ namespace Harbor.Project.Services
             var newId = await _projectRepository.CreateAsync(project);
             project.Id = newId;
 
+            await _cache.RemoveAsync(CacheKeys.AllProjects());
+            await _cache.RemoveAsync(CacheKeys.ProjectsByOwner(ownerId));
+
             return (true, null, ToResponse(project));
         }
 
         public async Task<List<ProjectResponse>> GetAccessibleProjectsAsync(int userId, bool isAdmin)
         {
-            var projects = isAdmin
-                ? await _projectRepository.GetAllAsync()
-                : await _projectRepository.GetByOwnerAsync(userId);
+            List<ProjectEntity>? projects;
+            if (isAdmin)
+            {
+                projects = await _cache.GetOrSetAsync(
+                    CacheKeys.AllProjects(),
+                    () => _projectRepository.GetAllAsync(),
+                    CacheTtl.AllProjects);
+            }
+            else
+            {
+                projects = await _cache.GetOrSetAsync(
+                    CacheKeys.ProjectsByOwner(userId),
+                    () => _projectRepository.GetByOwnerAsync(userId),
+                    CacheTtl.ProjectList);
+            }
 
-            return projects.Select(ToResponse).ToList();
+            return (projects ?? new List<ProjectEntity>()).Select(ToResponse).ToList();
         }
 
         public async Task<ProjectResponse?> GetByIdAsync(string projectId)
         {
-            var project = await _projectRepository.GetByIdOrPublicIdAsync(projectId);
+            var cacheKey = int.TryParse(projectId, out var id) 
+                ? CacheKeys.ProjectById(id) 
+                : CacheKeys.ProjectByPublicId(projectId);
+
+            var project = await _cache.GetOrSetAsync(
+                cacheKey,
+                () => _projectRepository.GetByIdOrPublicIdAsync(projectId),
+                CacheTtl.Project
+            );
+            
             return project == null ? null : ToResponse(project);
         }
 
@@ -117,6 +144,15 @@ namespace Harbor.Project.Services
             }
 
             var refreshed = await _projectRepository.GetByIdAsync(project.Id);
+            
+            await _cache.RemoveAsync(CacheKeys.AllProjects());
+            await _cache.RemoveAsync(CacheKeys.ProjectsByOwner(project.OwnerId));
+            await _cache.RemoveAsync(CacheKeys.ProjectById(project.Id));
+            if (!string.IsNullOrEmpty(project.PublicId))
+            {
+                await _cache.RemoveAsync(CacheKeys.ProjectByPublicId(project.PublicId));
+            }
+
             return (true, null, false, ToResponse(refreshed!));
         }
 
@@ -143,6 +179,14 @@ namespace Harbor.Project.Services
             if (!archived)
             {
                 return (false, "Project could not be archived.", false);
+            }
+
+            await _cache.RemoveAsync(CacheKeys.AllProjects());
+            await _cache.RemoveAsync(CacheKeys.ProjectsByOwner(project.OwnerId));
+            await _cache.RemoveAsync(CacheKeys.ProjectById(project.Id));
+            if (!string.IsNullOrEmpty(project.PublicId))
+            {
+                await _cache.RemoveAsync(CacheKeys.ProjectByPublicId(project.PublicId));
             }
 
             return (true, null, false);

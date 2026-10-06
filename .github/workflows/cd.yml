@@ -2,10 +2,11 @@ name: CD Pipeline
 
 on:
   workflow_run:
-    workflows: [ "CI Pipeline" ]
-    types: [ completed ]
+    workflows: ["CI Pipeline"]
+    types: [completed]
   workflow_dispatch:
 
+# Deployments to production must never cancel each other mid-flight.
 concurrency:
   group: cd-production
   cancel-in-progress: false
@@ -13,13 +14,19 @@ concurrency:
 env:
   ACR_LOGIN_SERVER: ${{ vars.ACR_LOGIN_SERVER }}
   RESOURCE_GROUP: rg-harbor-centralindia
-  ACA_ENVIRONMENT: harbor-env
+  ACA_ENVIRONMENT: harbor-env-prod
   DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Job 1 — Deploy all backend API Container Apps (matrix, runs in parallel)
+# ─────────────────────────────────────────────────────────────────────────────
 jobs:
   deploy-backend-apis:
     name: Deploy Backend APIs
-    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
     environment: Production
     strategy:
@@ -37,38 +44,26 @@ jobs:
             dockerfile: src/backend/Harbor.Reporting/Dockerfile
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           ref: ${{ env.DEPLOY_SHA }}
 
-      - name: Azure Login
+      - name: Azure login
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # Every URL below is derived from the environment's default domain instead of being
-      # configured by hand. A Container App FQDN is always {appName}.{envDefaultDomain},
-      # so these values are deterministic once harbor-env exists.
-      - name: Resolve environment domain and auth FQDN
-        id: get-domain
+      # Backend APIs use internal ingress in the same ACA environment.
+      # Service-to-service communication uses the application names directly.
+      - name: Configure backend URLs
         run: |
-          DOMAIN=$(az containerapp env show -n ${{ env.ACA_ENVIRONMENT }} -g ${{ env.RESOURCE_GROUP }} --query properties.defaultDomain -o tsv | tr -d '[:space:]')
-          echo "DOMAIN=$DOMAIN" >> $GITHUB_ENV
+          # AUTH_SERVICE_URL is consumed by Harbor.Deployment for service-to-service
+          # calls to the Auth API (JWT validation). Use the internal service name so that
+          # this call stays within the ACA environment.
+          echo "AUTH_SERVICE_URL=http://harbor-auth-api" >> $GITHUB_ENV
 
-          # Read the auth API's FQDN from Azure rather than constructing it. The short name does
-          # not resolve from another container app, and the documented .internal. FQDN resolves
-          # but presents a certificate issued for the non-internal name. On the very first deploy
-          # harbor-auth-api may not exist yet, so fall back to the constructed form.
-          AUTH_FQDN=$(az containerapp show -n harbor-auth-api -g ${{ env.RESOURCE_GROUP }} \
-            --query properties.configuration.ingress.fqdn -o tsv 2>/dev/null | tr -d '[:space:]')
-          if [ -z "$AUTH_FQDN" ]; then
-            AUTH_FQDN="harbor-auth-api.$DOMAIN"
-            echo "::warning::harbor-auth-api not found yet; falling back to $AUTH_FQDN"
-          fi
-          echo "AUTH_SERVICE_URL=https://$AUTH_FQDN" >> $GITHUB_ENV
-
-      - name: Deploy to Azure Container Apps
+      - name: Build and deploy to Azure Container Apps
         uses: azure/container-apps-deploy-action@v1
         with:
           appSourcePath: ${{ github.workspace }}
@@ -99,7 +94,7 @@ jobs:
           for attempt in 1 2 3; do
             if az containerapp update \
               --name "${{ matrix.service }}" \
-              --resource-group "${{ env.RESOURCE_GROUP }}" \
+              --resource-group "$RESOURCE_GROUP" \
               --set-env-vars \
                 "POSTGRES_SERVER=${{ vars.POSTGRES_SERVER }}" \
                 "POSTGRES_PORT=${{ vars.POSTGRES_PORT }}" \
@@ -130,155 +125,58 @@ jobs:
                 "GOOGLE_CLIENT_ID=${{ vars.GOOGLE_CLIENT_ID }}" \
                 "GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET" \
                 "AUTH_SERVICE_URL=$AUTH_SERVICE_URL" \
-                "FRONTEND_URL=https://harbor-web-ui.$DOMAIN" \
-                "API_GATEWAY_URL=https://harbor-api-gateway.$DOMAIN" \
-                "ALLOWED_ORIGINS=https://harbor-admin-ui.$DOMAIN,https://harbor-web-ui.$DOMAIN" \
+                "FRONTEND_URL=https://harborapp.tech" \
+                "API_GATEWAY_URL=https://api.harborapp.tech" \
+                "ALLOWED_ORIGINS=https://harborapp.tech,https://admin.harborapp.tech" \
+                "REDIS_CONNECTION_STRING=${{ vars.REDIS_CONNECTION_STRING }}" \
+                "REDIS_INSTANCE_NAME=${{ vars.REDIS_INSTANCE_NAME }}" \
               --min-replicas 0 \
               --max-replicas 1 \
               --cpu 0.5 \
               --memory 1Gi; then
               exit 0
             fi
-            echo "Azure Container Apps update failed (attempt $attempt/3); retrying..."
+            echo "Update failed (attempt $attempt/3); retrying in 15s..."
             sleep 15
           done
           exit 1
 
-  deploy-frontends:
-    name: Deploy Frontend UIs
-    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
-    runs-on: ubuntu-latest
-    # The frontends bake the gateway origin into the bundle at build time, so they must be
-    # built after the gateway app exists and its FQDN can be read back from Azure.
-    needs: deploy-api-gateway
-    environment: Production
-    strategy:
-      matrix:
-        include:
-          - service: harbor-admin-ui
-            context: src/frontend/harbor-admin
-            dockerfile: src/frontend/harbor-admin/Dockerfile
-          - service: harbor-web-ui
-            context: src/frontend/harbor-web
-            dockerfile: src/frontend/harbor-web/Dockerfile
-
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ env.DEPLOY_SHA }}
-
-      - name: Azure Login
-        uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      - name: Resolve API Gateway URL
-        id: get-gateway
-        run: |
-          GATEWAY_FQDN=$(az containerapp show --name harbor-api-gateway --resource-group ${{ env.RESOURCE_GROUP }} --query properties.configuration.ingress.fqdn -o tsv | tr -d '[:space:]')
-          if [ -z "$GATEWAY_FQDN" ]; then
-            echo "::error::harbor-api-gateway has no external FQDN. Check that ingress is external and the environment is publicly accessible."
-            exit 1
-          fi
-          echo "GATEWAY_URL=https://$GATEWAY_FQDN" >> $GITHUB_ENV
-
-      - name: Log in to ACR
-        run: docker login ${{ env.ACR_LOGIN_SERVER }} -u ${{ secrets.ACR_USERNAME }} -p ${{ secrets.ACR_PASSWORD }}
-
-      - name: Build and Push Frontend Image
-        run: |
-          # The build context must be the app directory, not the repo root. Each frontend is a
-          # self-contained Vite project, so the root context made COPY package*.json pick up the
-          # repo-level package-lock.json (there is no root package.json) and left nginx.conf
-          # unreachable at the context root.
-          docker build \
-            --build-arg VITE_API_BASE_URL=$GATEWAY_URL/api \
-            --build-arg VITE_GITHUB_APP_SLUG=${{ vars.GH_APP_SLUG }} \
-            -f ${{ matrix.dockerfile }} \
-            -t ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.service }}:${{ env.DEPLOY_SHA }} \
-            ${{ matrix.context }}
-          docker push ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.service }}:${{ env.DEPLOY_SHA }}
-
-      - name: Deploy to Azure Container Apps
-        uses: azure/container-apps-deploy-action@v1
-        with:
-          registryUrl: ${{ env.ACR_LOGIN_SERVER }}
-          registryUsername: ${{ secrets.ACR_USERNAME }}
-          registryPassword: ${{ secrets.ACR_PASSWORD }}
-          containerAppName: ${{ matrix.service }}
-          resourceGroup: ${{ env.RESOURCE_GROUP }}
-          containerAppEnvironment: ${{ env.ACA_ENVIRONMENT }}
-          imageToDeploy: ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.service }}:${{ env.DEPLOY_SHA }}
-          ingress: external
-          targetPort: 80
-
-      - name: Cap frontend scaling
-        run: |
-          for attempt in 1 2 3; do
-            if az containerapp update \
-              --name "${{ matrix.service }}" \
-              --resource-group ${{ env.RESOURCE_GROUP }} \
-              --min-replicas 0 \
-              --max-replicas 1 \
-              --cpu 0.5 \
-              --memory 1Gi; then
-              exit 0
-            fi
-            echo "Azure Container Apps update failed (attempt $attempt/3); retrying..."
-            sleep 15
-          done
-          exit 1
-
+# ─────────────────────────────────────────────────────────────────────────────
+# Job 2 — Deploy the API Gateway (depends on all backend APIs)
+# ─────────────────────────────────────────────────────────────────────────────
   deploy-api-gateway:
     name: Deploy API Gateway
-    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
     needs: deploy-backend-apis
     environment: Production
+
     steps:
-      - name: Checkout Repository
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           ref: ${{ env.DEPLOY_SHA }}
 
-      - name: Azure Login
+      - name: Azure login
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Get ACA Environment Domain
+      # Backend APIs run with internal ingress in the same ACA environment.
+      # The gateway must reach them via their internal ACA service names.
+      # Do NOT use the public FQDN or .internal. FQDNs for these calls.
+      - name: Resolve backend internal URLs
         run: |
-          DOMAIN=$(az containerapp env show -n ${{ env.ACA_ENVIRONMENT }} -g ${{ env.RESOURCE_GROUP }} --query properties.defaultDomain -o tsv | tr -d '[:space:]')
-          echo "DOMAIN=$DOMAIN" >> $GITHUB_ENV
+          echo "AUTH_FQDN=http://harbor-auth-api" >> $GITHUB_ENV
+          echo "PROJECT_FQDN=http://harbor-project-api" >> $GITHUB_ENV
+          echo "ENV_FQDN=http://harbor-env-api" >> $GITHUB_ENV
+          echo "DEPLOY_FQDN=http://harbor-deploy-api" >> $GITHUB_ENV
+          echo "REPORTING_FQDN=http://harbor-report-api" >> $GITHUB_ENV
 
-      # Ask Azure for each backend's FQDN instead of constructing it.
-      #
-      # Two earlier attempts failed, both from guessing the name. The short name
-      # (http://harbor-auth-api) does not resolve from another container app, and the
-      # documented internal FQDN (harbor-auth-api.internal.<domain>) resolves but presents a
-      # certificate issued for the non-internal name, giving RemoteCertificateNameMismatch.
-      # The FQDN the control plane actually reports matches the certificate, and because
-      # ingress is internal the app stays unreachable from outside the environment.
-      - name: Resolve backend FQDNs
-        run: |
-          resolve () {
-            local fqdn
-            fqdn=$(az containerapp show -n "$1" -g ${{ env.RESOURCE_GROUP }} \
-              --query properties.configuration.ingress.fqdn -o tsv 2>/dev/null | tr -d '[:space:]')
-            if [ -z "$fqdn" ]; then
-              fqdn="$1.$DOMAIN"
-              echo "::warning::$1 has no reported FQDN yet; falling back to $fqdn"
-            fi
-            echo "$2=https://$fqdn" >> $GITHUB_ENV
-          }
-          resolve harbor-auth-api AUTH_FQDN
-          resolve harbor-project-api PROJECT_FQDN
-          resolve harbor-env-api ENV_FQDN
-          resolve harbor-deploy-api DEPLOY_FQDN
-          resolve harbor-report-api REPORTING_FQDN
-
-      - name: Deploy API Gateway to ACA
+      - name: Build and deploy API Gateway to ACA
         uses: azure/container-apps-deploy-action@v1
         with:
           appSourcePath: ${{ github.workspace }}
@@ -298,49 +196,133 @@ jobs:
           for attempt in 1 2 3; do
             if az containerapp update \
               --name harbor-api-gateway \
-              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --resource-group "$RESOURCE_GROUP" \
               --set-env-vars \
                 "ReverseProxy__Clusters__authCluster__Destinations__destination1__Address=$AUTH_FQDN" \
                 "ReverseProxy__Clusters__projectCluster__Destinations__destination1__Address=$PROJECT_FQDN" \
                 "ReverseProxy__Clusters__environmentCluster__Destinations__destination1__Address=$ENV_FQDN" \
                 "ReverseProxy__Clusters__deploymentCluster__Destinations__destination1__Address=$DEPLOY_FQDN" \
                 "ReverseProxy__Clusters__reportingCluster__Destinations__destination1__Address=$REPORTING_FQDN" \
-                "ALLOWED_ORIGINS=https://harbor-admin-ui.$DOMAIN,https://harbor-web-ui.$DOMAIN" \
-                "FRONTEND_URL=https://harbor-web-ui.$DOMAIN" \
+                "ALLOWED_ORIGINS=https://harborapp.tech,https://admin.harborapp.tech" \
+                "FRONTEND_URL=https://harborapp.tech" \
               --min-replicas 0 \
               --max-replicas 1 \
               --cpu 0.5 \
               --memory 1Gi; then
               exit 0
             fi
-            echo "Azure API Gateway update failed (attempt $attempt/3); retrying..."
+            echo "Update failed (attempt $attempt/3); retrying in 15s..."
             sleep 15
           done
           exit 1
 
-      - name: Verify reverse proxy destinations were applied
+      - name: Verify gateway destinations are valid
         run: |
-          DESTINATIONS=$(az containerapp show -n harbor-api-gateway -g ${{ env.RESOURCE_GROUP }} \
-            --query "properties.template.containers[0].env[?starts_with(name,'ReverseProxy')].value" -o tsv)
+          DESTINATIONS=$(az containerapp show \
+            -n harbor-api-gateway -g "$RESOURCE_GROUP" \
+            --query "properties.template.containers[0].env[?starts_with(name,'ReverseProxy')].value" \
+            -o tsv)
           echo "Active destinations:"
           echo "$DESTINATIONS"
-          # A bare short name does not resolve, and a .internal. FQDN fails certificate
-          # validation. The destination must be the FQDN the control plane reports.
-          if echo "$DESTINATIONS" | grep -q '\.internal\.'; then
-            echo "::error::gateway points at a .internal. FQDN, which fails TLS name validation."
-            exit 1
-          fi
-          if echo "$DESTINATIONS" | grep -qv '^https://'; then
-            echo "::error::every destination must be an https:// FQDN that matches the environment certificate."
-            exit 1
-          fi
+
+          # Every YARP destination must be the internal ACA service name over HTTP.
           for app in harbor-auth-api harbor-project-api harbor-env-api harbor-deploy-api harbor-report-api; do
-            if ! echo "$DESTINATIONS" | grep -q "://$app\."; then
-              echo "::error::no destination for $app among the active destinations"
+            if ! echo "$DESTINATIONS" | grep -q "^http://$app$"; then
+              echo "::error::No internal destination for http://$app found among active destinations."
               exit 1
             fi
           done
-          echo "All five destinations are certificate-matching FQDNs."
 
+          # Ensure there are no accidental public or .internal. FQDNs.
+          if echo "$DESTINATIONS" | grep -q '\.azurecontainerapps\.io'; then
+            echo "::error::Destinations must not use public or .internal. azurecontainerapps.io FQDNs."
+            exit 1
+          fi
 
+          echo "All five destinations are valid ACA internal service names. ✓"
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Job 3 — Deploy frontend UIs (depends on gateway so the FQDN can be read back)
+# ─────────────────────────────────────────────────────────────────────────────
+  deploy-frontends:
+    name: Deploy Frontend UIs
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'main')
+    runs-on: ubuntu-latest
+    # Frontends bake the gateway origin into the bundle at build time, so they
+    # must be built after the gateway app exists and its FQDN can be read back.
+    needs: deploy-api-gateway
+    environment: Production
+    strategy:
+      matrix:
+        include:
+          - service: harbor-admin-ui
+            context: src/frontend/harbor-admin
+            dockerfile: src/frontend/harbor-admin/Dockerfile
+          - service: harbor-web-ui
+            context: src/frontend/harbor-web
+            dockerfile: src/frontend/harbor-web/Dockerfile
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.DEPLOY_SHA }}
+
+      - name: Azure login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Resolve API Gateway URL
+        run: |
+          echo "GATEWAY_URL=https://api.harborapp.tech" >> $GITHUB_ENV
+
+      - name: Log in to ACR
+        run: docker login "$ACR_LOGIN_SERVER" -u "${{ secrets.ACR_USERNAME }}" -p "${{ secrets.ACR_PASSWORD }}"
+
+      - name: Build and push frontend image
+        run: |
+          # The build context must be the app directory, not the repo root. Each frontend is a
+          # self-contained Vite project; using the repo root caused COPY package*.json to pick
+          # up the repo-level package-lock.json (no root package.json exists) and left
+          # nginx.conf unreachable at the context root.
+          docker build \
+            --build-arg VITE_API_BASE_URL="$GATEWAY_URL/api" \
+            --build-arg VITE_GITHUB_APP_SLUG="${{ vars.GH_APP_SLUG }}" \
+            -f "${{ matrix.dockerfile }}" \
+            -t "$ACR_LOGIN_SERVER/${{ matrix.service }}:$DEPLOY_SHA" \
+            "${{ matrix.context }}"
+          docker push "$ACR_LOGIN_SERVER/${{ matrix.service }}:$DEPLOY_SHA"
+
+      - name: Deploy to Azure Container Apps
+        uses: azure/container-apps-deploy-action@v1
+        with:
+          registryUrl: ${{ env.ACR_LOGIN_SERVER }}
+          registryUsername: ${{ secrets.ACR_USERNAME }}
+          registryPassword: ${{ secrets.ACR_PASSWORD }}
+          containerAppName: ${{ matrix.service }}
+          resourceGroup: ${{ env.RESOURCE_GROUP }}
+          containerAppEnvironment: ${{ env.ACA_ENVIRONMENT }}
+          imageToDeploy: ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.service }}:${{ env.DEPLOY_SHA }}
+          ingress: external
+          targetPort: 80
+
+      - name: Cap frontend scaling
+        run: |
+          for attempt in 1 2 3; do
+            if az containerapp update \
+              --name "${{ matrix.service }}" \
+              --resource-group "$RESOURCE_GROUP" \
+              --min-replicas 0 \
+              --max-replicas 1 \
+              --cpu 0.5 \
+              --memory 1Gi; then
+              exit 0
+            fi
+            echo "Update failed (attempt $attempt/3); retrying in 15s..."
+            sleep 15
+          done
+          exit 1

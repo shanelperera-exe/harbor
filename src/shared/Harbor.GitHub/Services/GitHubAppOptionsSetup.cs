@@ -13,5 +13,8 @@ public sealed class GitHubAppOptionsSetup : IConfigureOptions<GitHubAppOptions>
         options.Slug = Environment.GetEnvironmentVariable("GH_APP_SLUG") ?? Environment.GetEnvironmentVariable("GITHUB_APP_SLUG") ?? string.Empty;
         options.WebhookSecret = Environment.GetEnvironmentVariable("GH_APP_WEBHOOK_SECRET") ?? Environment.GetEnvironmentVariable("GITHUB_APP_WEBHOOK_SECRET") ?? string.Empty;
         options.ApiBaseUrl = Environment.GetEnvironmentVariable("GH_API_BASE_URL") ?? Environment.GetEnvironmentVariable("GITHUB_API_BASE_URL") ?? "https://api.github.com/";
+        var apiGatewayUrl = Environment.GetEnvironmentVariable("API_GATEWAY_URL");
+        if (!string.IsNullOrWhiteSpace(apiGatewayUrl))
+            options.ApiOrigin = apiGatewayUrl.TrimEnd('/');
     }
 }

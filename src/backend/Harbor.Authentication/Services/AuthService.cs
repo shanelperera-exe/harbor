@@ -2,7 +2,9 @@ using Harbor.Authentication.DTOs;
 using Harbor.Authentication.Models;
 using Harbor.Authentication.Repositories;
 using System.Text.Json.Nodes;
+using System.Text.Json.Nodes;
 using DiceBear;
+using Harbor.Caching;
 
 namespace Harbor.Authentication.Services
 {
@@ -26,12 +28,14 @@ namespace Harbor.Authentication.Services
         private readonly IUserRepository _userRepository;
         private readonly IJwtService _jwtService;
         private readonly IEmailService _emailService;
+        private readonly ICacheService _cache;
 
-        public AuthService(IUserRepository userRepository, IJwtService jwtService, IEmailService emailService)
+        public AuthService(IUserRepository userRepository, IJwtService jwtService, IEmailService emailService, ICacheService cache)
         {
             _userRepository = userRepository;
             _jwtService = jwtService;
             _emailService = emailService;
+            _cache = cache;
         }
 
         private static string GenerateAvatar(string seed)
@@ -215,29 +219,47 @@ namespace Harbor.Authentication.Services
             var passwordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
             await _userRepository.UpdatePasswordAsync(userId, passwordHash);
 
+            await _cache.RemoveAsync(CacheKeys.AuthUserById(userId));
+
             return (true, null);
+        }
+
+        public async Task LogoutAsync(string jti, TimeSpan expiresIn)
+        {
+            await _cache.SetAsync(CacheKeys.AuthRevokedToken(jti), true, expiresIn);
         }
 
         public async Task<(bool Success, string? Error, ProfileResponse? Data)> GetProfileAsync(int userId)
         {
-            var user = await _userRepository.GetByIdAsync(userId);
-            if (user == null)
+            var profile = await _cache.GetOrSetAsync(
+                CacheKeys.AuthUserById(userId),
+                async () =>
+                {
+                    var user = await _userRepository.GetByIdAsync(userId);
+                    if (user == null) return null;
+
+                    if (string.IsNullOrEmpty(user.AvatarSvg))
+                    {
+                        user.AvatarSvg = GenerateAvatar(user.Username);
+                        await _userRepository.UpdateAvatarAsync(user.Id, user.AvatarSvg);
+                    }
+
+                    var p = ToProfileResponse(user);
+                    p.LoginMethods = await _userRepository.GetExternalLoginMethodsAsync(user.Id);
+                    p.ProviderUsernames = await _userRepository.GetProviderUsernamesAsync(user.Id);
+                    p.HasPassword = await _userRepository.GetHasPasswordAsync(user.Id);
+                    p.GitHubInstallationId = await _userRepository.GetGitHubInstallationAsync(user.Id);
+                    p.Preferences = ToPreferencesResponse(await _userRepository.GetPreferencesAsync(user.Id));
+                    return p;
+                },
+                CacheTtl.UserProfile
+            );
+
+            if (profile == null)
             {
                 return (false, "User not found.", null);
             }
 
-            if (string.IsNullOrEmpty(user.AvatarSvg))
-            {
-                user.AvatarSvg = GenerateAvatar(user.Username);
-                await _userRepository.UpdateAvatarAsync(user.Id, user.AvatarSvg);
-            }
-
-            var profile = ToProfileResponse(user);
-            profile.LoginMethods = await _userRepository.GetExternalLoginMethodsAsync(user.Id);
-            profile.ProviderUsernames = await _userRepository.GetProviderUsernamesAsync(user.Id);
-            profile.HasPassword = await _userRepository.GetHasPasswordAsync(user.Id);
-            profile.GitHubInstallationId = await _userRepository.GetGitHubInstallationAsync(user.Id);
-            profile.Preferences = ToPreferencesResponse(await _userRepository.GetPreferencesAsync(user.Id));
             return (true, null, profile);
         }
 
@@ -271,6 +293,8 @@ namespace Harbor.Authentication.Services
             user.AvatarSvg = GenerateAvatar(user.Username);
             await _userRepository.UpdateProfileAsync(userId, user.Username, user.Email, user.AvatarSvg);
 
+            await _cache.RemoveAsync(CacheKeys.AuthUserById(userId));
+
             var updatedProfile = ToProfileResponse(user);
             updatedProfile.LoginMethods = await _userRepository.GetExternalLoginMethodsAsync(user.Id);
             updatedProfile.HasPassword = await _userRepository.GetHasPasswordAsync(user.Id);
@@ -301,6 +325,9 @@ namespace Harbor.Authentication.Services
             }
 
             var preferences = await _userRepository.UpsertPreferencesAsync(userId, dashboardTheme, logTheme);
+            
+            await _cache.RemoveAsync(CacheKeys.AuthUserById(userId));
+            
             return (true, null, ToPreferencesResponse(preferences));
         }
 
@@ -336,6 +363,8 @@ namespace Harbor.Authentication.Services
             {
                 return (false, "That login method is not connected.", null);
             }
+
+            await _cache.RemoveAsync(CacheKeys.AuthUserById(userId));
 
             return await GetProfileAsync(userId);
         }

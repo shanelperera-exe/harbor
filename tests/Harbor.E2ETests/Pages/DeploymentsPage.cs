@@ -14,7 +14,11 @@ namespace Harbor.E2ETests.Pages
         public DeploymentsPage(IWebDriver driver)
         {
             _driver = driver;
-            _wait = new WebDriverWait(driver, TimeSpan.FromSeconds(20));
+            // 30 s gives headroom on slow CI runners: after FilterByStatus("Running") the
+            // component fetches, renders, then immediately starts a 5-second live-poll cycle
+            // (because all returned rows are active), adding an extra React render before the
+            // wait condition is first satisfied. 20 s was too tight in shared-runner CI.
+            _wait = new WebDriverWait(driver, TimeSpan.FromSeconds(30));
             // React re-renders can swap the element out between "found" and "read" -
             // treat that as "not ready yet" and keep polling, same as NotFound.
             _wait.IgnoreExceptionTypes(typeof(NoSuchElementException), typeof(StaleElementReferenceException));
@@ -74,6 +78,10 @@ namespace Harbor.E2ETests.Pages
             {
                 throw new InvalidOperationException($"Could not open the status filter option '{target}'.");
             }
+
+            // Wait for framer-motion dropdown open animation (200ms) to finish.
+            // Otherwise, Selenium attempts to click while the element is still moving.
+            System.Threading.Thread.Sleep(300);
 
             ((IJavaScriptExecutor)_driver).ExecuteScript("arguments[0].scrollIntoView({block:'center'});", option);
             option.Click();
@@ -148,13 +156,29 @@ namespace Harbor.E2ETests.Pages
             return _driver.FindElements(By.CssSelector("[data-testid='deployment-row']"));
         }
 
+        /// <summary>
+        /// Non-blocking snapshot of all deployment rows currently in the DOM.
+        /// Returns an empty list immediately when no rows are present — safe to call
+        /// inside a _wait.Until() predicate without nesting a second blocking wait.
+        /// </summary>
+        private IReadOnlyList<IWebElement> GetRowsOrEmpty()
+            => _driver.FindElements(By.CssSelector("[data-testid='deployment-row']"));
+
         public IReadOnlyList<string> GetVisibleStatuses()
         {
             // Read the badge label only - the status cell also holds the deployment duration,
             // so the cell's full text is e.g. "Succeeded 4m" rather than just the status.
-            return GetRows()
-                .Select(r => r.FindElement(By.CssSelector("[data-testid='status-badge-label']")).Text.Trim())
-                .ToList();
+            // Use the non-blocking GetRowsOrEmpty() here: this method is called inside the
+            // outer _wait.Until() in FilterByStatus, and a nested blocking wait would burn
+            // the full timeout if no rows are present yet, causing a spurious timeout failure.
+            return GetRowsOrEmpty()
+                .Select(r =>
+                {
+                    try { return r.FindElement(By.CssSelector("[data-testid='status-badge-label']")).Text.Trim(); }
+                    catch (StaleElementReferenceException) { return null; }
+                })
+                .Where(t => t != null)
+                .ToList()!;
         }
 
         // _wait.Until() treats a returned `false` or empty string as "not ready yet" and

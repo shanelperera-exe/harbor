@@ -3,21 +3,43 @@
 # depend on. Locally this data was created by hand with psql - this script reproduces the same
 # shape so CI's freshly-migrated Postgres has it too.
 #
-# Requires: curl, jq, docker (with the harbor-postgres container already running),
+# Requires: curl, jq, and either:
+#   - docker (with a named Postgres container running), or
+#   - a system psql binary reachable at $POSTGRES_HOST:$POSTGRES_PORT
 # and the Authentication service reachable at $AUTH_URL.
 #
-# Env vars (with CI defaults matching .github/workflows/ci.yml):
+# Env vars (with CI defaults):
 #   AUTH_URL            (default http://localhost:5196)
-#   POSTGRES_CONTAINER  (default harbor-postgres)
+#   POSTGRES_CONTAINER  set to a container name to use docker exec; leave empty to use system psql
+#   POSTGRES_HOST       (default localhost)   used only when POSTGRES_CONTAINER is empty
+#   POSTGRES_PORT       (default 5432)        used only when POSTGRES_CONTAINER is empty
 #   POSTGRES_USER       (default harboruser)
+#   POSTGRES_PASSWORD   (default harborpass)  used only when POSTGRES_CONTAINER is empty
 #   POSTGRES_DATABASE   (default harbor_db)
 
 set -euo pipefail
 
 AUTH_URL="${AUTH_URL:-http://localhost:5196}"
-POSTGRES_CONTAINER="${POSTGRES_CONTAINER:-harbor-postgres}"
+POSTGRES_CONTAINER="${POSTGRES_CONTAINER-harbor-postgres}"
 POSTGRES_USER="${POSTGRES_USER:-harboruser}"
 POSTGRES_DATABASE="${POSTGRES_DATABASE:-harbor_db}"
+POSTGRES_HOST="${POSTGRES_HOST:-localhost}"
+POSTGRES_PORT="${POSTGRES_PORT:-5432}"
+POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-harborpass}"
+
+# run_psql <extra-psql-args...> — routes through docker exec when POSTGRES_CONTAINER
+# is set (local dev / legacy docker-compose CI), otherwise uses the system psql binary
+# directly (GitHub Actions service container, where Postgres is reachable on localhost).
+run_psql() {
+  if [ -n "$POSTGRES_CONTAINER" ]; then
+    docker exec -i "$POSTGRES_CONTAINER" psql -U "$POSTGRES_USER" -d "$POSTGRES_DATABASE" "$@"
+  else
+    PGPASSWORD="$POSTGRES_PASSWORD" psql \
+      -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" \
+      -U "$POSTGRES_USER" -d "$POSTGRES_DATABASE" "$@"
+  fi
+}
+
 
 SEED_USERNAME="qa_tester2"
 SEED_EMAIL="qa_tester2@harbor.local"
@@ -34,7 +56,7 @@ BODY=$(echo "$REGISTER_RESPONSE" | sed '$d')
 
 if [ "$HTTP_STATUS" != "201" ]; then
   echo "Register call returned $HTTP_STATUS - assuming user already exists, looking it up instead."
-  OWNER_ID=$(docker exec -i "$POSTGRES_CONTAINER" psql -U "$POSTGRES_USER" -d "$POSTGRES_DATABASE" -t -A \
+  OWNER_ID=$(run_psql -t -A \
     -c "SELECT \"Id\" FROM \"Users\" WHERE \"Username\" = '${SEED_USERNAME}';")
 else
   OWNER_ID=$(echo "$BODY" | jq -r '.data.id')
@@ -51,7 +73,7 @@ echo "Seeding deployment data for ${SEED_USERNAME} (OwnerId=${OWNER_ID}) ..."
 # ON_ERROR_STOP is required: without it psql prints errors but still exits 0, so a
 # broken INSERT (e.g. a column that no longer exists) silently seeds nothing and the
 # Deployments E2E tests fail later with confusing "no rows" assertions.
-docker exec -i "$POSTGRES_CONTAINER" psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DATABASE" <<SQL
+run_psql -v ON_ERROR_STOP=1 <<SQL
 -- Deployment history is queried through
 --   d."ServiceId" IN (SELECT s."Id" FROM "Services" s JOIN "Projects" p ON s."ProjectId" = p."Id" WHERE p."OwnerId" = ...)
 -- so every seeded Deployment must hang off a Service that belongs to a Project owned

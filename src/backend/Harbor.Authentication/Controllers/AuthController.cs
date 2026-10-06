@@ -68,6 +68,27 @@ namespace Harbor.Authentication.Controllers
             return Ok(new ApiResponse<LoginResponse> { Data = data });
         }
 
+        [Authorize]
+        [HttpPost("logout")]
+        public async Task<IActionResult> Logout()
+        {
+            var jti = User.FindFirstValue("jti");
+            var expClaim = User.FindFirstValue("exp");
+
+            if (!string.IsNullOrEmpty(jti) && long.TryParse(expClaim, out var exp))
+            {
+                var expirationTime = DateTimeOffset.FromUnixTimeSeconds(exp).UtcDateTime;
+                var expiresIn = expirationTime - DateTime.UtcNow;
+
+                if (expiresIn > TimeSpan.Zero)
+                {
+                    await _authService.LogoutAsync(jti, expiresIn);
+                }
+            }
+
+            return Ok(new { Message = "Logged out successfully" });
+        }
+
         [HttpPost("forgot-password")]
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
         {

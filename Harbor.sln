@@ -53,6 +53,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Harbor.Authentication.Integ
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Harbor.GitHub.Tests", "tests\unit\Harbor.GitHub.Tests\Harbor.GitHub.Tests.csproj", "{5D52DA33-6439-4173-BE1C-29541F75388E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Harbor.Caching", "src\shared\Harbor.Caching\Harbor.Caching.csproj", "{A131943B-D0BA-4926-8ADC-6A278CA281F8}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -259,6 +261,18 @@ Global
 		{5D52DA33-6439-4173-BE1C-29541F75388E}.Release|x64.Build.0 = Release|Any CPU
 		{5D52DA33-6439-4173-BE1C-29541F75388E}.Release|x86.ActiveCfg = Release|Any CPU
 		{5D52DA33-6439-4173-BE1C-29541F75388E}.Release|x86.Build.0 = Release|Any CPU
+		{A131943B-D0BA-4926-8ADC-6A278CA281F8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A131943B-D0BA-4926-8ADC-6A278CA281F8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A131943B-D0BA-4926-8ADC-6A278CA281F8}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{A131943B-D0BA-4926-8ADC-6A278CA281F8}.Debug|x64.Build.0 = Debug|Any CPU
+		{A131943B-D0BA-4926-8ADC-6A278CA281F8}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{A131943B-D0BA-4926-8ADC-6A278CA281F8}.Debug|x86.Build.0 = Debug|Any CPU
+		{A131943B-D0BA-4926-8ADC-6A278CA281F8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A131943B-D0BA-4926-8ADC-6A278CA281F8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A131943B-D0BA-4926-8ADC-6A278CA281F8}.Release|x64.ActiveCfg = Release|Any CPU
+		{A131943B-D0BA-4926-8ADC-6A278CA281F8}.Release|x64.Build.0 = Release|Any CPU
+		{A131943B-D0BA-4926-8ADC-6A278CA281F8}.Release|x86.ActiveCfg = Release|Any CPU
+		{A131943B-D0BA-4926-8ADC-6A278CA281F8}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -287,5 +301,6 @@ Global
 		{E3A1B2C4-5D6E-7F80-9A0B-1C2D3E4F5A6B} = {CC292182-0C2F-4EC7-BA0C-EDE1C79F08EC}
 		{4B3C2D1A-9E8F-4A0B-1C2D-3E4F5A6B7C8D} = {CC292182-0C2F-4EC7-BA0C-EDE1C79F08EC}
 		{5D52DA33-6439-4173-BE1C-29541F75388E} = {D3EC7B60-0B9F-4AE9-8C8A-A9FCF0805F9D}
+		{A131943B-D0BA-4926-8ADC-6A278CA281F8} = {9DD63D8E-0083-44E6-BCB4-93E67D072967}
 	EndGlobalSection
 EndGlobal

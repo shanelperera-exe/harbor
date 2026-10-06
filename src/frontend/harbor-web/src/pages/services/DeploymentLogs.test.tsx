@@ -308,8 +308,11 @@ describe('DeploymentLogs', () => {
     const user = userEvent.setup();
     render(<DeploymentLogs deployment={makeDeployment({ logs: actionsLogs })} />);
 
-    // KNOWN_GAP_D01: nothing is expanded on first render, because expandedSteps is seeded with
-    // the ids "setup-job"/"checkout"/"build" while generated ids are "step-<index>".
+    // Steps start expanded on first render
+    expect(screen.getAllByTestId('deployment-log-line').length).toBeGreaterThan(0);
+
+    // Collapse all hides every log line
+    await user.click(screen.getByRole('button', { name: /collapse all/i }));
     expect(screen.queryAllByTestId('deployment-log-line')).toHaveLength(0);
 
     await expandAll(user);

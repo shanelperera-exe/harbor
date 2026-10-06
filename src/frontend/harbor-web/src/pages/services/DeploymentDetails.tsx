@@ -38,6 +38,7 @@ export default function DeploymentDetails() {
   const [deployment, setDeployment] = useState<IDeploymentDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [redeploying, setRedeploying] = useState(false);
+  const [errorStatus, setErrorStatus] = useState<number | null>(null);
 
   useEffect(() => {
     if (!deploymentId) {
@@ -47,10 +48,13 @@ export default function DeploymentDetails() {
     const fetchDeploy = async () => {
       try {
         setLoading(true);
+        setErrorStatus(null);
         const data = await getDeploymentDetails(deploymentId);
         setDeployment(data);
-      } catch (err) {
+      } catch (err: any) {
         console.error(err);
+        const status = typeof err?.status === 'number' ? err.status : (err?.response?.status || 500);
+        setErrorStatus(status);
       } finally {
         setLoading(false);
       }
@@ -71,8 +75,12 @@ export default function DeploymentDetails() {
       await redeployDeployment(deploymentId);
       // Wait a moment then refresh deploy data
       setTimeout(async () => {
-        const data = await getDeploymentDetails(deploymentId);
-        setDeployment(data);
+        try {
+          const data = await getDeploymentDetails(deploymentId);
+          setDeployment(data);
+        } catch (e) {
+          console.error(e);
+        }
       }, 500);
     } catch (e) {
       console.error(e);
@@ -89,8 +97,19 @@ export default function DeploymentDetails() {
     );
   }
 
-  if (!deployment) {
-    return <div className="p-8 text-center text-gray-500 w-full">Deployment not found.</div>;
+  if (errorStatus || !deployment) {
+    let message = "Deployment doesn't exist";
+    if (errorStatus === 401) {
+      message = 'Not authenticated';
+    } else if (errorStatus === 403) {
+      message = 'Not authorized';
+    } else if (errorStatus === 404) {
+      message = "Deployment doesn't exist";
+    } else if (errorStatus && errorStatus >= 500) {
+      message = 'Server problem';
+    }
+
+    return <div data-testid="deployment-error-message" className="p-8 text-center text-gray-500 w-full">{message}</div>;
   }
 
   // Find the exact URL for this deployment's environment

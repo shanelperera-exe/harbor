@@ -180,12 +180,17 @@ export function DeploymentLogs({ deployment }: DeploymentLogsProps) {
 
   // Track expanded state for each step. By default, first 2 steps + failed step are expanded
   const [expandedSteps, setExpandedSteps] = useState<Record<string, boolean>>(() => {
-    const initial: Record<string, boolean> = {
-      'setup-job': true,
-      'checkout': true
-    };
-    if (isFailed) {
-      initial['build'] = true;
+    const initial: Record<string, boolean> = {};
+    const backendLogs = deployment.logs || [];
+    if (backendLogs.length > 0) {
+      steps.slice(0, 2).forEach((s) => {
+        initial[s.id] = true;
+      });
+      steps.forEach((s) => {
+        if (s.status === 'failed') {
+          initial[s.id] = true;
+        }
+      });
     }
     return initial;
   });

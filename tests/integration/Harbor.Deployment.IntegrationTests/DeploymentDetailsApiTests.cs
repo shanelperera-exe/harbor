@@ -697,19 +697,15 @@ public class DeploymentDetailsApiTests : IClassFixture<DeploymentApiFactory>
     }
 
     [Fact]
-    public async Task GetDetails_CommitMessageSecretIsNotRedacted_KNOWN_GAP_D06()
+    public async Task GetDetails_CommitMessageSecretIsRedacted()
     {
-        // DeploymentService.cs:100 returns CommitMessage without running it through
-        // DeploymentLogSanitizer, unlike logs / failureReason / triggerError.
         var client = await CreateClientWithDeploymentAsync(41034, version: "us19-commitmsg",
             commitMessage: "revert: PASSWORD=hunter2 in commit message");
 
         var raw = await (await client.GetAsync($"/api/deployments/{Seeded.Last()}")).Content.ReadAsStringAsync();
 
-        Assert.Contains("hunter2", raw);
-
-        // REQUIRED FIX: sanitize CommitMessage in DeploymentService.GetDetailsAsync, then change
-        // this assertion to DoesNotContain.
+        Assert.DoesNotContain("hunter2", raw);
+        Assert.Contains("[REDACTED]", raw);
     }
 
     // =========================================================================

@@ -466,4 +466,23 @@ public class DeploymentServiceTests
             e.FailureReason == "Some error"
         )), Times.Once);
     }
+
+    [Fact]
+    public async Task GetDetailsAsync_CommitMessageContainingSecret_IsSanitized()
+    {
+        var deployment = new DeploymentEntity
+        {
+            Id = 9, OwnerId = 7, ServiceId = 13, Environment = "production",
+            Version = "1.0.0", Status = "Succeeded", StartedAt = DateTime.UtcNow,
+            CommitMessage = "fix: token=ghp_secret_12345"
+        };
+        _repository.Setup(r => r.GetEntityByIdentifierAsync("9", 7, false)).ReturnsAsync(deployment);
+        _repository.Setup(r => r.GetLogsAsync(9)).ReturnsAsync(new List<DeploymentLogEntity>());
+
+        var result = await _service.GetDetailsAsync("9", 7);
+
+        Assert.NotNull(result);
+        Assert.DoesNotContain("ghp_secret_12345", result!.CommitMessage);
+        Assert.Contains("[REDACTED]", result.CommitMessage);
+    }
 }

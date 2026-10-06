@@ -66,6 +66,15 @@ export interface CiRunHistory {
   totalCount: number;
 }
 
+export class ApiError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+  }
+}
+
 /** Thrown when the CI gate blocks a deployment. The `message` contains the reason. */
 export class CiGateError extends Error {
   constructor(message: string) {
@@ -96,7 +105,7 @@ function headers(): HeadersInit {
 
 async function readResponse<T>(response: Response, fallback: string): Promise<T> {
   const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(body?.detail || body?.title || fallback);
+  if (!response.ok) throw new ApiError(body?.detail || body?.title || fallback, response.status);
   return body as T;
 }
 

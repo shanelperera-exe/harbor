@@ -97,7 +97,7 @@ public class DeploymentService : IDeploymentService
             ServiceName = deployment.ServiceName,
             ServiceType = deployment.ServiceType,
             UserName = deployment.UserName,
-            CommitMessage = deployment.CommitMessage,
+            CommitMessage = deployment.CommitMessage != null ? DeploymentLogSanitizer.Sanitize(deployment.CommitMessage) : null,
             Logs = logs.Select(log => new DeploymentLogResponse { Timestamp = log.Timestamp, Level = log.Level, Message = DeploymentLogSanitizer.Sanitize(log.Message) }).ToList()
         };
     }
@@ -278,7 +278,7 @@ public class DeploymentService : IDeploymentService
         CompletedAt = ciRun.CompletedAt,
     };
 
-    private static DeploymentResponse ToResponse(DeploymentEntity deployment) => new() { Id = deployment.Id, PublicId = string.IsNullOrEmpty(deployment.PublicId) ? deployment.Id.ToString() : deployment.PublicId, Hash = !string.IsNullOrEmpty(deployment.PublicId) && deployment.PublicId.StartsWith("dep-") ? (deployment.PublicId.Length >= 13 ? deployment.PublicId.Substring(4, 9) : deployment.PublicId.Substring(4)) : deployment.Id.ToString(), ServiceId = deployment.ServiceId, Environment = deployment.Environment, Version = deployment.Version, CommitSha = deployment.CommitSha, CommitMessage = deployment.CommitMessage, Status = deployment.Status, StartedAt = deployment.StartedAt, CompletedAt = deployment.CompletedAt, WorkflowFile = deployment.WorkflowFile, WorkflowRef = deployment.WorkflowRef, ProjectName = deployment.ProjectName, ServiceName = deployment.ServiceName, ServiceType = deployment.ServiceType, UserName = deployment.UserName };
+    private static DeploymentResponse ToResponse(DeploymentEntity deployment) => new() { Id = deployment.Id, PublicId = string.IsNullOrEmpty(deployment.PublicId) ? deployment.Id.ToString() : deployment.PublicId, Hash = !string.IsNullOrEmpty(deployment.PublicId) && deployment.PublicId.StartsWith("dep-") ? (deployment.PublicId.Length >= 13 ? deployment.PublicId.Substring(4, 9) : deployment.PublicId.Substring(4)) : deployment.Id.ToString(), ServiceId = deployment.ServiceId, Environment = deployment.Environment, Version = deployment.Version, CommitSha = deployment.CommitSha, CommitMessage = deployment.CommitMessage != null ? DeploymentLogSanitizer.Sanitize(deployment.CommitMessage) : null, Status = deployment.Status, StartedAt = deployment.StartedAt, CompletedAt = deployment.CompletedAt, WorkflowFile = deployment.WorkflowFile, WorkflowRef = deployment.WorkflowRef, ProjectName = deployment.ProjectName, ServiceName = deployment.ServiceName, ServiceType = deployment.ServiceType, UserName = deployment.UserName };
 
     // ── Deployment rollback (2.2) ──────────────────────────────────────────────
 
@@ -374,7 +374,7 @@ public class DeploymentService : IDeploymentService
                 Environment = d.Environment,
                 Version = d.Version,
                 CommitSha = d.CommitSha,
-                CommitMessage = d.CommitMessage,
+                CommitMessage = d.CommitMessage != null ? DeploymentLogSanitizer.Sanitize(d.CommitMessage) : null,
                 Status = d.Status,
                 StartedAt = d.StartedAt,
                 CompletedAt = d.CompletedAt,

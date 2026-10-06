@@ -175,85 +175,59 @@ public class DeploymentLogSanitizerTests
         Assert.Contains("step 3 ok", result);
     }
 
-    // ─── KNOWN GAPS: current leaky behaviour, pinned deliberately ─────────────
+    // ─── Previously KNOWN GAPS: now resolved ──────────────────────────────────
 
     [Fact]
-    public void Sanitize_ConnectionUrlWithEmbeddedPassword_IsNotRedacted_KNOWN_GAP_D07()
+    public void Sanitize_ConnectionUrlWithEmbeddedPassword_IsRedacted()
     {
-        // The keyword list has no connection-string form, and a URL carries its credential
-        // after ':' with no "password=" label. CI logs routinely print these.
         var input = "postgres://user:sup3rsecret@db.internal:5432/harbor";
 
         var result = Sanitize(input);
 
-        Assert.Equal(input, result);
-        Assert.Contains("sup3rsecret", result);
-
-        // REQUIRED FIX: add a URL userinfo pattern
-        // (?:[a-z][a-z0-9+.-]*://[^/\s:@]+:)[^/\s:@]+@  ->  "$1[REDACTED]@"
-        // then this test flips into the "redacted" group.
+        Assert.DoesNotContain("sup3rsecret", result);
+        Assert.Contains("[REDACTED]", result);
     }
 
     [Fact]
-    public void Sanitize_CredentialsEmbeddedInHttpsUrl_IsNotRedacted_KNOWN_GAP_D07()
+    public void Sanitize_CredentialsEmbeddedInHttpsUrl_IsRedacted()
     {
-        // Very common in real CI output: `git clone https://<token>@github.com/owner/repo`.
         var input = "git clone https://user:tok3n@github.com/owner/repo";
 
         var result = Sanitize(input);
 
-        Assert.Equal(input, result);
-        Assert.Contains("tok3n", result);
-
-        // Same fix as above covers this case.
+        Assert.DoesNotContain("tok3n", result);
+        Assert.Contains("[REDACTED]", result);
     }
 
     [Fact]
-    public void Sanitize_WhitespaceSeparatedCliSecret_IsNotRedacted_KNOWN_GAP_D07()
+    public void Sanitize_WhitespaceSeparatedCliSecret_IsRedacted()
     {
-        // Every pattern requires ':' or '=' as the key/value separator, so the very common
-        // `--password hunter2` form survives untouched.
         var input = "mysql --password hunter2 -u root";
 
         var result = Sanitize(input);
 
-        Assert.Equal(input, result);
-        Assert.Contains("hunter2", result);
-
-        // REQUIRED FIX: add a flag form, e.g.
-        // (?i)(--[a-z0-9_-]*(?:password|passwd|pwd|secret|token|key)[a-z0-9_-]*)(\s+)(\S+)
-        // -> "$1$2[REDACTED]"
+        Assert.DoesNotContain("hunter2", result);
+        Assert.Contains("[REDACTED]", result);
     }
 
     [Fact]
-    public void Sanitize_ConnectionStringKeyWithoutEmbeddedPasswordLabel_IsNotRedacted_KNOWN_GAP_D07()
+    public void Sanitize_ConnectionStringKeyWithoutEmbeddedPasswordLabel_IsRedacted()
     {
-        // `connectionString` itself is not in the keyword list; only an inner `Password=`
-        // gets redacted, so a differently-named credential key leaks.
         var input = "connectionString=Server=db;Pwd=abc;Database=harbor";
 
         var result = Sanitize(input);
 
-        Assert.DoesNotContain("Pwd=abc", result);   // inner labelled form IS caught
-        Assert.Contains("connectionString=Server=db;", result);
-
-        // REQUIRED FIX: add `connectionstring|connstring|connection_string` to the keyword
-        // alternation in both SensitiveSetting and QuotedSensitiveSetting.
+        Assert.DoesNotContain("Pwd=abc", result);
+        Assert.DoesNotContain("Server=db", result);
+        Assert.Contains("[REDACTED]", result);
     }
 
     [Fact]
-    public void Sanitize_BearerCredential_RedactedTwice_ProducesDuplicatePlaceholder_KNOWN_GAP_D16()
+    public void Sanitize_BearerCredential_NotRedactedTwice_DoesNotProduceDuplicatePlaceholder()
     {
-        // BearerCredential rewrites the value first; the later SensitiveSetting pass then
-        // matches the "Bearer" word itself as the value of the "authorization" key.
-        // Cosmetic only — the secret is still removed — but it corrupts the log line and
-        // makes copy-pasted output confusing.
         var result = Sanitize("Authorization: Bearer abc123");
 
         Assert.DoesNotContain("abc123", result);
-        Assert.Equal("Authorization: [REDACTED] [REDACTED]", result);
-
-        // REQUIRED FIX: make SensitiveSetting skip an already-redacted value, or run
-        // BearerCredential last, or exclude the literal word "bearer" from the value match.
+        Assert.Equal("Authorization: Bearer [REDACTED]", result);
     }
 }

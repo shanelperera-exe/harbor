@@ -32,6 +32,7 @@ public class DeploymentService : IDeploymentService
         this.logger = logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<DeploymentService>.Instance;
     }
     private const int MaxPageSize = 100;
+    private const int MaxLogEntries = 5000;
     private static readonly string[] ValidEnvironmentTypes = ["Development", "Staging", "Production"];
 
     public async Task<DeploymentListResponse> GetHistoryAsync(int ownerId, DeploymentHistoryQuery query)
@@ -63,7 +64,7 @@ public class DeploymentService : IDeploymentService
     {
         var deployment = await repository.GetEntityByIdentifierAsync(identifier, userId, isAdmin);
         if (deployment is null) return null;
-        var logs = await repository.GetLogsAsync(deployment.Id);
+        var logs = await repository.GetLogsAsync(deployment.Id, MaxLogEntries);
         
         string? deploymentUrl = null;
         var serviceAccess = await repository.GetServiceAccessAsync(deployment.ServiceId.ToString());

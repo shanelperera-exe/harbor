@@ -9,7 +9,7 @@ public interface IDeploymentRepository
     Task<DeploymentEntity?> GetByIdAsync(int id, int ownerId);
     Task<DeploymentEntity?> GetEntityByIdAsync(int id);
     Task<DeploymentEntity?> GetEntityByIdentifierAsync(string identifier, int userId, bool isAdmin);
-    Task<IReadOnlyList<DeploymentLogEntity>> GetLogsAsync(int deploymentId);
+    Task<IReadOnlyList<DeploymentLogEntity>> GetLogsAsync(int deploymentId, int limit = 5000);
     Task<int> CreateAsync(DeploymentEntity deployment);
     Task<bool> UpdateTriggerResultAsync(int deploymentId, string status, string? failureReason, string? triggerError);
     Task<bool> UpdateStatusAsync(int deploymentId, string status, string? failureReason = null);

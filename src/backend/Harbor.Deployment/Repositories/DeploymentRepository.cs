@@ -201,13 +201,14 @@ public class DeploymentRepository(DbConnectionFactory dbFactory) : IDeploymentRe
         return result.SingleOrDefault();
     }
 
-    public async Task<IReadOnlyList<DeploymentLogEntity>> GetLogsAsync(int deploymentId)
+    public async Task<IReadOnlyList<DeploymentLogEntity>> GetLogsAsync(int deploymentId, int limit = 5000)
     {
         await using var connection = dbFactory.CreateConnection();
         await connection.OpenAsync();
         await using var command = connection.CreateCommand();
-        command.CommandText = "SELECT \"Id\", \"DeploymentId\", \"Timestamp\", \"Level\", \"Message\" FROM \"DeploymentLogs\" WHERE \"DeploymentId\" = @deploymentId ORDER BY \"Timestamp\", \"Id\"";
+        command.CommandText = "SELECT \"Id\", \"DeploymentId\", \"Timestamp\", \"Level\", \"Message\" FROM \"DeploymentLogs\" WHERE \"DeploymentId\" = @deploymentId ORDER BY \"Timestamp\", \"Id\" LIMIT @limit";
         command.Parameters.AddWithValue("deploymentId", deploymentId);
+        command.Parameters.AddWithValue("limit", Math.Max(1, limit));
         var result = new List<DeploymentLogEntity>();
         await using var reader = await command.ExecuteReaderAsync();
         while (await reader.ReadAsync()) result.Add(new DeploymentLogEntity { Id = reader.GetInt32(0), DeploymentId = reader.GetInt32(1), Timestamp = reader.GetDateTime(2), Level = reader.GetString(3), Message = reader.GetString(4) });

@@ -485,4 +485,21 @@ public class DeploymentServiceTests
         Assert.DoesNotContain("ghp_secret_12345", result!.CommitMessage);
         Assert.Contains("[REDACTED]", result.CommitMessage);
     }
+
+    [Fact]
+    public async Task GetDetailsAsync_CallsGetLogsWithConfiguredLimit()
+    {
+        var deployment = new DeploymentEntity
+        {
+            Id = 15, OwnerId = 7, ServiceId = 13, Environment = "production",
+            Version = "1.0.0", Status = "Succeeded", StartedAt = DateTime.UtcNow
+        };
+        _repository.Setup(r => r.GetEntityByIdentifierAsync("15", 7, false)).ReturnsAsync(deployment);
+        _repository.Setup(r => r.GetLogsAsync(15, 5000)).ReturnsAsync(new List<DeploymentLogEntity>());
+
+        var result = await _service.GetDetailsAsync("15", 7);
+
+        Assert.NotNull(result);
+        _repository.Verify(r => r.GetLogsAsync(15, 5000), Times.Once);
+    }
 }

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useLocation, useMatch } from 'react-router-dom';
 import { getProject, type Project } from '../../services/projectService';
 import { getService, type Service } from '../../services/serviceService';
-import { Activity } from 'lucide-react';
+import { Activity, LayoutDashboard } from 'lucide-react';
 import { SlSupport } from 'react-icons/sl';
 
 const NavItem = ({ icon, label, to, isFooter = false, isButton = false }: any) => {
@@ -264,6 +264,7 @@ export default function SideNav({
           ) : (
             <div className="flex flex-col space-y-6 px-3 py-4">
               <NavSection title="Workspace">
+                <NavItem label="Dashboard" to="/dashboard" icon={<LayoutDashboard className="w-4 h-4" />} />
                 <NavItem label="Projects" to="/projects" icon={<Icon name="projects" className="w-4 h-4" />} />
               </NavSection>
 

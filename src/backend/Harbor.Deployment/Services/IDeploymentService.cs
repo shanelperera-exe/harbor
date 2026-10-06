@@ -10,4 +10,7 @@ public interface IDeploymentService
     Task<bool> UpdateStatusAsync(int deploymentId, string status, string? failureReason);
     Task<CiRunListResponse> GetCiRunsAsync(int ownerId, string serviceId, int page, int pageSize);
     Task<(bool Success, string? Error, int? DeploymentId, string Status, string? CiWarning)> RedeployAsync(int sourceDeploymentId, int ownerId, bool isAdmin);
+
+    // ── Centralized dashboard (US-20) ──────────────────────────────────────────
+    Task<DashboardSummaryResponse> GetDashboardAsync(int userId, bool isAdmin = false);
 }

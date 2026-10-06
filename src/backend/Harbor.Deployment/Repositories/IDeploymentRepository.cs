@@ -37,4 +37,9 @@ public interface IDeploymentRepository
 
     /// <summary>Creates a fresh deployment record as a copy of a previous one.</summary>
     Task<int> CreateFromSourceAsync(DeploymentEntity source);
+
+    // ── Centralized dashboard (US-20) ──────────────────────────────────────────
+    Task<IReadOnlyList<DashboardProjectEntity>> GetDashboardProjectsAsync(int userId, bool isAdmin);
+    Task<IReadOnlyList<DashboardDeploymentEntity>> GetDashboardRecentDeploymentsAsync(int userId, bool isAdmin, int limit = 10);
+    Task<DashboardMetricsEntity> GetDashboardMetricsAsync(int userId, bool isAdmin);
 }

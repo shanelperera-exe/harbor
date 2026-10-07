@@ -1,6 +1,7 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import DashboardHeader from './DashboardHeader';
 import SideNav from './SideNav';
+import { NotificationProvider } from '../../contexts/NotificationContext';
 
 import { useState } from 'react';
 import { useEffect } from 'react';
@@ -30,25 +31,27 @@ export default function DashboardLayout() {
   }, [navigate]);
 
   return (
-    <div className="h-screen flex flex-col w-full bg-white dark:bg-[oklch(0.21_0.03_263.45)] text-gray-900 dark:text-white font-sans transition-colors duration-300">
-      <DashboardHeader 
-        mobileMenuOpen={mobileMenuOpen} 
-        onToggleMobileMenu={() => setMobileMenuOpen(!mobileMenuOpen)} 
-        sidebarWidth={sidebarWidth}
-      />
-      <div className="flex flex-row flex-grow overflow-hidden relative">
-        {!hideSideNav && (
-          <SideNav 
-            mobileOpen={mobileMenuOpen} 
-            onClose={() => setMobileMenuOpen(false)} 
-            sidebarWidth={sidebarWidth}
-            setSidebarWidth={setSidebarWidth}
-          />
-        )}
-        <main className="flex-grow overflow-auto relative">
-          <Outlet />
-        </main>
+    <NotificationProvider>
+      <div className="h-screen flex flex-col w-full bg-white dark:bg-[oklch(0.21_0.03_263.45)] text-gray-900 dark:text-white font-sans transition-colors duration-300">
+        <DashboardHeader 
+          mobileMenuOpen={mobileMenuOpen} 
+          onToggleMobileMenu={() => setMobileMenuOpen(!mobileMenuOpen)} 
+          sidebarWidth={sidebarWidth}
+        />
+        <div className="flex flex-row flex-grow overflow-hidden relative">
+          {!hideSideNav && (
+            <SideNav 
+              mobileOpen={mobileMenuOpen} 
+              onClose={() => setMobileMenuOpen(false)} 
+              sidebarWidth={sidebarWidth}
+              setSidebarWidth={setSidebarWidth}
+            />
+          )}
+          <main className="flex-grow overflow-auto relative">
+            <Outlet />
+          </main>
+        </div>
       </div>
-    </div>
+    </NotificationProvider>
   );
 }

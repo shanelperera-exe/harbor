@@ -79,7 +79,16 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 builder.Services.AddAuthorization();
 builder.Services.AddSingleton<DbConnectionFactory>();
-builder.Services.AddScoped<IDeploymentRepository, DeploymentRepository>();
+// Register the real repository under its concrete type so the decorator can resolve it.
+builder.Services.AddScoped<DeploymentRepository>();
+// Decorate IDeploymentRepository: the notification-aware wrapper calls the real repo
+// and creates in-app notifications on terminal status transitions (US-21).
+builder.Services.AddScoped<IDeploymentRepository>(sp =>
+    new Harbor.Deployment.Services.NotificationAwareDeploymentRepository(
+        sp.GetRequiredService<DeploymentRepository>(),
+        sp.GetRequiredService<INotificationRepository>(),
+        sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Harbor.Deployment.Services.NotificationAwareDeploymentRepository>>()));
+builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
 builder.Services.AddScoped<IDeploymentService, DeploymentService>();
 builder.Services.AddScoped<IInstallationTokenResolver, InstallationTokenResolver>();
 

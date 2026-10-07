@@ -77,4 +77,83 @@ public class DashboardApiTests : IClassFixture<DeploymentApiFactory>
         Assert.Contains(dashboard.Projects, p => p.Id == DeploymentApiFactory.SeedProjectId + 1);
         Assert.True(dashboard.Metrics.TotalProjects >= 2);
     }
+
+    [Fact]
+    public async Task GetDashboard_NewUser_ReturnsEmptyState()
+    {
+        // User with no projects/environments
+        var newUserId = 999;
+        var client = CreateClient(newUserId);
+
+        var response = await client.GetAsync("/api/dashboard");
+        response.EnsureSuccessStatusCode();
+
+        var dashboard = await response.Content.ReadFromJsonAsync<DashboardSummaryResponse>();
+        Assert.NotNull(dashboard);
+        Assert.Empty(dashboard.Projects);
+        Assert.Empty(dashboard.RecentDeployments);
+        Assert.Equal(0, dashboard.Metrics.TotalProjects);
+        Assert.Equal(0, dashboard.Metrics.TotalDeployments);
+        Assert.Equal(0, dashboard.Metrics.SuccessfulDeployments);
+        Assert.Equal(0, dashboard.Metrics.RunningDeployments);
+        Assert.Equal(0, dashboard.Metrics.FailedDeployments);
+    }
+
+    [Fact]
+    public async Task GetDashboard_ServiceNameAndEnvironmentNamePopulated()
+    {
+        var client = CreateClient(DeploymentApiFactory.SeedOwnerId);
+
+        // Create a deployment
+        var deployReq = new CreateDeploymentRequest
+        {
+            ServiceId = DeploymentApiFactory.SeedServiceId.ToString(),
+            Environment = "production",
+            Version = "3.0.0",
+            CommitSha = "populate123"
+        };
+        var createRes = await client.PostAsJsonAsync("/api/deployments", deployReq);
+        createRes.EnsureSuccessStatusCode();
+
+        var response = await client.GetAsync("/api/dashboard");
+        response.EnsureSuccessStatusCode();
+
+        var dashboard = await response.Content.ReadFromJsonAsync<DashboardSummaryResponse>();
+        Assert.NotNull(dashboard);
+        Assert.NotEmpty(dashboard.RecentDeployments);
+        
+        var deployment = dashboard.RecentDeployments.First();
+        Assert.NotNull(deployment.ServiceName);
+        Assert.NotNull(deployment.ProjectName);
+        Assert.NotNull(deployment.Environment);
+        Assert.NotEmpty(deployment.ServiceName);
+        Assert.NotEmpty(deployment.ProjectName);
+    }
+
+    [Fact]
+    public async Task GetDashboard_ProjectIncludesLatestDeploymentStatus()
+    {
+        var client = CreateClient(DeploymentApiFactory.SeedOwnerId);
+
+        // Create a deployment
+        var deployReq = new CreateDeploymentRequest
+        {
+            ServiceId = DeploymentApiFactory.SeedServiceId.ToString(),
+            Environment = "production",
+            Version = "2.0.0",
+            CommitSha = "latest123"
+        };
+        var createRes = await client.PostAsJsonAsync("/api/deployments", deployReq);
+        createRes.EnsureSuccessStatusCode();
+
+        var response = await client.GetAsync("/api/dashboard");
+        response.EnsureSuccessStatusCode();
+
+        var dashboard = await response.Content.ReadFromJsonAsync<DashboardSummaryResponse>();
+        Assert.NotNull(dashboard);
+        
+        var project = dashboard.Projects.First(p => p.Id == DeploymentApiFactory.SeedProjectId);
+        Assert.NotNull(project.LatestStatus);
+        Assert.NotNull(project.LatestDeploymentTime);
+    }
 }

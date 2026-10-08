@@ -8,8 +8,8 @@ namespace Harbor.E2ETests
     {
         protected IWebDriver Driver { get; private set; }
 
-        [SetUp]
-        public void Setup()
+[SetUp]
+        public virtual void Setup()
         {
             var options = new ChromeOptions();
             options.AddArgument("--headless");
@@ -17,6 +17,11 @@ namespace Harbor.E2ETests
             options.AddArgument("--no-sandbox");
             options.AddArgument("--disable-dev-shm-usage");
             options.AddArgument("--window-size=1920,1080");
+            options.AddArgument("--disable-web-security");
+            options.AddArgument("--disable-features=VizDisplayCompositor");
+            options.AddArgument("--remote-debugging-port=9222");
+            // Enable browser logging
+            options.SetLoggingPreference(LogType.Browser, LogLevel.All);
 
             Driver = new ChromeDriver(options);
             Driver.Manage().Window.Maximize();

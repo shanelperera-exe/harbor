@@ -172,4 +172,272 @@ public class NotificationAwareDeploymentRepositoryTests
         Assert.Same(entity, result);
         _innerMock.Verify(r => r.GetEntityByIdAsync(5), Times.Once);
     }
+
+    // ── Additional forwarding tests for full coverage ────────────────────────────
+
+    [Fact]
+    public async Task GetHistoryAsync_WithServiceId_ForwardsToInner()
+    {
+        _innerMock.Setup(r => r.GetHistoryAsync(1, 10, "Successful", 0, 10))
+                  .ReturnsAsync((new List<DeploymentEntity>(), 0));
+
+        await _decorator.GetHistoryAsync(1, 10, "Successful", 0, 10);
+
+        _innerMock.Verify(r => r.GetHistoryAsync(1, 10, "Successful", 0, 10), Times.Once);
+        _notifMock.Verify(r => r.CreateAsync(It.IsAny<NotificationEntity>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_ForwardsToInner()
+    {
+        var entity = new DeploymentEntity { Id = 5, OwnerId = 7 };
+        _innerMock.Setup(r => r.GetByIdAsync(5, 7)).ReturnsAsync(entity);
+
+        var result = await _decorator.GetByIdAsync(5, 7);
+
+        Assert.Same(entity, result);
+        _innerMock.Verify(r => r.GetByIdAsync(5, 7), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetEntityByIdentifierAsync_ForwardsToInner()
+    {
+        var entity = new DeploymentEntity { Id = 5 };
+        _innerMock.Setup(r => r.GetEntityByIdentifierAsync("dep-123", 7, false)).ReturnsAsync(entity);
+
+        var result = await _decorator.GetEntityByIdentifierAsync("dep-123", 7, false);
+
+        Assert.Same(entity, result);
+        _innerMock.Verify(r => r.GetEntityByIdentifierAsync("dep-123", 7, false), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetLogsAsync_ForwardsToInner()
+    {
+        var logs = new List<DeploymentLogEntity> { new() { Id = 1, DeploymentId = 5, Message = "log" } };
+        _innerMock.Setup(r => r.GetLogsAsync(5)).ReturnsAsync(logs);
+
+        var result = await _decorator.GetLogsAsync(5);
+
+        Assert.Same(logs, result);
+        _innerMock.Verify(r => r.GetLogsAsync(5), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateTriggerResultAsync_ForwardsToInner()
+    {
+        _innerMock.Setup(r => r.UpdateTriggerResultAsync(5, "Failed", "error", null)).ReturnsAsync(true);
+
+        var result = await _decorator.UpdateTriggerResultAsync(5, "Failed", "error", null);
+
+        Assert.True(result);
+        _innerMock.Verify(r => r.UpdateTriggerResultAsync(5, "Failed", "error", null), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetRepositoryNameAsync_ForwardsToInner()
+    {
+        _innerMock.Setup(r => r.GetRepositoryNameAsync(10)).ReturnsAsync("owner/repo");
+
+        var result = await _decorator.GetRepositoryNameAsync(10);
+
+        Assert.Equal("owner/repo", result);
+        _innerMock.Verify(r => r.GetRepositoryNameAsync(10), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetWorkflowFileAsync_ForwardsToInner()
+    {
+        _innerMock.Setup(r => r.GetWorkflowFileAsync(10)).ReturnsAsync("ci.yml");
+
+        var result = await _decorator.GetWorkflowFileAsync(10);
+
+        Assert.Equal("ci.yml", result);
+        _innerMock.Verify(r => r.GetWorkflowFileAsync(10), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetServiceAccessAsync_ForwardsToInner()
+    {
+        _innerMock.Setup(r => r.GetServiceAccessAsync("srv-123"))
+                  .ReturnsAsync((true, 7, false, 10, 20));
+
+        var result = await _decorator.GetServiceAccessAsync("srv-123");
+
+        Assert.True(result.Exists);
+        Assert.Equal(7, result.OwnerId);
+        _innerMock.Verify(r => r.GetServiceAccessAsync("srv-123"), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetEnvironmentByNameAsync_ForwardsToInner()
+    {
+        _innerMock.Setup(r => r.GetEnvironmentByNameAsync(10, "production"))
+                  .ReturnsAsync((true, true, "Production", "https://prod.example.com"));
+
+        var result = await _decorator.GetEnvironmentByNameAsync(10, "production");
+
+        Assert.NotNull(result);
+        Assert.True(result.Value.IsActive);
+        _innerMock.Verify(r => r.GetEnvironmentByNameAsync(10, "production"), Times.Once);
+    }
+
+    [Fact]
+    public async Task SetWorkflowRunAsync_ForwardsToInner()
+    {
+        await _decorator.SetWorkflowRunAsync(5, 12345, "https://github.com/run/12345");
+
+        _innerMock.Verify(r => r.SetWorkflowRunAsync(5, 12345, "https://github.com/run/12345"), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetByWorkflowRunIdAsync_ForwardsToInner()
+    {
+        var entity = new DeploymentEntity { Id = 5, WorkflowRunId = 12345 };
+        _innerMock.Setup(r => r.GetByWorkflowRunIdAsync(12345)).ReturnsAsync(entity);
+
+        var result = await _decorator.GetByWorkflowRunIdAsync(12345);
+
+        Assert.Same(entity, result);
+        _innerMock.Verify(r => r.GetByWorkflowRunIdAsync(12345), Times.Once);
+    }
+
+    [Fact]
+    public async Task AddLogsAsync_ForwardsToInner()
+    {
+        await _decorator.AddLogsAsync(5, "deployment log text");
+
+        _innerMock.Verify(r => r.AddLogsAsync(5, "deployment log text"), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateCiRunAsync_ForwardsToInner()
+    {
+        var ciRun = new CiRunEntity { Id = 0, ServiceId = 10, OwnerId = 7 };
+        _innerMock.Setup(r => r.CreateCiRunAsync(ciRun)).ReturnsAsync(42);
+
+        var result = await _decorator.CreateCiRunAsync(ciRun);
+
+        Assert.Equal(42, result);
+        _innerMock.Verify(r => r.CreateCiRunAsync(ciRun), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateCiRunAsync_ForwardsToInner()
+    {
+        var ciRun = new CiRunEntity { Id = 1, ServiceId = 10, OwnerId = 7 };
+        _innerMock.Setup(r => r.UpdateCiRunAsync(ciRun)).ReturnsAsync(true);
+
+        var result = await _decorator.UpdateCiRunAsync(ciRun);
+
+        Assert.True(result);
+        _innerMock.Verify(r => r.UpdateCiRunAsync(ciRun), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetCiRunsAsync_ForwardsToInner()
+    {
+        var runs = new List<CiRunEntity> { new() { Id = 1 } };
+        _innerMock.Setup(r => r.GetCiRunsAsync(7, 10, 0, 10)).ReturnsAsync(runs);
+
+        var result = await _decorator.GetCiRunsAsync(7, 10, 0, 10);
+
+        Assert.Same(runs, result);
+        _innerMock.Verify(r => r.GetCiRunsAsync(7, 10, 0, 10), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetCiRunsTotalCountAsync_ForwardsToInner()
+    {
+        _innerMock.Setup(r => r.GetCiRunsTotalCountAsync(7, 10)).ReturnsAsync(5);
+
+        var result = await _decorator.GetCiRunsTotalCountAsync(7, 10);
+
+        Assert.Equal(5, result);
+        _innerMock.Verify(r => r.GetCiRunsTotalCountAsync(7, 10), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetCiRunByGitHubRunIdAsync_ForwardsToInner()
+    {
+        var ciRun = new CiRunEntity { Id = 1, GitHubRunId = 12345 };
+        _innerMock.Setup(r => r.GetCiRunByGitHubRunIdAsync(12345)).ReturnsAsync(ciRun);
+
+        var result = await _decorator.GetCiRunByGitHubRunIdAsync(12345);
+
+        Assert.Same(ciRun, result);
+        _innerMock.Verify(r => r.GetCiRunByGitHubRunIdAsync(12345), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetServiceByRepositoryAsync_ForwardsToInner()
+    {
+        _innerMock.Setup(r => r.GetServiceByRepositoryAsync("owner/repo")).ReturnsAsync((10, 7));
+
+        var result = await _decorator.GetServiceByRepositoryAsync("owner/repo");
+
+        Assert.NotNull(result);
+        Assert.Equal(10, result.Value.ServiceId);
+        _innerMock.Verify(r => r.GetServiceByRepositoryAsync("owner/repo"), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetSucceededForRedeployAsync_ForwardsToInner()
+    {
+        var entity = new DeploymentEntity { Id = 5, Status = "Successful" };
+        _innerMock.Setup(r => r.GetSucceededForRedeployAsync(5)).ReturnsAsync(entity);
+
+        var result = await _decorator.GetSucceededForRedeployAsync(5);
+
+        Assert.Same(entity, result);
+        _innerMock.Verify(r => r.GetSucceededForRedeployAsync(5), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateFromSourceAsync_ForwardsToInner()
+    {
+        var source = new DeploymentEntity { Id = 5, ServiceId = 10, OwnerId = 7 };
+        _innerMock.Setup(r => r.CreateFromSourceAsync(source)).ReturnsAsync(42);
+
+        var result = await _decorator.CreateFromSourceAsync(source);
+
+        Assert.Equal(42, result);
+        _innerMock.Verify(r => r.CreateFromSourceAsync(source), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetDashboardProjectsAsync_ForwardsToInner()
+    {
+        var projects = new List<DashboardProjectEntity> { new() { Id = 1, Name = "test" } };
+        _innerMock.Setup(r => r.GetDashboardProjectsAsync(7, false)).ReturnsAsync(projects);
+
+        var result = await _decorator.GetDashboardProjectsAsync(7, false);
+
+        Assert.Same(projects, result);
+        _innerMock.Verify(r => r.GetDashboardProjectsAsync(7, false), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetDashboardRecentDeploymentsAsync_ForwardsToInner()
+    {
+        var deployments = new List<DashboardDeploymentEntity> { new() { Id = 1 } };
+        _innerMock.Setup(r => r.GetDashboardRecentDeploymentsAsync(7, false, 5)).ReturnsAsync(deployments);
+
+        var result = await _decorator.GetDashboardRecentDeploymentsAsync(7, false, 5);
+
+        Assert.Same(deployments, result);
+        _innerMock.Verify(r => r.GetDashboardRecentDeploymentsAsync(7, false, 5), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetDashboardMetricsAsync_ForwardsToInner()
+    {
+        var metrics = new DashboardMetricsEntity { TotalProjects = 1 };
+        _innerMock.Setup(r => r.GetDashboardMetricsAsync(7, false)).ReturnsAsync(metrics);
+
+        var result = await _decorator.GetDashboardMetricsAsync(7, false);
+
+        Assert.Same(metrics, result);
+        _innerMock.Verify(r => r.GetDashboardMetricsAsync(7, false), Times.Once);
+    }
 }

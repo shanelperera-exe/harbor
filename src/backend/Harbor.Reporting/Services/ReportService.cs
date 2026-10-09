@@ -73,7 +73,7 @@ public class ReportService(IDeploymentReportRepository repository) : IReportServ
     /// When the list is empty, all counts are 0 and rate is 0 (AC8 – no misleading stats).
     /// AverageDurationSeconds is null when no completed deployments exist (AC7).
     /// </summary>
-    internal static DeploymentReportStatistics ComputeStatistics(IReadOnlyList<DeploymentReportItem> items)
+    public static DeploymentReportStatistics ComputeStatistics(IReadOnlyList<DeploymentReportItem> items)
     {
         var total      = items.Count;
         var successful = items.Count(i => SuccessStatuses.Contains(i.Status));

@@ -55,6 +55,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Harbor.GitHub.Tests", "test
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Harbor.Caching", "src\shared\Harbor.Caching\Harbor.Caching.csproj", "{A131943B-D0BA-4926-8ADC-6A278CA281F8}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Harbor.Reporting.Tests", "tests\unit\Harbor.Reporting.Tests\Harbor.Reporting.Tests.csproj", "{275BC330-FCE1-4C37-9A06-94F5D5B518CB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -273,6 +275,18 @@ Global
 		{A131943B-D0BA-4926-8ADC-6A278CA281F8}.Release|x64.Build.0 = Release|Any CPU
 		{A131943B-D0BA-4926-8ADC-6A278CA281F8}.Release|x86.ActiveCfg = Release|Any CPU
 		{A131943B-D0BA-4926-8ADC-6A278CA281F8}.Release|x86.Build.0 = Release|Any CPU
+		{275BC330-FCE1-4C37-9A06-94F5D5B518CB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{275BC330-FCE1-4C37-9A06-94F5D5B518CB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{275BC330-FCE1-4C37-9A06-94F5D5B518CB}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{275BC330-FCE1-4C37-9A06-94F5D5B518CB}.Debug|x64.Build.0 = Debug|Any CPU
+		{275BC330-FCE1-4C37-9A06-94F5D5B518CB}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{275BC330-FCE1-4C37-9A06-94F5D5B518CB}.Debug|x86.Build.0 = Debug|Any CPU
+		{275BC330-FCE1-4C37-9A06-94F5D5B518CB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{275BC330-FCE1-4C37-9A06-94F5D5B518CB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{275BC330-FCE1-4C37-9A06-94F5D5B518CB}.Release|x64.ActiveCfg = Release|Any CPU
+		{275BC330-FCE1-4C37-9A06-94F5D5B518CB}.Release|x64.Build.0 = Release|Any CPU
+		{275BC330-FCE1-4C37-9A06-94F5D5B518CB}.Release|x86.ActiveCfg = Release|Any CPU
+		{275BC330-FCE1-4C37-9A06-94F5D5B518CB}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -302,5 +316,6 @@ Global
 		{4B3C2D1A-9E8F-4A0B-1C2D-3E4F5A6B7C8D} = {CC292182-0C2F-4EC7-BA0C-EDE1C79F08EC}
 		{5D52DA33-6439-4173-BE1C-29541F75388E} = {D3EC7B60-0B9F-4AE9-8C8A-A9FCF0805F9D}
 		{A131943B-D0BA-4926-8ADC-6A278CA281F8} = {9DD63D8E-0083-44E6-BCB4-93E67D072967}
+		{275BC330-FCE1-4C37-9A06-94F5D5B518CB} = {D3EC7B60-0B9F-4AE9-8C8A-A9FCF0805F9D}
 	EndGlobalSection
 EndGlobal

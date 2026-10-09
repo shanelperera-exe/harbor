@@ -21,6 +21,7 @@ import NewService from './pages/services/NewService';
 import NewServiceRepoSelection from './pages/services/NewServiceRepoSelection';
 import NewServiceConfigure from './pages/services/NewServiceConfigure';
 import ServiceDetails from './pages/services/ServiceDetails';
+import DeploymentReport from './pages/reports/DeploymentReport';
 
 function App() {
   return (
@@ -56,6 +57,9 @@ function App() {
       </Route>
       <Route path="/settings" element={<DashboardLayout />}>
         <Route index element={<AccountSettings />} />
+      </Route>
+      <Route path="/reports" element={<DashboardLayout />}>
+        <Route index element={<DeploymentReport />} />
       </Route>
     </Routes>
   );

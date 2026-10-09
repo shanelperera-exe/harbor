@@ -14,6 +14,7 @@ namespace Harbor.Reporting.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/reports")]
+[Route("api/reporting")]
 [Authorize]
 [Produces("application/json")]
 public class DeploymentReportController(IReportService reportService) : ControllerBase

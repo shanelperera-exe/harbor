@@ -93,11 +93,17 @@ public class DeploymentReportRepository(ReportingDbConnectionFactory dbFactory) 
             command.Parameters.AddWithValue("status", status);
 
         if (startDate.HasValue)
-            command.Parameters.AddWithValue("startDate", startDate.Value.ToUniversalTime());
+        {
+            var startUtc = DateTime.SpecifyKind(startDate.Value, DateTimeKind.Utc);
+            command.Parameters.AddWithValue("startDate", startUtc);
+        }
 
         if (endDate.HasValue)
+        {
             // Add one day so "endDate = Oct 9" includes all of Oct 9.
-            command.Parameters.AddWithValue("endDate", endDate.Value.ToUniversalTime().AddDays(1));
+            var endUtc = DateTime.SpecifyKind(endDate.Value, DateTimeKind.Utc).AddDays(1);
+            command.Parameters.AddWithValue("endDate", endUtc);
+        }
 
         // ── Read results ───────────────────────────────────────────────────────
         var results = new List<DeploymentReportEntity>();

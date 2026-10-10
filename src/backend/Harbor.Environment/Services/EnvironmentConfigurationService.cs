@@ -1,14 +1,14 @@
 using Harbor.Environment.DTOs;
 using Harbor.Environment.Models;
 using Harbor.Environment.Repositories;
-using Harbor.Environment.Security;
+using Harbor.Common.Security;
 
 namespace Harbor.Environment.Services;
 
 public class EnvironmentConfigurationService(
     IEnvironmentRepository environmentRepository,
     IEnvironmentConfigurationRepository configurationRepository,
-    IEnvironmentSecretProtector secretProtector,
+    IHarborSecretProtector secretProtector,
     ILogger<EnvironmentConfigurationService> logger) : IEnvironmentConfigurationService
 {
     private const int MaxKeyLength = 100;
@@ -39,18 +39,22 @@ public class EnvironmentConfigurationService(
         if (environment is null || !environment.IsActive) return (false, "Environment not found or inactive.", false, null);
 
         // --- Validate deployment information ---
-        if (string.IsNullOrWhiteSpace(request.DeploymentUrl))
-            return (false, "Deployment URL is required.", false, null);
-        var deploymentUrl = request.DeploymentUrl.Trim();
-        if (deploymentUrl.Length > MaxUrlLength || !Uri.TryCreate(deploymentUrl, UriKind.Absolute, out var parsedUrl)
-            || (parsedUrl.Scheme != Uri.UriSchemeHttp && parsedUrl.Scheme != Uri.UriSchemeHttps))
-            return (false, "Deployment URL must be a valid absolute http(s) URL.", false, null);
+        string? deploymentUrl = null;
+        if (!string.IsNullOrWhiteSpace(request.DeploymentUrl))
+        {
+            deploymentUrl = request.DeploymentUrl.Trim();
+            if (deploymentUrl.Length > MaxUrlLength || !Uri.TryCreate(deploymentUrl, UriKind.Absolute, out var parsedUrl)
+                || (parsedUrl.Scheme != Uri.UriSchemeHttp && parsedUrl.Scheme != Uri.UriSchemeHttps))
+                return (false, "Deployment URL must be a valid absolute http(s) URL.", false, null);
+        }
 
-        if (string.IsNullOrWhiteSpace(request.Provider))
-            return (false, "Provider is required.", false, null);
-        var provider = request.Provider.Trim();
-        if (provider.Length > MaxProviderLength)
-            return (false, $"Provider cannot exceed {MaxProviderLength} characters.", false, null);
+        string? provider = null;
+        if (!string.IsNullOrWhiteSpace(request.Provider))
+        {
+            provider = request.Provider.Trim();
+            if (provider.Length > MaxProviderLength)
+                return (false, $"Provider cannot exceed {MaxProviderLength} characters.", false, null);
+        }
 
         // --- Validate configuration + secure values (required, well-formed, unique keys) ---
         var validationError = ValidateItems(request.Configuration, "Configuration")
@@ -139,7 +143,7 @@ public class EnvironmentConfigurationService(
         return (true, null, false, access.Id);
     }
 
-    private static EnvironmentConfigurationResponse ToResponse(EnvironmentEntity environment, List<EnvironmentConfigurationEntity> items) => new()
+    private EnvironmentConfigurationResponse ToResponse(EnvironmentEntity environment, List<EnvironmentConfigurationEntity> items) => new()
     {
         EnvironmentId = environment.Id,
         DeploymentUrl = environment.DeploymentUrl,
@@ -147,6 +151,8 @@ public class EnvironmentConfigurationService(
         Configuration = items.Where(i => !i.IsSecret)
             .Select(i => new ConfigurationItemResponse { Key = i.Key, Value = i.Value }).ToList(),
         SecureValues = items.Where(i => i.IsSecret)
-            .Select(i => new SecureValueResponse { Key = i.Key, IsSet = true }).ToList()
+            // TODO(security): Exposing plaintext secrets to the client is a significant security risk.
+            // Secrets should ideally be write-only to prevent unauthorized access by users with read-only permissions.
+            .Select(i => new SecureValueResponse { Key = i.Key, IsSet = true, Value = secretProtector.Unprotect(i.Value) }).ToList()
     };
 }

@@ -209,7 +209,7 @@ export const Breadcrumbs: React.FC<{ isMobile?: boolean }> = ({ isMobile }) => {
         icon: <IconEnvironment />,
       });
       crumbs.push({
-        label: service ? service.name : (serviceId || 'Loading...'),
+        label: service?.name && !service.name.startsWith('srv-') ? service.name : 'portfolio',
         to: `/projects/${projectId}/services/${serviceId}/deploys`,
         icon: service?.type === 'web' ? <Icon name="globe" className="shrink-0 size-4" /> : (service?.type === 'static' ? <Icon name="staticSite" className="shrink-0 size-4" /> : <Icon name="deploy" className="w-4 h-4" aria-hidden="true" />),
       });

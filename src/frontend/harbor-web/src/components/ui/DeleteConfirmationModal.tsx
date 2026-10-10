@@ -89,7 +89,7 @@ export function DeleteConfirmationModal({
           </div>
           
           <div className="w-full flex justify-start space-x-2 p-6 border-solid border-t border-gray-300 dark:border-[#525252]">
-            <button type="submit" data-testid="confirm-delete-button" disabled={!isDeleteConfirmed || isDeleting} className={`h-10 py-2.5 px-4 flex items-center group/button transition-colors rounded-sm font-medium ${isDeleteConfirmed && !isDeleting ? 'bg-[#e23642] hover:bg-[#c0222d] text-white cursor-pointer' : 'bg-[#fad1d3] dark:bg-red-900/30 text-[#c0222d] dark:text-red-500/50 cursor-not-allowed'}`}>
+            <button type="submit" data-testid="confirm-delete-button" disabled={!isDeleteConfirmed || isDeleting} className={`h-10 py-2.5 px-4 flex items-center group/button transition-colors rounded-sm font-medium ${isDeleteConfirmed && !isDeleting ? 'bg-red-600 hover:bg-red-700 text-white cursor-pointer' : 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 cursor-not-allowed'}`}>
               {isDeleting ? 'Deleting...' : deleteButtonLabel}
             </button>
             <button type="button" onClick={onClose} className="h-10 py-2.5 px-3 flex items-center border border-solid border-gray-300 dark:border-[#525252] hover:bg-gray-100 dark:hover:bg-[#272727] text-gray-900 dark:text-[#f0f0f0] rounded-sm transition-colors">

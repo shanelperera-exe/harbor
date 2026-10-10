@@ -111,7 +111,9 @@ export default function ServiceHeader({ onDeployed }: ServiceHeaderProps) {
         <div className="flex flex-col md:flex-row md:items-start justify-between gap-y-4">
           <div className="flex-1 min-w-0">
             <h1 className="flex flex-wrap items-center gap-4 text-5xl font-medium text-gray-900 dark:text-white pr-4">
-              <div className="min-w-0 break-words">{service.name}</div>
+              <div className="min-w-0 break-words">
+                {service?.name && !service.name.startsWith('srv-') ? service.name : 'portfolio'}
+              </div>
             </h1>
           </div>
 

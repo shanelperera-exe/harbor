@@ -110,9 +110,12 @@ builder.Services.AddScoped<Harbor.Project.Repositories.IProjectRepository, Harbo
 builder.Services.AddScoped<Harbor.Project.Services.IProjectService, Harbor.Project.Services.ProjectService>();
 builder.Services.AddScoped<Harbor.Project.Repositories.IServiceRepository, Harbor.Project.Repositories.ServiceRepository>();
 builder.Services.AddScoped<Harbor.Project.Services.IServiceService, Harbor.Project.Services.ServiceService>();
+builder.Services.AddScoped<Harbor.Project.Repositories.IProjectIntegrationRepository, Harbor.Project.Repositories.ProjectIntegrationRepository>();
+builder.Services.AddScoped<Harbor.Project.Services.IProjectIntegrationService, Harbor.Project.Services.ProjectIntegrationService>();
 builder.Services.AddHttpClient<Harbor.Project.Services.ITokenService, Harbor.Project.Services.TokenService>();
 builder.Services.AddHttpClient<Harbor.Project.Services.IGitHubService, Harbor.Project.Services.GitHubService>();
 builder.Services.AddHarborGitHubApp();
+builder.Services.AddSingleton<Harbor.Common.Security.IHarborSecretProtector, Harbor.Common.Security.HarborSecretProtector>();
 
 var app = builder.Build();
 

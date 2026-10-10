@@ -1,14 +1,14 @@
 using Harbor.Environment.DTOs;
 using Harbor.Environment.Models;
 using Harbor.Environment.Repositories;
-using Harbor.Environment.Security;
+using Harbor.Common.Security;
 
 namespace Harbor.Environment.Services;
 
 public class EnvironmentConfigurationService(
     IEnvironmentRepository environmentRepository,
     IEnvironmentConfigurationRepository configurationRepository,
-    IEnvironmentSecretProtector secretProtector,
+    IHarborSecretProtector secretProtector,
     ILogger<EnvironmentConfigurationService> logger) : IEnvironmentConfigurationService
 {
     private const int MaxKeyLength = 100;

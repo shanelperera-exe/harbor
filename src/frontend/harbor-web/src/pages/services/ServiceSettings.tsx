@@ -7,17 +7,10 @@ import { DeleteConfirmationModal } from '../../components/ui/DeleteConfirmationM
 import { ChevronDown } from 'lucide-react';
 import { FaAws, FaDigitalOcean } from "react-icons/fa";
 import { VscAzure } from "react-icons/vsc";
-import { SiGooglecloud, SiRender } from "react-icons/si";
+import { SiGooglecloud, SiRender, SiDocker } from "react-icons/si";
 import { IoLogoVercel } from "react-icons/io5";
+import { getProjectIntegrations, type ProjectIntegration } from '../../services/projectIntegrationService';
 
-const PROVIDERS = [
-  { id: 'AWS', name: 'AWS', icon: FaAws },
-  { id: 'Azure', name: 'Microsoft Azure', icon: VscAzure },
-  { id: 'Google Cloud', name: 'Google Cloud', icon: SiGooglecloud },
-  { id: 'Render', name: 'Render', icon: SiRender },
-  { id: 'Vercel', name: 'Vercel', icon: IoLogoVercel },
-  { id: 'DigitalOcean', name: 'DigitalOcean', icon: FaDigitalOcean },
-];
 
 export default function ServiceSettings() {
   const { projectId } = useParams();
@@ -28,7 +21,8 @@ export default function ServiceSettings() {
 
   const [workflowFile, setWorkflowFile] = useState('deploy.yml');
   const [deploymentUrls, setDeploymentUrls] = useState<{environment: string, url: string}[]>([]);
-  const [provider, setProvider] = useState('');
+  const [integrationId, setIntegrationId] = useState<number | null>(null);
+  const [integrations, setIntegrations] = useState<ProjectIntegration[]>([]);
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
@@ -37,7 +31,14 @@ export default function ServiceSettings() {
   const providerRef = useRef<HTMLDivElement>(null);
   const [isProviderDropdownOpen, setIsProviderDropdownOpen] = useState(false);
 
-  const lastSavedRef = useRef<{ workflowFile: string; deploymentUrls: { environment: string; url: string }[]; provider: string } | null>(null);
+  const lastSavedRef = useRef<{ workflowFile: string; deploymentUrls: { environment: string; url: string }[]; integrationId: number | null } | null>(null);
+
+  useEffect(() => {
+    if (projectId) {
+      getProjectIntegrations(projectId).then(setIntegrations).catch(console.error);
+    }
+  }, [projectId]);
+
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (providerRef.current && !providerRef.current.contains(event.target as Node)) {
@@ -54,16 +55,16 @@ export default function ServiceSettings() {
       const initialUrls = service.deploymentUrls && service.deploymentUrls.length > 0 
         ? service.deploymentUrls 
         : [{ environment: 'Production', url: service.deploymentUrl || '' }];
-      const initialProv = service.provider || '';
+      const initialIntegrationId = service.integrationId || null;
 
       setWorkflowFile(initialWf);
-      setDeploymentUrls(initialUrls);
-      setProvider(initialProv);
+      setDeploymentUrls(JSON.parse(JSON.stringify(initialUrls)));
+      setIntegrationId(initialIntegrationId);
 
       lastSavedRef.current = {
         workflowFile: initialWf,
-        deploymentUrls: initialUrls,
-        provider: initialProv
+        deploymentUrls: JSON.parse(JSON.stringify(initialUrls)),
+        integrationId: initialIntegrationId
       };
     }
   }, [service]);
@@ -75,7 +76,6 @@ export default function ServiceSettings() {
 
     const payloadWf = workflowFile.trim() || 'deploy.yml';
     const cleanUrls = deploymentUrls.filter(u => u.url.trim() !== '');
-    const payloadProv = provider.trim();
 
     setSaveState('saving');
     try {
@@ -90,7 +90,7 @@ export default function ServiceSettings() {
         body: JSON.stringify({ 
           workflowFile: payloadWf,
           deploymentUrls: cleanUrls,
-          provider: payloadProv
+          integrationId: integrationId
         })
       });
       if (!res.ok) {
@@ -105,8 +105,8 @@ export default function ServiceSettings() {
 
       lastSavedRef.current = {
         workflowFile: svc.workflowFile || 'deploy.yml',
-        deploymentUrls: updatedUrls,
-        provider: svc.provider || ''
+        deploymentUrls: JSON.parse(JSON.stringify(updatedUrls)),
+        integrationId: svc.integrationId || null
       };
 
       if (setContextService) {
@@ -169,14 +169,24 @@ export default function ServiceSettings() {
     return <div className="p-12 text-center text-red-500">Service not found</div>;
   }
 
-  const filteredProviders = PROVIDERS.filter(p => p.name.toLowerCase().includes(provider.toLowerCase()));
-  const selectedProvider = PROVIDERS.find(p => p.name === provider);
-  const ProviderIcon = selectedProvider?.icon;
+  const selectedIntegration = integrations.find(i => i.id === integrationId);
+  const ProviderIcon = selectedIntegration ? (() => {
+    switch (selectedIntegration.providerType) {
+      case 'AWS': return FaAws;
+      case 'Azure': return VscAzure;
+      case 'Google Cloud': return SiGooglecloud;
+      case 'Render': return SiRender;
+      case 'Vercel': return IoLogoVercel;
+      case 'DigitalOcean': return FaDigitalOcean;
+      case 'Docker': return SiDocker;
+      default: return null;
+    }
+  })() : null;
 
   const isDirty = !!lastSavedRef.current && (
     lastSavedRef.current.workflowFile !== (workflowFile.trim() || 'deploy.yml') ||
-    lastSavedRef.current.provider !== provider.trim() ||
-    JSON.stringify(lastSavedRef.current.deploymentUrls.filter(u => u.url.trim() !== '')) !== JSON.stringify(deploymentUrls.filter(u => u.url.trim() !== ''))
+    lastSavedRef.current.integrationId !== integrationId ||
+    JSON.stringify(lastSavedRef.current.deploymentUrls.filter(u => u?.url?.trim() !== '')) !== JSON.stringify(deploymentUrls.filter(u => u?.url?.trim() !== ''))
   );
 
   return (
@@ -228,8 +238,7 @@ export default function ServiceSettings() {
                   placeholder="Environment (e.g. Production)" 
                   value={dUrl.environment}
                   onChange={e => {
-                    const newUrls = [...deploymentUrls];
-                    newUrls[idx].environment = e.target.value;
+                    const newUrls = deploymentUrls.map((u, i) => i === idx ? { ...u, environment: e.target.value } : u);
                     setDeploymentUrls(newUrls);
                   }}
                 />
@@ -239,8 +248,7 @@ export default function ServiceSettings() {
                   placeholder="URL (e.g. https://api.example.com)" 
                   value={dUrl.url}
                   onChange={e => {
-                    const newUrls = [...deploymentUrls];
-                    newUrls[idx].url = e.target.value;
+                    const newUrls = deploymentUrls.map((u, i) => i === idx ? { ...u, url: e.target.value } : u);
                     setDeploymentUrls(newUrls);
                   }}
                 />
@@ -269,27 +277,21 @@ export default function ServiceSettings() {
             <p className="text-sm text-gray-500 dark:text-[#a3a3a3]">The URLs where this service will be accessible per environment</p>
           </div>
           <div className="flex flex-col gap-2 relative" ref={providerRef}>
-            <label className="text-base font-semibold text-gray-900 dark:text-[#f0f0f0]">Deployment Provider</label>
+            <label className="text-base font-semibold text-gray-900 dark:text-[#f0f0f0]">Project Integration</label>
             <div className="relative">
               {ProviderIcon && !isProviderDropdownOpen && (
                 <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 dark:text-[#a3a3a3]">
                   <ProviderIcon className="w-5 h-5" />
                 </div>
               )}
-              <input 
-                type="text" 
-                className={`w-full h-11 ${ProviderIcon && !isProviderDropdownOpen ? 'pl-11' : 'pl-3.5'} pr-10 bg-transparent border border-gray-300 dark:border-[#525252] rounded-sm focus:border-[#2563eb] focus:outline-none dark:text-white font-mono text-base`}
-                placeholder="Search or select provider..." 
-                value={provider}
-                onChange={e => {
-                  setProvider(e.target.value);
-                  setIsProviderDropdownOpen(true);
-                }}
-                onFocus={() => setIsProviderDropdownOpen(true)}
-              />
               <div 
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-500 cursor-pointer"
+                className={`w-full h-11 ${ProviderIcon && !isProviderDropdownOpen ? 'pl-11' : 'pl-3.5'} pr-10 bg-transparent border border-gray-300 dark:border-[#525252] rounded-sm focus:border-[#2563eb] focus:outline-none dark:text-white font-mono text-base flex items-center cursor-pointer`}
                 onClick={() => setIsProviderDropdownOpen(!isProviderDropdownOpen)}
+              >
+                {selectedIntegration ? selectedIntegration.name : 'Select an integration...'}
+              </div>
+              <div 
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-500 cursor-pointer pointer-events-none"
               >
                 <ChevronDown className="w-5 h-5" />
               </div>
@@ -297,30 +299,41 @@ export default function ServiceSettings() {
             
             {isProviderDropdownOpen && (
               <div className="absolute top-[78px] left-0 w-full z-10 bg-white dark:bg-[#1f1f1f] border border-gray-300 dark:border-[#525252] rounded-sm shadow-lg max-h-60 overflow-y-auto">
-                {filteredProviders.length > 0 ? (
+                {integrations.length > 0 ? (
                   <ul className="py-1">
-                    {filteredProviders.map(p => (
+                    <li 
+                      className="flex items-center gap-3 px-3.5 py-2.5 hover:bg-gray-100 dark:hover:bg-[#2a2a2a] cursor-pointer text-base text-gray-700 dark:text-[#e3e3e3] transition-colors"
+                      onClick={() => {
+                        setIntegrationId(null);
+                        setIsProviderDropdownOpen(false);
+                      }}
+                    >
+                      <span className="text-gray-500">None</span>
+                    </li>
+                    {integrations.map(p => (
                       <li 
                         key={p.id}
                         className="flex items-center gap-3 px-3.5 py-2.5 hover:bg-gray-100 dark:hover:bg-[#2a2a2a] cursor-pointer text-base text-gray-700 dark:text-[#e3e3e3] transition-colors"
                         onClick={() => {
-                          setProvider(p.name);
+                          setIntegrationId(p.id);
                           setIsProviderDropdownOpen(false);
                         }}
                       >
-                        <p.icon className="w-5 h-5 text-gray-500 dark:text-[#a3a3a3]" />
-                        <span>{p.name}</span>
+                        <div className="flex flex-col">
+                          <span className="font-medium">{p.name}</span>
+                          <span className="text-xs text-gray-500">{p.providerType}</span>
+                        </div>
                       </li>
                     ))}
                   </ul>
                 ) : (
                   <div className="px-3.5 py-3 text-sm text-gray-500 dark:text-[#8f8f8f]">
-                    No matching providers found
+                    No project integrations available.
                   </div>
                 )}
               </div>
             )}
-            <p className="text-sm text-gray-500 dark:text-[#a3a3a3]">The platform hosting this service</p>
+            <p className="text-sm text-gray-500 dark:text-[#a3a3a3]">The integration used to interact with the deployment provider</p>
           </div>
           <div className="pt-2 min-h-[52px]">
             {(isDirty || saveState !== 'idle') && (

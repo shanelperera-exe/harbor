@@ -10,6 +10,7 @@ import Dashboard from './pages/dashboard/Dashboard';
 import Projects from './pages/projects/Projects';
 import CreateProject from './pages/projects/CreateProject';
 import ProjectSettings from './pages/projects/ProjectSettings';
+import ProjectIntegrations from './pages/projects/ProjectIntegrations';
 import Deployments from './pages/deployments/Deployments';
 import ProjectEnvironments from './pages/projects/ProjectEnvironments';
 import EnvironmentSettings from './pages/projects/EnvironmentSettings';
@@ -40,6 +41,7 @@ function App() {
         <Route index element={<Projects />} />
         <Route path="new" element={<CreateProject />} />
         <Route path=":id/settings" element={<ProjectSettings />} />
+        <Route path=":id/integrations" element={<ProjectIntegrations />} />
         <Route path=":projectId/services/new" element={<NewService />} />
         <Route path=":projectId/services/new/:serviceType" element={<NewServiceRepoSelection />} />
         <Route path=":projectId/services/new/:serviceType/configure" element={<NewServiceConfigure />} />

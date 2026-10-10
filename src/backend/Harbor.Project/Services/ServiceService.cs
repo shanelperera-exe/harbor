@@ -9,13 +9,22 @@ namespace Harbor.Project.Services
     {
         private readonly IServiceRepository _serviceRepository;
         private readonly IProjectRepository _projectRepository;
+        private readonly IProjectIntegrationRepository _integrationRepository;
         private readonly ICacheService _cache;
+        private readonly Harbor.Common.Security.IHarborSecretProtector _secretProtector;
 
-        public ServiceService(IServiceRepository serviceRepository, IProjectRepository projectRepository, ICacheService cache)
+        public ServiceService(
+            IServiceRepository serviceRepository, 
+            IProjectRepository projectRepository, 
+            IProjectIntegrationRepository integrationRepository,
+            ICacheService cache,
+            Harbor.Common.Security.IHarborSecretProtector secretProtector)
         {
             _serviceRepository = serviceRepository;
             _projectRepository = projectRepository;
+            _integrationRepository = integrationRepository;
             _cache = cache;
+            _secretProtector = secretProtector;
         }
 
         public async Task<(bool Success, string? Error, ServiceResponse? Data)> CreateAsync(string projectId, CreateServiceRequest request, int userId, bool isAdmin)
@@ -48,6 +57,7 @@ namespace Harbor.Project.Services
                 WorkflowFile = string.IsNullOrWhiteSpace(request.WorkflowFile) ? "deploy.yml" : request.WorkflowFile.Trim(),
                 DeploymentUrl = request.DeploymentUrls != null ? System.Text.Json.JsonSerializer.Serialize(request.DeploymentUrls) : request.DeploymentUrl?.Trim(),
                 Provider = request.Provider?.Trim(),
+                ProviderToken = string.IsNullOrWhiteSpace(request.ProviderToken) ? null : _secretProtector.Protect(request.ProviderToken.Trim()),
                 IsPrivate = request.IsPrivate
             };
 
@@ -116,15 +126,7 @@ namespace Harbor.Project.Services
                 service.WorkflowFile = string.IsNullOrWhiteSpace(request.WorkflowFile) ? "deploy.yml" : request.WorkflowFile.Trim();
             }
 
-            if (request.BuildCommand != null)
-            {
-                service.BuildCommand = string.IsNullOrWhiteSpace(request.BuildCommand) ? null : request.BuildCommand.Trim();
-            }
 
-            if (request.StartCommand != null)
-            {
-                service.StartCommand = string.IsNullOrWhiteSpace(request.StartCommand) ? null : request.StartCommand.Trim();
-            }
 
             if (request.DeploymentUrls != null)
             {
@@ -135,9 +137,27 @@ namespace Harbor.Project.Services
                 service.DeploymentUrl = string.IsNullOrWhiteSpace(request.DeploymentUrl) ? null : request.DeploymentUrl.Trim();
             }
 
-            if (request.Provider != null)
+            if (request.IntegrationId != null)
             {
-                service.Provider = string.IsNullOrWhiteSpace(request.Provider) ? null : request.Provider.Trim();
+                var integration = await _integrationRepository.GetByIdAsync(request.IntegrationId.Value);
+                if (integration != null && integration.ProjectId == project.Id)
+                {
+                    service.IntegrationId = request.IntegrationId.Value;
+                    service.Provider = integration.ProviderType;
+                    service.ProviderToken = integration.ProviderToken; // already encrypted
+                }
+            }
+            else
+            {
+                if (request.Provider != null)
+                {
+                    service.Provider = string.IsNullOrWhiteSpace(request.Provider) ? null : request.Provider.Trim();
+                }
+
+                if (request.ProviderToken != null)
+                {
+                    service.ProviderToken = string.IsNullOrWhiteSpace(request.ProviderToken) ? null : _secretProtector.Protect(request.ProviderToken.Trim());
+                }
             }
 
             var updated = await _serviceRepository.UpdateAsync(service);
@@ -149,8 +169,22 @@ namespace Harbor.Project.Services
             return (true, null, ToResponse(updatedService!));
         }
 
-        private static ServiceResponse ToResponse(ServiceEntity s)
+        private ServiceResponse ToResponse(ServiceEntity s)
         {
+            string? unproctedToken = s.ProviderToken;
+            if (!string.IsNullOrEmpty(s.ProviderToken))
+            {
+                try
+                {
+                    unproctedToken = _secretProtector.Unprotect(s.ProviderToken);
+                }
+                catch
+                {
+                    // Fallback to raw token if it was stored in plaintext before encryption was enabled
+                    unproctedToken = s.ProviderToken;
+                }
+            }
+
             var response = new ServiceResponse
             {
                 Id = s.Id,
@@ -163,10 +197,11 @@ namespace Harbor.Project.Services
                 RepositoryBranch = s.RepositoryBranch,
                 RepositoryCommit = s.RepositoryCommit,
                 WorkflowFile = s.WorkflowFile,
-                BuildCommand = s.BuildCommand,
-                StartCommand = s.StartCommand,
+
                 DeploymentUrl = s.DeploymentUrl,
                 Provider = s.Provider,
+                ProviderToken = unproctedToken,
+                IntegrationId = s.IntegrationId,
                 IsPrivate = s.IsPrivate,
                 CreatedAt = s.CreatedAt,
                 DeploymentUrls = new System.Collections.Generic.List<ServiceDeploymentUrl>()

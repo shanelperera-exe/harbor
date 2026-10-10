@@ -262,6 +262,7 @@ export default function SideNav({
                   </NavSection>
                   
                   <NavSection title="Manage">
+                    <NavItem label="Integrations" to={`/projects/${projectId}/integrations`} icon={<LayoutDashboard className="w-4 h-4" />} />
                     <NavItem label="Settings" to={`/projects/${projectId}/settings`} icon={<Icon name="settings" className="w-4 h-4" />} />
                   </NavSection>
                 </div>

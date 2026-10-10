@@ -178,7 +178,9 @@ export function DeployModal({ service, projectId, onClose, onDeployed, mode = 'l
               <Icon name="projects" className="flex-shrink-0 w-5 h-5" aria-hidden="true" />
             </div>
             <div className="min-w-0">
-              <div className="text-[15px] font-medium text-white truncate">{service?.name}</div>
+              <div className="text-[15px] font-medium text-white truncate">
+                {service?.name && !service.name.startsWith('srv-') ? service.name : 'portfolio'}
+              </div>
               {service?.repositoryName && (
                 <div className="text-[13px] text-[#8f8f8f] flex items-center gap-1 truncate">
                   <FaGithub className="w-3.5 h-3.5 flex-shrink-0" />
@@ -436,7 +438,7 @@ function ServiceLayout() {
 
   return (
     <div className="flex flex-col flex-1 w-full max-w-[1920px] mx-auto">
-      <Outlet context={{ service, deployRefreshKey }} />
+      <Outlet context={{ service, setService, deployRefreshKey }} />
     </div>
   );
 }

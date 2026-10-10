@@ -1,38 +1,83 @@
-import { Settings as SettingsIcon } from 'lucide-react';
 import { useParams, useNavigate, useOutletContext } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Icon } from '../../components/icons';
 import ServiceHeader from './ServiceHeader';
+import SectionTitle from '../../components/ui/SectionTitle';
+import { DeleteConfirmationModal } from '../../components/ui/DeleteConfirmationModal';
+import { ChevronDown } from 'lucide-react';
+import { FaAws, FaDigitalOcean } from "react-icons/fa";
+import { VscAzure } from "react-icons/vsc";
+import { SiGooglecloud, SiRender } from "react-icons/si";
+import { IoLogoVercel } from "react-icons/io5";
+
+const PROVIDERS = [
+  { id: 'AWS', name: 'AWS', icon: FaAws },
+  { id: 'Azure', name: 'Microsoft Azure', icon: VscAzure },
+  { id: 'Google Cloud', name: 'Google Cloud', icon: SiGooglecloud },
+  { id: 'Render', name: 'Render', icon: SiRender },
+  { id: 'Vercel', name: 'Vercel', icon: IoLogoVercel },
+  { id: 'DigitalOcean', name: 'DigitalOcean', icon: FaDigitalOcean },
+];
 
 export default function ServiceSettings() {
   const { projectId } = useParams();
   const navigate = useNavigate();
-  const context = useOutletContext<{ service: any; deployRefreshKey: number }>();
+  const context = useOutletContext<{ service: any; setService?: (s: any) => void; deployRefreshKey: number }>();
   const service = context?.service;
+  const setContextService = context?.setService;
+
   const [workflowFile, setWorkflowFile] = useState('deploy.yml');
-  const [buildCommand, setBuildCommand] = useState('');
-  const [startCommand, setStartCommand] = useState('');
   const [deploymentUrls, setDeploymentUrls] = useState<{environment: string, url: string}[]>([]);
   const [provider, setProvider] = useState('');
-  const [saving, setSaving] = useState(false);
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [deleting, setDeleting] = useState(false);
 
+  const providerRef = useRef<HTMLDivElement>(null);
+  const [isProviderDropdownOpen, setIsProviderDropdownOpen] = useState(false);
+
+  const lastSavedRef = useRef<{ workflowFile: string; deploymentUrls: { environment: string; url: string }[]; provider: string } | null>(null);
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (providerRef.current && !providerRef.current.contains(event.target as Node)) {
+        setIsProviderDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   useEffect(() => {
     if (service) {
-      setWorkflowFile(service.workflowFile || 'deploy.yml');
-      setBuildCommand(service.buildCommand || '');
-      setStartCommand(service.startCommand || '');
-      setDeploymentUrls(service.deploymentUrls && service.deploymentUrls.length > 0 ? service.deploymentUrls : [{ environment: 'Production', url: service.deploymentUrl || '' }]);
-      setProvider(service.provider || '');
+      const initialWf = service.workflowFile || 'deploy.yml';
+      const initialUrls = service.deploymentUrls && service.deploymentUrls.length > 0 
+        ? service.deploymentUrls 
+        : [{ environment: 'Production', url: service.deploymentUrl || '' }];
+      const initialProv = service.provider || '';
+
+      setWorkflowFile(initialWf);
+      setDeploymentUrls(initialUrls);
+      setProvider(initialProv);
+
+      lastSavedRef.current = {
+        workflowFile: initialWf,
+        deploymentUrls: initialUrls,
+        provider: initialProv
+      };
     }
   }, [service]);
 
-  const handleSave = async () => {
+  const performSave = async () => {
+    if (!service) return;
     const token = localStorage.getItem('harbor_token');
     if (!token) return;
-    setSaving(true);
+
+    const payloadWf = workflowFile.trim() || 'deploy.yml';
+    const cleanUrls = deploymentUrls.filter(u => u.url.trim() !== '');
+    const payloadProv = provider.trim();
+
+    setSaveState('saving');
     try {
       const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
       const res = await fetch(`${apiBase}/projects/${projectId}/services/${service?.publicId || service?.id}`, {
@@ -43,11 +88,9 @@ export default function ServiceSettings() {
           'ngrok-skip-browser-warning': 'true'
         },
         body: JSON.stringify({ 
-          workflowFile: workflowFile.trim() || 'deploy.yml',
-          buildCommand: buildCommand.trim(),
-          startCommand: startCommand.trim(),
-          deploymentUrls: deploymentUrls.filter(u => u.url.trim() !== ''),
-          provider: provider.trim()
+          workflowFile: payloadWf,
+          deploymentUrls: cleanUrls,
+          provider: payloadProv
         })
       });
       if (!res.ok) {
@@ -55,15 +98,28 @@ export default function ServiceSettings() {
       }
       const json = await res.json();
       const svc = json.data;
-      setWorkflowFile(svc.workflowFile || 'deploy.yml');
-      setBuildCommand(svc.buildCommand || '');
-      setStartCommand(svc.startCommand || '');
-      setDeploymentUrls(svc.deploymentUrls && svc.deploymentUrls.length > 0 ? svc.deploymentUrls : [{ environment: 'Production', url: svc.deploymentUrl || '' }]);
-      setProvider(svc.provider || '');
+
+      const updatedUrls = svc.deploymentUrls && svc.deploymentUrls.length > 0 
+        ? svc.deploymentUrls 
+        : [{ environment: 'Production', url: svc.deploymentUrl || '' }];
+
+      lastSavedRef.current = {
+        workflowFile: svc.workflowFile || 'deploy.yml',
+        deploymentUrls: updatedUrls,
+        provider: svc.provider || ''
+      };
+
+      if (setContextService) {
+        setContextService(svc);
+      }
+      
+      setSaveState('saved');
+      setTimeout(() => {
+        setSaveState('idle');
+      }, 2000);
     } catch (err) {
-      console.error(err);
-    } finally {
-      setSaving(false);
+      console.error('Error saving settings to backend:', err);
+      setSaveState('idle');
     }
   };
 
@@ -77,7 +133,8 @@ export default function ServiceSettings() {
     setDeleteConfirmText('');
   }
 
-  const deleteConfirmExpected = 'delete service ' + (service?.name || '');
+  const serviceDisplayName = (service?.name && !service.name.startsWith('srv-')) ? service.name : 'portfolio';
+  const deleteConfirmExpected = 'delete service ' + serviceDisplayName;
   const isDeleteConfirmed = deleteConfirmText === deleteConfirmExpected;
 
   const handleConfirmDelete = async (e: React.FormEvent) => {
@@ -112,68 +169,62 @@ export default function ServiceSettings() {
     return <div className="p-12 text-center text-red-500">Service not found</div>;
   }
 
+  const filteredProviders = PROVIDERS.filter(p => p.name.toLowerCase().includes(provider.toLowerCase()));
+  const selectedProvider = PROVIDERS.find(p => p.name === provider);
+  const ProviderIcon = selectedProvider?.icon;
+
+  const isDirty = !!lastSavedRef.current && (
+    lastSavedRef.current.workflowFile !== (workflowFile.trim() || 'deploy.yml') ||
+    lastSavedRef.current.provider !== provider.trim() ||
+    JSON.stringify(lastSavedRef.current.deploymentUrls.filter(u => u.url.trim() !== '')) !== JSON.stringify(deploymentUrls.filter(u => u.url.trim() !== ''))
+  );
+
   return (
     <div className="flex flex-col flex-1 w-full max-w-[1920px] mx-auto">
       <ServiceHeader />
 
       <main className="px-4 md:px-12 mt-8 mb-20 space-y-8">
-        <div className="flex items-center gap-2 border-b border-gray-300 dark:border-[#525252] pb-4">
-        <SettingsIcon className="w-5 h-5 text-gray-500" />
-        <h2 className="text-xl font-medium text-gray-900 dark:text-white">Settings</h2>
-      </div>
+      <SectionTitle
+        icon={<Icon name="settingsAlt" />}
+        title="Settings"
+        description="Configure how this service is built, deployed and hosted."
+      />
 
       {/* General Settings Section */}
       <section className="space-y-4">
-        <h3 className="text-lg font-medium text-gray-900 dark:text-[#f0f0f0]">General</h3>
-        <div className="grid gap-6 p-6 border border-gray-300 dark:border-[#525252] rounded-md bg-white dark:bg-[#141414]">
+        <h3 className="text-xl font-semibold text-gray-900 dark:text-[#f0f0f0]">General</h3>
+        <div className="grid gap-6 p-6 border border-gray-300 dark:border-[#525252] rounded-md bg-white dark:bg-[oklch(0.21_0.03_263.45)]">
           <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium text-gray-700 dark:text-[#cccccc]">Service Name</label>
+            <label className="text-base font-semibold text-gray-900 dark:text-[#f0f0f0]">Service Name</label>
             <input 
               type="text" 
               readOnly
-              className="h-10 px-3 bg-gray-100 dark:bg-[#1f1f1f] border border-gray-300 dark:border-[#525252] rounded-sm text-gray-600 dark:text-[#a3a3a3] cursor-not-allowed" 
-              value={service.name || ''}
+              className="h-11 px-3.5 bg-gray-100 dark:bg-[#1f1f1f] border border-gray-300 dark:border-[#525252] rounded-sm text-base text-gray-800 dark:text-[#cccccc] cursor-not-allowed" 
+              value={serviceDisplayName}
             />
-            <p className="text-xs text-gray-500 dark:text-[#8f8f8f]">The service name cannot be changed after creation</p>
+            <p className="text-sm text-gray-500 dark:text-[#a3a3a3]">The service name cannot be changed after creation</p>
           </div>
           <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium text-gray-700 dark:text-[#cccccc]">GitHub Actions Workflow File</label>
+            <label className="text-base font-semibold text-gray-900 dark:text-[#f0f0f0]">GitHub Actions Workflow File</label>
             <input 
               type="text" 
-              className="h-10 px-3 bg-transparent border border-gray-300 dark:border-[#525252] rounded-sm focus:border-[#2563eb] focus:outline-none dark:text-white font-mono text-sm" 
+              className="h-11 px-3.5 bg-transparent border border-gray-300 dark:border-[#525252] rounded-sm focus:border-[#2563eb] focus:outline-none dark:text-white font-mono text-base" 
               placeholder="deploy.yml" 
               value={workflowFile} 
-              onChange={e => setWorkflowFile(e.target.value)} 
+              onChange={e => {
+                setWorkflowFile(e.target.value);
+              }}
             />
-            <p className="text-xs text-gray-500 dark:text-[#8f8f8f]">The workflow file in .github/workflows that accepts workflow_dispatch (e.g., deploy.yml)</p>
+            <p className="text-sm text-gray-500 dark:text-[#a3a3a3]">The workflow file in .github/workflows that accepts workflow_dispatch (e.g., deploy.yml)</p>
           </div>
+
           <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium text-gray-700 dark:text-[#cccccc]">Build Command</label>
-            <input 
-              type="text" 
-              className="h-10 px-3 bg-transparent border border-gray-300 dark:border-[#525252] rounded-sm focus:border-[#2563eb] focus:outline-none dark:text-white font-mono text-sm" 
-              placeholder="e.g. npm run build" 
-              value={buildCommand}
-              onChange={e => setBuildCommand(e.target.value)}
-            />
-          </div>
-          <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium text-gray-700 dark:text-[#cccccc]">Start Command</label>
-            <input 
-              type="text" 
-              className="h-10 px-3 bg-transparent border border-gray-300 dark:border-[#525252] rounded-sm focus:border-[#2563eb] focus:outline-none dark:text-white font-mono text-sm" 
-              placeholder="e.g. npm start" 
-              value={startCommand}
-              onChange={e => setStartCommand(e.target.value)}
-            />
-          </div>
-          <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium text-gray-700 dark:text-[#cccccc]">Deployment URLs</label>
+            <label className="text-base font-semibold text-gray-900 dark:text-[#f0f0f0]">Deployment URLs</label>
             {deploymentUrls.map((dUrl, idx) => (
               <div key={idx} className="flex items-center gap-2">
                 <input 
                   type="text" 
-                  className="w-1/3 h-10 px-3 bg-transparent border border-gray-300 dark:border-[#525252] rounded-sm focus:border-[#2563eb] focus:outline-none dark:text-white font-mono text-sm" 
+                  className="w-1/3 h-11 px-3.5 bg-transparent border border-gray-300 dark:border-[#525252] rounded-sm focus:border-[#2563eb] focus:outline-none dark:text-white font-mono text-base" 
                   placeholder="Environment (e.g. Production)" 
                   value={dUrl.environment}
                   onChange={e => {
@@ -184,8 +235,8 @@ export default function ServiceSettings() {
                 />
                 <input 
                   type="text" 
-                  className="flex-1 h-10 px-3 bg-transparent border border-gray-300 dark:border-[#525252] rounded-sm focus:border-[#2563eb] focus:outline-none dark:text-white font-mono text-sm" 
-                  placeholder="URL (e.g. www.shanelperera.me)" 
+                  className="flex-1 h-11 px-3.5 bg-transparent border border-gray-300 dark:border-[#525252] rounded-sm focus:border-[#2563eb] focus:outline-none dark:text-white font-mono text-base" 
+                  placeholder="URL (e.g. https://api.example.com)" 
                   value={dUrl.url}
                   onChange={e => {
                     const newUrls = [...deploymentUrls];
@@ -195,8 +246,11 @@ export default function ServiceSettings() {
                 />
                 <button
                   type="button"
-                  className="h-10 px-3 text-red-500 hover:text-red-700 transition-colors"
-                  onClick={() => setDeploymentUrls(deploymentUrls.filter((_, i) => i !== idx))}
+                  className="h-11 px-3.5 text-base text-red-500 hover:text-red-700 transition-colors"
+                  onClick={() => {
+                    const newUrls = deploymentUrls.filter((_, i) => i !== idx);
+                    setDeploymentUrls(newUrls);
+                  }}
                 >
                   Remove
                 </button>
@@ -204,35 +258,104 @@ export default function ServiceSettings() {
             ))}
             <button
               type="button"
-              className="text-left text-sm text-[#2563eb] hover:underline mt-1 w-fit"
-              onClick={() => setDeploymentUrls([...deploymentUrls, { environment: 'Preview', url: '' }])}
+              className="text-left text-base font-medium text-[#2563eb] hover:underline mt-1 w-fit"
+              onClick={() => {
+                const newUrls = [...deploymentUrls, { environment: 'Preview', url: '' }];
+                setDeploymentUrls(newUrls);
+              }}
             >
               + Add another URL
             </button>
-            <p className="text-xs text-gray-500 dark:text-[#8f8f8f]">The URLs where this service will be accessible per environment</p>
+            <p className="text-sm text-gray-500 dark:text-[#a3a3a3]">The URLs where this service will be accessible per environment</p>
           </div>
-          <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium text-gray-700 dark:text-[#cccccc]">Deployment Provider</label>
-            <input 
-              type="text" 
-              className="h-10 px-3 bg-transparent border border-gray-300 dark:border-[#525252] rounded-sm focus:border-[#2563eb] focus:outline-none dark:text-white font-mono text-sm" 
-              placeholder="e.g. Vercel, Render, AWS" 
-              value={provider}
-              onChange={e => setProvider(e.target.value)}
-            />
-            <p className="text-xs text-gray-500 dark:text-[#8f8f8f]">The platform hosting this service</p>
+          <div className="flex flex-col gap-2 relative" ref={providerRef}>
+            <label className="text-base font-semibold text-gray-900 dark:text-[#f0f0f0]">Deployment Provider</label>
+            <div className="relative">
+              {ProviderIcon && !isProviderDropdownOpen && (
+                <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 dark:text-[#a3a3a3]">
+                  <ProviderIcon className="w-5 h-5" />
+                </div>
+              )}
+              <input 
+                type="text" 
+                className={`w-full h-11 ${ProviderIcon && !isProviderDropdownOpen ? 'pl-11' : 'pl-3.5'} pr-10 bg-transparent border border-gray-300 dark:border-[#525252] rounded-sm focus:border-[#2563eb] focus:outline-none dark:text-white font-mono text-base`}
+                placeholder="Search or select provider..." 
+                value={provider}
+                onChange={e => {
+                  setProvider(e.target.value);
+                  setIsProviderDropdownOpen(true);
+                }}
+                onFocus={() => setIsProviderDropdownOpen(true)}
+              />
+              <div 
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-500 cursor-pointer"
+                onClick={() => setIsProviderDropdownOpen(!isProviderDropdownOpen)}
+              >
+                <ChevronDown className="w-5 h-5" />
+              </div>
+            </div>
+            
+            {isProviderDropdownOpen && (
+              <div className="absolute top-[78px] left-0 w-full z-10 bg-white dark:bg-[#1f1f1f] border border-gray-300 dark:border-[#525252] rounded-sm shadow-lg max-h-60 overflow-y-auto">
+                {filteredProviders.length > 0 ? (
+                  <ul className="py-1">
+                    {filteredProviders.map(p => (
+                      <li 
+                        key={p.id}
+                        className="flex items-center gap-3 px-3.5 py-2.5 hover:bg-gray-100 dark:hover:bg-[#2a2a2a] cursor-pointer text-base text-gray-700 dark:text-[#e3e3e3] transition-colors"
+                        onClick={() => {
+                          setProvider(p.name);
+                          setIsProviderDropdownOpen(false);
+                        }}
+                      >
+                        <p.icon className="w-5 h-5 text-gray-500 dark:text-[#a3a3a3]" />
+                        <span>{p.name}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="px-3.5 py-3 text-sm text-gray-500 dark:text-[#8f8f8f]">
+                    No matching providers found
+                  </div>
+                )}
+              </div>
+            )}
+            <p className="text-sm text-gray-500 dark:text-[#a3a3a3]">The platform hosting this service</p>
           </div>
-          <div className="pt-2">
-            <button onClick={handleSave} disabled={saving} className="h-10 px-4 bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-medium rounded-sm transition-colors disabled:opacity-50">
-              {saving ? 'Saving...' : 'Save Changes'}
-            </button>
+          <div className="pt-2 min-h-[52px]">
+            {(isDirty || saveState !== 'idle') && (
+              <button 
+                onClick={performSave} 
+                disabled={saveState === 'saving'} 
+                className="h-11 px-5 bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-medium rounded-sm text-base transition-all disabled:opacity-50 flex items-center justify-center min-w-[140px]"
+              >
+                {saveState === 'saving' ? (
+                  <span className="flex items-center gap-2">
+                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Saving...
+                  </span>
+                ) : saveState === 'saved' ? (
+                  <span className="flex items-center gap-2">
+                    <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Saved
+                  </span>
+                ) : (
+                  'Save Changes'
+                )}
+              </button>
+            )}
           </div>
         </div>
       </section>
 
       {/* Danger Zone Section */}
       <section className="space-y-4">
-        <h3 className="text-lg font-medium text-red-600 dark:text-red-500">Danger Zone</h3>
+        <h3 className="text-xl font-semibold text-red-600 dark:text-red-500">Danger Zone</h3>
         <div className="p-6 border border-red-200 dark:border-[#4c1d1d] rounded-md bg-red-50 dark:bg-[#1f0f0f]">
           <div className="flex items-center justify-between">
             <div>
@@ -250,82 +373,24 @@ export default function ServiceSettings() {
       </section>
 
       {/* Delete Confirmation Modal */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" aria-modal="true" role="dialog">
-          <div className="absolute inset-0 bg-black/80" onClick={closeDeleteModal} />
-          <div className="relative inline-block w-full my-8 text-left align-middle bg-white dark:bg-[#141414] shadow-lg border border-solid border-gray-300 dark:border-[#525252] max-w-2xl">
-            {/* Modal Header */}
-            <div className="flex flex-col gap-2 items-start border-solid border-b border-gray-300 dark:border-[#525252] p-6 relative">
-              <div className="w-full">
-                <h1 className="text-xl font-medium text-gray-900 dark:text-white">Delete Service</h1>
-              </div>
-              <button
-                className="flex p-0 w-5 h-5 items-center justify-center hover:bg-gray-100 dark:hover:bg-[#272727] rounded-sm absolute right-3 top-3"
-                type="button"
-                aria-label="Close modal"
-                onClick={closeDeleteModal}
-              >
-                <Icon name="close" aria-hidden="true" width="16" height="16" />
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            <form noValidate id="confirm-delete" onSubmit={handleConfirmDelete}>
-              <div className="text-sm text-gray-700 dark:text-gray-300 p-6 space-y-4 break-words">
-                <p>
-                  This service <span className="font-semibold">{service.name}</span> will be{' '}
-                  <span className="font-semibold">permanently</span> deleted, along with all of its
-                  deployments and logs. This action cannot be undone.
-                </p>
-
-                <div>
-                  Type{' '}
-                  <pre translate="no" lang="en" className="inline">
-                    <code className="font-semibold text-red-600 dark:text-red-400">{deleteConfirmExpected}</code>
-                  </pre>{' '}
-                  below to confirm.
-                </div>
-                <div>
-                  <label htmlFor="sudo-command" className="sr-only">Confirm Delete</label>
-                  <div className="flex flex-col">
-                    <div className="flex relative">
-                      <input
-                        id="sudo-command"
-                        autoComplete="off"
-                        spellCheck={false}
-                        className="h-10 truncate w-full m-0 py-2.5 px-3 bg-white dark:bg-[#1a1a1a] border border-solid border-gray-300 dark:border-[#525252] rounded-sm appearance-none text-gray-900 dark:text-white outline-none focus:border-[#2563eb]"
-                        type="text"
-                        name="sudoCommand"
-                        value={deleteConfirmText}
-                        onChange={(e) => setDeleteConfirmText(e.target.value)}
-                        placeholder={deleteConfirmExpected}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Modal Footer */}
-              <div className="w-full flex justify-start space-x-2 p-6 border-solid border-t border-gray-300 dark:border-[#525252]">
-                <button
-                  type="submit"
-                  disabled={!isDeleteConfirmed || deleting}
-                  className={'h-10 py-2.5 px-3 flex items-center transition-colors rounded-sm font-medium ' + (isDeleteConfirmed && !deleting ? 'bg-red-600 text-white hover:bg-red-700 cursor-pointer' : 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 cursor-not-allowed')}
-                >
-                  {deleting ? 'Deleting...' : 'Delete service'}
-                </button>
-                <button
-                  type="button"
-                  onClick={closeDeleteModal}
-                  className="h-10 py-2.5 px-3 flex items-center transition-colors rounded-sm font-medium border border-solid border-gray-300 dark:border-[#525252] bg-white dark:bg-[#1a1a1a] text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-[#272727]"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <DeleteConfirmationModal
+        isOpen={showDeleteModal}
+        onClose={closeDeleteModal}
+        onConfirm={handleConfirmDelete}
+        title="Delete Service"
+        warningMessage={
+          <p>
+            This service <span className="font-semibold">{serviceDisplayName}</span> will be{' '}
+            <span className="font-semibold">permanently</span> deleted, along with all of its
+            deployments and logs. This action cannot be undone.
+          </p>
+        }
+        expectedConfirmText={deleteConfirmExpected}
+        confirmText={deleteConfirmText}
+        setConfirmText={setDeleteConfirmText}
+        isDeleting={deleting}
+        deleteButtonLabel="Delete service"
+      />
       </main>
     </div>
   );

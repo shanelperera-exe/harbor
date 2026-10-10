@@ -8,11 +8,12 @@ import { MdOutlinePublic } from "react-icons/md";
 import { RiLinksFill, RiSaveLine } from "react-icons/ri";
 import { PiPassword, PiEye, PiEyeSlash } from "react-icons/pi";
 import { FiExternalLink } from "react-icons/fi";
-import { LuCircleAlert } from "react-icons/lu";
+
 import UserAvatar from "../../components/ui/UserAvatar";
 import { clearAuthSession } from "../../services/authSession";
 import { useTheme } from "../../contexts/ThemeContext";
 import { Icon } from '../../components/icons';
+import { DeleteConfirmationModal } from '../../components/ui/DeleteConfirmationModal';
 
 const authApiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 // The GitHub App to install is per-environment, so the slug is supplied at build time
@@ -1489,82 +1490,27 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
         </div>
       )}
       
-      {isDeleteModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 px-4" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) { setIsDeleteModalOpen(false); setDeleteConfirmationText(''); } }}>
-          <div className="inline-block w-full text-left align-middle transform page-primary bg-white dark:bg-[oklch(0.21_0.03_263.45)] shadow-lg border border-solid border-gray-300 dark:border-[#525252] max-w-xl rounded-sm">
-            <form onSubmit={deleteAccount}>
-              <div className="flex flex-col gap-2 items-start border-solid border-b border-gray-300 dark:border-[#525252] p-6 relative">
-                <div className="w-full">
-                  <h1 className="text-[28px] leading-[32px] font-medium text-strong mb-1 font-['Roobert',sans-serif]">Delete Harbor Account</h1>
-                </div>
-                <button type="button" aria-label="Close modal" onClick={() => { setIsDeleteModalOpen(false); setDeleteConfirmationText(''); }} className="flex p-0 w-6 h-6 items-center justify-center text-gray-500 hover:text-gray-900 dark:text-[#8f8f8f] dark:hover:text-white absolute right-4 top-4">
-                  <Icon name="close" aria-hidden="true" />
-                </button>
-              </div>
-              
-              <div className="text-[16px] leading-relaxed text-gray-800 dark:text-[#e3e3e3] p-6 space-y-4 font-normal">
-                <div className="bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300 p-4 rounded-sm border border-red-100 dark:border-red-900/30 flex items-start space-x-3">
-                  <div className="flex-shrink-0 mt-0.5">
-                    <LuCircleAlert className="w-5 h-5 text-red-600 dark:text-red-400" />
-                  </div>
-                  <div>
-                    <p>This will delete all existing services, databases, data, Projects, and environment groups in your account.</p>
-                    <p className="mt-2">Deleting your account can <span className="font-bold underline">NOT</span> be reversed.</p>
-                  </div>
-                </div>
-                <div>Type <span className="font-mono font-bold text-red-600 dark:text-red-400 bg-gray-100 dark:bg-[#1a1a1a] px-1.5 py-0.5 rounded border border-gray-200 dark:border-[#333] select-all shadow-sm">sudo delete my account</span> in the text box below and click the delete button.</div>
-                {deleteError && (
-                  <p role="alert" className="text-[16px] text-red-600 dark:text-red-400">{deleteError}</p>
-                )}
-                
-                <div className="flex flex-col">
-                  <div className="flex relative">
-                    <input 
-                      autoComplete="off" 
-                      spellCheck="false" 
-                      id="delete-confirm-input" 
-                      className="h-10 w-full border border-gray-300 bg-transparent px-3 text-[16px] text-gray-900 outline-none focus:border-[#2563eb] focus:ring-1 focus:ring-[#2563eb] dark:border-[#525252] dark:text-white transition-colors rounded-sm" 
-                      type="text" 
-                      value={deleteConfirmationText} 
-                      onChange={(e) => setDeleteConfirmationText(e.target.value)} 
-                      name="confirm" 
-                    />
-                  </div>
-                </div>
-              </div>
-              
-              <div className="w-full flex justify-start space-x-2 p-6 border-solid border-t border-gray-300 dark:border-[#525252]">
-                <button 
-                  type="submit" 
-                  disabled={isDeletingAccount || deleteConfirmationText !== 'sudo delete my account'}
-                  className={`type-interface-01 text-[16px] h-10 py-2.5 px-3 flex items-center group/button transition-colors rounded-sm ${
-                    deleteConfirmationText === 'sudo delete my account' && !isDeletingAccount
-                      ? 'bg-[#e23642] hover:bg-[#c0222d] text-white cursor-pointer'
-                      : 'bg-[#e23642] text-white opacity-30 cursor-not-allowed'
-                  }`}
-                >
-                  {isDeletingAccount ? (
-                    'Deleting...'
-                  ) : (
-                    <>
-                      <div className="inline-flex w-4 h-4 me-1.5"><Icon name="trash" /></div>
-                      Delete Harbor Account
-                    </>
-                  )}
-                </button>
-                <button 
-                  type="button" 
-                  disabled={isDeletingAccount}
-                  onClick={() => { setIsDeleteModalOpen(false); setDeleteConfirmationText(''); }} 
-                  className="type-interface-01 text-[16px] text-gray-900 bg-white hover:bg-gray-100 dark:bg-[#1a1a1a] dark:text-[#e3e3e3] dark:hover:bg-[#272727] border border-solid border-gray-300 dark:border-[#525252] h-10 py-2.5 px-3 flex items-center group/button disabled:opacity-50 disabled:cursor-not-allowed transition-colors rounded-sm"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
+      <DeleteConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => { setIsDeleteModalOpen(false); setDeleteConfirmationText(''); }}
+        onConfirm={deleteAccount}
+        title="Delete Harbor Account"
+        warningMessage={
+          <div>
+            <p>This will delete all existing services, databases, data, Projects, and environment groups in your account.</p>
+            <p className="mt-2">Deleting your account can <span className="font-bold underline">NOT</span> be reversed.</p>
           </div>
-        </div>
-      )}
+        }
+        expectedConfirmText="sudo delete my account"
+        confirmText={deleteConfirmationText}
+        setConfirmText={setDeleteConfirmationText}
+        isDeleting={isDeletingAccount}
+        deleteButtonLabel="Delete account"
+      >
+        {deleteError && (
+          <p role="alert" className="text-[16px] text-red-600 dark:text-red-400 mb-4">{deleteError}</p>
+        )}
+      </DeleteConfirmationModal>
     </div>
   );
 }

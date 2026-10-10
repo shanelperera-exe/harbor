@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useOutletContext, useParams } from 'react-router-dom';
 import {
-  Database, Copy, Eye, EyeOff, Download
+  Copy, Download
 } from 'lucide-react';
 import { Icon } from '../../components/icons';
 import ServiceHeader from './ServiceHeader';
+import SectionTitle from '../../components/ui/SectionTitle';
 import {
   getEnvironments,
   getEnvironmentConfiguration,
@@ -12,6 +13,37 @@ import {
   type DeploymentEnvironment,
   type EnvironmentConfiguration,
 } from '../../services/environmentService';
+
+// Shared class names — kept in sync with the env UI in NewServiceConfigure.tsx
+const cardClass =
+  'p-6 md:p-8 bg-transparent dark:bg-[oklch(0.21_0.03_263.45)] border border-solid border-gray-300 dark:border-[#4d4d4d] rounded-sm scroll-mt-20';
+const titleClass =
+  "text-gray-900 dark:text-white text-[18px] font-semibold font-['Roobert',sans-serif]";
+const descriptionClass =
+  "text-[16px] leading-[24px] text-gray-600 dark:text-[#c7c7c7] mt-1 max-w-xl font-['Neue_Montreal',sans-serif]";
+const linkClass =
+  'font-inherit text-[#2563eb] hover:text-[#1d4ed8] active:text-[#1e3a8a] hover:underline relative no-underline outline-none ml-1';
+const bodyClass =
+  "text-[16px] leading-[24px] text-gray-900 dark:text-[#f0f0f0] font-['Neue_Montreal',sans-serif]";
+const tableWrapperClass =
+  'border border-solid border-gray-300 dark:border-[#4d4d4d] rounded-sm overflow-hidden';
+const keyHeaderClass =
+  'w-1/3 py-3 pl-7 pr-4 text-left font-mono text-[16px] uppercase text-gray-900 dark:text-[#f0f0f0]';
+const valueHeaderClass =
+  'py-3 pl-2 pr-4 text-left font-mono text-[16px] uppercase text-gray-900 dark:text-[#f0f0f0]';
+const keyCellClass = 'w-1/3 p-4 pt-0 align-top [tr:first-of-type_>_&]:pt-4';
+const valueCellClass = 'pb-4 pr-4 align-top [tr:first-of-type_>_&]:pt-4';
+const deleteCellClass = 'w-px pb-4 pr-4 align-top [tr:first-of-type_>_&]:pt-4';
+const keyInputClass =
+  'h-10 truncate font-mono text-[16px] w-full m-0 py-2.5 px-3 bg-transparent placeholder-gray-400 dark:placeholder-[#8f8f8f] outline-none border border-solid rounded-sm appearance-none text-gray-900 dark:text-[#f0f0f0] border-gray-300 dark:border-[#6b6b6b] focus:border-[#2563eb]';
+const valueInputClass =
+  'h-10 font-mono text-[16px] w-full m-0 px-3 bg-transparent placeholder-gray-400 dark:placeholder-[#8f8f8f] outline-none border border-solid rounded-sm appearance-none text-gray-900 dark:text-[#f0f0f0] border-gray-300 dark:border-[#6b6b6b] focus:border-[#2563eb] min-h-10 py-2';
+const iconButtonClass =
+  'text-[16px] text-gray-600 dark:text-[#e3e3e3] hover:bg-gray-100 dark:hover:bg-[#ffffff1a] hover:text-gray-900 dark:hover:text-[#f0f0f0] active:bg-gray-200 dark:active:bg-[#fff3] active:text-gray-900 dark:active:text-[#fff] h-10 py-2.5 px-3 outline-none flex items-center group/button transition-colors';
+const deleteButtonClass =
+  'text-[16px] bg-transparent text-red-500 dark:text-[#f0989e] hover:bg-red-600 hover:text-white dark:hover:bg-[#f4b3b7] dark:hover:text-[#000] active:bg-red-700 dark:active:bg-[#fad1d3] h-10 py-2.5 px-3 outline-none flex items-center group/button transition-colors';
+const actionButtonClass =
+  'text-[16px] text-gray-700 dark:text-[#e3e3e3] hover:bg-gray-50 dark:hover:bg-[#ffffffe6] hover:text-gray-900 dark:hover:text-[oklch(0.21_0.03_263.45)] active:bg-gray-100 dark:active:bg-[#fff] border border-solid border-gray-300 dark:border-[#fff6] h-10 py-2.5 px-3 outline-none flex items-center justify-center group/button transition-colors rounded-sm';
 
 export default function ServiceEnvironment() {
  const { projectId } = useParams();
@@ -22,6 +54,7 @@ export default function ServiceEnvironment() {
  const [isEditingVars, setIsEditingVars] = useState(false);
  const [envVars, setEnvVars] = useState<{key: string, value: string}[]>([]);
  const [editingVars, setEditingVars] = useState<{key: string, value: string}[]>([]);
+  const [visibleVars, setVisibleVars] = useState<Record<number, boolean>>({});
 
  // Environment Secrets State
  const [isEditingSecrets, setIsEditingSecrets] = useState(false);
@@ -57,7 +90,7 @@ export default function ServiceEnvironment() {
           config.configuration.map((c) => ({ key: c.key, value: c.value })),
         );
         setEnvSecrets(
-          config.secureValues.map((s) => ({ key: s.key, value: '' })),
+          config.secureValues.map((s) => ({ key: s.key, value: s.value || '' })),
         );
         setSecretIsSet(
           config.secureValues.reduce(
@@ -82,7 +115,7 @@ export default function ServiceEnvironment() {
   }, [projectId, service]);
 
   const handleEditVars = () => {
-   setEditingVars([...envVars]);
+   setEditingVars(envVars.map((v) => ({ ...v })));
    setIsEditingVars(true);
   };
   
@@ -113,7 +146,7 @@ export default function ServiceEnvironment() {
   };
 
   const handleCancelVars = () => {
-   setEditingVars([...envVars]);
+   setEditingVars(envVars.map((v) => ({ ...v })));
    setIsEditingVars(false);
   };
  
@@ -123,9 +156,12 @@ export default function ServiceEnvironment() {
   newVars.splice(index, 1);
   setEditingVars(newVars);
  };
+  const updateVar = (index: number, field: 'key' | 'value', val: string) => {
+   setEditingVars((prev) => prev.map((v, i) => (i === index ? { ...v, [field]: val } : v)));
+  };
 
  const handleEditSecrets = () => {
-  setEditingSecrets([...envSecrets]);
+  setEditingSecrets(envSecrets.map((s) => ({ ...s })));
   setIsEditingSecrets(true);
  };
  
@@ -156,7 +192,7 @@ export default function ServiceEnvironment() {
   };
 
   const handleCancelSecrets = () => {
-   setEditingSecrets([...envSecrets]);
+   setEditingSecrets(envSecrets.map((s) => ({ ...s })));
    setIsEditingSecrets(false);
   };
  
@@ -166,6 +202,13 @@ export default function ServiceEnvironment() {
   newSecrets.splice(index, 1);
   setEditingSecrets(newSecrets);
  };
+  const updateSecret = (index: number, field: 'key' | 'value', val: string) => {
+   setEditingSecrets((prev) => prev.map((s, i) => (i === index ? { ...s, [field]: val } : s)));
+  };
+
+  const toggleVarVisibility = (index: number) => {
+   setVisibleVars(prev => ({ ...prev, [index]: !prev[index] }));
+  };
 
   const toggleSecretVisibility = (index: number) => {
    setVisibleSecrets(prev => ({ ...prev, [index]: !prev[index] }));
@@ -176,42 +219,44 @@ export default function ServiceEnvironment() {
     void fetchEnvironmentConfig();
   }, [projectId, service]);
 
+  const varsToShow = isEditingVars ? editingVars : envVars;
+  const secretsToShow = isEditingSecrets ? editingSecrets : envSecrets;
+
   return (
   <div className="flex flex-col flex-1 w-full max-w-[1920px] mx-auto pb-20">
    <ServiceHeader />
 
     <main className="px-4 md:px-12 mt-8 space-y-6">
-    <h2 className="text-xl font-medium text-gray-900 dark:text-white flex items-center gap-2 mb-6">
-     <Database className="w-5 h-5 text-gray-500" />
-     Environment
-    </h2>
+    <SectionTitle
+     icon={<Icon name="sliders" />}
+     title="Environment"
+     description="Variables and secrets injected into this service at build and runtime."
+    />
 
     {/* Environment Variables Block */}
-    <div id="environment-variables" className="p-6 md:p-8 bg-white dark:bg-[#0b1221] border border-solid border-gray-300 dark:border-[#525252] rounded-md scroll-mt-20">
+    <div id="environment-variables" className={cardClass}>
      <div className="mb-8">
       <div className="flex justify-between flex-col md:flex-row gap-y-6">
        <div className="flex-1 md:pr-4">
-        <h4 className="text-gray-900 dark:text-white text-lg font-medium">Environment Variables</h4>
-        <div className="text-sm text-gray-500 dark:text-[#c7c7c7] mt-1 max-w-xl">
-         Set environment-specific config and secrets (such as API keys), then read those values from your code.{' '}
-         <a rel="noopener noreferrer" target="_blank" className="text-gray-900 dark:text-[#d1b8ff] underline hover:no-underline font-medium" href="https://render.com/docs/configure-environment-variables">
+        <h4 className={titleClass}>Environment Variables</h4>
+        <div className={descriptionClass}>
+         Set environment-specific config and secrets (such as API keys), then read those values from your code.
+         <a rel="noopener noreferrer" target="_blank" className={linkClass} href="https://render.com/docs/configure-environment-variables">
           Learn more.
          </a>
         </div>
        </div>
         <div>
          {!isEditingVars && envVars.length > 0 && (
-          <div className="inline-flex flex-wrap gap-2">
-           <button className="h-10 px-3 inline-flex items-center justify-center border border-solid border-gray-300 dark:border-[#fff6] text-gray-700 dark:text-[#e3e3e3] hover:bg-gray-100 dark:hover:bg-[#ffffffe6] hover:text-gray-900 dark:hover:text-[#141414] transition-colors rounded-none text-sm font-medium">
+          <div className="inline-flex flex-wrap gap-3">
+           <button type="button" aria-label="Download" className={actionButtonClass}>
             <Download className="w-4 h-4" />
            </button>
-           <button className="h-10 px-3 inline-flex items-center justify-center border border-solid border-gray-300 dark:border-[#fff6] text-gray-700 dark:text-[#e3e3e3] hover:bg-gray-100 dark:hover:bg-[#ffffffe6] hover:text-gray-900 dark:hover:text-[#141414] transition-colors rounded-none text-sm font-medium">
+           <button type="button" aria-label="Copy" className={actionButtonClass}>
             <Copy className="w-4 h-4" />
            </button>
-           <button
-            onClick={handleEditVars}
-            className="h-10 px-3 inline-flex items-center justify-center border border-solid border-gray-300 dark:border-[#fff6] text-gray-700 dark:text-[#e3e3e3] hover:bg-gray-100 dark:hover:bg-[#ffffffe6] hover:text-gray-900 dark:hover:text-[#141414] transition-colors rounded-none text-sm font-medium"
-           >
+           <button type="button" onClick={handleEditVars} className={actionButtonClass}>
+            <div className="inline-flex w-4 h-4 me-1.5"><Icon name="editPencil" /></div>
             Edit
            </button>
           </div>
@@ -221,155 +266,147 @@ export default function ServiceEnvironment() {
       </div>
       
       {configError && (
-       <div className="mb-4 text-sm text-red-500">
+       <div className="mb-4 text-[14px] text-red-500">
         {configError}
        </div>
       )}
       {saveError && (
-       <div className="mb-4 text-sm text-red-500">
+       <div className="mb-4 text-[14px] text-red-500">
         {saveError}
        </div>
       )}
 
       {loadingConfig ? (
-       <div className="py-8 text-center text-gray-500 dark:text-[#8f8f8f] text-sm">
+       <div className="py-8 text-center text-gray-500 dark:text-[#8f8f8f] text-[14px]">
         Loading environment variables…
        </div>
       ) : (
-       <div className="text-[14px] text-gray-900 dark:text-[#f0f0f0]">
-       {isEditingVars || envVars.length > 0 ? (
-       <form noValidate className="[container-type:inline-size]">
-        <table className="w-full">
-         <thead role="rowgroup" className="w-full table border-solid border-gray-300 dark:border-[#4d4d4d] border-t border-x">
-          <tr>
-           <th scope="col" className="py-3 pr-4 pl-4 text-[12px] uppercase tracking-wider text-gray-900 dark:text-[#f0f0f0] font-mono text-left w-[33%]">Key</th>
-           <th scope="col" className="py-3 pr-4 pl-0 text-[12px] uppercase tracking-wider text-gray-900 dark:text-[#f0f0f0] font-mono text-left">Value</th>
-           <th scope="col" className="py-3 pr-4 pl-0 text-[14px] font-semibold text-left w-[1px]">
-            <span className="sr-only">Delete</span>
-           </th>
-          </tr>
-         </thead>
-         <tbody role="rowgroup" className="w-full block border-solid border-gray-300 dark:border-[#4d4d4d] border">
-          {(isEditingVars ? editingVars : envVars).map((v, idx) => (
-           <tr role="row" key={idx} className="w-full table border-b border-gray-200 dark:border-[#4d4d4d] last:border-0">
-            <th scope="row" className="align-top pt-4 pb-4 pr-4 pl-4 w-[33%]">
-             <div className="scroll-mt-16 scroll-mb-2">
-              <div className="flex flex-col">
-               <label className="inline-block text-[12px] text-gray-900 dark:text-[#f0f0f0] mb-2 sr-only">Key</label>
-               <div className="flex relative">
-                <input 
-                 placeholder="NAME_OF_VARIABLE" 
-                 value={v.key}
-                 onChange={(e) => {
-                  const newVars = [...editingVars];
-                  newVars[idx].key = e.target.value;
-                  setEditingVars(newVars);
-                 }}
-                 className="h-10 truncate font-mono text-[13px] w-full m-0 py-2.5 px-3 bg-transparent placeholder-gray-400 dark:placeholder-[#8f8f8f] border border-solid dark:border-[#6b6b6b] hover:dark:border-[#b3b3b3] rounded-none appearance-none text-gray-900 dark:text-[#f0f0f0]" 
-                 type="text" 
-                />
-               </div>
-              </div>
-             </div>
-            </th>
-            <td className="align-top pt-4 pb-4 pr-4 pl-0">
-             <div className="w-full flex items-start space-x-4 scroll-mt-16 scroll-mb-2">
-              <div className="flex flex-col w-full">
-               <label className="inline-block text-[12px] text-gray-900 dark:text-[#f0f0f0] mb-2 sr-only">Value</label>
-               <div className="flex relative">
-                <textarea 
-                 rows={1} 
-                 placeholder="value" 
-                 value={v.value}
-                 onChange={(e) => {
-                  const newVars = [...editingVars];
-                  newVars[idx].value = e.target.value;
-                  setEditingVars(newVars);
-                 }}
-                 className="font-mono text-[13px] w-full m-0 px-3 bg-transparent placeholder-gray-400 dark:placeholder-[#8f8f8f] border border-solid dark:border-[#6b6b6b] hover:dark:border-[#b3b3b3] rounded-none appearance-none text-gray-900 dark:text-[#f0f0f0] h-10 min-h-[40px] max-h-[40px] py-2.5 overflow-hidden resize-none"
-                />
-               </div>
-              </div>
-              <div className="flex items-center space-x-2 justify-start min-w-[100px]">
-              </div>
-             </div>
-            </td>
-            <td className="align-top pt-4 pb-4 pr-4 pl-0 w-[1px]">
-             <div>
-              {isEditingVars && <button onClick={() => removeVar(idx)} type="button" className="text-red-600 dark:text-[#f0989e] hover:text-red-700 dark:hover:text-[#000] hover:bg-red-50 dark:hover:bg-[#f4b3b7] active:bg-red-100 dark:active:bg-[#fad1d3] h-10 py-2.5 px-3 flex items-center group/button transition-colors">
-               <Icon name="trash" aria-label="Delete" />
-              </button>}
-             </div>
-            </td>
-           </tr>
-          ))}
-         </tbody>
-        </table>
-        
-         {isEditingVars && <div className="mt-10 flex justify-between gap-y-10 flex-col gap-x-4 [@container(min-width:50rem)]:flex-row">
-          <div className="flex flex-wrap gap-2 items-center">
-           <button type="button" onClick={addVar} className="text-gray-700 dark:text-[#e3e3e3] hover:bg-gray-100 dark:hover:bg-[#ffffffe6] hover:text-gray-900 dark:hover:text-[#141414] border border-solid border-gray-300 dark:border-[#fff6] h-10 py-2.5 px-3 flex items-center group/button transition-colors text-sm font-medium">
-            <div className="inline-flex w-4 h-4 me-1.5">
-             <Icon name="plus" />
-            </div>
-            Add variable
-           </button>
+       <div className={bodyClass}>
+        <form noValidate onSubmit={(e) => e.preventDefault()}>
+         {varsToShow.length > 0 && (
+          <div className={tableWrapperClass}>
+           <table className="w-full">
+            <thead className="border-b border-solid border-gray-300 dark:border-[#4d4d4d]">
+             <tr>
+              <th scope="col" className={keyHeaderClass}>Key</th>
+              <th scope="col" className={valueHeaderClass}>Value</th>
+              <th scope="col" className="w-px pr-4"><span className="sr-only">Delete</span></th>
+             </tr>
+            </thead>
+            <tbody>
+             {varsToShow.map((v, idx) => (
+              <tr key={idx}>
+               <td className={keyCellClass}>
+                <div className="flex flex-col">
+                 <label htmlFor={`env-key-${idx}`} className="inline-block text-[12px] font-medium text-[#f0f0f0] mb-2 sr-only">Key</label>
+                 <div className="flex relative">
+                  <input
+                   id={`env-key-${idx}`}
+                   placeholder="NAME_OF_VARIABLE"
+                   type="text"
+                   value={v.key}
+                   readOnly={!isEditingVars}
+                   onChange={(e) => updateVar(idx, 'key', e.target.value)}
+                   className={keyInputClass}
+                  />
+                 </div>
+                </div>
+               </td>
+               <td className={valueCellClass}>
+                <div className="w-full flex items-start space-x-4 scroll-mt-16 scroll-mb-2">
+                 <div className="flex flex-col w-full">
+                  <label htmlFor={`env-value-${idx}`} className="inline-block text-[12px] font-medium text-[#f0f0f0] mb-2 sr-only">Value</label>
+                  <div className="flex relative">
+                   <input
+                    id={`env-value-${idx}`}
+                    type={visibleVars[idx] ? 'text' : 'password'}
+                    placeholder="value"
+                    dir="auto"
+                    autoComplete="off"
+                    spellCheck={false}
+                    value={v.value}
+                    readOnly={!isEditingVars}
+                    onChange={(e) => updateVar(idx, 'value', e.target.value)}
+                    className={valueInputClass}
+                   />
+                  </div>
+                 </div>
+                 <div className="flex items-center space-x-2 justify-start">
+                  <button type="button" aria-label="Toggle value visibility" onClick={() => toggleVarVisibility(idx)} className={iconButtonClass}>
+                   {visibleVars[idx] ? <Icon name="eyeOff" aria-hidden="true" /> : <Icon name="eye" />}
+                  </button>
+                 </div>
+                </div>
+               </td>
+               <td className={deleteCellClass}>
+                {isEditingVars && (
+                 <button onClick={() => removeVar(idx)} type="button" aria-label="Delete" className={deleteButtonClass}>
+                  <Icon name="trash" />
+                 </button>
+                )}
+               </td>
+              </tr>
+             ))}
+            </tbody>
+           </table>
           </div>
-          <div className="flex flex-wrap gap-3 items-start">
-           <button onClick={handleSaveVars} type="button" className="text-gray-700 dark:text-[#e3e3e3] hover:bg-gray-100 dark:hover:bg-[#ffffffe6] hover:text-gray-900 dark:hover:text-[#141414] border border-solid border-gray-300 dark:border-[#fff6] h-10 py-2.5 px-3 flex items-center group/button transition-colors text-sm font-medium">
-            Save
-           </button>
-           <button onClick={handleCancelVars} type="button" className="text-gray-700 dark:text-[#e3e3e3] hover:bg-gray-100 dark:hover:bg-[#ffffffe6] hover:text-gray-900 dark:hover:text-[#141414] border border-solid border-gray-300 dark:border-[#fff6] h-10 py-2.5 px-3 flex items-center group/button transition-colors text-sm font-medium">
-            Cancel
-           </button>
+         )}
+
+         {isEditingVars ? (
+          <div className={`${varsToShow.length > 0 ? 'mt-5' : ''} flex flex-col md:flex-row justify-between gap-3`}>
+           <div className="flex flex-wrap gap-3">
+            <button type="button" onClick={addVar} className={actionButtonClass}>
+             <div className="inline-flex w-4 h-4 me-1.5"><Icon name="plus" /></div>
+             Add Environment Variable
+            </button>
+           </div>
+           <div className="flex flex-wrap gap-3">
+            <button type="button" onClick={handleSaveVars} className={actionButtonClass}>
+             Save
+            </button>
+            <button type="button" onClick={handleCancelVars} className={actionButtonClass}>
+             Cancel
+            </button>
+           </div>
           </div>
-         </div>}
-       </form>
-       ) : (
-        <form noValidate className="[container-type:inline-size]">
-         <div className="flex justify-between gap-y-10 flex-col gap-x-4 [@container(min-width:50rem)]:flex-row">
-          <div className="flex flex-wrap gap-2 items-center">
-           <button 
-            type="button" 
+         ) : envVars.length === 0 && (
+          <div className="flex flex-wrap gap-3">
+           <button
+            type="button"
             onClick={() => {
              setEditingVars([{ key: '', value: '' }]);
              setIsEditingVars(true);
-            }} 
-            className="text-gray-700 dark:text-[#e3e3e3] hover:bg-gray-100 dark:hover:bg-[#ffffffe6] hover:text-gray-900 dark:hover:text-[#141414] border border-solid border-gray-300 dark:border-[#fff6] h-10 py-2.5 px-3 flex items-center group/button text-sm font-medium transition-colors"
+            }}
+            className={actionButtonClass}
            >
-            <div className="inline-flex w-4 h-4 me-1.5">
-             <Icon name="plus" />
-            </div>
-            Add variable
+            <div className="inline-flex w-4 h-4 me-1.5"><Icon name="plus" /></div>
+            Add Environment Variable
            </button>
           </div>
-         </div>
+         )}
         </form>
-       )}
-      </div>
-       )}
+       </div>
+      )}
      </div>
 
      {/* Environment Secrets Block */}
-    <div id="environment-secrets" className="p-6 md:p-8 bg-white dark:bg-[#0b1221] border border-solid border-gray-300 dark:border-[#525252] rounded-md scroll-mt-20">
+    <div id="environment-secrets" className={cardClass}>
      <div className="mb-8">
       <div className="flex justify-between flex-col md:flex-row gap-y-6">
        <div className="flex-1 md:pr-4">
-        <h4 className="text-gray-900 dark:text-white text-lg font-medium">Environment Secrets</h4>
-        <div className="text-sm text-gray-500 dark:text-[#c7c7c7] mt-1 max-w-xl">
-         These secrets are encrypted at rest and injected securely at runtime.{' '}
-         <a rel="noopener noreferrer" target="_blank" className="text-gray-900 dark:text-[#d1b8ff] underline hover:no-underline font-medium" href="https://render.com/docs/configure-environment-variables">
+        <h4 className={titleClass}>Environment Secrets</h4>
+        <div className={descriptionClass}>
+         These secrets are encrypted at rest and injected securely at runtime.
+         <a rel="noopener noreferrer" target="_blank" className={linkClass} href="https://render.com/docs/configure-environment-variables">
           Learn more.
          </a>
         </div>
        </div>
         <div>
          {!isEditingSecrets && envSecrets.length > 0 && (
-          <div className="inline-flex flex-wrap gap-2">
-           <button
-            onClick={handleEditSecrets}
-            className="h-10 px-3 inline-flex items-center justify-center border border-solid border-gray-300 dark:border-[#fff6] text-gray-700 dark:text-[#e3e3e3] hover:bg-gray-100 dark:hover:bg-[#ffffffe6] hover:text-gray-900 dark:hover:text-[#141414] transition-colors rounded-none text-sm font-medium"
-           >
+          <div className="inline-flex flex-wrap gap-3">
+           <button type="button" onClick={handleEditSecrets} className={actionButtonClass}>
+            <div className="inline-flex w-4 h-4 me-1.5"><Icon name="editPencil" /></div>
             Edit
            </button>
           </div>
@@ -379,145 +416,127 @@ export default function ServiceEnvironment() {
       </div>
       
       {loadingConfig ? (
-       <div className="py-8 text-center text-gray-500 dark:text-[#8f8f8f] text-sm">
+       <div className="py-8 text-center text-gray-500 dark:text-[#8f8f8f] text-[14px]">
         Loading environment secrets…
        </div>
       ) : (
-       <div className="text-[14px] text-gray-900 dark:text-[#f0f0f0]">
-       {isEditingSecrets || envSecrets.length > 0 ? (
-       <form noValidate className="[container-type:inline-size]">
-        <table className="w-full">
-         <thead role="rowgroup" className="w-full table border-solid border-gray-300 dark:border-[#4d4d4d] border-t border-x">
-          <tr>
-           <th scope="col" className="py-3 pr-4 pl-4 text-[12px] uppercase tracking-wider text-gray-900 dark:text-[#f0f0f0] font-mono text-left w-[33%]">Key</th>
-           <th scope="col" className="py-3 pr-4 pl-0 text-[12px] uppercase tracking-wider text-gray-900 dark:text-[#f0f0f0] font-mono text-left">Value</th>
-           <th scope="col" className="py-3 pr-4 pl-0 text-[14px] font-semibold text-left w-[1px]">
-            <span className="sr-only">Delete</span>
-           </th>
-          </tr>
-         </thead>
-         <tbody role="rowgroup" className="w-full block border-solid border-gray-300 dark:border-[#4d4d4d] border">
-          {(isEditingSecrets ? editingSecrets : envSecrets).map((v, idx) => (
-           <tr role="row" key={idx} className="w-full table border-b border-gray-200 dark:border-[#4d4d4d] last:border-0">
-            <th scope="row" className="align-top pt-4 pb-4 pr-4 pl-4 w-[33%]">
-             <div className="scroll-mt-16 scroll-mb-2">
-              <div className="flex flex-col">
-               <label className="inline-block text-[12px] text-gray-900 dark:text-[#f0f0f0] mb-2 sr-only">Key</label>
-               <div className="flex relative">
-                <input 
-                 placeholder="NAME_OF_SECRET" 
-                 value={v.key}
-                 onChange={(e) => {
-                  const newSecrets = [...editingSecrets];
-                  newSecrets[idx].key = e.target.value;
-                  setEditingSecrets(newSecrets);
-                 }}
-                 className="h-10 truncate font-mono text-[13px] w-full m-0 py-2.5 px-3 bg-transparent placeholder-gray-400 dark:placeholder-[#8f8f8f] border border-solid dark:border-[#6b6b6b] hover:dark:border-[#b3b3b3] rounded-none appearance-none text-gray-900 dark:text-[#f0f0f0]" 
-                 type="text" 
-                />
-               </div>
-              </div>
-             </div>
-            </th>
-             <td className="align-top pt-4 pb-4 pr-4 pl-0">
-              <div className="w-full flex items-start space-x-4 scroll-mt-16 scroll-mb-2">
-               <div className="flex flex-col w-full">
-                <label className="inline-block text-[12px] text-gray-900 dark:text-[#f0f0f0] mb-2 sr-only">Value</label>
-                <div className="flex relative">
-                 {isEditingSecrets ? (
-                  <textarea 
-                   rows={1} 
-                   placeholder="value" 
-                   value={v.value}
-                   onChange={(e) => {
-                    const newSecrets = [...editingSecrets];
-                    newSecrets[idx].value = e.target.value;
-                    setEditingSecrets(newSecrets);
-                   }}
-                   className="font-mono text-[13px] w-full m-0 px-3 bg-transparent placeholder-gray-400 dark:placeholder-[#8f8f8f] border border-solid dark:border-[#6b6b6b] hover:dark:border-[#b3b3b3] rounded-none appearance-none text-gray-900 dark:text-[#f0f0f0] h-10 min-h-[40px] max-h-[40px] py-2.5 overflow-hidden resize-none [&[data-state=hidden]]:text-transparent [&[data-state=hidden]]:placeholder-transparent"
-                   data-state={visibleSecrets[idx] ? 'visible' : 'hidden'}
+       <div className={bodyClass}>
+        <form noValidate onSubmit={(e) => e.preventDefault()}>
+         {secretsToShow.length > 0 && (
+          <div className={tableWrapperClass}>
+           <table className="w-full">
+            <thead className="border-b border-solid border-gray-300 dark:border-[#4d4d4d]">
+             <tr>
+              <th scope="col" className={keyHeaderClass}>Key</th>
+              <th scope="col" className={valueHeaderClass}>Value</th>
+              <th scope="col" className="w-px pr-4"><span className="sr-only">Delete</span></th>
+             </tr>
+            </thead>
+            <tbody>
+             {secretsToShow.map((s, idx) => (
+              <tr key={idx}>
+               <td className={keyCellClass}>
+                <div className="flex flex-col">
+                 <label htmlFor={`env-secret-key-${idx}`} className="inline-block text-[12px] font-medium text-[#f0f0f0] mb-2 sr-only">Key</label>
+                 <div className="flex relative">
+                  <input
+                   id={`env-secret-key-${idx}`}
+                   placeholder="NAME_OF_SECRET"
+                   type="text"
+                   value={s.key}
+                   readOnly={!isEditingSecrets}
+                   onChange={(e) => updateSecret(idx, 'key', e.target.value)}
+                   className={keyInputClass}
                   />
-                 ) : (
-                  <div 
-                    className="font-mono text-[13px] w-full m-0 px-3 py-2.5 bg-transparent border border-solid dark:border-[#6b6b6b] rounded-none appearance-none text-gray-900 dark:text-[#f0f0f0] h-10 min-h-[40px] max-h-[40px] overflow-hidden resize-none cursor-default"
-                    data-state={visibleSecrets[idx] ? 'visible' : 'hidden'}
-                  >
-                    {secretIsSet[idx] ? (visibleSecrets[idx] ? v.value || '••••••••••' : '•'.repeat(Math.max(2, v.value?.length || 8)) ) : 'Not set'}
+                 </div>
+                </div>
+               </td>
+               <td className={valueCellClass}>
+                <div className="w-full flex items-start space-x-4 scroll-mt-16 scroll-mb-2">
+                 <div className="flex flex-col w-full">
+                  <label htmlFor={`env-secret-value-${idx}`} className="inline-block text-[12px] font-medium text-[#f0f0f0] mb-2 sr-only">Value</label>
+                  <div className="flex relative">
+                   {isEditingSecrets ? (
+                    <input
+                     id={`env-secret-value-${idx}`}
+                     type={visibleSecrets[idx] ? 'text' : 'password'}
+                     placeholder="value"
+                     dir="auto"
+                     autoComplete="off"
+                     spellCheck={false}
+                     value={s.value}
+                     onChange={(e) => updateSecret(idx, 'value', e.target.value)}
+                     className={valueInputClass}
+                    />
+                   ) : (
+                    <div id={`env-secret-value-${idx}`} className={`${valueInputClass} flex items-center cursor-default select-none`}>
+                     {secretIsSet[idx] ? (
+                       <span className={visibleSecrets[idx] ? '' : 'tracking-widest'}>
+                         {visibleSecrets[idx] ? s.value : '••••••••••'}
+                       </span>
+                     ) : <span className="text-gray-400 dark:text-[#8f8f8f]">Not set</span>}
+                    </div>
+                   )}
+                  </div>
+                 </div>
+                 {(isEditingSecrets || secretIsSet[idx]) && (
+                  <div className="flex items-center space-x-2 justify-start">
+                   <button type="button" aria-label="Toggle secret visibility" onClick={() => toggleSecretVisibility(idx)} className={iconButtonClass}>
+                    {visibleSecrets[idx] ? <Icon name="eyeOff" aria-hidden="true" /> : <Icon name="eye" />}
+                   </button>
                   </div>
                  )}
                 </div>
-               </div>
-               <div className="flex items-center space-x-2 justify-start min-w-[100px]">
+               </td>
+               <td className={deleteCellClass}>
                 {isEditingSecrets && (
-                 <button type="button" className="text-blue-600 dark:text-[#d1b8ff] hover:bg-blue-50 dark:hover:bg-[#ffffff1a] h-10 py-2.5 px-3 flex items-center group/button transition-colors font-medium text-sm">
-                  <div className="inline-flex w-4 h-4 me-1.5">
-                   <Icon name="openExternal" />
-                  </div>
-                  Generate
+                 <button onClick={() => removeSecret(idx)} type="button" aria-label="Delete" className={deleteButtonClass}>
+                  <Icon name="trash" />
                  </button>
                 )}
-               </div>
-              </div>
-             </td>
-             <td className="align-top pt-4 pb-4 pr-4 pl-0 w-[1px]">
-              <div className="flex items-center">
-               {isEditingSecrets && (
-                <button onClick={() => toggleSecretVisibility(idx)} type="button" className="text-gray-400 dark:text-[#8f8f8f] hover:text-gray-700 dark:hover:text-[#c7c7c7] h-10 py-2.5 px-3 flex items-center transition-colors">
-                 {visibleSecrets[idx] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-               )}
-               {isEditingSecrets && <button onClick={() => removeSecret(idx)} type="button" className="text-red-600 dark:text-[#f0989e] hover:text-red-700 dark:hover:text-[#000] hover:bg-red-50 dark:hover:bg-[#f4b3b7] active:bg-red-100 dark:active:bg-[#fad1d3] h-10 py-2.5 px-3 flex items-center group/button transition-colors">
-                <Icon name="trash" aria-label="Delete" />
-               </button>}
-              </div>
-             </td>
-           </tr>
-          ))}
-         </tbody>
-        </table>
-        
-         {isEditingSecrets && <div className="mt-10 flex justify-between gap-y-10 flex-col gap-x-4 [@container(min-width:50rem)]:flex-row">
-          <div className="flex flex-wrap gap-2 items-center">
-           <button type="button" onClick={addSecret} className="text-gray-700 dark:text-[#e3e3e3] hover:bg-gray-100 dark:hover:bg-[#ffffffe6] hover:text-gray-900 dark:hover:text-[#141414] border border-solid border-gray-300 dark:border-[#fff6] h-10 py-2.5 px-3 flex items-center group/button transition-colors text-sm font-medium">
-            <div className="inline-flex w-4 h-4 me-1.5">
-             <Icon name="plus" />
-            </div>
-            Add secret
-           </button>
+               </td>
+              </tr>
+             ))}
+            </tbody>
+           </table>
           </div>
-          <div className="flex flex-wrap gap-3 items-start">
-           <button onClick={handleSaveSecrets} type="button" className="text-gray-700 dark:text-[#e3e3e3] hover:bg-gray-100 dark:hover:bg-[#ffffffe6] hover:text-gray-900 dark:hover:text-[#141414] border border-solid border-gray-300 dark:border-[#fff6] h-10 py-2.5 px-3 flex items-center group/button transition-colors text-sm font-medium">
-            Save
-           </button>
-           <button onClick={handleCancelSecrets} type="button" className="text-gray-700 dark:text-[#e3e3e3] hover:bg-gray-100 dark:hover:bg-[#ffffffe6] hover:text-gray-900 dark:hover:text-[#141414] border border-solid border-gray-300 dark:border-[#fff6] h-10 py-2.5 px-3 flex items-center group/button transition-colors text-sm font-medium">
-            Cancel
-           </button>
+         )}
+
+         {isEditingSecrets ? (
+          <div className={`${secretsToShow.length > 0 ? 'mt-5' : ''} flex flex-col md:flex-row justify-between gap-3`}>
+           <div className="flex flex-wrap gap-3">
+            <button type="button" onClick={addSecret} className={actionButtonClass}>
+             <div className="inline-flex w-4 h-4 me-1.5"><Icon name="plus" /></div>
+             Add Secret
+            </button>
+           </div>
+           <div className="flex flex-wrap gap-3">
+            <button type="button" onClick={handleSaveSecrets} className={actionButtonClass}>
+             Save
+            </button>
+            <button type="button" onClick={handleCancelSecrets} className={actionButtonClass}>
+             Cancel
+            </button>
+           </div>
           </div>
-         </div>}
-       </form>
-       ) : (
-        <form noValidate className="[container-type:inline-size]">
-         <div className="flex justify-between gap-y-10 flex-col gap-x-4 [@container(min-width:50rem)]:flex-row">
-          <div className="flex flex-wrap gap-2 items-center">
-           <button 
-            type="button" 
+         ) : envSecrets.length === 0 && (
+          <div className="flex flex-wrap gap-3">
+           <button
+            type="button"
             onClick={() => {
              setEditingSecrets([{ key: '', value: '' }]);
              setIsEditingSecrets(true);
-            }} 
-            className="text-gray-700 dark:text-[#e3e3e3] hover:bg-gray-100 dark:hover:bg-[#ffffffe6] hover:text-gray-900 dark:hover:text-[#141414] border border-solid border-gray-300 dark:border-[#fff6] h-10 py-2.5 px-3 flex items-center group/button text-sm font-medium transition-colors"
+            }}
+            className={actionButtonClass}
            >
-            <div className="inline-flex w-4 h-4 me-1.5">
-             <Icon name="plus" />
-            </div>
-            Add secret
+            <div className="inline-flex w-4 h-4 me-1.5"><Icon name="plus" /></div>
+            Add Secret
            </button>
           </div>
-         </div>
+         )}
         </form>
-       )}
-      </div>
-       )}
+       </div>
+      )}
       </div>
 
      </main>

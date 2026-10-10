@@ -11,4 +11,5 @@ public class SecureValueResponse
 {
     public string Key { get; set; } = string.Empty;
     public bool IsSet { get; set; }
+    public string? Value { get; set; }
 }

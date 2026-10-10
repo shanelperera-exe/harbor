@@ -178,7 +178,10 @@ namespace Harbor.Project.Services
                 {
                     if (s.DeploymentUrl.Trim().StartsWith("["))
                     {
-                        var parsedUrls = System.Text.Json.JsonSerializer.Deserialize<System.Collections.Generic.List<ServiceDeploymentUrl>>(s.DeploymentUrl);
+                        var parsedUrls = System.Text.Json.JsonSerializer.Deserialize<System.Collections.Generic.List<ServiceDeploymentUrl>>(
+                            s.DeploymentUrl, 
+                            new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                        );
                         if (parsedUrls != null)
                         {
                             response.DeploymentUrls = parsedUrls;

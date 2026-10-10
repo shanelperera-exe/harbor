@@ -5,9 +5,9 @@ import { getService, type Service } from '../../services/serviceService';
 import { Activity, LayoutDashboard } from 'lucide-react';
 import { SlSupport } from 'react-icons/sl';
 
-const NavItem = ({ icon, label, to, isFooter = false, isButton = false }: any) => {
+const NavItem = ({ icon, label, to, isFooter = false, isButton = false, isActiveOverride }: any) => {
   const location = useLocation();
-  const isActive = location.pathname === to;
+  const isActive = isActiveOverride !== undefined ? isActiveOverride : location.pathname === to;
   const baseClasses = "group/shell-side-nav-item flex items-center w-full px-2 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 space-x-3 py-2 transition-colors duration-200 rounded-sm";
   
   const activeClasses = isActive 
@@ -168,96 +168,102 @@ export default function SideNav({
 
         <div className="flex-grow overflow-y-auto overflow-x-hidden min-h-48 scrollbar-thin">
           {isServiceContext ? (
-            <div className="flex flex-col space-y-2 mt-4 px-3 py-1">
-              <Link 
-                to={`/projects/${serviceMatch.params.projectId}/environments`}
-                className="flex items-center space-x-2 py-1 text-[13px] text-gray-500 hover:text-gray-900 dark:text-[#a1a1aa] dark:hover:text-white transition-colors outline-none focus:outline-none"
-              >
-                <Icon name="arrowLeft" className="flex-shrink-0 ml-1 w-3 h-3" aria-hidden="true" />
-                <span>Environment</span>
-              </Link>
-              
-              <div className="flex items-center space-x-2 text-black dark:text-white px-1 py-3">
-                <Icon name="globe" className="flex-shrink-0 w-5 h-5 text-gray-700 dark:text-[#f0f0f0]" aria-hidden="true" />
-                <span className="font-medium truncate">{service ? service.name : (serviceId || 'Loading...')}</span>
-              </div>
-              
-              <div className="flex flex-col space-y-6 py-2">
-                <ul>
-                  <NavItem label="Deployments" to={`/projects/${serviceMatch.params.projectId}/services/${serviceId}/deploys`} icon={<Icon name="deploy" className="w-4 h-4" aria-hidden="true" />} />
-                  <NavItem label="CI History" to={`/projects/${serviceMatch.params.projectId}/services/${serviceId}/ci-history`} icon={<Activity className="w-4 h-4" />} />
-                  <NavItem label="Settings" to={`/projects/${serviceMatch.params.projectId}/services/${serviceId}/settings`} icon={<Icon name="settingsAlt" className="w-4 h-4" aria-hidden="true" />} />
-                </ul>
-                
-                <div className="relative space-y-2">
-                  <div className="text-[#b3b3b3] px-2.5 text-[15px] uppercase font-mono tracking-wider">Monitor</div>
-                  <ul>
-                    <NavItem label="Logs" to={`/projects/${serviceMatch.params.projectId}/services/${serviceId}/logs`} icon={<Icon name="logs" className="w-4 h-4" aria-hidden="true" />} />
-                    <NavItem label="Metrics" to={`/projects/${serviceMatch.params.projectId}/services/${serviceId}/metrics`} icon={<Icon name="metrics" className="w-4 h-4" aria-hidden="true" />} />
-                  </ul>
+            <div className="flex flex-col space-y-6 px-3 py-4">
+              <div className="flex flex-col space-y-4">
+                <div>
+                  <Link 
+                    to={`/projects/${serviceMatch.params.projectId}/environments`}
+                    className="group inline-flex items-center space-x-1.5 text-[12px] font-medium text-gray-500 hover:text-gray-900 dark:text-[#a1a1aa] dark:hover:text-white transition-colors px-1 py-0.5 rounded-sm hover:bg-gray-100 dark:hover:bg-white/5 mb-2 outline-none focus:outline-none"
+                  >
+                    <Icon name="arrowLeft" className="w-3 h-3 flex-shrink-0 transition-transform group-hover:-translate-x-0.5" aria-hidden="true" />
+                    <span>Environment</span>
+                  </Link>
+                  
+                  <Link
+                    to={`/projects/${serviceMatch.params.projectId}/services/${serviceId}/deploys`}
+                    className="flex items-center justify-between w-full p-2 space-x-2.5 rounded-sm border border-dashed border-black/40 dark:border-white/40 hover:border-black dark:hover:border-white transition-colors"
+                  >
+                    <div className="flex items-center space-x-2.5 min-w-0 flex-1">
+                      <div className="flex-shrink-0 w-5 h-5 text-gray-900 dark:text-white flex items-center justify-center">
+                        {service?.type === 'static' ? (
+                          <Icon name="staticSite" className="w-4.5 h-4.5" aria-hidden="true" />
+                        ) : service?.type === 'db' ? (
+                          <Icon name="database" className="w-4.5 h-4.5" aria-hidden="true" />
+                        ) : (
+                          <Icon name="globe" className="w-4.5 h-4.5" aria-hidden="true" />
+                        )}
+                      </div>
+                      <span className="font-normal text-[17px] text-gray-950 dark:text-white truncate">
+                        {service?.name && !service.name.startsWith('srv-') ? service.name : 'portfolio'}
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-mono uppercase tracking-wider font-medium px-1.5 py-0.5 rounded-xs bg-gray-200/70 dark:bg-white/10 text-gray-600 dark:text-gray-300 flex-shrink-0">
+                      {service?.type === 'static' ? 'Static' : service?.type === 'web' ? 'Web' : service?.type === 'db' ? 'DB' : 'Service'}
+                    </span>
+                  </Link>
                 </div>
 
-                <div className="relative space-y-2">
-                  <div className="text-[#b3b3b3] px-2.5 text-[15px] uppercase font-mono tracking-wider">Manage</div>
-                  <ul>
+                <div className="flex flex-col space-y-6">
+                  <NavSection>
+                    <NavItem label="Deployments" to={`/projects/${serviceMatch.params.projectId}/services/${serviceId}/deploys`} icon={<Icon name="deploy" className="w-4 h-4" aria-hidden="true" />} />
+                    <NavItem label="CI History" to={`/projects/${serviceMatch.params.projectId}/services/${serviceId}/ci-history`} icon={<Activity className="w-4 h-4" />} />
+                    <NavItem label="Settings" to={`/projects/${serviceMatch.params.projectId}/services/${serviceId}/settings`} icon={<Icon name="settingsAlt" className="w-4 h-4" aria-hidden="true" />} />
+                  </NavSection>
+                  
+                  <NavSection title="Monitor">
+                    <NavItem label="Logs" to={`/projects/${serviceMatch.params.projectId}/services/${serviceId}/logs`} icon={<Icon name="logs" className="w-4 h-4" aria-hidden="true" />} />
+                    <NavItem label="Metrics" to={`/projects/${serviceMatch.params.projectId}/services/${serviceId}/metrics`} icon={<Icon name="metrics" className="w-4 h-4" aria-hidden="true" />} />
+                  </NavSection>
+
+                  <NavSection title="Manage">
                     <NavItem label="Environment" to={`/projects/${serviceMatch.params.projectId}/services/${serviceId}/environment`} icon={<Icon name="sliders" className="w-4 h-4" aria-hidden="true" />} />
-                  </ul>
+                  </NavSection>
                 </div>
               </div>
             </div>
           ) : isProjectContext ? (
-            <div className="flex flex-col space-y-2 mt-4 px-3 py-1">
-              <Link 
-                to="/projects"
-                className="flex items-center space-x-2 py-1 text-[13px] text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors outline-none focus:outline-none"
-              >
-                <Icon name="arrowLeft" className="flex-shrink-0 ml-1 w-3 h-3" aria-hidden="true" />
-                <span>Projects</span>
-              </Link>
-              
-              <div className="flex items-center space-x-2 text-black dark:text-[#f0f0f0] px-1 py-3">
-                <Icon name="projects" className="flex-shrink-0 w-5 h-5 text-black dark:text-[#f0f0f0]" aria-hidden="true" />
-                <span className="font-medium truncate">{project ? project.name : 'Loading...'}</span>
-              </div>
-              
-              <div className="flex flex-col space-y-6 py-2">
-                <ul>
-                  <li>
-                    <Link 
-                      to={`/projects/${projectId}/environments`}
-                      className={`group/shell-side-nav-item flex items-center w-full px-2 text-left space-x-3 py-2 transition-colors duration-200 rounded-sm ${
-                        location.pathname === `/projects/${projectId}/environments` || location.pathname === `/projects/${projectId}`
-                        ? 'bg-[#2563eb] text-white text-[17px] font-medium' 
-                        : 'hover:bg-gray-100 dark:hover:bg-[#272727] hover:text-gray-900 dark:hover:text-[#f0f0f0] text-gray-600 dark:text-[#c7c7c7] text-[17px] font-medium'
-                      }`}
-                    >
-                      <div className="flex-shrink-0 w-5 h-5 text-current flex items-center justify-center">
-                        <Icon name="database" className="w-4 h-4" aria-hidden="true" />
+            <div className="flex flex-col space-y-6 px-3 py-4">
+              <div className="flex flex-col space-y-4">
+                <div>
+                  <Link 
+                    to="/projects"
+                    className="group inline-flex items-center space-x-1.5 text-[12px] font-medium text-gray-500 hover:text-gray-900 dark:text-[#a1a1aa] dark:hover:text-white transition-colors px-1 py-0.5 rounded-sm hover:bg-gray-100 dark:hover:bg-white/5 mb-2 outline-none focus:outline-none"
+                  >
+                    <Icon name="arrowLeft" className="w-3 h-3 flex-shrink-0 transition-transform group-hover:-translate-x-0.5" aria-hidden="true" />
+                    <span>Projects</span>
+                  </Link>
+                  
+                  <Link
+                    to={`/projects/${projectId}/environments`}
+                    className="flex items-center justify-between w-full p-2 space-x-2.5 rounded-sm border border-dashed border-black/40 dark:border-white/40 hover:border-black dark:hover:border-white transition-colors"
+                  >
+                    <div className="flex items-center space-x-2.5 min-w-0 flex-1">
+                      <div className="flex-shrink-0 w-5 h-5 text-gray-900 dark:text-white flex items-center justify-center">
+                        <Icon name="projects" className="w-4.5 h-4.5" aria-hidden="true" />
                       </div>
-                      <span className="truncate">Overview</span>
-                    </Link>
-                  </li>
-                </ul>
-                
-                <div className="relative space-y-2">
-                  <div className="text-[#b3b3b3] px-2.5 text-[12px] uppercase font-mono tracking-wider">Manage</div>
-                  <ul>
-                    <li>
-                      <Link 
-                        to={`/projects/${projectId}/settings`}
-                        className={`group/shell-side-nav-item flex items-center w-full px-2 text-left space-x-3 py-2 transition-colors duration-200 rounded-sm ${
-                          location.pathname === `/projects/${projectId}/settings`
-                          ? 'bg-[#2563eb] text-white text-[17px] font-medium' 
-                          : 'hover:bg-gray-100 dark:hover:bg-[#272727] hover:text-gray-900 dark:hover:text-[#f0f0f0] text-gray-600 dark:text-[#c7c7c7] text-[17px] font-medium'
-                        }`}
-                      >
-                        <div className="flex-shrink-0 w-5 h-5 text-current flex items-center justify-center">
-                          <Icon name="settings" className="w-4 h-4" />
-                        </div>
-                        <span className="truncate">Settings</span>
-                      </Link>
-                    </li>
-                  </ul>
+                      <span className="font-normal text-[17px] text-gray-950 dark:text-white truncate">
+                        {project ? project.name : 'Portfolio'}
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-mono uppercase tracking-wider font-medium px-1.5 py-0.5 rounded-xs bg-gray-200/70 dark:bg-white/10 text-gray-600 dark:text-gray-300 flex-shrink-0">
+                      Project
+                    </span>
+                  </Link>
+                </div>
+
+                <div className="flex flex-col space-y-6">
+                  <NavSection>
+                    <NavItem 
+                      label="Overview" 
+                      to={`/projects/${projectId}/environments`} 
+                      icon={<Icon name="database" className="w-4 h-4" aria-hidden="true" />} 
+                      isActiveOverride={location.pathname === `/projects/${projectId}/environments` || location.pathname === `/projects/${projectId}`}
+                    />
+                  </NavSection>
+                  
+                  <NavSection title="Manage">
+                    <NavItem label="Settings" to={`/projects/${projectId}/settings`} icon={<Icon name="settings" className="w-4 h-4" />} />
+                  </NavSection>
                 </div>
               </div>
             </div>

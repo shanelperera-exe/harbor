@@ -85,8 +85,8 @@ public class NotificationAwareDeploymentRepository(
 
     // ── Forwarded members ─────────────────────────────────────────────────────
 
-    public Task<(IReadOnlyList<DeploymentEntity> Items, int TotalCount)> GetHistoryAsync(int ownerId, string? projectId, string? environment, string? serviceId, string? status, int skip, int take)
-        => inner.GetHistoryAsync(ownerId, projectId, environment, serviceId, status, skip, take);
+    public Task<(IReadOnlyList<DeploymentEntity> Items, int TotalCount)> GetHistoryAsync(int ownerId, string? projectId, string? environment, string? serviceId, string? status, int skip, int take, bool isAdmin = false)
+        => inner.GetHistoryAsync(ownerId, projectId, environment, serviceId, status, skip, take, isAdmin);
 
     public Task<(IReadOnlyList<DeploymentEntity> Items, int TotalCount)> GetHistoryAsync(int ownerId, int serviceId, string? status, int skip, int take)
         => inner.GetHistoryAsync(ownerId, serviceId, status, skip, take);
@@ -129,6 +129,15 @@ public class NotificationAwareDeploymentRepository(
 
     public Task AddLogsAsync(int deploymentId, string logText)
         => inner.AddLogsAsync(deploymentId, logText);
+
+    public Task<bool> UpdateDeploymentUrlAsync(int deploymentId, string deploymentUrl)
+        => inner.UpdateDeploymentUrlAsync(deploymentId, deploymentUrl);
+
+    public Task<(string? Provider, string? EncryptedToken)?> GetServiceProviderAndTokenAsync(int serviceId)
+        => inner.GetServiceProviderAndTokenAsync(serviceId);
+
+    public Task<bool> UpdateServiceDeploymentUrlAsync(int serviceId, string deploymentUrl)
+        => inner.UpdateServiceDeploymentUrlAsync(serviceId, deploymentUrl);
 
     public Task<int> CreateCiRunAsync(CiRunEntity ciRun)
         => inner.CreateCiRunAsync(ciRun);

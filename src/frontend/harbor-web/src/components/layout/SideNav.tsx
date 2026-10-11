@@ -217,6 +217,7 @@ export default function SideNav({
 
                   <NavSection title="Manage">
                     <NavItem label="Environment" to={`/projects/${serviceMatch.params.projectId}/services/${serviceId}/environment`} icon={<Icon name="sliders" className="w-4 h-4" aria-hidden="true" />} />
+                    <NavItem label="Domains" to={`/projects/${serviceMatch.params.projectId}/services/${serviceId}/domains`} icon={<Icon name="globe" className="w-4 h-4" aria-hidden="true" />} />
                   </NavSection>
                 </div>
               </div>

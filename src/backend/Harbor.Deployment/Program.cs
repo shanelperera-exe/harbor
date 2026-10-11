@@ -8,6 +8,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Harbor.Deployment.Kafka;
 using Harbor.Caching.Extensions;
+using Harbor.Common.Security;
 
 if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("JWT_SECRET")))
 {
@@ -91,6 +92,9 @@ builder.Services.AddScoped<IDeploymentRepository>(sp =>
 builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
 builder.Services.AddScoped<IDeploymentService, DeploymentService>();
 builder.Services.AddScoped<IInstallationTokenResolver, InstallationTokenResolver>();
+builder.Services.AddSingleton<IHarborSecretProtector, HarborSecretProtector>();
+builder.Services.AddScoped<ICloudProviderSyncService, CloudProviderSyncService>();
+builder.Services.AddHttpClient();
 
 builder.Services.Configure<KafkaOptions>(options =>
 {

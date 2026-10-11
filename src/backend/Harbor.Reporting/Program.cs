@@ -59,15 +59,32 @@ var jwtIssuer   = builder.Configuration["JWT_ISSUER"]   ?? "harbor";
 var jwtAudience = builder.Configuration["JWT_AUDIENCE"] ?? "harbor-api";
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options => options.TokenValidationParameters = new TokenValidationParameters
+    .AddJwtBearer(options =>
     {
-        ValidateIssuer           = true,
-        ValidateAudience         = true,
-        ValidateLifetime         = true,
-        ValidateIssuerSigningKey = true,
-        ValidIssuer              = jwtIssuer,
-        ValidAudience            = jwtAudience,
-        IssuerSigningKey         = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret))
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer           = true,
+            ValidateAudience         = true,
+            ValidateLifetime         = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer              = jwtIssuer,
+            ValidAudience            = jwtAudience,
+            IssuerSigningKey         = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
+            ClockSkew                = TimeSpan.FromMinutes(5)
+        };
+        options.Events = new JwtBearerEvents
+        {
+            OnAuthenticationFailed = context =>
+            {
+                Console.WriteLine($"[Harbor.Reporting JWT Auth Failed] {context.Exception}");
+                return Task.CompletedTask;
+            },
+            OnChallenge = context =>
+            {
+                Console.WriteLine($"[Harbor.Reporting JWT Challenge] Error: {context.Error}, Desc: {context.ErrorDescription}");
+                return Task.CompletedTask;
+            }
+        };
     });
 builder.Services.AddAuthorization();
 

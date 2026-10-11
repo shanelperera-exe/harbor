@@ -4,7 +4,7 @@ namespace Harbor.Deployment.Services;
 
 public interface IDeploymentService
 {
-    Task<DeploymentListResponse> GetHistoryAsync(int ownerId, DeploymentHistoryQuery query);
+    Task<DeploymentListResponse> GetHistoryAsync(int ownerId, DeploymentHistoryQuery query, bool isAdmin = false);
     Task<DeploymentDetailsResponse?> GetDetailsAsync(string identifier, int userId, bool isAdmin = false);
     Task<(bool Success, string? Error, int? DeploymentId, string Status, string? CiWarning)> CreateAsync(CreateDeploymentRequest request, int ownerId, bool isAdmin);
     Task<bool> UpdateStatusAsync(int deploymentId, string status, string? failureReason);

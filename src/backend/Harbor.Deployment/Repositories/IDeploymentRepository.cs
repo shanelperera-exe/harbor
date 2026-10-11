@@ -4,7 +4,7 @@ namespace Harbor.Deployment.Repositories;
 
 public interface IDeploymentRepository
 {
-    Task<(IReadOnlyList<DeploymentEntity> Items, int TotalCount)> GetHistoryAsync(int ownerId, string? projectId, string? environment, string? serviceId, string? status, int skip, int take);
+    Task<(IReadOnlyList<DeploymentEntity> Items, int TotalCount)> GetHistoryAsync(int ownerId, string? projectId, string? environment, string? serviceId, string? status, int skip, int take, bool isAdmin = false);
     Task<(IReadOnlyList<DeploymentEntity> Items, int TotalCount)> GetHistoryAsync(int ownerId, int serviceId, string? status, int skip, int take);
     Task<DeploymentEntity?> GetByIdAsync(int id, int ownerId);
     Task<DeploymentEntity?> GetEntityByIdAsync(int id);
@@ -20,6 +20,9 @@ public interface IDeploymentRepository
     Task SetWorkflowRunAsync(int deploymentId, long workflowRunId, string runUrl);
     Task<DeploymentEntity?> GetByWorkflowRunIdAsync(long workflowRunId);
     Task AddLogsAsync(int deploymentId, string logText);
+    Task<bool> UpdateDeploymentUrlAsync(int deploymentId, string deploymentUrl);
+    Task<(string? Provider, string? EncryptedToken)?> GetServiceProviderAndTokenAsync(int serviceId);
+    Task<bool> UpdateServiceDeploymentUrlAsync(int serviceId, string deploymentUrl);
 
     // ── CI Run tracking (2.1) ──────────────────────────────────────────────────
     Task<int> CreateCiRunAsync(CiRunEntity ciRun);

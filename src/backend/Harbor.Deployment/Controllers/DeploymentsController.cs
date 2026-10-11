@@ -20,7 +20,7 @@ public class DeploymentsController(IDeploymentService deploymentService) : Contr
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
-        return Ok(await deploymentService.GetHistoryAsync(userId.Value, query));
+        return Ok(await deploymentService.GetHistoryAsync(userId.Value, query, User.IsInRole("Admin")));
     }
 
     /// <summary>Returns CI run history for a service, newest first.</summary>

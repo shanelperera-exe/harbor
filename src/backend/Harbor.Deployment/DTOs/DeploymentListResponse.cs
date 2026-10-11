@@ -27,4 +27,5 @@ public class DeploymentResponse
     public string? ServiceName { get; init; }
     public string? ServiceType { get; init; }
     public string? UserName { get; init; }
+    public string? DeploymentUrl { get; init; }
 }

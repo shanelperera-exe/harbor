@@ -510,5 +510,66 @@ namespace Harbor.Authentication.Repositories
             command.Parameters.AddWithValue("userId", userId);
             return await command.ExecuteNonQueryAsync();
         }
+
+        public async Task<List<Harbor.Authentication.DTOs.AdminUserDto>> GetAllUsersAsync()
+        {
+            var result = new List<Harbor.Authentication.DTOs.AdminUserDto>();
+            using var connection = _dbFactory.CreateConnection();
+            await connection.OpenAsync();
+
+            using var command = connection.CreateCommand();
+            command.CommandText = @"
+                SELECT u.""Id"", u.""PublicId"", u.""Username"", u.""Email"", u.""Role"", 
+                       COALESCE(u.""Status"", 'active') AS ""Status"", 
+                       u.""CreatedAt"", u.""AvatarSvg"",
+                       COALESCE((SELECT COUNT(1) FROM ""Projects"" p WHERE p.""OwnerId"" = u.""Id""), 0) AS ""ProjectCount""
+                FROM ""Users"" u
+                ORDER BY u.""Id"" ASC";
+
+            using var reader = await command.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                result.Add(new Harbor.Authentication.DTOs.AdminUserDto
+                {
+                    Id = reader.GetInt32(0),
+                    PublicId = reader.GetString(1),
+                    Username = reader.GetString(2),
+                    Email = reader.GetString(3),
+                    Role = reader.GetString(4),
+                    Status = reader.GetString(5),
+                    CreatedAt = reader.GetDateTime(6),
+                    AvatarSvg = reader.IsDBNull(7) ? null : reader.GetString(7),
+                    ProjectCount = Convert.ToInt32(reader.GetInt64(8))
+                });
+            }
+
+            return result;
+        }
+
+        public async Task<bool> UpdateUserRoleAsync(int userId, string role)
+        {
+            using var connection = _dbFactory.CreateConnection();
+            await connection.OpenAsync();
+
+            using var command = connection.CreateCommand();
+            command.CommandText = "UPDATE \"Users\" SET \"Role\" = @role WHERE \"Id\" = @userId";
+            command.Parameters.AddWithValue("role", role);
+            command.Parameters.AddWithValue("userId", userId);
+
+            return await command.ExecuteNonQueryAsync() > 0;
+        }
+
+        public async Task<bool> UpdateUserStatusAsync(int userId, string status)
+        {
+            using var connection = _dbFactory.CreateConnection();
+            await connection.OpenAsync();
+
+            using var command = connection.CreateCommand();
+            command.CommandText = "UPDATE \"Users\" SET \"Status\" = @status WHERE \"Id\" = @userId";
+            command.Parameters.AddWithValue("status", status);
+            command.Parameters.AddWithValue("userId", userId);
+
+            return await command.ExecuteNonQueryAsync() > 0;
+        }
     }
 }

@@ -15,7 +15,7 @@ namespace Harbor.E2ETests.Tests
             var loginPage = new LoginPage(Driver);
             loginPage.NavigateTo();
 
-            loginPage.Login("invalid_username", "wrong_password123");
+            loginPage.LoginExpectingFailure("invalid_username", "wrong_password123");
 
             var error = loginPage.GetErrorMessage();
             Assert.That(error, Is.Not.Empty);

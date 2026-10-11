@@ -24,7 +24,7 @@ namespace Harbor.Project.Repositories
 
             using var command = connection.CreateCommand();
             command.CommandText =
-                "INSERT INTO \"Services\" (\"PublicId\", \"ProjectId\", \"Name\", \"Type\", \"RepositoryUrl\", \"RepositoryName\", \"RepositoryBranch\", \"RepositoryCommit\", \"WorkflowFile\", \"DeploymentUrl\", \"Provider\", \"ProviderToken\", \"integration_id\", \"IsPrivate\", \"CreatedAt\") " +
+                "INSERT INTO \"Services\" (\"PublicId\", \"ProjectId\", \"Name\", \"Type\", \"RepositoryUrl\", \"RepositoryName\", \"RepositoryBranch\", \"RepositoryCommit\", \"WorkflowFile\", \"DeploymentUrl\", \"Provider\", \"ProviderToken\", \"IntegrationId\", \"IsPrivate\", \"CreatedAt\") " +
                 "VALUES (@publicId, @projectId, @name, @type, @repositoryUrl, @repositoryName, @repositoryBranch, @repositoryCommit, @workflowFile, @deploymentUrl, @provider, @providerToken, @integrationId, @isPrivate, @createdAt) " +
                 "RETURNING \"Id\";";
             command.Parameters.AddWithValue("publicId", service.PublicId);

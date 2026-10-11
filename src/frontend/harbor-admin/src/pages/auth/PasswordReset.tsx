@@ -31,9 +31,9 @@ export default function PasswordReset() {
   };
 
   return (
-    <div className="w-full min-h-screen flex items-center justify-center pt-[66px] bg-white dark:bg-[oklch(0.21_0.03_263.45)] transition-colors duration-300">
+    <div className="w-full min-h-screen flex items-center justify-center pt-[66px] bg-white dark:bg-[#202124] transition-colors duration-300">
       <div className="w-full max-w-[576px] px-5 lg:px-0">
-        <div className="relative z-[1] w-full mx-auto bg-white dark:bg-[oklch(0.21_0.03_263.45)] transition-colors duration-300">
+        <div className="relative z-[1] w-full mx-auto bg-white dark:bg-[#202124] transition-colors duration-300">
           <h1 className="text-3xl lg:text-4xl font-medium tracking-tight text-black dark:text-white mb-6 transition-colors duration-300">
             Reset Your Password
           </h1>
@@ -80,7 +80,7 @@ export default function PasswordReset() {
               </div>
             </div>
           ) : (
-            <div className="space-y-4 border border-gray-300 dark:border-[#525252] p-6 lg:p-8 bg-white dark:bg-[oklch(0.26_0.03_263.45)] rounded-sm transition-colors duration-300">
+            <div className="space-y-4 border border-gray-300 dark:border-[#525252] p-6 lg:p-8 bg-white dark:bg-[#292a2d] rounded-sm transition-colors duration-300">
               <p className="text-[17px] text-black dark:text-[#f0f0f0] transition-colors duration-300">
                 You will receive a password reset email soon if the account exists.
               </p>

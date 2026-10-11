@@ -4,6 +4,7 @@ using Microsoft.IdentityModel.Tokens;
 using Harbor.GitHub;
 using System.Text;
 using Harbor.Caching.Extensions;
+using Harbor.Common.Observability;
 
 if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("JWT_SECRET")))
 {
@@ -14,6 +15,11 @@ var builder = WebApplication.CreateBuilder(args);
 // duplicate builder removed
 builder.Services.AddControllers();
 builder.Services.AddHarborCaching(builder.Configuration);
+
+builder.Services.AddHealthChecks()
+    .AddHarborLiveness("Harbor.Project")
+    .AddHarborDbCheck<Harbor.Project.Data.DbConnectionFactory>(f => f.CreateConnection())
+    .AddHarborCacheCheck();
 
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
 if (allowedOrigins == null || allowedOrigins.Length == 0)
@@ -129,6 +135,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseHarborObservability();
 app.UseCors("DefaultPolicy");
 if (!builder.Configuration.GetValue("DisableHttpsRedirection", false))
     app.UseHttpsRedirection();
@@ -138,6 +145,7 @@ app.UseMiddleware<Harbor.Caching.Middleware.TokenBlacklistMiddleware>();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHarborObservability();
 
 app.Run();
 

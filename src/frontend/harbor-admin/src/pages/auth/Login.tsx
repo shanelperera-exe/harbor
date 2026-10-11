@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Key, Eye, EyeOff, User, AlertCircle, ShieldCheck } from 'lucide-react';
+import { Key, Eye, EyeOff, User, AlertCircle } from 'lucide-react';
+import { RiAdminLine } from 'react-icons/ri';
 import { Link, useNavigate } from 'react-router-dom';
 
 const authApiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
@@ -65,15 +66,23 @@ export default function Login() {
   }
 
   return (
-    <div className="w-full min-h-screen flex items-center justify-center pt-[66px] bg-white dark:bg-[oklch(0.21_0.03_263.45)] transition-colors duration-300">
+    <div className="w-full min-h-screen flex items-center justify-center pt-[66px] bg-white dark:bg-[#202124] transition-colors duration-300">
       <div className="w-full max-w-[576px] px-5 lg:px-0">
-        <div className="relative z-[1] w-full mx-auto bg-white dark:bg-[oklch(0.21_0.03_263.45)] transition-colors duration-300">
+        <div className="relative z-[1] w-full mx-auto bg-white dark:bg-[#202124] transition-colors duration-300">
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-sm bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 mb-4 border border-blue-200 dark:border-blue-900/50">
-              <ShieldCheck className="w-6 h-6" />
+            <div className="inline-flex items-center justify-center gap-5 sm:gap-6 mb-7">
+              <img
+                src="/logos/harbor_light_notext.svg"
+                alt="Harbor Logo"
+                className="w-20 h-20 sm:w-24 sm:h-24 object-contain"
+              />
+              <span className="text-gray-400 dark:text-gray-500 text-3xl sm:text-4xl font-light select-none leading-none">
+                ×
+              </span>
+              <RiAdminLine className="w-20 h-20 sm:w-24 sm:h-24 text-gray-900 dark:text-white" />
             </div>
             <h1 className="text-3xl lg:text-4xl font-medium tracking-tight text-black dark:text-white transition-colors duration-300">
-              Admin Portal
+              Harbor Admin Portal
             </h1>
             <p className="mt-2 text-[15px] text-gray-500 dark:text-[#a1a1aa]">
               Sign in with your email or username to access the Harbor control center

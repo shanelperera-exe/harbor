@@ -160,6 +160,9 @@ public class NotificationAwareDeploymentRepository(
     public Task<DeploymentEntity?> GetSucceededForRedeployAsync(int deploymentId)
         => inner.GetSucceededForRedeployAsync(deploymentId);
 
+    public Task<DeploymentEntity?> GetSucceededForRedeployAsync(string identifier)
+        => inner.GetSucceededForRedeployAsync(identifier);
+
     public Task<int> CreateFromSourceAsync(DeploymentEntity source)
         => inner.CreateFromSourceAsync(source);
 

@@ -597,7 +597,10 @@ public class DeploymentRepository(DbConnectionFactory dbFactory) : IDeploymentRe
         DeploymentUrl = reader.IsDBNull(16) ? null : reader.GetString(16),
     };
 
-    public async Task<DeploymentEntity?> GetSucceededForRedeployAsync(int deploymentId)
+    public Task<DeploymentEntity?> GetSucceededForRedeployAsync(int deploymentId)
+        => GetSucceededForRedeployAsync(deploymentId.ToString());
+
+    public async Task<DeploymentEntity?> GetSucceededForRedeployAsync(string identifier)
     {
         await using var connection = dbFactory.CreateConnection();
         await connection.OpenAsync();
@@ -606,8 +609,8 @@ public class DeploymentRepository(DbConnectionFactory dbFactory) : IDeploymentRe
                 ""Version"", ""CommitSha"", ""Status"", ""StartedAt"", ""CompletedAt"", ""FailureReason"",
                 ""WorkflowFile"", ""WorkflowRef"", ""TriggerError"", ""WorkflowRunId"", ""WorkflowRunUrl"", ""CommitMessage"", ""DeploymentUrl""
             FROM ""Deployments""
-            WHERE ""Id"" = @deploymentId AND ""Status"" = 'Succeeded'";
-        command.Parameters.AddWithValue("deploymentId", deploymentId);
+            WHERE (""Id""::text = @identifier OR ""PublicId"" = @identifier) AND ""Status"" = 'Succeeded'";
+        command.Parameters.AddWithValue("identifier", identifier);
 
         await using var reader = await command.ExecuteReaderAsync();
         if (!await reader.ReadAsync()) return null;

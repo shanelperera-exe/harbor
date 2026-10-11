@@ -1,0 +1,126 @@
+groups:
+  - name: harbor-availability-alerts
+    rules:
+      - alert: HarborServiceDown
+        expr: up{job=~"harbor-.*"} == 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Harbor microservice {{ $labels.job }} is DOWN"
+          description: "Service instance {{ $labels.instance }} has been unreachable for more than 30 seconds."
+
+      - alert: HarborApiGatewayDown
+        expr: up{job="harbor-api-gateway"} == 0
+        for: 15s
+        labels:
+          severity: critical
+          tier: edge
+        annotations:
+          summary: "Harbor API Gateway edge is DOWN"
+          description: "The primary ingress edge gateway is unreachable. All external HTTP traffic is impacted."
+
+      - alert: HarborHighHttp5xxErrorRate
+        expr: (sum(rate(http_requests_received_total{code=~"5.."}[2m])) / sum(rate(http_requests_received_total[2m]))) * 100 > 5
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High HTTP 5xx server error rate ({{ $value | printf \"%.1f\" }}%)"
+          description: "HTTP 5xx server error rate exceeds 5% of all traffic over the last 2 minutes."
+
+      - alert: HarborHighHttp4xxErrorRate
+        expr: (sum(rate(http_requests_received_total{code=~"4.."}[2m])) / sum(rate(http_requests_received_total[2m]))) * 100 > 25
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High HTTP 4xx client error rate ({{ $value | printf \"%.1f\" }}%)"
+          description: "HTTP 4xx client errors exceed 25% of all traffic over the last 3 minutes. Check client authentication or bad requests."
+
+  - name: harbor-performance-alerts
+    rules:
+      - alert: HarborDegradedLatencyP95
+        expr: histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, job)) > 2
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Degraded HTTP P95 latency on {{ $labels.job }} ({{ $value | printf \"%.2f\" }}s)"
+          description: "P95 request latency exceeds 2 seconds for service {{ $labels.job }} over the last 5 minutes."
+
+      - alert: HarborCriticalLatencyP99
+        expr: histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, job)) > 5
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Critical HTTP P99 latency on {{ $labels.job }} ({{ $value | printf \"%.2f\" }}s)"
+          description: "P99 request latency exceeds 5 seconds for service {{ $labels.job }}."
+
+      - alert: HarborHighCpuUsage
+        expr: system_runtime_cpu_usage{job=~"harbor-.*"} > 85
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU utilization on {{ $labels.job }} ({{ $value | printf \"%.1f\" }}%)"
+          description: "Service {{ $labels.job }} has sustained CPU usage above 85% for more than 3 minutes."
+
+      - alert: HarborHighMemoryWorkingSet
+        expr: process_working_set_bytes{job=~"harbor-.*"} > 629145600
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory working set on {{ $labels.job }}"
+          description: "Working set memory exceeds 600MB on {{ $labels.job }} (current: {{ $value | humanize1024 }}B)."
+
+      - alert: HarborThreadPoolStarvation
+        expr: system_runtime_dotnet_thread_pool_queue_length{job=~"harbor-.*"} > 10
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "ThreadPool starvation detected on {{ $labels.job }}"
+          description: "ThreadPool queue length exceeds 10 queued items on {{ $labels.job }}, indicating possible thread blocking or resource exhaustion."
+
+      - alert: HarborHighExceptionRate
+        expr: rate(system_runtime_exception_count_total{job=~"harbor-.*"}[1m]) > 10
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High exception rate on {{ $labels.job }} ({{ $value | printf \"%.1f\" }} exc/sec)"
+          description: "CLR exception throw rate exceeds 10 exceptions/second on {{ $labels.job }}."
+
+  - name: harbor-deployment-alerts
+    rules:
+      - alert: HarborDeploymentFailureBurst
+        expr: increase(harbor_deployment_operations_total{status="Failed"}[10m]) >= 3
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Burst of deployment failures detected"
+          description: "3 or more deployments failed within 10 minutes in environment {{ $labels.environment }}."
+
+      - alert: HarborDeploymentSuccessRateDrop
+        expr: (sum(rate(harbor_deployment_operations_total{status=~"DeploymentSucceeded|Succeeded"}[1h])) / sum(rate(harbor_deployment_operations_total[1h]))) * 100 < 80
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Deployment success rate dropped below 80%"
+          description: "Overall deployment success rate is {{ $value | printf \"%.1f\" }}% over the last hour."
+
+  - name: harbor-dependency-alerts
+    rules:
+      - alert: HarborOutboundDependencyFailures
+        expr: (sum(rate(system_net_http_requests_failed_total[2m])) / sum(rate(system_net_http_requests_started_total[2m]))) * 100 > 10
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Outbound HTTP requests failing ({{ $value | printf \"%.1f\" }}%)"
+          description: "More than 10% of outbound HTTP client calls (GitHub API, webhooks, or inter-service) are failing."

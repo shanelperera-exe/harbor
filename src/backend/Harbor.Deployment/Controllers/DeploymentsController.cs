@@ -105,11 +105,11 @@ public class DeploymentsController(IDeploymentService deploymentService) : Contr
     /// record with the same environment, version, branch, and commit SHA.
     /// Only deployments with status "Succeeded" owned by the caller are eligible.
     /// </summary>
-    [HttpPost("{id:int}/redeploy")]
+    [HttpPost("{id}/redeploy")]
     [ProducesResponseType(typeof(CreateDeploymentResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status502BadGateway)]
-    public async Task<ActionResult<CreateDeploymentResponse>> Redeploy(int id)
+    public async Task<ActionResult<CreateDeploymentResponse>> Redeploy(string id)
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();

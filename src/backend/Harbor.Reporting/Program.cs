@@ -1,5 +1,6 @@
 using DotNetEnv;
 using Harbor.Caching.Extensions;
+using Harbor.Common.Observability;
 using Harbor.Reporting.Data;
 using Harbor.Reporting.Repositories;
 using Harbor.Reporting.Services;
@@ -16,6 +17,11 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 builder.Services.AddHarborCaching(builder.Configuration);
+
+builder.Services.AddHealthChecks()
+    .AddHarborLiveness("Harbor.Reporting")
+    .AddHarborDbCheck<ReportingDbConnectionFactory>(f => f.CreateConnection())
+    .AddHarborCacheCheck();
 builder.Services.AddSignalR();
 
 // Register Phase 3 Native Adapter Dependencies
@@ -136,6 +142,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseHarborObservability();
 app.UseCors("DefaultPolicy");
 
 if (!builder.Configuration.GetValue("DisableHttpsRedirection", false))
@@ -147,6 +154,7 @@ app.UseAuthorization();
 
 app.MapControllers();
 app.MapHub<Harbor.Reporting.Hubs.ServiceLogsHub>("/hubs/logs");
+app.MapHarborObservability();
 
 app.Run();
 

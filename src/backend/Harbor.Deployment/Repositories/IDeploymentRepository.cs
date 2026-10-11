@@ -37,6 +37,7 @@ public interface IDeploymentRepository
     // ── Deployment rollback (2.2) ──────────────────────────────────────────────
     /// <summary>Fetches a succeeded deployment by ID (ownership verified in service layer).</summary>
     Task<DeploymentEntity?> GetSucceededForRedeployAsync(int deploymentId);
+    Task<DeploymentEntity?> GetSucceededForRedeployAsync(string identifier);
 
     /// <summary>Creates a fresh deployment record as a copy of a previous one.</summary>
     Task<int> CreateFromSourceAsync(DeploymentEntity source);

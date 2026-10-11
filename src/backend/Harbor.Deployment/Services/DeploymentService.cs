@@ -285,10 +285,13 @@ public class DeploymentService : IDeploymentService
 
     // ── Deployment rollback (2.2) ──────────────────────────────────────────────
 
-    public async Task<(bool Success, string? Error, int? DeploymentId, string Status, string? CiWarning)> RedeployAsync(int sourceDeploymentId, int ownerId, bool isAdmin)
+    public Task<(bool Success, string? Error, int? DeploymentId, string Status, string? CiWarning)> RedeployAsync(int sourceDeploymentId, int ownerId, bool isAdmin)
+        => RedeployAsync(sourceDeploymentId.ToString(), ownerId, isAdmin);
+
+    public async Task<(bool Success, string? Error, int? DeploymentId, string Status, string? CiWarning)> RedeployAsync(string sourceIdentifier, int ownerId, bool isAdmin)
     {
         // Look up the source deployment — must be Succeeded
-        var source = await repository.GetSucceededForRedeployAsync(sourceDeploymentId);
+        var source = await repository.GetSucceededForRedeployAsync(sourceIdentifier);
         if (source is null)
             return (false, "Succeeded deployment not found.", null, "Failed", null);
 
@@ -318,6 +321,7 @@ public class DeploymentService : IDeploymentService
     {
         try
         {
+            var sanitizedReason = Harbor.Common.Observability.HarborSensitiveDataScrubber.Scrub(failureReason);
             var @event = new DeploymentLifecycleEvent
             {
                 DeploymentId = deploymentId,
@@ -326,8 +330,22 @@ public class DeploymentService : IDeploymentService
                 Environment = environment,
                 Version = version,
                 Timestamp = DateTime.UtcNow,
-                FailureReason = failureReason
+                FailureReason = sanitizedReason
             };
+
+            logger.LogInformation(
+                "Deployment operation {DeploymentId} for service {ServiceId} in {Environment} transitioned to status {Status}. Version: {Version}. DiagnosticReason: {DiagnosticReason}",
+                deploymentId,
+                serviceId,
+                environment,
+                status,
+                version,
+                string.IsNullOrEmpty(sanitizedReason) ? "None" : sanitizedReason);
+
+            Harbor.Deployment.Observability.HarborDeploymentMetrics.DeploymentsTotal
+                .WithLabels(environment, status)
+                .Inc();
+
             await kafkaProducerService.PublishDeploymentEventAsync(@event);
         }
         catch (Exception ex)

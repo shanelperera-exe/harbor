@@ -1,7 +1,59 @@
 global:
   scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - "/etc/prometheus/alert_rules.yml"
 
 scrape_configs:
-  - job_name: 'harbor-services'
+  - job_name: "prometheus"
     static_configs:
-      - targets: ['localhost:9090']
+      - targets: ["localhost:9090"]
+
+  - job_name: "harbor-api-gateway"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["api-gateway:8080"]
+        labels:
+          service: "harbor-api-gateway"
+          tier: "edge"
+
+  - job_name: "harbor-authentication"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["authentication-service:8080"]
+        labels:
+          service: "harbor-authentication"
+          tier: "backend"
+
+  - job_name: "harbor-project"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["project-service:8080"]
+        labels:
+          service: "harbor-project"
+          tier: "backend"
+
+  - job_name: "harbor-environment"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["environment-service:8080"]
+        labels:
+          service: "harbor-environment"
+          tier: "backend"
+
+  - job_name: "harbor-deployment"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["deployment-service:8080"]
+        labels:
+          service: "harbor-deployment"
+          tier: "backend"
+
+  - job_name: "harbor-reporting"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["reporting-service:8080"]
+        labels:
+          service: "harbor-reporting"
+          tier: "backend"

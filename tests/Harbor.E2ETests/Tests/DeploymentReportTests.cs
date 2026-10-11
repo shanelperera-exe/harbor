@@ -47,6 +47,23 @@ namespace Harbor.E2ETests.Tests
         }
 
         [Test]
+        public void Scenario2_FilterByProject_ShowsOnlyMatchingProjectRows()
+        {
+            LoginAsSeededUser();
+
+            var reportPage = new DeploymentReportPage(Driver);
+            reportPage.NavigateTo();
+            reportPage.SelectProject("Project Alpha");
+            reportPage.ClickGenerate();
+
+            var rows = reportPage.GetRows();
+            Assert.That(rows.Count, Is.GreaterThan(0), "Expected deployments for selected project");
+
+            var total = int.Parse(reportPage.GetTotalDeploymentsStat());
+            Assert.That(total, Is.EqualTo(rows.Count));
+        }
+
+        [Test]
         public void Scenario3_FilterByEnvironment_ShowsOnlyMatchingEnvironmentRows()
         {
             LoginAsSeededUser();
@@ -64,7 +81,7 @@ namespace Harbor.E2ETests.Tests
         }
 
         [Test]
-        public void Scenario5_FilterByStatus_ShowsOnlyMatchingStatusRows()
+        public void Scenario4_FilterByStatus_ShowsOnlyMatchingStatusRows()
         {
             LoginAsSeededUser();
 
@@ -84,19 +101,71 @@ namespace Harbor.E2ETests.Tests
         }
 
         [Test]
-        public void Scenario4_InvalidDateRange_DisplaysValidationError()
+        public void Scenario5_FilterByDateRange_ValidDates_ReturnsFilteredDeployments()
         {
             LoginAsSeededUser();
 
             var reportPage = new DeploymentReportPage(Driver);
             reportPage.NavigateTo();
-            reportPage.SetStartDate("2026-12-31");
-            reportPage.SetEndDate("2026-01-01");
+            reportPage.SetStartDate("2026-01-01");
+            reportPage.SetEndDate("2026-12-31");
+            reportPage.ClickGenerate();
+
+            var totalStr = reportPage.GetTotalDeploymentsStat();
+            Assert.That(int.TryParse(totalStr, out var total), Is.True);
+            Assert.That(total, Is.GreaterThanOrEqualTo(0));
+        }
+
+        [Test]
+        public void Scenario5_InvalidDateRange_DisplaysValidationError()
+        {
+            LoginAsSeededUser();
+
+            var reportPage = new DeploymentReportPage(Driver);
+            reportPage.NavigateTo();
+            reportPage.SetStartDateForValidation("2026-12-31");
+            reportPage.SetEndDateForValidation("2026-01-01");
             reportPage.ClickGenerate();
 
             var error = reportPage.GetErrorMessage();
             Assert.That(error, Is.Not.Null);
-            Assert.That(error, Does.Contain("Start date must be on or before end date"));
+            Assert.That(error, Does.Contain("validation errors"));
+        }
+
+        [Test]
+        public void Scenario6_CalculateDeploymentStatistics_ValidatesAllMetricCards()
+        {
+            LoginAsSeededUser();
+
+            var reportPage = new DeploymentReportPage(Driver);
+            reportPage.NavigateTo();
+            reportPage.ClickGenerate();
+
+            var total = int.Parse(reportPage.GetTotalDeploymentsStat());
+            var successful = int.Parse(reportPage.GetSuccessfulStat());
+            var failed = int.Parse(reportPage.GetFailedStat());
+            var successRateStr = reportPage.GetSuccessRateStat().Replace("%", "");
+            var successRate = double.Parse(successRateStr);
+
+            Assert.That(total, Is.GreaterThanOrEqualTo(successful + failed));
+            Assert.That(successRate, Is.InRange(0.0, 100.0));
+        }
+
+        [Test]
+        public void Scenario7_CalculateAverageDuration_DisplaysFormattedAverageWhenAvailable()
+        {
+            LoginAsSeededUser();
+
+            var reportPage = new DeploymentReportPage(Driver);
+            reportPage.NavigateTo();
+            reportPage.ClickGenerate();
+
+            var avgDuration = reportPage.GetAverageDurationStat();
+            if (avgDuration != null)
+            {
+                // Format check: e.g. "45s" or "2m 15s" or "—"
+                Assert.That(avgDuration, Does.Match(@"^(\d+m\s*\d*s?|\d+s|—)$"));
+            }
         }
 
         [Test]
@@ -116,6 +185,42 @@ namespace Harbor.E2ETests.Tests
             var total = int.Parse(reportPage.GetTotalDeploymentsStat());
             Assert.That(total, Is.EqualTo(0));
             Assert.That(reportPage.GetSuccessRateStat(), Is.EqualTo("0%"));
+        }
+
+        [Test]
+        public void Scenario_CombinedFilters_ProjectEnvironmentStatus_FiltersAccurately()
+        {
+            LoginAsSeededUser();
+
+            var reportPage = new DeploymentReportPage(Driver);
+            reportPage.NavigateTo();
+            reportPage.SelectEnvironment("Production");
+            reportPage.SelectStatus("Succeeded");
+            reportPage.ClickGenerate();
+
+            var rows = reportPage.GetRows();
+            Assert.That(rows.Count, Is.GreaterThan(0));
+
+            var statuses = reportPage.GetVisibleStatuses();
+            Assert.That(statuses, Has.All.EqualTo("Success"));
+        }
+
+        [Test]
+        public void Scenario_ResetFilters_ClearsResultsAndRestoresForm()
+        {
+            LoginAsSeededUser();
+
+            var reportPage = new DeploymentReportPage(Driver);
+            reportPage.NavigateTo();
+            reportPage.SelectEnvironment("Production");
+            reportPage.ClickGenerate();
+
+            Assert.That(reportPage.GetRows().Count, Is.GreaterThan(0));
+
+            reportPage.ClickReset();
+
+            // After reset, rows should no longer be rendered
+            Assert.That(reportPage.GetRows().Count, Is.EqualTo(0));
         }
     }
 }

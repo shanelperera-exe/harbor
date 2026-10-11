@@ -102,5 +102,40 @@ describe('reportService', () => {
       await expect(getDeploymentReport({ startDate: '2026-02-01', endDate: '2026-01-01' }))
         .rejects.toThrow('Start date must be on or before end date.');
     });
+
+    it('falls back to title when detail is missing in error response', async () => {
+      (globalThis.fetch as any).mockResolvedValue(
+        jsonResponse({ title: 'Invalid date range' }, false, 400)
+      );
+
+      await expect(getDeploymentReport({ startDate: '2026-02-01', endDate: '2026-01-01' }))
+        .rejects.toThrow('Invalid date range');
+    });
+
+    it('falls back to generic error when body is empty', async () => {
+      (globalThis.fetch as any).mockResolvedValue(
+        jsonResponse({}, false, 500)
+      );
+
+      await expect(getDeploymentReport())
+        .rejects.toThrow('Unable to generate deployment report.');
+    });
+
+    it('omits undefined or empty query parameters', async () => {
+      (globalThis.fetch as any).mockResolvedValue(jsonResponse({ items: [] }));
+
+      await getDeploymentReport({
+        projectId: '',
+        environment: undefined,
+        status: 'Failed',
+      });
+
+      const [url] = lastCall();
+      const parsedUrl = new URL(url);
+      expect(parsedUrl.searchParams.has('projectId')).toBe(false);
+      expect(parsedUrl.searchParams.has('environment')).toBe(false);
+      expect(parsedUrl.searchParams.get('status')).toBe('Failed');
+    });
   });
 });
+

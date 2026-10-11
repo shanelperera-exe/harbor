@@ -1,27 +1,55 @@
+import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { RxDashboard } from "react-icons/rx";
+import { 
+  LayoutDashboard, 
+  Activity, 
+  Users, 
+  FolderGit2, 
+  Globe, 
+  Rocket, 
+  BarChart3, 
+  ScrollText, 
+  Settings,
+  HelpCircle
+} from 'lucide-react';
 
-const NavItem = ({ icon, label, to, isFooter = false, isButton = false }: any) => {
+interface NavItemProps {
+  icon: React.ReactNode;
+  label: string;
+  to: string;
+  isFooter?: boolean;
+  isButton?: boolean;
+  badge?: string;
+}
+
+const NavItem = ({ icon, label, to, isFooter = false, isButton = false, badge }: NavItemProps) => {
   const location = useLocation();
-  const isActive = location.pathname === to;
-  const baseClasses = "group/shell-side-nav-item flex items-center w-full px-3 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 space-x-3 py-2.5 rounded-lg transition-colors duration-200";
+  const isActive = location.pathname === to || (to !== '/dashboard' && location.pathname.startsWith(to));
+  const baseClasses = "group/shell-side-nav-item flex items-center justify-between w-full px-2.5 py-1.5 text-left focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 transition-colors duration-150 rounded-sm";
   
   const activeClasses = isActive 
-    ? "bg-[#2563eb] text-white text-[17px] font-medium shadow-sm" 
-    : "hover:bg-gray-100 dark:hover:bg-[#272727] hover:text-gray-900 dark:hover:text-[#f0f0f0] text-gray-600 dark:text-[#c7c7c7] text-[17px] font-medium";
+    ? "bg-[#2563eb] text-white text-[14px] font-medium" 
+    : "text-gray-700 dark:text-[#bdc1c6] hover:bg-gray-100 dark:hover:bg-[#2c2d30] hover:text-gray-900 dark:hover:text-white text-[14px] font-normal";
 
   const footerClasses = isFooter 
-    ? "text-[16px] text-gray-500 dark:text-[#c7c7c7] hover:text-gray-900 dark:hover:text-[#f0f0f0] space-x-2 py-2 font-medium" 
+    ? "text-[13px] text-gray-500 dark:text-[#9aa0a6] hover:text-gray-900 dark:hover:text-white py-1 font-normal" 
     : activeClasses;
 
   if (isButton) {
     return (
       <li>
         <button type="button" className={`${baseClasses} ${footerClasses}`}>
-          <div className="flex-shrink-0 w-[22px] h-[22px] text-current flex items-center justify-center">
-            {icon}
+          <div className="flex items-center space-x-2.5 min-w-0">
+            <div className="flex-shrink-0 w-4 h-4 text-current">
+              {icon}
+            </div>
+            <span className="truncate">{label}</span>
           </div>
-          <span className="truncate">{label}</span>
+          {badge && (
+            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-sm bg-gray-200 dark:bg-[#3c4043] text-gray-700 dark:text-gray-300">
+              {badge}
+            </span>
+          )}
         </button>
       </li>
     );
@@ -34,95 +62,136 @@ const NavItem = ({ icon, label, to, isFooter = false, isButton = false }: any) =
         className={`${baseClasses} ${footerClasses}`}
         aria-current={isActive ? "page" : undefined}
       >
-        <div className="flex-shrink-0 w-[22px] h-[22px] text-current flex items-center justify-center">
-          {icon}
+        <div className="flex items-center space-x-2.5 min-w-0">
+          <div className="flex-shrink-0 w-4 h-4 text-current flex items-center justify-center">
+            {icon}
+          </div>
+          <span className="truncate">{label}</span>
         </div>
-        <span className="truncate">{label}</span>
+        {badge && (
+          <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded-sm ${isActive ? 'bg-blue-700 text-white' : 'bg-gray-100 dark:bg-[#3c4043] text-gray-600 dark:text-[#bdc1c6]'}`}>
+            {badge}
+          </span>
+        )}
       </Link>
     </li>
   );
 };
 
-const NavSection = ({ title, children }: any) => (
-  <div className="space-y-2.5">
-    {title && <div className="text-gray-400 dark:text-[#b3b3b3] px-3 text-[14px] uppercase font-mono tracking-wider">{title}</div>}
-    <ul className="space-y-1">{children}</ul>
+const NavSection = ({ title, children }: { title?: string; children: React.ReactNode }) => (
+  <div className="space-y-1">
+    {title && (
+      <div className="text-gray-400 dark:text-[#9aa0a6] px-2.5 text-[11px] uppercase font-mono tracking-wider mb-1 font-normal">
+        {title}
+      </div>
+    )}
+    <ul className="space-y-0.5">{children}</ul>
   </div>
 );
 
 export default function SideNav({ 
   mobileOpen = false, 
-  onClose 
+  onClose,
+  sidebarWidth = 260,
+  setSidebarWidth
 }: { 
   mobileOpen?: boolean; 
   onClose?: () => void;
+  sidebarWidth?: number;
+  setSidebarWidth?: (width: number) => void;
 } = {}) {
+  const [isResizing, setIsResizing] = useState(false);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing || !setSidebarWidth) return;
+      const newWidth = Math.max(200, Math.min(480, e.clientX));
+      setSidebarWidth(newWidth);
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+  }, [isResizing, setSidebarWidth]);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+  };
+
   return (
     <>
       {/* Mobile backdrop */}
       {mobileOpen && (
         <div 
-          className="fixed inset-0 top-14 bg-black/60 z-[40] md:hidden transition-opacity"
+          className="fixed inset-0 top-14 bg-black/50 z-[40] md:hidden transition-opacity"
           onClick={onClose}
         />
       )}
 
       {/* Sidebar navigation */}
-      <nav className={`
-        fixed top-14 left-0 z-[50] flex flex-col justify-between w-[260px] md:w-[294px] h-[calc(100vh-3.5rem)] 
-        bg-gray-50 dark:bg-[#141414] border-r border-gray-200 dark:border-[#4d4d4d] 
+      <nav 
+        className={`
+        fixed top-14 left-0 z-[50] flex flex-col justify-between h-[calc(100vh-3.5rem)] 
+        bg-white dark:bg-[#202124] border-r border-gray-300 dark:border-[#3c4043] 
         transition-transform duration-300 ease-in-out
-        md:relative md:top-0 md:h-full md:translate-x-0
+        md:relative md:top-0 md:h-full md:translate-x-0 flex-shrink-0
         ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}
-      `}>
-        <div role="separator" tabIndex={0} className="hidden md:block absolute top-0 h-full -right-1 w-2 cursor-col-resize select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"></div>
+      `}
+        style={{ width: `${sidebarWidth}px` }}
+      >
+        <div 
+          role="separator" 
+          tabIndex={0} 
+          className="hidden md:block absolute top-0 h-full -right-1 w-2 cursor-col-resize select-none focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 z-10"
+          onMouseDown={handleMouseDown}
+        ></div>
 
-        <div className="flex-grow overflow-y-auto min-h-48 scrollbar-thin">
-        <div className="flex flex-col space-y-6 px-3 py-4">
-          <NavSection title="Workspace">
-            <NavItem label="Dashboard" to="/dashboard" icon={<IconBlueprints />} />
-            <NavItem label="Projects" to="/projects" icon={<IconProjects />} />
-          </NavSection>
+        <div className="flex-grow overflow-y-auto overflow-x-hidden min-h-48 scrollbar-thin">
+          <div className="flex flex-col space-y-4 px-3 py-3">
+            <NavSection title="Telemetry">
+              <NavItem label="Control Plane" to="/dashboard" icon={<LayoutDashboard className="w-4 h-4" />} />
+              <NavItem label="System Health" to="/health" icon={<Activity className="w-4 h-4" />} badge="Live" />
+            </NavSection>
 
-          <NavSection title="Infrastructure">
-            <NavItem label="Environments" to="/environments" icon={<IconGroups />} />
-            <NavItem label="Deployments" to="/deployments" icon={<IconWebhooks />} />
-          </NavSection>
+            <NavSection title="Tenants & Resources">
+              <NavItem label="Users" to="/users" icon={<Users className="w-4 h-4" />} />
+              <NavItem label="Projects" to="/projects" icon={<FolderGit2 className="w-4 h-4" />} />
+              <NavItem label="Custom Domains" to="/domains" icon={<Globe className="w-4 h-4" />} />
+            </NavSection>
 
-          <NavSection title="Observability">
-            <NavItem label="Metrics" to="/metrics" icon={<IconMetrics />} />
-            <NavItem label="Logs" to="/logs" icon={<IconLogs />} />
-            <NavItem label="Alerts" to="/alerts" icon={<IconAlerts />} />
-          </NavSection>
+            <NavSection title="Operations">
+              <NavItem label="Deployments" to="/deployments" icon={<Rocket className="w-4 h-4" />} />
+              <NavItem label="Operational Reports" to="/reports" icon={<BarChart3 className="w-4 h-4" />} />
+            </NavSection>
 
-          <NavSection title="System">
-            <NavItem label="Settings" to="/settings" icon={<IconSettings />} />
-          </NavSection>
+            <NavSection title="Governance">
+              <NavItem label="Audit Logs" to="/audit" icon={<ScrollText className="w-4 h-4" />} />
+              <NavItem label="Platform Settings" to="/settings" icon={<Settings className="w-4 h-4" />} />
+            </NavSection>
+          </div>
         </div>
-        
-        <div aria-hidden="true" className="pointer-events-none sticky bottom-0 left-0 w-full h-4 bg-gradient-to-t from-gray-50 dark:from-[#141414] to-transparent transition-colors duration-300"></div>
-      </div>
 
-      <footer className="flex flex-col space-y-4 px-3 py-4 border-t border-gray-200 dark:border-[#4d4d4d] transition-colors duration-300">
-        <div className="relative">
-          <ul className="mb-4 pr-8">
-            <NavItem label="Contact support" isButton isFooter icon={<IconSupport />} />
+        <footer className="flex flex-col px-3 py-3 border-t border-gray-300 dark:border-[#3c4043] bg-white dark:bg-[#202124]">
+          <ul className="space-y-0.5">
+            <NavItem label="Operator Handbook" to="/settings" icon={<HelpCircle className="w-4 h-4" />} isFooter />
           </ul>
-        </div>
-      </footer>
-    </nav>
+        </footer>
+      </nav>
     </>
   );
 }
-
-import { SlSupport } from "react-icons/sl";
-
-export const IconProjects = () => <svg viewBox="0 0 16 16" fill="currentColor" className="w-5 h-5"><path d="M10.65 2.45L8.4 1.1C8.25 1.05 8.15 1 8 1C7.85 1 7.75 1.05 7.65 1.1L5.4 2.45C5.15 2.6 5 2.85 5 3.1V5.9C5 6.15 5.15 6.4 5.35 6.55L7.6 7.9C7.7 7.95 7.85 8 7.95 8C8.05 8 8.2 7.95 8.3 7.9L10.55 6.55C10.75 6.4 10.9 6.2 10.9 5.9V3.1C11 2.85 10.85 2.6 10.65 2.45ZM10 5.75L8 6.95L6 5.75V3.25L8 2.05L10 3.25V5.75Z"></path><path d="M14.65 9.45L12.4 8.1C12.25 8.05 12.15 8 12 8C11.85 8 11.75 8.05 11.65 8.1L9.4 9.45C9.2 9.6 9.05 9.8 9.05 10.1V12.9C9.05 13.15 9.2 13.4 9.4 13.55L11.65 14.9C11.75 14.95 11.9 15 12 15C12.1 15 12.25 14.95 12.35 14.9L14.6 13.55C14.8 13.4 14.95 13.2 14.95 12.9V10.1C15 9.85 14.85 9.6 14.65 9.45ZM14 12.75L12 13.95L10 12.75V10.25L12 9.05L14 10.25V12.75Z"></path><path d="M6.65 9.45L4.4 8.1C4.25 8.05 4.15 8 4 8C3.85 8 3.75 8.05 3.65 8.1L1.4 9.45C1.15 9.6 1 9.85 1 10.1V12.9C1 13.15 1.15 13.4 1.35 13.55L3.6 14.9C3.75 14.95 3.85 15 4 15C4.15 15 4.25 14.95 4.35 14.9L6.6 13.55C6.8 13.4 6.95 13.2 6.95 12.9V10.1C7 9.85 6.85 9.6 6.65 9.45ZM6 12.75L4 13.95L2 12.75V10.25L4 9.05L6 10.25V12.75Z"></path></svg>;
-export const IconBlueprints = () => <RxDashboard className="w-5 h-5" />;
-export const IconGroups = () => <svg viewBox="0 0 16 16" fill="currentColor" className="w-5 h-5"><path d="M5 13.5H2C1.73478 13.5 1.48043 13.3946 1.29289 13.2071C1.10536 13.0196 1 12.7652 1 12.5V11C1 10.7348 1.10536 10.4804 1.29289 10.2929C1.48043 10.1054 1.73478 10 2 10H6.5V11H2V12.5H5V13.5Z"></path><path d="M8.5 9H2C1.73478 9 1.48043 8.89464 1.29289 8.70711C1.10536 8.51957 1 8.26522 1 8V6.5C1 6.23478 1.10536 5.98043 1.29289 5.79289C1.48043 5.60536 1.73478 5.5 2 5.5H11V6.5H2V8H8.5V9Z"></path><path d="M11 4.5H2C1.73478 4.5 1.48043 4.39464 1.29289 4.20711C1.10536 4.01957 1 3.76522 1 3.5V2C1 1.73478 1.10536 1.48043 1.29289 1.29289C1.48043 1.10536 1.73478 1 2 1H11C11.2652 1 11.5196 1.10536 11.7071 1.29289C11.8946 1.48043 12 1.73478 12 2V3.5C12 3.76522 11.8946 4.01957 11.7071 4.20711C11.5196 4.39464 11.2652 4.5 11 4.5ZM2 3.5H11V2H2V3.5Z"></path><path d="M12.5 10.5C12.7761 10.5 13 10.2761 13 10C13 9.72386 12.7761 9.5 12.5 10.5Z"></path><path d="M9.70705 15H7.5V12.7928L10.0169 10.276C10.0057 10.1844 10.0001 10.0923 10 10C9.99968 9.49369 10.1531 8.99922 10.44 8.58202C10.7268 8.16481 11.1336 7.84454 11.6065 7.66358C12.0793 7.48262 12.596 7.4495 13.0881 7.5686C13.5802 7.6877 14.0245 7.95341 14.3623 8.33057C14.7001 8.70773 14.9154 9.17856 14.9797 9.68076C15.0441 10.183 14.9544 10.6929 14.7226 11.143C14.4908 11.5931 14.1278 11.9623 13.6816 12.2016C13.2354 12.4409 12.7271 12.5391 12.2239 12.4831L9.70705 15ZM8.5 14H9.29295L11.896 11.3968L12.1657 11.4587C12.4872 11.5353 12.8249 11.5049 13.1274 11.3721C13.43 11.2393 13.681 11.0113 13.8422 10.7228C14.0034 10.4344 14.066 10.1012 14.0206 9.77389C13.9752 9.44658 13.8241 9.14305 13.5905 8.9094C13.3568 8.67575 13.0533 8.52476 12.7259 8.47936C12.3986 8.43396 12.0654 8.49664 11.777 8.65787C11.4886 8.8191 11.2606 9.07007 11.1278 9.37266C10.995 9.67525 10.9646 10.0129 11.0413 10.3343L11.1031 10.604L8.5 13.2072V14Z"></path></svg>;
-export const IconMetrics = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><rect x="18" y="3" width="4" height="18"></rect><rect x="10" y="8" width="4" height="13"></rect><rect x="2" y="13" width="4" height="8"></rect></svg>;
-export const IconLogs = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M4 6h16M4 12h16M4 18h7"></path></svg>;
-export const IconAlerts = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>;
-export const IconWebhooks = () => <svg viewBox="0 0 16 16" fill="currentColor" className="w-5 h-5"><path d="M12.0002 13C12.2755 13.0011 12.5457 12.9265 12.7814 12.7842C13.017 12.642 13.209 12.4376 13.3363 12.1936C13.4636 11.9495 13.5212 11.6751 13.5029 11.4005C13.4847 11.1258 13.3912 10.8615 13.2327 10.6365C13.0743 10.4114 12.8569 10.2343 12.6045 10.1245C12.3521 10.0147 12.0744 9.97649 11.8017 10.014C11.529 10.0516 11.2719 10.1634 11.0585 10.3373C10.8452 10.5112 10.6838 10.7405 10.592 11H6.50024V11.5C6.50024 11.9945 6.35362 12.4778 6.07892 12.8889C5.80421 13.3001 5.41377 13.6205 4.95695 13.8097C4.50013 13.9989 3.99747 14.0484 3.51252 13.952C3.02756 13.8555 2.58211 13.6174 2.23248 13.2678C1.88284 12.9181 1.64474 12.4727 1.54828 11.9877C1.45182 11.5028 1.50132 11.0001 1.69054 10.5433C1.87976 10.0865 2.20019 9.69604 2.61132 9.42133C3.02244 9.14663 3.50579 9.00001 4.00024 9.00001V8.00001C3.32937 8.00005 2.67264 8.19291 2.10827 8.55561C1.54389 8.9183 1.09564 9.43556 0.8169 10.0458C0.538158 10.656 0.440667 11.3335 0.536035 11.9975C0.631403 12.6616 0.915613 13.2843 1.35482 13.7914C1.79403 14.2985 2.36973 14.6687 3.01337 14.8579C3.657 15.0471 4.34146 15.0474 4.98523 14.8586C5.62901 14.6699 6.20497 14.3001 6.64454 13.7933C7.0841 13.2865 7.36875 12.664 7.46459 12H10.592C10.6946 12.2918 10.885 12.5447 11.1372 12.7238C11.3894 12.9029 11.6909 12.9994 12.0002 13Z"></path><path d="M12.0002 8.00001C11.5604 8.00004 11.1245 8.0827 10.7152 8.24366L9.13244 5.47391C9.36815 5.20168 9.49982 4.85476 9.50407 4.49469C9.50833 4.13462 9.38491 3.78468 9.1557 3.50696C8.92649 3.22924 8.60631 3.04168 8.25197 2.97757C7.89763 2.91346 7.53203 2.97693 7.22004 3.15673C6.90805 3.33654 6.66984 3.62104 6.54765 3.95977C6.42547 4.2985 6.42723 4.66956 6.55261 5.00712C6.67799 5.34469 6.91889 5.62692 7.23257 5.80376C7.54624 5.98061 7.91242 6.04062 8.26614 5.97316L10.3256 9.57741L10.7599 9.32861C11.1889 9.08359 11.6809 8.97115 12.1737 9.00548C12.6665 9.03981 13.1382 9.21938 13.529 9.52151C13.9199 9.82365 14.2125 10.2348 14.3699 10.7031C14.5273 11.1714 14.5425 11.6758 14.4135 12.1527C14.2844 12.6296 14.017 13.0576 13.645 13.3826C13.273 13.7077 12.813 13.9152 12.3231 13.9791C11.8332 14.0429 11.3354 13.9602 10.8924 13.7414C10.4495 13.5225 10.0813 13.1774 9.83439 12.7495L8.96874 13.2505C9.27597 13.7826 9.71783 14.2244 10.2499 14.5316C10.782 14.8388 11.3856 15.0005 12 15.0005C12.6144 15.0005 13.218 14.8388 13.7501 14.5316C14.2822 14.2244 14.724 13.7825 15.0312 13.2504C15.3385 12.7183 15.5002 12.1148 15.5002 11.5004C15.5002 10.886 15.3385 10.2824 15.0314 9.75027C14.7242 9.21817 14.2824 8.77629 13.7503 8.46906C13.2182 8.16182 12.6146 8.00005 12.0002 8.00001Z"></path><path d="M4.26624 10.0269C3.9146 9.96049 3.55083 10.0207 3.23937 10.1969C2.9279 10.3731 2.68886 10.6539 2.56459 10.9895C2.44032 11.325 2.43884 11.6938 2.56042 12.0303C2.682 12.3669 2.91879 12.6495 3.22883 12.8282C3.53887 13.0069 3.90216 13.07 4.25431 13.0065C4.60647 12.943 4.92477 12.7568 5.15281 12.481C5.38086 12.2053 5.50393 11.8577 5.50022 11.4999C5.49651 11.142 5.36626 10.7971 5.13254 10.5261C5.87024 9.23501 6.93024 7.38036 6.94524 7.35401L7.19404 6.91991L6.76019 6.67141C6.33051 6.4259 5.98335 6.0584 5.7627 5.61544C5.54204 5.17249 5.45781 4.67401 5.52068 4.18315C5.58354 3.69228 5.79067 3.23112 6.11584 2.85807C6.441 2.48502 6.86957 2.21686 7.34725 2.08757C7.82494 1.95827 8.33025 1.97365 8.79918 2.13177C9.26812 2.28988 9.67957 2.58361 9.98144 2.97575C10.2833 3.36789 10.462 3.8408 10.4949 4.33458C10.5278 4.82836 10.4134 5.32079 10.1662 5.74951L11.0319 6.25051C11.3682 5.66838 11.5297 5.00176 11.4971 4.3303C11.4646 3.65884 11.2394 3.01096 10.8484 2.46408C10.4574 1.91721 9.91729 1.49448 9.29249 1.24641C8.66769 0.998348 7.98467 0.935445 7.32507 1.06522C6.66547 1.195 6.05719 1.51196 5.57293 1.97823C5.08867 2.4445 4.74892 3.04035 4.59428 3.69457C4.43965 4.34879 4.47666 5.0337 4.70091 5.66744C4.92516 6.30118 5.32715 6.85694 5.85884 7.26831C5.63034 7.63966 5.30779 8.2041 4.82199 9.0547L4.26624 10.0269Z"></path></svg>;
-export const IconSettings = () => <svg viewBox="0 0 16 16" fill="currentColor" className="w-5 h-5"><path d="M13.5 8.38008C13.5 8.25508 13.5 8.13008 13.5 8.00008C13.5 7.87008 13.5 7.74508 13.5 7.61508L14.46 6.77508C14.637 6.61911 14.7531 6.40559 14.7879 6.17228C14.8226 5.93897 14.7738 5.70088 14.65 5.50008L13.47 3.50008C13.3823 3.34821 13.2562 3.22207 13.1044 3.13431C12.9526 3.04655 12.7804 3.00026 12.605 3.00008C12.4963 2.99925 12.3882 3.01614 12.285 3.05008L11.07 3.46008C10.8602 3.32068 10.6414 3.19541 10.415 3.08508L10.16 1.82508C10.1143 1.59488 9.98905 1.3881 9.80623 1.24093C9.62341 1.09376 9.39466 1.01558 9.16 1.02008H6.82C6.58535 1.01558 6.3566 1.09376 6.17378 1.24093C5.99096 1.3881 5.86573 1.59488 5.82 1.82508L5.565 3.08508C5.33697 3.19538 5.11649 3.32066 4.905 3.46008L3.715 3.03008C3.61065 3.00289 3.50259 2.99276 3.395 3.00008C3.21964 3.00026 3.04741 3.04655 2.89559 3.13431C2.74376 3.22207 2.61769 3.34821 2.53 3.50008L1.35 5.50008C1.2333 5.70058 1.18993 5.93541 1.22733 6.16436C1.26473 6.39332 1.38057 6.60214 1.555 6.75508L2.5 7.62008C2.5 7.74508 2.5 7.87008 2.5 8.00008C2.5 8.13008 2.5 8.25508 2.5 8.38508L1.555 9.22508C1.37564 9.37908 1.25663 9.59165 1.2191 9.82505C1.18158 10.0585 1.22795 10.2976 1.35 10.5001L2.53 12.5001C2.61769 12.6519 2.74376 12.7781 2.89559 12.8659C3.04741 12.9536 3.21964 12.9999 3.395 13.0001C3.50368 13.0009 3.61176 12.984 3.715 12.9501L4.93 12.5401C5.13977 12.6795 5.35859 12.8048 5.585 12.9151L5.84 14.1751C5.88573 14.4053 6.01096 14.6121 6.19378 14.7592C6.3766 14.9064 6.60535 14.9846 6.84 14.9801H9.2C9.43466 14.9846 9.66341 14.9064 9.84623 14.7592C10.029 14.6121 10.1543 14.4053 10.2 14.1751L10.455 12.9151C10.683 12.8048 10.9035 12.6795 11.115 12.5401L12.325 12.9501C12.4282 12.984 12.5363 13.0009 12.645 13.0001C12.8204 12.9999 12.9926 12.9536 13.1444 12.8659C13.2962 12.7781 13.4223 12.6519 13.51 12.5001L14.65 10.5001C14.7667 10.2996 14.8101 10.0648 14.7727 9.8358C14.7353 9.60685 14.6194 9.39802 14.445 9.24508L13.5 8.38008ZM12.605 12.0001L10.89 11.4201C10.4885 11.7601 10.0297 12.026 9.535 12.2051L9.18 14.0001H6.82L6.465 12.2251C5.97422 12.0409 5.51786 11.7755 5.115 11.4401L3.395 12.0001L2.215 10.0001L3.575 8.80008C3.48255 8.28251 3.48255 7.75265 3.575 7.23508L2.215 6.00008L3.395 4.00008L5.11 4.58008C5.51147 4.24003 5.97031 3.97421 6.465 3.79508L6.82 2.00008H9.18L9.535 3.77508C10.0258 3.95929 10.4821 4.22465 10.885 4.56008L12.605 4.00008L13.785 6.00008L12.425 7.20008C12.5175 7.71765 12.5175 8.24751 12.425 8.76508L13.785 10.0001L12.605 12.0001Z"></path><path d="M8 11.0001C7.40666 11.0001 6.82664 10.8241 6.33329 10.4945C5.83995 10.1648 5.45543 9.69631 5.22837 9.14813C5.0013 8.59995 4.94189 7.99675 5.05765 7.41481C5.1734 6.83287 5.45913 6.29832 5.87868 5.87876C6.29824 5.4592 6.83279 5.17348 7.41473 5.05773C7.99668 4.94197 8.59988 5.00138 9.14805 5.22844C9.69623 5.45551 10.1648 5.84002 10.4944 6.33337C10.8241 6.82672 11 7.40674 11 8.00008C11.004 8.39516 10.9292 8.78707 10.7798 9.15286C10.6305 9.51865 10.4096 9.85096 10.1303 10.1303C9.85089 10.4097 9.51857 10.6305 9.15278 10.7799C8.787 10.9292 8.39508 11.0041 8 11.0001ZM8 6.00008C7.73568 5.99392 7.47285 6.04145 7.22741 6.13978C6.98198 6.23811 6.75904 6.3852 6.57208 6.57216C6.38512 6.75912 6.23803 6.98205 6.1397 7.22749C6.04137 7.47292 5.99385 7.73575 6 8.00008C5.99385 8.26441 6.04137 8.52724 6.1397 8.77267C6.23803 9.01811 6.38512 9.24105 6.57208 9.42801C6.75904 9.61496 6.98198 9.01811 9.42793 9.42801C9.61489 9.24105 9.76198 9.01811 9.86031 8.77267C9.95864 8.52724 10.0062 8.26441 10 8.00008C10.0062 7.73575 9.95864 7.47292 9.86031 7.22749C9.76198 6.98205 9.61489 6.75912 9.42793 6.57216C9.24097 6.3852 9.01803 6.23811 8.7726 6.13978C8.52716 6.04145 8.26433 5.99392 8 6.00008Z"></path></svg>;
-export const IconSupport = () => <SlSupport className="w-5 h-5" />;

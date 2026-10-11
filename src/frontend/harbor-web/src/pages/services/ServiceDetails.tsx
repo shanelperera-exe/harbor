@@ -10,6 +10,7 @@ import ServiceLogs from './ServiceLogs';
 import DeploymentDetails from './DeploymentDetails';
 import ServiceMetrics from './ServiceMetrics';
 import ServiceEnvironment from './ServiceEnvironment';
+import ServiceDomains from './ServiceDomains';
 import ServiceSettings from './ServiceSettings';
 import ServiceCiRuns from './ServiceCiRuns';
 import { createDeployment, CiGateError } from '../../services/deploymentService';
@@ -454,6 +455,7 @@ export default function ServiceDetails() {
          <Route path="logs" element={<ServiceLogs />} />
         <Route path="metrics" element={<ServiceMetrics />} />
         <Route path="environment" element={<ServiceEnvironment />} />
+        <Route path="domains" element={<ServiceDomains />} />
         <Route path="settings" element={<ServiceSettings />} />
       </Route>
     </Routes>

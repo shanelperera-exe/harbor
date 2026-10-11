@@ -13,6 +13,7 @@ namespace Harbor.Project.Tests
         private readonly Mock<IServiceRepository> _serviceRepository = new();
         private readonly Mock<IProjectRepository> _projectRepository = new();
         private readonly Mock<IProjectIntegrationRepository> _integrationRepository = new();
+        private readonly Mock<Harbor.Common.Security.IHarborSecretProtector> _secretProtector = new();
         private readonly TestCacheService _cacheService = new();
         private readonly Mock<Harbor.Common.Security.IHarborSecretProtector> _secretProtector = new();
         private readonly ServiceService _service;

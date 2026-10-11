@@ -56,6 +56,9 @@ namespace Harbor.E2ETests.Pages
             Thread.Sleep(300);
             ((IJavaScriptExecutor)_driver).ExecuteScript("arguments[0].scrollIntoView({block:'center'});", option);
             option.Click();
+            
+            _wait.Until(d => !IsDropdownOpen(optionsListTestId));
+            Thread.Sleep(200);
         }
 
         private bool IsDropdownOpen(string optionsListTestId)
@@ -98,21 +101,45 @@ namespace Harbor.E2ETests.Pages
         public void SelectEnvironment(string environment) => SelectFilterOption("report-environment-filter", environment);
         public void SelectStatus(string status) => SelectFilterOption("report-status-filter", status);
 
-        public void SetStartDate(string date)
+        public void SetStartDate(string date) => SetDateInput("report-start-date", date);
+        public void SetEndDate(string date) => SetDateInput("report-end-date", date);
+
+        // Used for validation testing where client-side React state must be updated
+        public void SetStartDateForValidation(string date) => SetDateInputWithSendKeys("report-start-date", date);
+        public void SetEndDateForValidation(string date) => SetDateInputWithSendKeys("report-end-date", date);
+
+        private void SetDateInput(string testId, string date)
         {
-            StartDateInput.Clear();
-            StartDateInput.SendKeys(date);
+            var input = _wait.Until(d => d.FindElement(By.CssSelector($"[data-testid='{testId}']")));
+            
+            // Use native value setter to properly update React controlled component
+            ((IJavaScriptExecutor)_driver).ExecuteScript(
+                "var input = arguments[0]; var date = arguments[1]; " +
+                "var nativeSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set; " +
+                "nativeSetter.call(input, date); " +
+                "var inputEvent = new Event('input', { bubbles: true, composed: true, cancelable: true }); " +
+                "input.dispatchEvent(inputEvent); " +
+                "var changeEvent = new Event('change', { bubbles: true, composed: true, cancelable: true }); " +
+                "input.dispatchEvent(changeEvent); " +
+                "var blurEvent = new Event('blur', { bubbles: true, composed: true }); " +
+                "input.dispatchEvent(blurEvent);",
+                input, date);
+            Thread.Sleep(100);
         }
 
-        public void SetEndDate(string date)
+        private void SetDateInputWithSendKeys(string testId, string date)
         {
-            EndDateInput.Clear();
-            EndDateInput.SendKeys(date);
+            var input = _wait.Until(d => d.FindElement(By.CssSelector($"[data-testid='{testId}']")));
+            input.Clear();
+            input.SendKeys(date);
+            input.SendKeys(OpenQA.Selenium.Keys.Tab);
+            Thread.Sleep(100);
         }
 
         public void ClickGenerate()
         {
-            GenerateButton.Click();
+            Thread.Sleep(300);
+            ((IJavaScriptExecutor)_driver).ExecuteScript("arguments[0].click();", GenerateButton);
             _wait.Until(d =>
             {
                 try
@@ -122,6 +149,29 @@ namespace Harbor.E2ETests.Pages
                 }
                 catch (StaleElementReferenceException) { return false; }
             });
+            
+            // Wait for results section to be fully rendered (empty state visible or table rows visible)
+            // OR for validation error to appear
+            _wait.Until(d =>
+            {
+                try
+                {
+                    var empty = d.FindElements(By.CssSelector("[data-testid='report-empty']"));
+                    if (empty.Count > 0 && empty[0].Displayed) return true;
+                    
+                    var rows = d.FindElements(By.CssSelector("[data-testid='report-row']"));
+                    if (rows.Count > 0 && rows[0].Displayed) return true;
+                    
+                    var error = d.FindElements(By.CssSelector("[data-testid='report-error']"));
+                    if (error.Count > 0 && error[0].Displayed) return true;
+                    
+                    return false;
+                }
+                catch { return false; }
+            });
+            
+            // Small delay to ensure React rendering is complete
+            Thread.Sleep(500);
         }
 
         public void ClickReset()
@@ -172,10 +222,18 @@ namespace Harbor.E2ETests.Pages
         {
             try
             {
-                var empty = _driver.FindElement(By.CssSelector("[data-testid='report-empty']"));
-                return empty.Displayed;
+                var empty = _wait.Until(d =>
+                {
+                    try
+                    {
+                        var el = d.FindElement(By.CssSelector("[data-testid='report-empty']"));
+                        return el.Displayed ? el : null;
+                    }
+                    catch { return null; }
+                });
+                return empty != null && empty.Displayed;
             }
-            catch (NoSuchElementException)
+            catch (WebDriverTimeoutException)
             {
                 return false;
             }

@@ -11,6 +11,8 @@ namespace Harbor.Project.Tests
     {
         private readonly Mock<IServiceRepository> _serviceRepository = new();
         private readonly Mock<IProjectRepository> _projectRepository = new();
+        private readonly Mock<IProjectIntegrationRepository> _integrationRepository = new();
+        private readonly Mock<Harbor.Common.Security.IHarborSecretProtector> _secretProtector = new();
         private readonly TestCacheService _cacheService = new();
         private readonly ServiceService _service;
 
@@ -18,7 +20,7 @@ namespace Harbor.Project.Tests
 
         public ServiceServiceTests()
         {
-            _service = new ServiceService(_serviceRepository.Object, _projectRepository.Object, _cacheService);
+            _service = new ServiceService(_serviceRepository.Object, _projectRepository.Object, _integrationRepository.Object, _cacheService, _secretProtector.Object);
         }
 
         private void SetupProject(ProjectEntity? project)
@@ -503,7 +505,7 @@ namespace Harbor.Project.Tests
 
             var (success, error, _) = await _service.UpdateAsync(
                 "srv-abcdefghij",
-                new UpdateServiceRequest { WorkflowFile = "  ship.yml  ", BuildCommand = "  dotnet build  ", StartCommand = "  dotnet run  ", Provider = "  docker  " },
+                new UpdateServiceRequest { WorkflowFile = "  ship.yml  ", Provider = "  docker  " },
                 OwnerId,
                 isAdmin: false);
 
@@ -512,8 +514,6 @@ namespace Harbor.Project.Tests
 
             _serviceRepository.Verify(r => r.UpdateAsync(It.Is<ServiceEntity>(s =>
                 s.WorkflowFile == "ship.yml" &&
-                s.BuildCommand == "dotnet build" &&
-                s.StartCommand == "dotnet run" &&
                 s.Provider == "docker")), Times.Once);
         }
 
@@ -533,7 +533,7 @@ namespace Harbor.Project.Tests
 
             Assert.True(success);
             _serviceRepository.Verify(r => r.UpdateAsync(It.Is<ServiceEntity>(s =>
-                s.WorkflowFile == null && s.BuildCommand == null && s.StartCommand == null && s.Provider == "podman")), Times.Once);
+                s.WorkflowFile == null && s.Provider == "podman")), Times.Once);
         }
 
         [Theory]
@@ -552,21 +552,6 @@ namespace Harbor.Project.Tests
             _serviceRepository.Verify(r => r.UpdateAsync(It.Is<ServiceEntity>(s => s.WorkflowFile == "deploy.yml")), Times.Once);
         }
 
-        [Theory]
-        [InlineData("")]
-        [InlineData("   ")]
-    public async Task UpdateAsync_BlankOptionalCommand_ClearsStoredValue(string blank)
-        {
-        _serviceRepository.Setup(r => r.GetByIdOrPublicIdAsync(It.IsAny<string>())).ReturnsAsync(ExistingService());
-            SetupProjectById(OwnedProject());
-            _serviceRepository.Setup(r => r.UpdateAsync(It.IsAny<ServiceEntity>())).ReturnsAsync(true);
-            _serviceRepository.Setup(r => r.GetByIdAsync(13)).ReturnsAsync(ExistingService());
-
-            await _service.UpdateAsync(
-       "srv-abcdefghij", new UpdateServiceRequest { BuildCommand = blank, StartCommand = blank }, OwnerId, isAdmin: false);
-
-            _serviceRepository.Verify(r => r.UpdateAsync(It.Is<ServiceEntity>(s => s.BuildCommand == null && s.StartCommand == null)), Times.Once);
-        }
 
         [Fact]
         public async Task UpdateAsync_DeploymentUrlsList_TakesPrecedenceOverSingleUrl()

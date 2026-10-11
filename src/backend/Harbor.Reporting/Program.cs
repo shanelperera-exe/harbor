@@ -1,5 +1,6 @@
 using DotNetEnv;
 using Harbor.Caching.Extensions;
+using Harbor.Common.Observability;
 using Harbor.Reporting.Data;
 using Harbor.Reporting.Repositories;
 using Harbor.Reporting.Services;
@@ -16,6 +17,11 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 builder.Services.AddHarborCaching(builder.Configuration);
+
+builder.Services.AddHealthChecks()
+    .AddHarborLiveness("Harbor.Reporting")
+    .AddHarborDbCheck<ReportingDbConnectionFactory>(f => f.CreateConnection())
+    .AddHarborCacheCheck();
 builder.Services.AddSignalR();
 
 // Register Phase 3 Native Adapter Dependencies
@@ -59,15 +65,32 @@ var jwtIssuer   = builder.Configuration["JWT_ISSUER"]   ?? "harbor";
 var jwtAudience = builder.Configuration["JWT_AUDIENCE"] ?? "harbor-api";
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options => options.TokenValidationParameters = new TokenValidationParameters
+    .AddJwtBearer(options =>
     {
-        ValidateIssuer           = true,
-        ValidateAudience         = true,
-        ValidateLifetime         = true,
-        ValidateIssuerSigningKey = true,
-        ValidIssuer              = jwtIssuer,
-        ValidAudience            = jwtAudience,
-        IssuerSigningKey         = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret))
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer           = true,
+            ValidateAudience         = true,
+            ValidateLifetime         = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer              = jwtIssuer,
+            ValidAudience            = jwtAudience,
+            IssuerSigningKey         = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
+            ClockSkew                = TimeSpan.FromMinutes(5)
+        };
+        options.Events = new JwtBearerEvents
+        {
+            OnAuthenticationFailed = context =>
+            {
+                Console.WriteLine($"[Harbor.Reporting JWT Auth Failed] {context.Exception}");
+                return Task.CompletedTask;
+            },
+            OnChallenge = context =>
+            {
+                Console.WriteLine($"[Harbor.Reporting JWT Challenge] Error: {context.Error}, Desc: {context.ErrorDescription}");
+                return Task.CompletedTask;
+            }
+        };
     });
 builder.Services.AddAuthorization();
 
@@ -119,6 +142,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseHarborObservability();
 app.UseCors("DefaultPolicy");
 
 if (!builder.Configuration.GetValue("DisableHttpsRedirection", false))
@@ -130,6 +154,7 @@ app.UseAuthorization();
 
 app.MapControllers();
 app.MapHub<Harbor.Reporting.Hubs.ServiceLogsHub>("/hubs/logs");
+app.MapHarborObservability();
 
 app.Run();
 

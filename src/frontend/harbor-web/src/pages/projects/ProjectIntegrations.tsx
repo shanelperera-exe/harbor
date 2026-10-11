@@ -4,7 +4,6 @@ import { getProjectIntegrations, createProjectIntegration, deleteProjectIntegrat
 import { Icon } from '../../components/icons';
 import { RiSaveLine, RiCloseLine } from 'react-icons/ri';
 import { BiLinkExternal, BiKey } from 'react-icons/bi';
-import { PiPlugBold, PiPlugsConnected } from 'react-icons/pi';
 import { IoLogoVercel } from 'react-icons/io5';
 import { MdOutlineCloud } from 'react-icons/md';
 import { SiRender, SiGooglecloud, SiKubernetes } from 'react-icons/si';
@@ -132,31 +131,55 @@ export default function ProjectIntegrations() {
                 const providerDef = AVAILABLE_PROVIDERS.find(p => p.id === integration.providerType);
                 
                 return (
-                  <div key={integration.id} className="p-6 page-primary border border-solid border-gray-300 dark:border-[#525252] rounded-sm relative group hover:border-gray-400 dark:hover:border-gray-500 transition-colors">
-                    <button 
-                      onClick={() => deleteIntegration(integration.id)}
-                      className="absolute top-4 right-4 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <Icon name="trash" />
-                    </button>
-                    <div className="flex items-center gap-4 mb-4">
-                      <div className="flex items-center justify-center p-3 bg-gray-100 dark:bg-[#272727] rounded-md">
-                        {providerDef ? <ProviderLogo provider={providerDef} className="w-12 h-12" /> : <BiLinkExternal className="w-12 h-12 text-gray-500" />}
+                  <div 
+                    key={integration.id} 
+                    className="p-6 page-primary border border-solid border-gray-300 dark:border-[#525252] rounded-sm relative group hover:border-gray-400 dark:hover:border-gray-500 transition-colors flex flex-col justify-between"
+                  >
+                    <div>
+                      {/* Top Header: Logo & Delete Action */}
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-center justify-center p-3 bg-gray-50 dark:bg-white/[0.03] rounded-md group-hover:bg-gray-100 dark:group-hover:bg-[#272727] transition-colors">
+                          {providerDef ? <ProviderLogo provider={providerDef} className="w-12 h-12" /> : <BiLinkExternal className="w-12 h-12 text-gray-500" />}
+                        </div>
+                        <button 
+                          onClick={() => deleteIntegration(integration.id)}
+                          className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 p-1.5 rounded-sm hover:bg-red-50 dark:hover:bg-red-950/30 transition-all"
+                          title="Delete connection"
+                        >
+                          <Icon name="trash" className="w-4 h-4" />
+                        </button>
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <h3 className="text-[17px] font-medium text-gray-900 dark:text-white truncate">{integration.name}</h3>
-                        <p className="text-[14.5px] text-gray-500 dark:text-[#a1a1aa] font-normal">{providerDef?.name}</p>
+
+                      {/* Connection Title & Provider Type */}
+                      <div className="mb-4">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="text-[18px] font-medium leading-snug text-gray-900 dark:text-[#f0f0f0] truncate" title={integration.name}>
+                            {integration.name}
+                          </h3>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[13.5px] text-gray-500 dark:text-[#a1a1aa] font-normal">
+                            {providerDef?.name || integration.providerType}
+                          </span>
+                          {providerDef?.badge && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded-sm bg-gray-100 dark:bg-[#2a2a2a] text-gray-600 dark:text-[#b0b0b0] border border-gray-200 dark:border-[#404040]">
+                              {providerDef.badge}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11.5px] font-medium rounded-sm bg-emerald-50 dark:bg-[#1a3826] text-emerald-700 dark:text-[#4ade80] border border-emerald-200 dark:border-[#22543d]">
-                        <PiPlugsConnected className="w-3.5 h-3.5" />
-                        <span>Connected</span>
-                      </span>
-                      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11.5px] font-medium rounded-sm bg-gray-100 dark:bg-[#2a2a2a] text-gray-600 dark:text-[#b0b0b0] border border-gray-200 dark:border-[#404040]">
-                        <Icon name="lock" className="w-3 h-3" />
-                        <span>Encrypted</span>
-                      </span>
+
+                    {/* Status Footer: Connected & Encrypted status indicator */}
+                    <div className="pt-3 border-t border-gray-100 dark:border-[#2f2f2f] flex items-center justify-between text-[12px] text-gray-500 dark:text-[#888]">
+                      <div className="flex items-center gap-1.5">
+                        <span className="inline-block h-2 w-2 rounded-full bg-emerald-500"></span>
+                        <span className="text-gray-700 dark:text-[#ccc] font-medium">Connected</span>
+                      </div>
+                      <div className="flex items-center gap-1 text-gray-400 dark:text-[#777]" title="Encrypted with AES-256">
+                        <Icon name="lock" className="w-3.5 h-3.5 text-blue-500 dark:text-[#3b82f6]" />
+                        <span className="text-gray-600 dark:text-[#aaa]">Encrypted</span>
+                      </div>
                     </div>
                   </div>
                 );
@@ -181,9 +204,9 @@ export default function ProjectIntegrations() {
                   <div className="flex items-center justify-center p-3 bg-gray-50 dark:bg-white/[0.03] rounded-md group-hover:bg-gray-100 dark:group-hover:bg-[#272727] transition-colors">
                     <ProviderLogo provider={provider} className="w-12 h-12" />
                   </div>
-                  <button className="flex items-center gap-2 text-[14.5px] font-mono text-[#2563eb] dark:text-[#3b82f6] hover:text-[#1d4ed8] dark:hover:text-[#60a5fa] opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-sm text-[12px] font-medium text-gray-700 dark:text-[#ccc] bg-gray-100/90 hover:bg-blue-600 hover:text-white dark:bg-white/[0.06] dark:hover:bg-blue-600 dark:hover:text-white border border-gray-200/80 dark:border-white/[0.08] hover:border-blue-600 dark:hover:border-blue-600 opacity-0 group-hover:opacity-100 transition-all duration-150">
+                    <Icon name="plus" className="w-3.5 h-3.5" />
                     <span>Connect</span>
-                    <PiPlugBold className="w-[18px] h-[18px]" />
                   </button>
                 </div>
                 <div className="flex items-center gap-2 mb-1.5 flex-wrap">

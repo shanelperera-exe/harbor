@@ -19,7 +19,8 @@ public sealed class DeploymentWebhookController(
     IDeploymentRepository repository,
     IGitHubActionsClient gitHubActionsClient,
     IInstallationTokenResolver? installationTokenResolver,
-    ILogger<DeploymentWebhookController> logger) : ControllerBase
+    ILogger<DeploymentWebhookController> logger,
+    ICloudProviderSyncService? cloudProviderSync = null) : ControllerBase
 {
     [HttpPost("github")]
     public async Task<IActionResult> HandleGitHubWebhook()
@@ -149,10 +150,47 @@ public sealed class DeploymentWebhookController(
                     var repoName = await repository.GetRepositoryNameAsync(deployment.ServiceId);
                     if (string.IsNullOrWhiteSpace(repoName) || !repoName.Contains('/')) return;
                     var parts = repoName.Split('/', 2);
-
                     var logText = await gitHubActionsClient.FetchRunLogsAsync(parts[0], parts[1], captureRunId, token);
                     if (!string.IsNullOrWhiteSpace(logText))
+                    {
                         await repository.AddLogsAsync(captureDeploymentId, logText);
+                    }
+
+                    var detectedUrl = !string.IsNullOrWhiteSpace(logText) 
+                        ? DeploymentUrlExtractor.ExtractUrl(logText) 
+                        : null;
+
+                    if (string.IsNullOrWhiteSpace(detectedUrl) && cloudProviderSync != null)
+                    {
+                        try
+                        {
+                            var providerInfo = await repository.GetServiceProviderAndTokenAsync(deployment.ServiceId);
+                            if (providerInfo != null && 
+                                !string.IsNullOrWhiteSpace(providerInfo.Value.Provider) && 
+                                !string.IsNullOrWhiteSpace(providerInfo.Value.EncryptedToken))
+                            {
+                                detectedUrl = await cloudProviderSync.FetchLiveDeploymentUrlAsync(
+                                    providerInfo.Value.Provider, 
+                                    providerInfo.Value.EncryptedToken, 
+                                    deployment.CommitSha
+                                );
+                            }
+                        }
+                        catch (Exception syncEx)
+                        {
+                            logger.LogWarning(syncEx, "Provider API sync failed for deployment {Id}", captureDeploymentId);
+                        }
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(detectedUrl))
+                    {
+                        await repository.UpdateDeploymentUrlAsync(captureDeploymentId, detectedUrl);
+                        if (string.Equals(deployment.Environment, "Production", StringComparison.OrdinalIgnoreCase))
+                        {
+                            await repository.UpdateServiceDeploymentUrlAsync(deployment.ServiceId, detectedUrl);
+                        }
+                        logger.LogInformation("Extracted deployment URL '{Url}' for deployment {Id}.", detectedUrl, captureDeploymentId);
+                    }
                 }
                 catch (Exception ex)
                 {

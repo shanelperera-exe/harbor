@@ -34,11 +34,11 @@ public class DeploymentService : IDeploymentService
     private const int MaxPageSize = 100;
     private static readonly string[] ValidEnvironmentTypes = ["Development", "Staging", "Production"];
 
-    public async Task<DeploymentListResponse> GetHistoryAsync(int ownerId, DeploymentHistoryQuery query)
+    public async Task<DeploymentListResponse> GetHistoryAsync(int ownerId, DeploymentHistoryQuery query, bool isAdmin = false)
     {
         var page = Math.Max(1, query.Page);
         var pageSize = Math.Clamp(query.PageSize, 1, MaxPageSize);
-        var (items, totalCount) = await repository.GetHistoryAsync(ownerId, query.ProjectId?.Trim(), query.Environment?.Trim(), query.ServiceId?.Trim(), query.Status?.Trim(), (page - 1) * pageSize, pageSize);
+        var (items, totalCount) = await repository.GetHistoryAsync(ownerId, query.ProjectId?.Trim(), query.Environment?.Trim(), query.ServiceId?.Trim(), query.Status?.Trim(), (page - 1) * pageSize, pageSize, isAdmin);
         return new DeploymentListResponse { Items = items.Select(ToResponse).ToList(), Page = page, PageSize = pageSize, TotalCount = totalCount };
     }
 
@@ -65,14 +65,17 @@ public class DeploymentService : IDeploymentService
         if (deployment is null) return null;
         var logs = await repository.GetLogsAsync(deployment.Id);
         
-        string? deploymentUrl = null;
-        var serviceAccess = await repository.GetServiceAccessAsync(deployment.ServiceId.ToString());
-        if (serviceAccess.Exists)
+        string? deploymentUrl = deployment.DeploymentUrl;
+        if (string.IsNullOrWhiteSpace(deploymentUrl))
         {
-            var env = await repository.GetEnvironmentByNameAsync(serviceAccess.ProjectId, deployment.Environment);
-            if (env != null)
+            var serviceAccess = await repository.GetServiceAccessAsync(deployment.ServiceId.ToString());
+            if (serviceAccess.Exists)
             {
-                deploymentUrl = env.Value.DeploymentUrl;
+                var env = await repository.GetEnvironmentByNameAsync(serviceAccess.ProjectId, deployment.Environment);
+                if (env != null)
+                {
+                    deploymentUrl = env.Value.DeploymentUrl;
+                }
             }
         }
 
@@ -278,14 +281,17 @@ public class DeploymentService : IDeploymentService
         CompletedAt = ciRun.CompletedAt,
     };
 
-    private static DeploymentResponse ToResponse(DeploymentEntity deployment) => new() { Id = deployment.Id, PublicId = string.IsNullOrEmpty(deployment.PublicId) ? deployment.Id.ToString() : deployment.PublicId, Hash = !string.IsNullOrEmpty(deployment.PublicId) && deployment.PublicId.StartsWith("dep-") ? (deployment.PublicId.Length >= 13 ? deployment.PublicId.Substring(4, 9) : deployment.PublicId.Substring(4)) : deployment.Id.ToString(), ServiceId = deployment.ServiceId, Environment = deployment.Environment, Version = deployment.Version, CommitSha = deployment.CommitSha, CommitMessage = deployment.CommitMessage, Status = deployment.Status, StartedAt = deployment.StartedAt, CompletedAt = deployment.CompletedAt, WorkflowFile = deployment.WorkflowFile, WorkflowRef = deployment.WorkflowRef, ProjectName = deployment.ProjectName, ServiceName = deployment.ServiceName, ServiceType = deployment.ServiceType, UserName = deployment.UserName };
+    private static DeploymentResponse ToResponse(DeploymentEntity deployment) => new() { Id = deployment.Id, PublicId = string.IsNullOrEmpty(deployment.PublicId) ? deployment.Id.ToString() : deployment.PublicId, Hash = !string.IsNullOrEmpty(deployment.PublicId) && deployment.PublicId.StartsWith("dep-") ? (deployment.PublicId.Length >= 13 ? deployment.PublicId.Substring(4, 9) : deployment.PublicId.Substring(4)) : deployment.Id.ToString(), ServiceId = deployment.ServiceId, Environment = deployment.Environment, Version = deployment.Version, CommitSha = deployment.CommitSha, CommitMessage = deployment.CommitMessage, Status = deployment.Status, StartedAt = deployment.StartedAt, CompletedAt = deployment.CompletedAt, WorkflowFile = deployment.WorkflowFile, WorkflowRef = deployment.WorkflowRef, ProjectName = deployment.ProjectName, ServiceName = deployment.ServiceName, ServiceType = deployment.ServiceType, UserName = deployment.UserName, DeploymentUrl = deployment.DeploymentUrl };
 
     // ── Deployment rollback (2.2) ──────────────────────────────────────────────
 
-    public async Task<(bool Success, string? Error, int? DeploymentId, string Status, string? CiWarning)> RedeployAsync(int sourceDeploymentId, int ownerId, bool isAdmin)
+    public Task<(bool Success, string? Error, int? DeploymentId, string Status, string? CiWarning)> RedeployAsync(int sourceDeploymentId, int ownerId, bool isAdmin)
+        => RedeployAsync(sourceDeploymentId.ToString(), ownerId, isAdmin);
+
+    public async Task<(bool Success, string? Error, int? DeploymentId, string Status, string? CiWarning)> RedeployAsync(string sourceIdentifier, int ownerId, bool isAdmin)
     {
         // Look up the source deployment — must be Succeeded
-        var source = await repository.GetSucceededForRedeployAsync(sourceDeploymentId);
+        var source = await repository.GetSucceededForRedeployAsync(sourceIdentifier);
         if (source is null)
             return (false, "Succeeded deployment not found.", null, "Failed", null);
 
@@ -315,6 +321,7 @@ public class DeploymentService : IDeploymentService
     {
         try
         {
+            var sanitizedReason = Harbor.Common.Observability.HarborSensitiveDataScrubber.Scrub(failureReason);
             var @event = new DeploymentLifecycleEvent
             {
                 DeploymentId = deploymentId,
@@ -323,8 +330,22 @@ public class DeploymentService : IDeploymentService
                 Environment = environment,
                 Version = version,
                 Timestamp = DateTime.UtcNow,
-                FailureReason = failureReason
+                FailureReason = sanitizedReason
             };
+
+            logger.LogInformation(
+                "Deployment operation {DeploymentId} for service {ServiceId} in {Environment} transitioned to status {Status}. Version: {Version}. DiagnosticReason: {DiagnosticReason}",
+                deploymentId,
+                serviceId,
+                environment,
+                status,
+                version,
+                string.IsNullOrEmpty(sanitizedReason) ? "None" : sanitizedReason);
+
+            Harbor.Deployment.Observability.HarborDeploymentMetrics.DeploymentsTotal
+                .WithLabels(environment, status)
+                .Inc();
+
             await kafkaProducerService.PublishDeploymentEventAsync(@event);
         }
         catch (Exception ex)

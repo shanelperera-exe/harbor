@@ -117,6 +117,7 @@ export const Breadcrumbs: React.FC<{ isMobile?: boolean }> = ({ isMobile }) => {
     { segment: 'logs', label: 'Logs', icon: <Icon name="logs" className="w-4 h-4" aria-hidden="true" /> },
     { segment: 'metrics', label: 'Metrics', icon: <Icon name="metrics" className="w-4 h-4" aria-hidden="true" /> },
     { segment: 'environment', label: 'Environment', icon: <Icon name="sliders" className="w-4 h-4" aria-hidden="true" /> },
+    { segment: 'domains', label: 'Domains', icon: <Icon name="globe" className="w-4 h-4" aria-hidden="true" /> },
     { segment: 'settings', label: 'Settings', icon: <Icon name="settingsAlt" className="w-4 h-4" aria-hidden="true" /> },
   ];
 
@@ -230,6 +231,7 @@ export const Breadcrumbs: React.FC<{ isMobile?: boolean }> = ({ isMobile }) => {
           { label: 'Logs',        to: `/projects/${projectId}/services/${serviceId}/logs`,        icon: <Icon name="logs" className="w-4 h-4" aria-hidden="true" />,        selected: currentServiceRouteLabel === 'Logs' },
           { label: 'Metrics',     to: `/projects/${projectId}/services/${serviceId}/metrics`,     icon: <Icon name="metrics" className="w-4 h-4" aria-hidden="true" />,     selected: currentServiceRouteLabel === 'Metrics' },
           { label: 'Environment', to: `/projects/${projectId}/services/${serviceId}/environment`, icon: <Icon name="sliders" className="w-4 h-4" aria-hidden="true" />, selected: currentServiceRouteLabel === 'Environment' },
+          { label: 'Domains',     to: `/projects/${projectId}/services/${serviceId}/domains`,     icon: <Icon name="globe" className="w-4 h-4" aria-hidden="true" />,   selected: currentServiceRouteLabel === 'Domains' },
           { label: 'Settings',    to: `/projects/${projectId}/services/${serviceId}/settings`,    icon: <Icon name="settingsAlt" className="w-4 h-4" aria-hidden="true" />,    selected: currentServiceRouteLabel === 'Settings' },
         ]
       });

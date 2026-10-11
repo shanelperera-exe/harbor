@@ -2,6 +2,10 @@
 
 @theme {
   --font-sans: "PP Neue Montreal", sans-serif;
+  --font-mono: "Geist Mono", monospace;
+  --color-admin-dark: #202124;
+  --color-admin-surface-dark: #292a2d;
+  --color-admin-border-dark: #3c4043;
 }
 
 @custom-variant dark (&:where(.dark, .dark *));
@@ -24,16 +28,8 @@
 
 @font-face {
   font-family: 'PP Neue Montreal';
-  src: url('/fonts/ppneuemontreal-bold.otf') format('opentype');
+  src: url('/fonts/ppneuemontreal-medium.otf') format('opentype');
   font-weight: 600;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'PP Neue Montreal';
-  src: url('/fonts/ppneuemontreal-bold.otf') format('opentype');
-  font-weight: 700;
   font-style: normal;
   font-display: swap;
 }
@@ -63,15 +59,6 @@
   font-display: swap;
 }
 
-@font-face {
-  font-family: 'Roobert';
-  src: url('/fonts/roobert-bold.otf') format('opentype');
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
-
-/* Custom theme properties or overrides can go here */
 :root {
   font-family: "PP Neue Montreal", sans-serif;
   line-height: 1.5;
@@ -88,25 +75,51 @@ body {
   min-width: 320px;
   min-height: 100vh;
   background-color: #ffffff;
-  color: #090909;
+  color: #111827;
 }
 
 html.dark body {
-  background-color: #090909;
-  color: white;
+  background-color: #202124;
+  color: #f1f3f4;
 }
 
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
+.font-geist-mono {
+  font-family: "Geist Mono", monospace;
+  font-optical-sizing: auto;
+  font-weight: 400;
+  font-style: normal;
 }
 
-.animate-blink {
-  animation: blink 0.8s step-end infinite;
+/* Flat Scrollbar Styles */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
 }
 
-.font-roobert span {
-  font-variant-numeric: tabular-nums;
-  display: inline-block;
-  min-height: 1.2em;
+::-webkit-scrollbar-track {
+  background: #ffffff;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #d1d5db;
+  border: 2px solid #ffffff;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: #9ca3af;
+}
+
+html.dark ::-webkit-scrollbar-track {
+  background: #202124;
+}
+
+html.dark ::-webkit-scrollbar-thumb {
+  background-color: #3c4043;
+  border: 2px solid #202124;
+  border-radius: 4px;
+}
+
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background-color: #5f6368;
 }

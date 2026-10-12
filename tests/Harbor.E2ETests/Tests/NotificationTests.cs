@@ -1,3 +1,5 @@
+using System;
+using System.Threading;
 using NUnit.Framework;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Support.UI;
@@ -133,7 +135,7 @@ namespace Harbor.E2ETests.Tests
             {
                 var firstItem = items[0];
                 firstItem.Click();
-                Thread.Sleep(500);
+                System.Threading.Thread.Sleep(500);
             }
         }
 
@@ -150,7 +152,7 @@ namespace Harbor.E2ETests.Tests
             if (_notificationPage.IsMarkAllReadVisible())
             {
                 _notificationPage.ClickMarkAllRead();
-                Thread.Sleep(500);
+                System.Threading.Thread.Sleep(500);
             }
         }
 
@@ -190,7 +192,7 @@ namespace Harbor.E2ETests.Tests
             if (viewAllLink.Count > 0 && viewAllLink[0].Displayed)
             {
                 viewAllLink[0].Click();
-                Thread.Sleep(2000);
+                System.Threading.Thread.Sleep(2000);
                 Assert.That(Driver.Url, Does.Contain("/deployments"));
             }
         }

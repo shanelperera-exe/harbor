@@ -53,12 +53,12 @@ namespace Harbor.E2ETests.Pages
                 throw new InvalidOperationException($"Could not find option '{optionLabel}' in dropdown '{filterTestId}'.");
             }
 
-            Thread.Sleep(300);
+            System.Threading.Thread.Sleep(300);
             ((IJavaScriptExecutor)_driver).ExecuteScript("arguments[0].scrollIntoView({block:'center'});", option);
             option.Click();
             
             _wait.Until(d => !IsDropdownOpen(optionsListTestId));
-            Thread.Sleep(200);
+            System.Threading.Thread.Sleep(200);
         }
 
         private bool IsDropdownOpen(string optionsListTestId)
@@ -124,7 +124,7 @@ namespace Harbor.E2ETests.Pages
                 "var blurEvent = new Event('blur', { bubbles: true, composed: true }); " +
                 "input.dispatchEvent(blurEvent);",
                 input, date);
-            Thread.Sleep(100);
+            System.Threading.Thread.Sleep(100);
         }
 
         private void SetDateInputWithSendKeys(string testId, string date)
@@ -133,12 +133,12 @@ namespace Harbor.E2ETests.Pages
             input.Clear();
             input.SendKeys(date);
             input.SendKeys(OpenQA.Selenium.Keys.Tab);
-            Thread.Sleep(100);
+            System.Threading.Thread.Sleep(100);
         }
 
         public void ClickGenerate()
         {
-            Thread.Sleep(300);
+            System.Threading.Thread.Sleep(300);
             ((IJavaScriptExecutor)_driver).ExecuteScript("arguments[0].click();", GenerateButton);
             _wait.Until(d =>
             {
@@ -171,7 +171,7 @@ namespace Harbor.E2ETests.Pages
             });
             
             // Small delay to ensure React rendering is complete
-            Thread.Sleep(500);
+            System.Threading.Thread.Sleep(500);
         }
 
         public void ClickReset()

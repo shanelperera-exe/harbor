@@ -1,3 +1,7 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Support.UI;
 
@@ -104,6 +108,9 @@ namespace Harbor.E2ETests.Pages
                 // If rows exist, they must all match. If no rows, that's valid for empty results.
                 return statuses.Count == 0 || statuses.All(s => s == expected);
             });
+            
+            // Additional small wait to ensure React rendering is complete
+            System.Threading.Thread.Sleep(200);
         }
 
         /// <summary>

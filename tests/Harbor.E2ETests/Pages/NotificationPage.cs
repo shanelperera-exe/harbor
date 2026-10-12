@@ -12,13 +12,14 @@ namespace Harbor.E2ETests.Pages
         {
             _driver = driver;
             _wait = new WebDriverWait(driver, TimeSpan.FromSeconds(20));
+            _wait.IgnoreExceptionTypes(typeof(NoSuchElementException), typeof(StaleElementReferenceException));
         }
 
-        private IWebElement NotificationBellButton => _driver.FindElement(By.Id("notification-bell-btn"));
-        private IWebElement NotificationBadge => _driver.FindElement(By.Id("notification-badge"));
-        private IWebElement NotificationPanel => _driver.FindElement(By.Id("notification-panel"));
-        private IWebElement NotificationsEmptyState => _driver.FindElement(By.Id("notifications-empty"));
-        private IWebElement MarkAllReadButton => _driver.FindElement(By.Id("mark-all-read-btn"));
+        private IWebElement NotificationBellButton => _wait.Until(d => d.FindElement(By.CssSelector("[data-testid='notification-bell-btn']")));
+        private IWebElement NotificationBadge => _driver.FindElement(By.CssSelector("[data-testid='notification-badge']"));
+        private IWebElement NotificationPanel => _wait.Until(d => d.FindElement(By.CssSelector("[data-testid='notification-panel']")));
+        private IWebElement NotificationsEmptyState => _driver.FindElement(By.CssSelector("[data-testid='notifications-empty']"));
+        private IWebElement MarkAllReadButton => _driver.FindElement(By.CssSelector("[data-testid='mark-all-read-btn']"));
 
         public bool IsNotificationBellVisible()
         {
@@ -36,7 +37,7 @@ namespace Harbor.E2ETests.Pages
         {
             try
             {
-                var el = _driver.FindElement(By.Id("notification-bell-btn"));
+                var el = _driver.FindElement(By.CssSelector("[data-testid='notification-bell-btn']"));
                 return el != null;
             }
             catch (NoSuchElementException)

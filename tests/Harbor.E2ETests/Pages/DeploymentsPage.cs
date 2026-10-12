@@ -68,8 +68,9 @@ namespace Harbor.E2ETests.Pages
         public void FilterByStatus(string status)
         {
             var target = string.IsNullOrEmpty(status) ? "All statuses" : status;
+            var optionsListTestId = "status-filter-options";
 
-            IWebElement option = null;
+            IWebElement? option = null;
             for (var attempt = 0; attempt < 3 && option == null; attempt++)
             {
                 // Only click when the panel is actually closed. Clicking on every poll can
@@ -87,12 +88,23 @@ namespace Harbor.E2ETests.Pages
                 throw new InvalidOperationException($"Could not open the status filter option '{target}'.");
             }
 
-            // Wait for framer-motion dropdown open animation (200ms) to finish.
-            // Otherwise, Selenium attempts to click while the element is still moving.
-            System.Threading.Thread.Sleep(300);
+            // Wait for dropdown animation to complete (option should be fully visible)
+            _wait.Until(d => {
+                try {
+                    var style = option.GetAttribute("style");
+                    return style == null || !style.Contains("opacity: 0") && !style.Contains("translateY(-10px)");
+                } catch {
+                    return false;
+                }
+            });
 
+            System.Threading.Thread.Sleep(300);
             ((IJavaScriptExecutor)_driver).ExecuteScript("arguments[0].scrollIntoView({block:'center'});", option);
-            option.Click();
+            // Use JavaScript click to avoid interception during animation
+            ((IJavaScriptExecutor)_driver).ExecuteScript("arguments[0].click();", option);
+
+            _wait.Until(d => !IsOptionsPanelOpen());
+            System.Threading.Thread.Sleep(200);
 
             if (string.IsNullOrEmpty(status))
             {

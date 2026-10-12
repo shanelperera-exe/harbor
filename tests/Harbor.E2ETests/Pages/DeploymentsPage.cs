@@ -46,6 +46,10 @@ namespace Harbor.E2ETests.Pages
         public void NavigateTo()
         {
             _driver.Navigate().GoToUrl("http://localhost:5173/deployments");
+            _wait.Until(d => d.FindElement(By.CssSelector("[data-testid='status-filter']")));
+            
+            // Wait for React to fully hydrate (dev server cold compile can delay this)
+            System.Threading.Thread.Sleep(500);
         }
 
         /// <summary>

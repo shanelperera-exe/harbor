@@ -29,6 +29,9 @@ namespace Harbor.E2ETests.Pages
                 try
                 {
                     _wait.Until(d => d.FindElement(By.CssSelector("[data-testid='username-input']")).Displayed);
+                    
+                    // Wait for React to fully hydrate (dev server cold compile can delay this)
+                    System.Threading.Thread.Sleep(500);
                     return;
                 }
                 catch (WebDriverTimeoutException) when (attempt < 2)

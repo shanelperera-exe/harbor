@@ -115,7 +115,7 @@ namespace Harbor.E2ETests.Pages
                     System.Threading.Thread.Sleep(500);
                     if (IsNotificationPanelVisible())
                     {
-                        return;
+                        break;
                     }
                     // Try clicking again if panel didn't open
                     if (attempt < 5)
@@ -127,6 +127,13 @@ namespace Harbor.E2ETests.Pages
                 // Final wait with standard timeout
                 _wait.Until(d => IsNotificationPanelVisible());
             }
+
+            // Wait for notification items to load (or empty state)
+            _wait.Until(d => {
+                var items = d.FindElements(By.CssSelector("[data-testid^='notification-item-']"));
+                var empty = d.FindElements(By.CssSelector("[data-testid='notifications-empty']"));
+                return items.Count > 0 || empty.Count > 0;
+            });
         }
 
         public void ClosePanelByClickingOutside()
@@ -184,6 +191,38 @@ namespace Harbor.E2ETests.Pages
                 var classes = _element.GetAttribute("class");
                 return !classes.Contains("bg-blue-50");
             }
+
+            public bool IsSuccess()
+            {
+                try
+                {
+                    var dot = _element.FindElement(By.CssSelector("span[class*='bg-emerald-500']"));
+                    return dot != null;
+                }
+                catch (NoSuchElementException)
+                {
+                    // Fallback: check message contains "deployed successfully"
+                    var message = _element.FindElement(By.CssSelector("p.line-clamp-2")).Text;
+                    return message.Contains("deployed successfully", StringComparison.OrdinalIgnoreCase);
+                }
+            }
+
+            public bool IsFailure()
+            {
+                try
+                {
+                    var dot = _element.FindElement(By.CssSelector("span[class*='bg-red-500']"));
+                    return dot != null;
+                }
+                catch (NoSuchElementException)
+                {
+                    // Fallback: check message contains "failed to deploy"
+                    var message = _element.FindElement(By.CssSelector("p.line-clamp-2")).Text;
+                    return message.Contains("failed to deploy", StringComparison.OrdinalIgnoreCase);
+                }
+            }
+
+            public string GetAttribute(string name) => _element.GetAttribute(name);
 
             public void Click()
             {

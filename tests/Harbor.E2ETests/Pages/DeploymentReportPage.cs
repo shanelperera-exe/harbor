@@ -32,7 +32,7 @@ namespace Harbor.E2ETests.Pages
             _wait.Until(d => d.FindElement(By.CssSelector("[data-testid='generate-report-btn']")));
         }
 
-        public void SelectFilterOption(string filterTestId, string optionLabel)
+public void SelectFilterOption(string filterTestId, string optionLabel)
         {
             var trigger = _wait.Until(d => d.FindElement(By.CssSelector($"[data-testid='{filterTestId}']")));
             var optionsListTestId = $"{filterTestId}-options";
@@ -53,10 +53,21 @@ namespace Harbor.E2ETests.Pages
                 throw new InvalidOperationException($"Could not find option '{optionLabel}' in dropdown '{filterTestId}'.");
             }
 
+            // Wait for dropdown animation to complete (option should be fully visible)
+            _wait.Until(d => {
+                try {
+                    var style = option.GetAttribute("style");
+                    return style == null || !style.Contains("opacity: 0") && !style.Contains("translateY(-10px)");
+                } catch {
+                    return false;
+                }
+            });
+
             System.Threading.Thread.Sleep(300);
             ((IJavaScriptExecutor)_driver).ExecuteScript("arguments[0].scrollIntoView({block:'center'});", option);
-            option.Click();
-            
+            // Use JavaScript click to avoid interception during animation
+            ((IJavaScriptExecutor)_driver).ExecuteScript("arguments[0].click();", option);
+
             _wait.Until(d => !IsDropdownOpen(optionsListTestId));
             System.Threading.Thread.Sleep(200);
         }

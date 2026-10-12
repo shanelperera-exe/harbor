@@ -82,7 +82,10 @@ DO \$\$
 DECLARE
     v_project_id INTEGER;
     v_service_id INTEGER;
+    v_project_alpha_id INTEGER;
+    v_service_alpha_id INTEGER;
 BEGIN
+    -- Project for DeploymentsTests (existing name)
     SELECT "Id" INTO v_project_id FROM "Projects" WHERE "Name" = 'qa_seeded_project';
     IF v_project_id IS NULL THEN
         INSERT INTO "Projects" ("Name","Description","OwnerId","PublicId")
@@ -95,6 +98,21 @@ BEGIN
         INSERT INTO "Services" ("ProjectId","Name","Type","RepositoryName","RepositoryBranch","PublicId","WorkflowFile")
         VALUES (v_project_id,'qa_seeded_service','api','qa-seeded-service','main','qa_seed_svc_001','deploy.yml')
         RETURNING "Id" INTO v_service_id;
+    END IF;
+
+    -- Project Alpha for DeploymentReportTests
+    SELECT "Id" INTO v_project_alpha_id FROM "Projects" WHERE "Name" = 'Project Alpha';
+    IF v_project_alpha_id IS NULL THEN
+        INSERT INTO "Projects" ("Name","Description","OwnerId","PublicId")
+        VALUES ('Project Alpha','Alpha project for deployment report tests',${OWNER_ID},'qa_seed_proj_alpha')
+        RETURNING "Id" INTO v_project_alpha_id;
+    END IF;
+
+    SELECT "Id" INTO v_service_alpha_id FROM "Services" WHERE "ProjectId" = v_project_alpha_id;
+    IF v_service_alpha_id IS NULL THEN
+        INSERT INTO "Services" ("ProjectId","Name","Type","RepositoryName","RepositoryBranch","PublicId","WorkflowFile")
+        VALUES (v_project_alpha_id,'Alpha Service','api','alpha-service','main','qa_seed_svc_alpha','deploy.yml')
+        RETURNING "Id" INTO v_service_alpha_id;
     END IF;
 END
 \$\$;
@@ -124,6 +142,23 @@ SELECT
     CASE WHEN (n % 2) = 1 THEN 'GitHub Actions is not configured for this repository.' ELSE NULL END
 FROM generate_series(1, 29) AS n
 JOIN "Services" s ON s."PublicId" = 'qa_seed_svc_001';
+
+-- Additional deployments for Project Alpha / Alpha Service (for DeploymentReportTests)
+-- Need at least one Succeeded + Production deployment for Scenario3
+INSERT INTO "Deployments" ("PublicId","ServiceId","OwnerId","Environment","Version","CommitSha","Status","StartedAt","CompletedAt","FailureReason")
+SELECT
+    'qa_seed_dep_alpha_' || n,
+    s."Id",
+    ${OWNER_ID},
+    (ARRAY['development','staging','production'])[1 + (n % 3)],
+    '1.0.' || n,
+    md5('alpha-commit-' || n),
+    (ARRAY['Succeeded','Failed'])[1 + (n % 2)],
+    NOW() - (n || ' hours')::interval,
+    CASE WHEN (n % 2) = 0 THEN NOW() - (n || ' hours')::interval + INTERVAL '5 minutes' ELSE NULL END,
+    CASE WHEN (n % 2) = 1 THEN 'GitHub Actions is not configured for this repository.' ELSE NULL END
+FROM generate_series(1, 10) AS n
+JOIN "Services" s ON s."PublicId" = 'qa_seed_svc_alpha';
 
 -- One specific Failed deployment with a real failure reason and real logs,
 -- required by DeploymentsTests.DetailsPanel_WithPopulatedFailedDeployment_ShowsFailureReasonAndLogs.
@@ -197,7 +232,7 @@ FROM failed_dep f;
 
 -- Create a second test user for isolation test
 INSERT INTO "Users" ("Username", "Email", "PasswordHash", "Role", "PublicId")
-SELECT 'qa_tester3', 'qa_tester3@harbor.local', '\$2a\$11\$dummyhashforseededuser', 'User', 'qa_seed_user_003'
+SELECT 'qa_tester3', 'qa_tester3@harbor.local', '\$2a\$11\$g9oGHHaC8SEGvTpCvYb7zONwAY95rOKa8CIMYburupXZrTpdpV3be', 'User', 'qa_seed_user_003'
 WHERE NOT EXISTS (SELECT 1 FROM "Users" WHERE "Username" = 'qa_tester3');
 
 -- Get second user's ID and create notifications for them

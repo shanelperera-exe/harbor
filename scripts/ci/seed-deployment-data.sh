@@ -146,3 +146,89 @@ FROM inserted, (VALUES
 SQL
 
 echo "Deployment test data seeded successfully."
+
+# Seed notifications for E2E tests that need real notification data
+run_psql -v ON_ERROR_STOP=1 <<SQL
+-- Clear any existing seed notifications first
+DELETE FROM "Notifications" WHERE "UserId" = ${OWNER_ID} AND "DeploymentId" IS NOT NULL;
+
+-- Get deployment IDs for linking notifications (using the same format as NotificationAwareDeploymentRepository)
+WITH deployments AS (
+    SELECT d."Id", d."Status", d."Environment", d."Version", d."ServiceId", d."PublicId", s."Name" AS "ServiceName"
+    FROM "Deployments" d
+    JOIN "Services" s ON d."ServiceId" = s."Id"
+    WHERE d."PublicId" LIKE 'qa_seed_dep_%'
+    LIMIT 10
+)
+INSERT INTO "Notifications" ("UserId", "DeploymentId", "Type", "Title", "Message")
+SELECT 
+    ${OWNER_ID},
+    d."Id",
+    CASE 
+        WHEN d."Status" = 'Succeeded' THEN 'success'
+        ELSE 'failure'
+    END,
+    CASE 
+        WHEN d."Status" = 'Succeeded' THEN 'Deployment succeeded — ' || d."ServiceName"
+        ELSE 'Deployment failed — ' || d."ServiceName"
+    END,
+    CASE 
+        WHEN d."Status" = 'Succeeded' 
+        THEN 'Version ' || d."Version" || ' deployed successfully to ' || d."Environment" || '.'
+        ELSE 'Version ' || d."Version" || ' failed to deploy to ' || d."Environment" || '. Reason: GitHub Actions is not configured for this repository.'
+    END
+FROM deployments d;
+
+-- Also create one unread success and one unread failure for the specific test scenarios
+WITH failed_dep AS (
+    SELECT d."Id", d."Environment", d."Version", s."Name" AS "ServiceName"
+    FROM "Deployments" d
+    JOIN "Services" s ON d."ServiceId" = s."Id"
+    WHERE d."PublicId" = 'qa_seed_dep_failed'
+)
+INSERT INTO "Notifications" ("UserId", "DeploymentId", "Type", "Title", "Message")
+SELECT 
+    ${OWNER_ID},
+    f."Id",
+    'failure',
+    'Deployment failed — ' || f."ServiceName",
+    'Version ' || f."Version" || ' failed to deploy to ' || f."Environment" || '. Reason: GitHub Actions is not configured for this repository.'
+FROM failed_dep f;
+
+-- Create a second test user for isolation test
+INSERT INTO "Users" ("Username", "Email", "PasswordHash", "Role", "PublicId")
+SELECT 'qa_tester3', 'qa_tester3@harbor.local', '$2a$11$dummyhashforseededuser', 'User', 'qa_seed_user_003'
+WHERE NOT EXISTS (SELECT 1 FROM "Users" WHERE "Username" = 'qa_tester3');
+
+-- Get second user's ID and create notifications for them
+WITH user2 AS (
+    SELECT "Id" FROM "Users" WHERE "Username" = 'qa_tester3'
+),
+dep1 AS (
+    SELECT d."Id", d."Environment", d."Version", s."Name" AS "ServiceName"
+    FROM "Deployments" d
+    JOIN "Services" s ON d."ServiceId" = s."Id"
+    WHERE d."PublicId" = 'qa_seed_dep_1'
+)
+INSERT INTO "Notifications" ("UserId", "DeploymentId", "Type", "Title", "Message")
+SELECT 
+    u2."Id",
+    d."Id",
+    'success',
+    'Deployment succeeded — ' || d."ServiceName",
+    'Version ' || d."Version" || ' deployed successfully to ' || d."Environment" || '.'
+FROM user2 u2, dep1 d;
+
+-- Mark first 3 notifications as unread for qa_tester2 (for badge/unread count tests)
+UPDATE "Notifications"
+SET "IsRead" = false
+WHERE "UserId" = ${OWNER_ID}
+  AND "Id" IN (
+    SELECT "Id" FROM "Notifications" 
+    WHERE "UserId" = ${OWNER_ID} 
+    ORDER BY "CreatedAt" DESC 
+    LIMIT 3
+  );
+SQL
+
+echo "Notification test data seeded successfully."

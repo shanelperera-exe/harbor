@@ -13,6 +13,7 @@ import FilterDropdown from '../../components/ui/FilterDropdown';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { mapDeployStatus } from '../../services/deploymentService';
 import { Icon } from '../../components/icons';
+import SectionTitle from '../../components/ui/SectionTitle';
 
 const ProjectGeistIcon = ({ className }: { className?: string }) => (
   <Icon name="projects" className={className || "w-4 h-4"} />
@@ -198,21 +199,13 @@ export default function Deployments() {
   const dropdownClass = "flex items-center justify-between gap-2 h-10 px-3 text-sm border border-gray-300 dark:border-[#525252] bg-white dark:bg-[#0b1221] text-gray-700 dark:text-[#c9c9c9] rounded-sm hover:bg-gray-50 dark:hover:bg-[#111c33] transition-colors min-w-[160px]";
 
   return (
-    <div className="w-full h-full p-6 lg:px-12 xl:px-20 text-gray-900 dark:text-white overflow-y-auto bg-white dark:bg-[oklch(0.21_0.03_263.45)]">
-      {/* Page header */}
-      <div className="flex flex-wrap justify-between items-end gap-4 mb-8">
-        <div>
-          <h1 className="flex items-center gap-3 text-[28px] lg:text-[32px] font-medium text-gray-900 dark:text-white leading-tight tracking-tight">
-            <Icon name="deploy" className="w-[1em] h-[1em]" aria-hidden="true" />
-            Deployments
-          </h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-[#6b6b6b]">
-            Review all deployments across your projects.
-          </p>
-        </div>
-      </div>
-
-      <main className="flex flex-col gap-6">
+    <div className="flex flex-col flex-1 w-full max-w-[1920px] mx-auto">
+      <main className="px-4 md:px-12 mt-8 mb-20 flex flex-col gap-6">
+        <SectionTitle
+          icon={<Icon name="deploy" />}
+          title="Deployments"
+          description="Review all deployments across your projects."
+        />
         {/* Search + Filters Toolbar */}
         <div className="flex flex-col gap-3">
           <div className="flex flex-wrap items-center gap-3">

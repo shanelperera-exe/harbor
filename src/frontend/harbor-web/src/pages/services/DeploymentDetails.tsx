@@ -161,7 +161,7 @@ export default function DeploymentDetails() {
               <button
                 onClick={handleRedeploy}
                 disabled={redeploying}
-                className="h-10 px-4 flex items-center justify-center gap-2 bg-white dark:bg-[#1a1a1a] hover:bg-gray-50 dark:hover:bg-[#272727] text-gray-900 dark:text-white font-[Geist] font-medium border border-gray-300 dark:border-[#525252] transition-colors rounded-sm disabled:opacity-50 shadow-sm"
+                className="h-10 px-4 flex items-center justify-center gap-2 bg-white dark:bg-[#1a1a1a] hover:bg-gray-50 dark:hover:bg-[#272727] text-gray-900 dark:text-white font-[Geist] font-medium border border-gray-300 dark:border-[#525252] transition-colors rounded-sm disabled:opacity-50"
               >
                 {redeploying ? <Loader2 className="w-4 h-4 animate-spin" /> : <VscDebugRerun className="w-4 h-4" />}
                 Redeploy

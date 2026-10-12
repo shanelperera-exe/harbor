@@ -14,6 +14,7 @@ import { clearAuthSession } from "../../services/authSession";
 import { useTheme } from "../../contexts/ThemeContext";
 import { Icon } from '../../components/icons';
 import { DeleteConfirmationModal } from '../../components/ui/DeleteConfirmationModal';
+import SectionTitle from '../../components/ui/SectionTitle';
 
 const authApiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 // The GitHub App to install is per-environment, so the slug is supplied at build time
@@ -607,17 +608,14 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
   const indicatorOffset = Math.max(0, activeIndex) * 2.75; // 2.75rem = h-11
 
   return (
-    <div className="w-full lg:max-w-[calc(100vw-294px)]">
-      <main className="w-full max-w-[1920px] mx-auto px-4 mb-20 md:px-12">
-        <div>
-          <div className="my-6 md:my-12 flex justify-between">
-            <div className="">
-              <div className="">
-                <h1 className="text-[36px] font-[500] leading-[40px] tracking-[-0.32px] text-strong" style={{ fontFamily: 'Roobert, sans-serif' }}>Account settings</h1>
-              </div>
-            </div>
-          </div>
-          <div className="flex flex-row-reverse gap-8">
+    <div className="flex flex-col flex-1 w-full max-w-[1920px] mx-auto px-4 md:px-12 mt-8 mb-20 space-y-8">
+      <SectionTitle
+        icon={<Icon name="settings" />}
+        title="Settings"
+        description="Manage your account profile, preferences, credentials and security settings."
+      />
+
+      <div className="flex flex-row-reverse gap-8">
             <div className="relative flex-shrink-0 hidden xl:block xl:sticky xl:h-full xl:max-h-[calc(100vh_-_3.5rem)] xl:top-14 custom-scrollbar overflow-y-auto">
               <nav aria-labelledby="_r_3f_">
                 <span id="_r_3f_" className="sr-only">Table of contents</span>
@@ -882,7 +880,7 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                                     </button>
                                     
                                     {isEditingTheme && themeDropdownOpen && (
-                                      <div className="absolute z-10 w-full mt-1 bg-white dark:bg-[oklch(0.21_0.03_263.45)] border border-gray-300 dark:border-[#525252] shadow-lg rounded-sm">
+                                      <div className="absolute z-10 w-full mt-1 bg-white dark:bg-[oklch(0.21_0.03_263.45)] border border-gray-300 dark:border-[#525252] rounded-sm">
                                         <ul className="py-1">
                                           {themeOptions.map((opt) => (
                                             <li key={opt.value}>
@@ -972,7 +970,7 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                                     </button>
                                     
                                     {isEditingLogTheme && logThemeDropdownOpen && (
-                                      <div className="absolute z-10 w-full mt-1 bg-white dark:bg-[oklch(0.21_0.03_263.45)] border border-gray-300 dark:border-[#525252] shadow-lg outline-none rounded-sm">
+                                      <div className="absolute z-10 w-full mt-1 bg-white dark:bg-[oklch(0.21_0.03_263.45)] border border-gray-300 dark:border-[#525252] outline-none rounded-sm">
                                         <ul role="listbox" className="list-none p-2 custom-scrollbar max-h-80 overflow-y-auto overscroll-contain">
                                           {logThemeOptions.map((opt) => {
                                             const isActive = logTheme === opt.value;
@@ -1154,7 +1152,7 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                                             <IoEllipsisHorizontal className="w-5 h-5" />
                                           </button>
                                           {signinMethodDropdownOpen === 'google' && (
-                                            <div className="absolute right-0 top-full mt-1 z-[100] min-w-[160px] bg-white dark:bg-[oklch(0.21_0.03_263.45)] border border-gray-300 dark:border-[#525252] rounded-sm shadow-md overflow-hidden py-1">
+                                            <div className="absolute right-0 top-full mt-1 z-[100] min-w-[160px] bg-white dark:bg-[oklch(0.21_0.03_263.45)] border border-gray-300 dark:border-[#525252] rounded-sm overflow-hidden py-1">
                                               <button
                                                 type="button"
                                                 onClick={() => { void linkLoginMethod('google'); setSigninMethodDropdownOpen(null); }}
@@ -1178,7 +1176,7 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                                         <button
                                           type="button"
                                           onClick={() => void linkLoginMethod('google')}
-                                          className="text-white bg-[#2563eb] hover:bg-[#1d4ed8] dark:bg-white dark:text-black dark:hover:bg-gray-200 font-medium !px-3 max-w-full items-center justify-center transition-[border-color, background,color,transform,box-shadow] duration-[time:150ms] ease-in-out data-[focus]:transition-none data-[focus]:shadow-[var(--ds-focus-ring)] [&_svg]:shrink-0 text-(length:--geist-form-small-font) h-[32px] rounded-sm"
+                                          className="text-white bg-[#2563eb] hover:bg-[#1d4ed8] dark:bg-white dark:text-black dark:hover:bg-gray-200 font-medium !px-3 max-w-full items-center justify-center transition-colors [&_svg]:shrink-0 text-(length:--geist-form-small-font) h-[32px] rounded-sm"
                                         >
                                           Connect
                                         </button>
@@ -1212,7 +1210,7 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                                             <IoEllipsisHorizontal className="w-5 h-5" />
                                           </button>
                                           {signinMethodDropdownOpen === 'github' && (
-                                            <div className="absolute right-0 top-full mt-1 z-[100] min-w-[160px] bg-white dark:bg-[oklch(0.21_0.03_263.45)] border border-gray-300 dark:border-[#525252] rounded-sm shadow-md overflow-hidden py-1">
+                                            <div className="absolute right-0 top-full mt-1 z-[100] min-w-[160px] bg-white dark:bg-[oklch(0.21_0.03_263.45)] border border-gray-300 dark:border-[#525252] rounded-sm overflow-hidden py-1">
                                               <button
                                                 type="button"
                                                 onClick={() => { void linkLoginMethod('github'); setSigninMethodDropdownOpen(null); }}
@@ -1236,7 +1234,7 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                                         <button
                                           type="button"
                                           onClick={() => void linkLoginMethod('github')}
-                                          className="text-white bg-[#2563eb] hover:bg-[#1d4ed8] dark:bg-white dark:text-black dark:hover:bg-gray-200 font-medium !px-3 max-w-full items-center justify-center transition-[border-color, background,color,transform,box-shadow] duration-[time:150ms] ease-in-out data-[focus]:transition-none data-[focus]:shadow-[var(--ds-focus-ring)] [&_svg]:shrink-0 text-(length:--geist-form-small-font) h-[32px] rounded-sm"
+                                          className="text-white bg-[#2563eb] hover:bg-[#1d4ed8] dark:bg-white dark:text-black dark:hover:bg-gray-200 font-medium !px-3 max-w-full items-center justify-center transition-colors [&_svg]:shrink-0 text-(length:--geist-form-small-font) h-[32px] rounded-sm"
                                         >
                                           Connect
                                         </button>
@@ -1305,7 +1303,7 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
                                      </button>
                                     
                                     {credentialOptionsOpen && (
-                                      <div className="min-w-[208px] p-4 bg-white dark:bg-[oklch(0.21_0.03_263.45)] shadow-lg border border-solid border-gray-300 dark:border-[#525252] outline-none absolute z-50 top-full right-0 mt-1 rounded-sm">
+                                      <div className="min-w-[208px] p-4 bg-white dark:bg-[oklch(0.21_0.03_263.45)] border border-solid border-gray-300 dark:border-[#525252] outline-none absolute z-50 top-full right-0 mt-1 rounded-sm">
                                         <button type="button" onClick={() => { setCredentialOptionsOpen(false); window.open('https://github.com/settings/installations', '_blank'); }} className="w-full flex relative text-[14px] text-gray-900 dark:text-[#e3e3e3] py-2 px-3 whitespace-nowrap focus-visible:outline-none cursor-pointer hover:bg-gray-100 dark:hover:bg-[#272727] transition-colors rounded-sm">
                                           <div className="w-full flex items-center space-x-2.5">
                                             <Icon name="box" className="w-4 h-4 shrink-0" />
@@ -1406,11 +1404,9 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
 
               </div>
             </div>
-          </div>
-      </main>
       {isPasswordModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 px-4" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !isChangingPassword) setIsPasswordModalOpen(false); }}>
-          <div role="dialog" aria-modal="true" aria-labelledby="change-password-title" className="w-full max-w-md border border-gray-300 bg-white p-6 shadow-xl rounded-sm dark:border-[#525252] dark:bg-[oklch(0.21_0.03_263.45)]">
+          <div role="dialog" aria-modal="true" aria-labelledby="change-password-title" className="w-full max-w-md border border-gray-300 bg-white p-6 rounded-sm dark:border-[#525252] dark:bg-[oklch(0.21_0.03_263.45)]">
             <div className="mb-6 flex items-start justify-between gap-4">
               <div>
                 <h2 id="change-password-title" className="flex items-center space-x-2 text-[24px] font-medium text-gray-900 dark:text-white">
@@ -1498,7 +1494,7 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
         warningMessage={
           <div>
             <p>This will delete all existing services, databases, data, Projects, and environment groups in your account.</p>
-            <p className="mt-2">Deleting your account can <span className="font-bold underline">NOT</span> be reversed.</p>
+            <p className="mt-2">Deleting your account can <span className="font-semibold underline">NOT</span> be reversed.</p>
           </div>
         }
         expectedConfirmText="sudo delete my account"

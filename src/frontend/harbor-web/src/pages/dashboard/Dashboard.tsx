@@ -9,6 +9,7 @@ import {
 } from '../../services/dashboardService';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { Icon } from '../../components/icons';
+import SectionTitle from '../../components/ui/SectionTitle';
 import {
   Loader2,
   FolderGit2,
@@ -20,7 +21,8 @@ import {
   RefreshCw,
   Plus,
   GitCommit,
-  Layers
+  Layers,
+  LayoutDashboard
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -114,7 +116,7 @@ export default function Dashboard() {
           <Link
             id="btn-new-project-empty"
             to="/projects/new"
-            className="h-10 px-4 bg-[#2563eb] hover:bg-blue-700 text-white font-medium text-[15px] transition-colors flex items-center justify-center rounded-sm gap-1 shadow-sm"
+            className="h-10 px-4 bg-[#2563eb] hover:bg-blue-700 text-white font-medium text-[15px] transition-colors flex items-center justify-center rounded-sm gap-1"
           >
             New Project <span className="text-lg leading-none mb-0.5">+</span>
           </Link>
@@ -124,109 +126,105 @@ export default function Dashboard() {
   }
 
   return (
-    <div id="dashboard-container" className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8">
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-gray-200 dark:border-[#383838]">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-gray-900 dark:text-white">
-            Deployment Dashboard
-          </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Centralized overview of your accessible projects and recent deployment operational activity.
-          </p>
-        </div>
+    <div id="dashboard-container" className="flex flex-col flex-1 w-full max-w-[1920px] mx-auto px-4 md:px-12 mt-8 mb-20 space-y-8">
+      {/* Top Header with unified SectionTitle */}
+      <SectionTitle
+        icon={<LayoutDashboard className="w-6 h-6" />}
+        title="Deployment Dashboard"
+        description="Centralized overview of your accessible projects and recent deployment operational activity."
+        actions={
+          <div className="flex items-center gap-3">
+            <button
+              id="btn-refresh-dashboard"
+              onClick={() => loadData(true)}
+              disabled={refreshing}
+              className="inline-flex items-center gap-1.5 h-10 px-3 text-sm font-medium text-gray-700 dark:text-[#ccc] bg-transparent hover:bg-gray-100 dark:hover:bg-white/[0.06] border border-gray-300 dark:border-[#525252] rounded-sm transition-colors disabled:opacity-50"
+              title="Refresh dashboard data"
+            >
+              <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+              <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
+            </button>
 
-        <div className="flex items-center gap-3">
-          <button
-            id="btn-refresh-dashboard"
-            onClick={() => loadData(true)}
-            disabled={refreshing}
-            className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-[#1a1a1a] border border-gray-300 dark:border-[#404040] hover:bg-gray-50 dark:hover:bg-[#252525] rounded-sm transition-colors disabled:opacity-50"
-            title="Refresh dashboard data"
-          >
-            <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-            <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
-          </button>
-
-          <Link
-            id="btn-new-project"
-            to="/projects/new"
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#2563eb] hover:bg-blue-700 text-white text-sm font-medium rounded-sm transition-colors shadow-sm"
-          >
-            <Plus className="w-4 h-4" />
-            <span>New Project</span>
-          </Link>
-        </div>
-      </div>
+            <Link
+              id="btn-new-project"
+              to="/projects/new"
+              className="inline-flex items-center gap-1.5 h-10 px-4 bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-sm font-medium rounded-sm transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              <span>New Project</span>
+            </Link>
+          </div>
+        }
+      />
 
       {/* Summary Metrics Cards */}
       <div id="summary-metrics" className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <div
           id="metric-total-projects"
-          className="p-4 rounded-sm bg-white dark:bg-[oklch(0.24_0.03_263.45)] border border-gray-200 dark:border-[#3d3d3d] shadow-sm flex flex-col justify-between"
+          className="p-5 rounded-sm bg-white dark:bg-white/[0.02] border border-gray-300 dark:border-[#525252] flex flex-col justify-between"
         >
           <div className="flex items-center justify-between text-gray-500 dark:text-gray-400">
             <span className="text-xs uppercase font-mono tracking-wider">Projects</span>
             <FolderGit2 className="w-4 h-4 text-blue-500" />
           </div>
           <div className="mt-3">
-            <span className="text-2xl font-bold text-gray-900 dark:text-white">{metrics.totalProjects}</span>
+            <span className="text-2xl font-medium tabular-nums text-gray-900 dark:text-white">{metrics.totalProjects}</span>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Accessible projects</p>
           </div>
         </div>
 
         <div
           id="metric-total-deployments"
-          className="p-4 rounded-sm bg-white dark:bg-[oklch(0.24_0.03_263.45)] border border-gray-200 dark:border-[#3d3d3d] shadow-sm flex flex-col justify-between"
+          className="p-5 rounded-sm bg-white dark:bg-white/[0.02] border border-gray-300 dark:border-[#525252] flex flex-col justify-between"
         >
           <div className="flex items-center justify-between text-gray-500 dark:text-gray-400">
             <span className="text-xs uppercase font-mono tracking-wider">Deployments</span>
             <Rocket className="w-4 h-4 text-indigo-500" />
           </div>
           <div className="mt-3">
-            <span className="text-2xl font-bold text-gray-900 dark:text-white">{metrics.totalDeployments}</span>
+            <span className="text-2xl font-medium tabular-nums text-gray-900 dark:text-white">{metrics.totalDeployments}</span>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Total triggered</p>
           </div>
         </div>
 
         <div
           id="metric-successful"
-          className="p-4 rounded-sm bg-white dark:bg-[oklch(0.24_0.03_263.45)] border border-gray-200 dark:border-[#3d3d3d] shadow-sm flex flex-col justify-between"
+          className="p-5 rounded-sm bg-white dark:bg-white/[0.02] border border-gray-300 dark:border-[#525252] flex flex-col justify-between"
         >
           <div className="flex items-center justify-between text-green-600 dark:text-green-400">
             <span className="text-xs uppercase font-mono tracking-wider">Successful</span>
             <CheckCircle2 className="w-4 h-4" />
           </div>
           <div className="mt-3">
-            <span className="text-2xl font-bold text-green-600 dark:text-green-400">{metrics.successfulDeployments}</span>
+            <span className="text-2xl font-medium tabular-nums text-green-600 dark:text-green-400">{metrics.successfulDeployments}</span>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Succeeded</p>
           </div>
         </div>
 
         <div
           id="metric-running"
-          className="p-4 rounded-sm bg-white dark:bg-[oklch(0.24_0.03_263.45)] border border-gray-200 dark:border-[#3d3d3d] shadow-sm flex flex-col justify-between"
+          className="p-5 rounded-sm bg-white dark:bg-white/[0.02] border border-gray-300 dark:border-[#525252] flex flex-col justify-between"
         >
           <div className="flex items-center justify-between text-blue-600 dark:text-blue-400">
             <span className="text-xs uppercase font-mono tracking-wider">Running</span>
             <Clock className="w-4 h-4 animate-spin" />
           </div>
           <div className="mt-3">
-            <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">{metrics.runningDeployments}</span>
+            <span className="text-2xl font-medium tabular-nums text-blue-600 dark:text-blue-400">{metrics.runningDeployments}</span>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Active / In Progress</p>
           </div>
         </div>
 
         <div
           id="metric-failed"
-          className="p-4 rounded-sm bg-white dark:bg-[oklch(0.24_0.03_263.45)] border border-gray-200 dark:border-[#3d3d3d] shadow-sm flex flex-col justify-between col-span-2 md:col-span-1"
+          className="p-5 rounded-sm bg-white dark:bg-white/[0.02] border border-gray-300 dark:border-[#525252] flex flex-col justify-between col-span-2 md:col-span-1"
         >
           <div className="flex items-center justify-between text-red-600 dark:text-red-400">
             <span className="text-xs uppercase font-mono tracking-wider">Failed</span>
             <XCircle className="w-4 h-4" />
           </div>
           <div className="mt-3">
-            <span className="text-2xl font-bold text-red-600 dark:text-red-400">{metrics.failedDeployments}</span>
+            <span className="text-2xl font-medium tabular-nums text-red-600 dark:text-red-400">{metrics.failedDeployments}</span>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Failed deployments</p>
           </div>
         </div>
@@ -236,8 +234,8 @@ export default function Dashboard() {
       <section id="projects-section" className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Accessible Projects</h2>
-            <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 dark:bg-[#333] text-gray-700 dark:text-gray-300">
+            <h2 className="text-[17px] font-medium text-gray-900 dark:text-white">Accessible Projects</h2>
+            <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300">
               {projects.length}
             </span>
           </div>
@@ -260,15 +258,15 @@ export default function Dashboard() {
                 id={`project-card-${proj.id}`}
                 data-testid={`project-card-${proj.id}`}
                 onClick={() => navigate(`/projects/${proj.publicId || proj.id}/environments`)}
-                className="group p-5 rounded-sm bg-white dark:bg-[oklch(0.24_0.03_263.45)] border border-gray-200 dark:border-[#3d3d3d] hover:border-blue-500 dark:hover:border-blue-500 cursor-pointer shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
+                className="group p-5 rounded-sm bg-white dark:bg-white/[0.02] border border-gray-300 dark:border-[#525252] hover:border-[#2563eb] cursor-pointer transition-colors flex flex-col justify-between"
               >
                 <div>
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-sm bg-blue-50 dark:bg-blue-950/50 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                      <div className="w-8 h-8 rounded-sm bg-blue-50 dark:bg-blue-950/40 flex items-center justify-center text-blue-600 dark:text-blue-400">
                         <Icon name="projects" className="w-4 h-4" />
                       </div>
-                      <h3 className="font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate">
+                      <h3 className="font-medium text-[16px] text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate">
                         {proj.name}
                       </h3>
                     </div>
@@ -282,7 +280,7 @@ export default function Dashboard() {
                   </p>
                 </div>
 
-                <div className="mt-4 pt-3 border-t border-gray-100 dark:border-[#383838] flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                <div className="mt-4 pt-3 border-t border-gray-100 dark:border-white/10 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
                   <div className="flex items-center gap-1.5">
                     <Rocket className="w-3.5 h-3.5" />
                     <span>{proj.totalDeployments} {proj.totalDeployments === 1 ? 'deployment' : 'deployments'}</span>
@@ -302,8 +300,8 @@ export default function Dashboard() {
       <section id="deployments-section" className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Recent Deployment Activity</h2>
-            <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 dark:bg-[#333] text-gray-700 dark:text-gray-300">
+            <h2 className="text-[17px] font-medium text-gray-900 dark:text-white">Recent Deployment Activity</h2>
+            <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300">
               {recentDeployments.length}
             </span>
           </div>
@@ -320,14 +318,25 @@ export default function Dashboard() {
         {recentDeployments.length === 0 ? (
           <div
             id="deployments-empty-state"
-            className="p-8 text-center bg-white dark:bg-[oklch(0.24_0.03_263.45)] border border-gray-200 dark:border-[#3d3d3d] rounded-sm text-gray-500 dark:text-gray-400"
+            className="p-8 text-center bg-white dark:bg-white/[0.02] border border-gray-300 dark:border-[#525252] rounded-sm text-gray-500 dark:text-gray-400"
           >
             <Layers className="w-8 h-8 mx-auto text-gray-400 mb-2" />
             <p className="text-sm">No recent deployments found for your accessible projects.</p>
           </div>
         ) : (
-          <div className="bg-white dark:bg-[oklch(0.24_0.03_263.45)] border border-gray-200 dark:border-[#3d3d3d] rounded-sm shadow-sm overflow-hidden">
-            <div className="divide-y divide-gray-200 dark:divide-[#383838]">
+          <div className="flex flex-col border border-gray-300 dark:border-[#525252] rounded-md overflow-hidden bg-transparent">
+            {/* Table Header */}
+            <div className="flex flex-row items-center gap-4 xl:gap-8 border-b border-gray-300 dark:border-[#525252] text-gray-700 dark:text-[#e3e3e3] bg-gray-50 dark:bg-white/[0.02] px-5 py-3.5 text-[13px] font-medium uppercase tracking-wider font-[Geist]">
+              <div className="flex-1 min-w-[200px] flex items-center gap-2">
+                Project / Service
+              </div>
+              <div className="w-[120px] shrink-0">Status</div>
+              <div className="w-[120px] shrink-0 hidden sm:block">Environment</div>
+              <div className="w-[100px] shrink-0 hidden md:block">Commit</div>
+              <div className="w-[140px] shrink-0 text-right">Time</div>
+            </div>
+
+            <div className="divide-y divide-gray-200 dark:divide-[#525252]">
               {recentDeployments.map((deploy) => {
                 const statusBadge = mapDashboardDeployStatus(deploy.status);
                 const targetUrl = `/projects/${deploy.projectId}/services/${deploy.serviceId}/deployments/${deploy.publicId || deploy.id}`;
@@ -338,58 +347,61 @@ export default function Dashboard() {
                     id={`deployment-item-${deploy.id}`}
                     data-testid={`deployment-item-${deploy.id}`}
                     onClick={() => navigate(targetUrl)}
-                    className="p-4 sm:px-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-gray-50 dark:hover:bg-[#252525] cursor-pointer transition-colors group"
+                    className="px-5 py-3.5 flex flex-row items-center gap-4 xl:gap-8 hover:bg-gray-50 dark:hover:bg-white/[0.04] cursor-pointer transition-colors group"
                   >
-                    <div className="flex items-start sm:items-center gap-3">
-                      {/* Distinguishable Status Indicator */}
-                      <div className="pt-0.5 sm:pt-0">
-                        <StatusBadge status={statusBadge.type} label={statusBadge.label} />
-                      </div>
-
-                      <div className="space-y-1">
+                    {/* Project / Service */}
+                    <div className="flex-1 min-w-[200px] flex items-center gap-3">
+                      <div className="space-y-0.5 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-medium text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                          <span className="font-medium text-[14.5px] text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate">
                             {deploy.projectName || 'Project'} / {deploy.serviceName || `Service #${deploy.serviceId}`}
                           </span>
-
-                          <span className={`px-2 py-0.5 text-xs font-semibold rounded-sm uppercase tracking-wider ${getEnvironmentColor(deploy.environment)}`}>
-                            {deploy.environment}
-                          </span>
-
-                          <span className="text-xs text-gray-500 dark:text-gray-400 font-mono bg-gray-100 dark:bg-[#333] px-1.5 py-0.5 rounded-sm">
+                          <span className="text-xs text-gray-500 dark:text-gray-400 font-mono bg-gray-100 dark:bg-white/10 px-1.5 py-0.5 rounded-xs">
                             v{deploy.version}
                           </span>
                         </div>
 
-                        <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400 flex-wrap">
-                          {deploy.commitSha && (
-                            <span className="inline-flex items-center gap-1 font-mono">
-                              <GitCommit className="w-3.5 h-3.5" />
-                              {deploy.commitSha.slice(0, 7)}
-                            </span>
-                          )}
-
-                          {deploy.commitMessage && (
-                            <span className="truncate max-w-xs text-gray-600 dark:text-gray-300">
-                              "{deploy.commitMessage}"
-                            </span>
-                          )}
-
-                          {deploy.userName && (
-                            <span>by {deploy.userName}</span>
-                          )}
-
-                          <span>
-                            {deploy.startedAt ? format(new Date(deploy.startedAt), 'MMM d, yyyy HH:mm') : ''}
-                          </span>
-                        </div>
+                        {deploy.commitMessage && (
+                          <div className="text-xs text-gray-500 dark:text-[#888] truncate max-w-sm">
+                            <span>"{deploy.commitMessage}"</span>
+                            {deploy.userName && (
+                              <>
+                                <span> · </span>
+                                <span>by {deploy.userName}</span>
+                              </>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 self-end sm:self-center">
-                      <span className="text-xs font-medium text-blue-600 dark:text-blue-400 group-hover:underline flex items-center gap-1">
-                        Details <ChevronRight className="w-3.5 h-3.5" />
+                    {/* Status */}
+                    <div className="w-[120px] shrink-0">
+                      <StatusBadge status={statusBadge.type} label={statusBadge.label} />
+                    </div>
+
+                    {/* Environment */}
+                    <div className="w-[120px] shrink-0 hidden sm:block">
+                      <span className={`px-2 py-0.5 text-xs font-medium rounded-xs uppercase tracking-wider ${getEnvironmentColor(deploy.environment)}`}>
+                        {deploy.environment}
                       </span>
+                    </div>
+
+                    {/* Commit */}
+                    <div className="w-[100px] shrink-0 hidden md:block">
+                      {deploy.commitSha ? (
+                        <span className="inline-flex items-center gap-1 font-mono text-xs text-gray-600 dark:text-gray-300">
+                          <GitCommit className="w-3.5 h-3.5 text-gray-400" />
+                          {deploy.commitSha.slice(0, 7)}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-gray-400">—</span>
+                      )}
+                    </div>
+
+                    {/* Time */}
+                    <div className="w-[140px] shrink-0 text-right text-xs text-gray-500 dark:text-gray-400">
+                      {deploy.startedAt ? format(new Date(deploy.startedAt), 'MMM d, HH:mm') : '—'}
                     </div>
                   </div>
                 );

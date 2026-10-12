@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Key, Eye, EyeOff, User, AlertCircle } from 'lucide-react';
 import { RiAdminLine } from 'react-icons/ri';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 const authApiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
@@ -155,16 +155,6 @@ export default function Login() {
                   <p>{errors.general}</p>
                 </div>
               )}
-
-              <div className="flex items-center justify-between text-[13.5px] pt-1">
-                <div></div>
-                <div>
-                  Forgot your password?{' '}
-                  <Link to="/password-reset" className="text-[#2563eb] hover:underline font-medium">
-                    Reset it
-                  </Link>
-                </div>
-              </div>
 
               <button
                 type="submit"

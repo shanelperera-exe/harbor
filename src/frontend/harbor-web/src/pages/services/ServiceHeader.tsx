@@ -151,7 +151,7 @@ export default function ServiceHeader({ onDeployed }: ServiceHeaderProps) {
                   closed: { scaleY: 0, opacity: 0, transition: { duration: 0.2 } }
                 }}
                 style={{ originY: "top" }}
-                className="flex flex-col p-1.5 rounded-sm bg-white dark:bg-[#1a1a1a] border border-gray-300 dark:border-[#525252] absolute top-[120%] right-0 min-w-[220px] overflow-hidden z-[100] shadow-lg shadow-black/5 dark:shadow-black/20"
+                className="flex flex-col p-1.5 rounded-sm bg-white dark:bg-[#1a1a1a] border border-gray-300 dark:border-[#525252] absolute top-[120%] right-0 min-w-[220px] overflow-hidden z-[100]"
               >
                 <li
                   onClick={() => {

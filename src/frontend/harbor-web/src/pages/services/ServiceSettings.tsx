@@ -298,7 +298,7 @@ export default function ServiceSettings() {
             </div>
             
             {isProviderDropdownOpen && (
-              <div className="absolute top-[78px] left-0 w-full z-10 bg-white dark:bg-[#1f1f1f] border border-gray-300 dark:border-[#525252] rounded-sm shadow-lg max-h-60 overflow-y-auto">
+              <div className="absolute top-[78px] left-0 w-full z-10 bg-white dark:bg-[#1f1f1f] border border-gray-300 dark:border-[#525252] rounded-sm max-h-60 overflow-y-auto">
                 {integrations.length > 0 ? (
                   <ul className="py-1">
                     <li 

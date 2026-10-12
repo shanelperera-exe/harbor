@@ -14,6 +14,7 @@ import { format } from 'date-fns';
 import FilterDropdown from '../../components/ui/FilterDropdown';
 import { BiSolidBolt } from 'react-icons/bi';
 import { Icon } from '../../components/icons';
+import SectionTitle from '../../components/ui/SectionTitle';
 
 // ── Environment colour helper (mirrors Deployments.tsx) ──────────────────────
 const getEnvironmentColor = (env: string) => {
@@ -35,12 +36,12 @@ interface StatCardProps {
 
 function StatCard({ label, value, icon, accent = 'text-gray-900 dark:text-white', testId }: StatCardProps) {
   return (
-    <div className="flex flex-col gap-2 p-5 rounded-md border border-gray-200 dark:border-[#333] bg-white dark:bg-white/[0.02]">
+    <div className="flex flex-col gap-2 p-5 rounded-md border border-gray-300 dark:border-[#525252] bg-white dark:bg-white/[0.02]">
       <div className="flex items-center justify-between">
         <span className="text-sm text-gray-500 dark:text-[#8f8f8f] font-medium">{label}</span>
         <span className="text-gray-400 dark:text-[#555]">{icon}</span>
       </div>
-      <span data-testid={testId} className={`text-3xl font-semibold tabular-nums ${accent}`}>{value}</span>
+      <span data-testid={testId} className={`text-3xl font-medium tabular-nums ${accent}`}>{value}</span>
     </div>
   );
 }
@@ -136,29 +137,20 @@ export default function DeploymentReport() {
   const stats = report?.statistics;
 
   return (
-    <div className="w-full h-full p-6 lg:px-12 xl:px-20 text-gray-900 dark:text-white overflow-y-auto bg-white dark:bg-[oklch(0.21_0.03_263.45)]">
-
-      {/* ── Page header ─────────────────────────────────────────────────── */}
-      <div className="flex flex-wrap justify-between items-end gap-4 mb-8">
-        <div>
-          <h1 className="flex items-center gap-3 text-[28px] lg:text-[32px] font-medium text-gray-900 dark:text-white leading-tight tracking-tight">
-            <FileBarChart2 className="w-[1em] h-[1em]" aria-hidden="true" />
-            Deployment Reports
-          </h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-[#6b6b6b]">
-            Select filters and generate a report to evaluate deployment activity and reliability.
-          </p>
-        </div>
-      </div>
-
-      <main className="flex flex-col gap-8">
+    <div className="flex flex-col flex-1 w-full max-w-[1920px] mx-auto">
+      <main className="px-4 md:px-12 mt-8 mb-20 flex flex-col gap-8">
+        <SectionTitle
+          icon={<Icon name="observability" />}
+          title="Deployment Reports"
+          description="Select filters and generate a report to evaluate deployment activity, lead times, and reliability."
+        />
 
         {/* ── Filter panel ────────────────────────────────────────────────── */}
         <section
           aria-label="Report filters"
-          className="rounded-md border border-gray-200 dark:border-[#333] bg-gray-50 dark:bg-white/[0.02] p-5 flex flex-col gap-5"
+          className="rounded-md border border-gray-300 dark:border-[#525252] bg-white dark:bg-white/[0.02] p-5 flex flex-col gap-5"
         >
-          <h2 className="text-[15px] font-semibold text-gray-800 dark:text-[#e0e0e0] flex items-center gap-2">
+          <h2 className="text-[15px] font-medium text-gray-800 dark:text-[#e0e0e0] flex items-center gap-2">
             <ChevronDown className="w-4 h-4 text-gray-400" />
             Report Filters
           </h2>

@@ -26,7 +26,7 @@
 
 @font-face {
   font-family: 'PP Neue Montreal';
-  src: url('/fonts/ppneuemontreal-bold.otf') format('opentype');
+  src: url('/fonts/ppneuemontreal-medium.otf') format('opentype');
   font-weight: 600;
   font-style: normal;
   font-display: swap;
@@ -96,6 +96,21 @@ body {
 html.dark body {
   background-color: oklch(0.21 0.03 263.45);
   color: white;
+}
+
+/* Ensure font boldness is controlled and not heavy */
+b, strong {
+  font-weight: 500;
+}
+
+/* Flat DevOps aesthetic: No shadows, no glows */
+*, ::before, ::after {
+  --tw-shadow: 0 0 #0000 !important;
+  --tw-shadow-colored: 0 0 #0000 !important;
+}
+
+.shadow, .shadow-sm, .shadow-md, .shadow-lg, .shadow-xl, .shadow-2xl, .shadow-inner {
+  box-shadow: none !important;
 }
 
 .font-geist-mono {

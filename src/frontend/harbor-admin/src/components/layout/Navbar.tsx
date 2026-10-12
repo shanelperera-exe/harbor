@@ -19,12 +19,23 @@ export default function Navbar() {
         </button>
 
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-2.5 group">
-          <img src="/logos/harbor_light_notext.svg" alt="Harbor Logo" className="h-7 lg:h-10 w-auto group-hover:opacity-80 transition-opacity" />
-          <span className="text-2xl lg:text-2xl font-medium tracking-tight text-gray-900 dark:text-white transition-colors duration-300 lowercase" style={{ fontFamily: 'Roobert, sans-serif' }}>harbor</span>
-          <span className="text-[11px] font-mono font-medium px-1.5 py-0.5 rounded-sm bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900/60">
-            Admin
-          </span>
+        <Link to="/" className="flex items-center gap-2.5 sm:gap-3 group focus:outline-none">
+          <img src="/logos/harbor_light_notext.svg" alt="Harbor Logo" className="h-7 lg:h-9 w-auto group-hover:opacity-85 transition-opacity" />
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            <span
+              className="text-2xl lg:text-[26px] font-semibold tracking-[-0.03em] text-gray-900 dark:text-white transition-colors duration-300"
+              style={{ fontFamily: 'Roobert, sans-serif' }}
+            >
+              Harbor
+            </span>
+            <span
+              className="h-4 sm:h-4.5 w-px bg-gray-300 dark:bg-[#3c4043] transition-colors duration-300"
+              aria-hidden="true"
+            />
+            <span className="text-[13px] sm:text-[14px] lg:text-[15px] font-medium tracking-tight text-gray-500 dark:text-[#9aa0a6] transition-colors duration-300 whitespace-nowrap">
+              Admin Portal
+            </span>
+          </div>
         </Link>
       </div>
 

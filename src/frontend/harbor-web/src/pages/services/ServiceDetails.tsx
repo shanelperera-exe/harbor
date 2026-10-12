@@ -220,7 +220,7 @@ export function DeployModal({ service, projectId, onClose, onDeployed, mode = 'l
                 </button>
 
                 {envDropdownOpen && (
-                  <ul className="absolute top-full left-0 right-0 mt-1 bg-[oklch(0.21_0.03_263.45)] border border-[#4d4d4d] rounded-sm z-[100] shadow-xl max-h-60 overflow-y-auto">
+                  <ul className="absolute top-full left-0 right-0 mt-1 bg-[oklch(0.21_0.03_263.45)] border border-[#4d4d4d] rounded-sm z-[100] max-h-60 overflow-y-auto">
                     {environments.map(env => {
                       const type = env.type.toLowerCase();
                       const isProduction = type === 'production';
@@ -289,7 +289,7 @@ export function DeployModal({ service, projectId, onClose, onDeployed, mode = 'l
                 className="h-10 truncate w-full m-0 py-2.5 pl-9 pr-3 bg-transparent border border-[#6b6b6b] hover:border-[#b3b3b3] focus:border-[#2563eb] focus:ring-1 focus:ring-[#2563eb] outline-none text-[#f0f0f0] text-[16px] placeholder:text-[#8f8f8f] transition-colors disabled:opacity-50 disabled:cursor-not-allowed rounded-sm font-mono"
               />
               {mode === 'specific' && commitDropdownOpen && commitsList.length > 0 && (
-                <ul className="absolute top-full left-0 right-0 mt-1 bg-[oklch(0.21_0.03_263.45)] border border-[#4d4d4d] rounded-sm z-[100] shadow-xl max-h-60 overflow-y-auto">
+                <ul className="absolute top-full left-0 right-0 mt-1 bg-[oklch(0.21_0.03_263.45)] border border-[#4d4d4d] rounded-sm z-[100] max-h-60 overflow-y-auto">
                   {commitsList
                     .filter(c => c.sha.startsWith(branch) || c.message.toLowerCase().includes(branch.toLowerCase()))
                     .map(commit => (

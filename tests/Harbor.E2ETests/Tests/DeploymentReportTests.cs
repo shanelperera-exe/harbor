@@ -129,7 +129,7 @@ namespace Harbor.E2ETests.Tests
 
             var error = reportPage.GetErrorMessage();
             Assert.That(error, Is.Not.Null);
-            Assert.That(error, Does.Contain("validation errors"));
+            Assert.That(error, Does.Contain("Start date must be on or before end date"));
         }
 
         [Test]

@@ -137,20 +137,19 @@ public class DeploymentApiTests : IClassFixture<DeploymentApiFactory>
         var client = CreateClient(userId, "Admin");
         var serviceId = await _factory.ProvisionServiceForOwnerAsync(userId);
 
-        // Create 3 deployments
+        // Create 3 deployments for the specific service under test.
         for (var i = 1; i <= 3; i++)
             await CreateDeploymentAsync(client, new CreateDeploymentRequest
                 { ServiceId = serviceId.ToString(), Environment = "dev", Version = $"page-test-{i}", CommitSha = "abc123" });
 
-        // Fetch page 1 with pageSize=2
-        var response = await client.GetAsync("/api/deployments?page=1&pageSize=2");
+        // Scope the history to this service so earlier cross-test records do not inflate the page count.
+        var response = await client.GetAsync($"/api/deployments?page=1&pageSize=2&serviceId={serviceId}");
         var body     = await response.Content.ReadFromJsonAsync<DeploymentListResponse>();
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal(2, body!.Items.Count);
         Assert.Equal(1, body.Page);
         Assert.Equal(2, body.PageSize);
-        // History is scoped to this user's own project, which holds exactly 3 deployments.
         Assert.Equal(3, body.TotalCount);
     }
 

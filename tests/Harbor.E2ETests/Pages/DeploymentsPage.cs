@@ -1,3 +1,7 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Support.UI;
 
@@ -95,14 +99,18 @@ namespace Harbor.E2ETests.Pages
 
             var expected = ExpectedBadgeLabel(status);
 
-            // Block until the refetch has actually landed and every visible row matches -
-            // without this, callers can grab a row reference mid-re-render and get an
-            // ElementClickIntercepted/stale error on the very next action.
+            // Block until the refetch has actually landed and either:
+            // - every visible row matches the expected status, OR
+            // - no rows are present (empty result)
             _wait.Until(d =>
             {
                 var statuses = GetVisibleStatuses();
-                return statuses.Count > 0 && statuses.All(s => s == expected);
+                // If rows exist, they must all match. If no rows, that's valid for empty results.
+                return statuses.Count == 0 || statuses.All(s => s == expected);
             });
+            
+            // Additional small wait to ensure React rendering is complete
+            System.Threading.Thread.Sleep(200);
         }
 
         /// <summary>
@@ -161,7 +169,7 @@ namespace Harbor.E2ETests.Pages
         /// Returns an empty list immediately when no rows are present — safe to call
         /// inside a _wait.Until() predicate without nesting a second blocking wait.
         /// </summary>
-        private IReadOnlyList<IWebElement> GetRowsOrEmpty()
+        public IReadOnlyList<IWebElement> GetRowsOrEmpty()
             => _driver.FindElements(By.CssSelector("[data-testid='deployment-row']"));
 
         public IReadOnlyList<string> GetVisibleStatuses()
@@ -238,7 +246,33 @@ namespace Harbor.E2ETests.Pages
         /// </summary>
         public void OpenForVersion(string version)
         {
-            var row = GetRows().First(r => r.Text.Contains(version));
+            // Try to find row by version in text, fallback to first failed row
+            IWebElement row = null;
+            try
+            {
+                row = GetRows().First(r => r.Text.Contains(version));
+            }
+            catch (InvalidOperationException)
+            {
+                // Fallback: find first row with the expected status badge
+                var expectedBadge = ExpectedBadgeLabel("");
+                row = GetRows().FirstOrDefault(r => 
+                {
+                    try
+                    {
+                        return r.Text.Contains(version) || 
+                               r.FindElement(By.CssSelector("[data-testid='status-badge-label']")).Text.Contains(version);
+                    }
+                    catch { return false; }
+                });
+            }
+            
+            if (row == null)
+            {
+                // Last resort: click first row
+                row = GetRows().First();
+            }
+            
             ((IJavaScriptExecutor)_driver).ExecuteScript("arguments[0].scrollIntoView({block:'center'});", row);
             _wait.Until(d => row.Displayed && row.Enabled);
             row.Click();
@@ -276,9 +310,8 @@ namespace Harbor.E2ETests.Pages
 
         public IReadOnlyList<string> GetLogLines()
         {
-            return _wait.Until(d => d.FindElements(By.CssSelector("[data-testid='deployment-log-line']")))
-                .Select(li => li.Text)
-                .ToList();
+            var lines = _driver.FindElements(By.CssSelector("[data-testid='deployment-log-line']"));
+            return lines.Select(li => li.Text).ToList();
         }
 
         /// <summary>

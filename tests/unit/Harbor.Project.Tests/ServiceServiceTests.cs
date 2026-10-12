@@ -2,6 +2,7 @@ using Harbor.Project.DTOs;
 using Harbor.Project.Models;
 using Harbor.Project.Repositories;
 using Harbor.Project.Services;
+using Harbor.Caching;
 using Moq;
 using Xunit;
 
@@ -20,7 +21,20 @@ namespace Harbor.Project.Tests
 
         public ServiceServiceTests()
         {
-            _service = new ServiceService(_serviceRepository.Object, _projectRepository.Object, _integrationRepository.Object, _cacheService, _secretProtector.Object);
+            _secretProtector
+                .Setup(p => p.Protect(It.IsAny<string>()))
+                .Returns((string v) => $"ENCRYPTED({v})");
+
+            _secretProtector
+                .Setup(p => p.Unprotect(It.IsAny<string>()))
+                .Returns((string v) => v.Replace("ENCRYPTED(", "").Replace(")", ""));
+
+            _service = new ServiceService(
+                _serviceRepository.Object,
+                _projectRepository.Object,
+                _integrationRepository.Object,
+                _cacheService,
+                _secretProtector.Object);
         }
 
         private void SetupProject(ProjectEntity? project)
@@ -505,7 +519,7 @@ namespace Harbor.Project.Tests
 
             var (success, error, _) = await _service.UpdateAsync(
                 "srv-abcdefghij",
-                new UpdateServiceRequest { WorkflowFile = "  ship.yml  ", Provider = "  docker  " },
+                new UpdateServiceRequest { WorkflowFile = "  ship.yml  ", BuildCommand = "  dotnet build  ", StartCommand = "  dotnet run  ", Provider = "  docker  " },
                 OwnerId,
                 isAdmin: false);
 
@@ -514,6 +528,8 @@ namespace Harbor.Project.Tests
 
             _serviceRepository.Verify(r => r.UpdateAsync(It.Is<ServiceEntity>(s =>
                 s.WorkflowFile == "ship.yml" &&
+                s.BuildCommand == "dotnet build" &&
+                s.StartCommand == "dotnet run" &&
                 s.Provider == "docker")), Times.Once);
         }
 
@@ -533,7 +549,7 @@ namespace Harbor.Project.Tests
 
             Assert.True(success);
             _serviceRepository.Verify(r => r.UpdateAsync(It.Is<ServiceEntity>(s =>
-                s.WorkflowFile == null && s.Provider == "podman")), Times.Once);
+                s.WorkflowFile == null && s.BuildCommand == null && s.StartCommand == null && s.Provider == "podman")), Times.Once);
         }
 
         [Theory]
@@ -552,26 +568,40 @@ namespace Harbor.Project.Tests
             _serviceRepository.Verify(r => r.UpdateAsync(It.Is<ServiceEntity>(s => s.WorkflowFile == "deploy.yml")), Times.Once);
         }
 
+        [Theory]
+        [InlineData("")]
+        [InlineData("   ")]
+        public async Task UpdateAsync_BlankOptionalCommand_ClearsStoredValue(string blank)
+        {
+            _serviceRepository.Setup(r => r.GetByIdOrPublicIdAsync(It.IsAny<string>())).ReturnsAsync(ExistingService());
+            SetupProjectById(OwnedProject());
+            _serviceRepository.Setup(r => r.UpdateAsync(It.IsAny<ServiceEntity>())).ReturnsAsync(true);
+            _serviceRepository.Setup(r => r.GetByIdAsync(13)).ReturnsAsync(ExistingService());
+
+            await _service.UpdateAsync(
+                "srv-abcdefghij", new UpdateServiceRequest { BuildCommand = blank, StartCommand = blank }, OwnerId, isAdmin: false);
+
+            _serviceRepository.Verify(r => r.UpdateAsync(It.Is<ServiceEntity>(s => s.BuildCommand == null && s.StartCommand == null)), Times.Once);
+        }
 
         [Fact]
         public async Task UpdateAsync_DeploymentUrlsList_TakesPrecedenceOverSingleUrl()
         {
             _serviceRepository.Setup(r => r.GetByIdOrPublicIdAsync(It.IsAny<string>())).ReturnsAsync(ExistingService());
-      SetupProjectById(OwnedProject());
+            SetupProjectById(OwnedProject());
             _serviceRepository.Setup(r => r.UpdateAsync(It.IsAny<ServiceEntity>())).ReturnsAsync(true);
             _serviceRepository.Setup(r => r.GetByIdAsync(13)).ReturnsAsync(ExistingService());
 
             await _service.UpdateAsync(
-    "srv-abcdefghij",
-          new UpdateServiceRequest
-       {
-           DeploymentUrl = "https://ignored.dev",
-       DeploymentUrls = new List<ServiceDeploymentUrl> { new() { Environment = "Production", Url = "https://acme.dev" } }
-     },
-     OwnerId,
-   isAdmin: false);
+                "srv-abcdefghij",
+                new UpdateServiceRequest
+                {
+                    DeploymentUrl = "https://ignored.dev",
+                    DeploymentUrls = new List<ServiceDeploymentUrl> { new() { Environment = "Production", Url = "https://acme.dev" } }
+                },
+                OwnerId,
+                isAdmin: false);
 
-            // The list is serialised as JSON and takes precedence over the single URL.
             _serviceRepository.Verify(r => r.UpdateAsync(It.Is<ServiceEntity>(s =>
                 s.DeploymentUrl != null &&
                 s.DeploymentUrl.StartsWith("[") &&
@@ -581,13 +611,13 @@ namespace Harbor.Project.Tests
         [Fact]
         public async Task UpdateAsync_BlankSingleUrl_ClearsStoredValue()
         {
-  _serviceRepository.Setup(r => r.GetByIdOrPublicIdAsync(It.IsAny<string>())).ReturnsAsync(ExistingService());
-SetupProjectById(OwnedProject());
+            _serviceRepository.Setup(r => r.GetByIdOrPublicIdAsync(It.IsAny<string>())).ReturnsAsync(ExistingService());
+            SetupProjectById(OwnedProject());
             _serviceRepository.Setup(r => r.UpdateAsync(It.IsAny<ServiceEntity>())).ReturnsAsync(true);
-        _serviceRepository.Setup(r => r.GetByIdAsync(13)).ReturnsAsync(ExistingService());
+            _serviceRepository.Setup(r => r.GetByIdAsync(13)).ReturnsAsync(ExistingService());
 
-      await _service.UpdateAsync(
-    "srv-abcdefghij", new UpdateServiceRequest { DeploymentUrl = "   " }, OwnerId, isAdmin: false);
+            await _service.UpdateAsync(
+                "srv-abcdefghij", new UpdateServiceRequest { DeploymentUrl = "   " }, OwnerId, isAdmin: false);
 
             _serviceRepository.Verify(r => r.UpdateAsync(It.Is<ServiceEntity>(s => s.DeploymentUrl == null)), Times.Once);
         }
@@ -595,56 +625,56 @@ SetupProjectById(OwnedProject());
         [Fact]
         public async Task UpdateAsync_ServiceNotFound_ReturnsError()
         {
-  _serviceRepository.Setup(r => r.GetByIdOrPublicIdAsync(It.IsAny<string>())).ReturnsAsync((ServiceEntity?)null);
+            _serviceRepository.Setup(r => r.GetByIdOrPublicIdAsync(It.IsAny<string>())).ReturnsAsync((ServiceEntity?)null);
 
-    var (success, error, data) = await _service.UpdateAsync(
-      "srv-missing", new UpdateServiceRequest { Provider = "docker" }, OwnerId, isAdmin: false);
+            var (success, error, data) = await _service.UpdateAsync(
+                "srv-missing", new UpdateServiceRequest { Provider = "docker" }, OwnerId, isAdmin: false);
 
-       Assert.False(success);
+            Assert.False(success);
             Assert.Equal("Service not found.", error);
-  Assert.Null(data);
+            Assert.Null(data);
         }
 
         [Fact]
         public async Task UpdateAsync_OwningProjectMissing_ReturnsError()
-    {
-  _serviceRepository.Setup(r => r.GetByIdOrPublicIdAsync(It.IsAny<string>())).ReturnsAsync(ExistingService());
-  SetupProjectById(null);
+        {
+            _serviceRepository.Setup(r => r.GetByIdOrPublicIdAsync(It.IsAny<string>())).ReturnsAsync(ExistingService());
+            SetupProjectById(null);
 
-      var (success, error, _) = await _service.UpdateAsync(
-       "srv-abcdefghij", new UpdateServiceRequest { Provider = "docker" }, OwnerId, isAdmin: false);
+            var (success, error, _) = await _service.UpdateAsync(
+                "srv-abcdefghij", new UpdateServiceRequest { Provider = "docker" }, OwnerId, isAdmin: false);
 
             Assert.False(success);
-      Assert.Equal("Project not found.", error);
+            Assert.Equal("Project not found.", error);
         }
 
         [Fact]
         public async Task UpdateAsync_NonOwnerNonAdmin_ReturnsPermissionError()
         {
-      _serviceRepository.Setup(r => r.GetByIdOrPublicIdAsync(It.IsAny<string>())).ReturnsAsync(ExistingService());
-       SetupProjectById(OwnedProject());
+            _serviceRepository.Setup(r => r.GetByIdOrPublicIdAsync(It.IsAny<string>())).ReturnsAsync(ExistingService());
+            SetupProjectById(OwnedProject());
 
-  var (success, error, _) = await _service.UpdateAsync(
+            var (success, error, _) = await _service.UpdateAsync(
                 "srv-abcdefghij", new UpdateServiceRequest { Provider = "docker" }, userId: 99, isAdmin: false);
 
             Assert.False(success);
-      Assert.Equal("You do not have permission to update this service.", error);
+            Assert.Equal("You do not have permission to update this service.", error);
             _serviceRepository.Verify(r => r.UpdateAsync(It.IsAny<ServiceEntity>()), Times.Never);
         }
 
- [Fact]
+        [Fact]
         public async Task UpdateAsync_RepositoryReportsFailure_ReturnsError()
- {
+        {
             _serviceRepository.Setup(r => r.GetByIdOrPublicIdAsync(It.IsAny<string>())).ReturnsAsync(ExistingService());
-    SetupProjectById(OwnedProject());
-        _serviceRepository.Setup(r => r.UpdateAsync(It.IsAny<ServiceEntity>())).ReturnsAsync(false);
+            SetupProjectById(OwnedProject());
+            _serviceRepository.Setup(r => r.UpdateAsync(It.IsAny<ServiceEntity>())).ReturnsAsync(false);
 
-    var (success, error, data) = await _service.UpdateAsync(
-            "srv-abcdefghij", new UpdateServiceRequest { Provider = "docker" }, OwnerId, isAdmin: false);
+            var (success, error, data) = await _service.UpdateAsync(
+                "srv-abcdefghij", new UpdateServiceRequest { Provider = "docker" }, OwnerId, isAdmin: false);
 
-   Assert.False(success);
-        Assert.Equal("Failed to update service.", error);
-          Assert.Null(data);
+            Assert.False(success);
+            Assert.Equal("Failed to update service.", error);
+            Assert.Null(data);
         }
 
         // ---------- Response mapping (ToResponse) ----------
@@ -661,66 +691,65 @@ SetupProjectById(OwnedProject());
 
             Assert.Equal(2, data!.DeploymentUrls!.Count);
             Assert.Equal("Staging", data.DeploymentUrls[0].Environment);
-            // The first entry in the list wins as the primary URL for backward compatibility.
             Assert.Equal("https://staging.acme.dev", data.DeploymentUrl);
         }
 
         [Fact]
         public async Task GetByIdAsync_PlainDeploymentUrl_IsWrappedAsProductionEntry()
-   {
-   var service = ExistingService();
-     service.DeploymentUrl = "https://acme.dev";
-    _serviceRepository.Setup(r => r.GetByIdOrPublicIdAsync(It.IsAny<string>())).ReturnsAsync(service);
+        {
+            var service = ExistingService();
+            service.DeploymentUrl = "https://acme.dev";
+            _serviceRepository.Setup(r => r.GetByIdOrPublicIdAsync(It.IsAny<string>())).ReturnsAsync(service);
             SetupProjectById(OwnedProject());
 
-     var (_, _, data) = await _service.GetByIdAsync("srv-abcdefghij", OwnerId, isAdmin: false);
+            var (_, _, data) = await _service.GetByIdAsync("srv-abcdefghij", OwnerId, isAdmin: false);
 
-    var entry = Assert.Single(data!.DeploymentUrls!);
-    Assert.Equal("Production", entry.Environment);
+            var entry = Assert.Single(data!.DeploymentUrls!);
+            Assert.Equal("Production", entry.Environment);
             Assert.Equal("https://acme.dev", entry.Url);
-    Assert.Equal("https://acme.dev", data.DeploymentUrl);
+            Assert.Equal("https://acme.dev", data.DeploymentUrl);
         }
 
         [Fact]
         public async Task GetByIdAsync_MalformedJsonDeploymentUrl_FallsBackToProductionEntry()
-   {
+        {
             var service = ExistingService();
-         service.DeploymentUrl = "[ not valid json";
-      _serviceRepository.Setup(r => r.GetByIdOrPublicIdAsync(It.IsAny<string>())).ReturnsAsync(service);
-      SetupProjectById(OwnedProject());
+            service.DeploymentUrl = "[ not valid json";
+            _serviceRepository.Setup(r => r.GetByIdOrPublicIdAsync(It.IsAny<string>())).ReturnsAsync(service);
+            SetupProjectById(OwnedProject());
 
             var (_, _, data) = await _service.GetByIdAsync("srv-abcdefghij", OwnerId, isAdmin: false);
 
-       var entry = Assert.Single(data!.DeploymentUrls!);
-  Assert.Equal("Production", entry.Environment);
-Assert.Equal("[ not valid json", entry.Url);
-   }
+            var entry = Assert.Single(data!.DeploymentUrls!);
+            Assert.Equal("Production", entry.Environment);
+            Assert.Equal("[ not valid json", entry.Url);
+        }
 
         [Fact]
         public async Task GetByIdAsync_NoDeploymentUrl_YieldsEmptyUrlList()
         {
-    var service = ExistingService();
-  service.DeploymentUrl = null;
-  _serviceRepository.Setup(r => r.GetByIdOrPublicIdAsync(It.IsAny<string>())).ReturnsAsync(service);
-    SetupProjectById(OwnedProject());
+            var service = ExistingService();
+            service.DeploymentUrl = null;
+            _serviceRepository.Setup(r => r.GetByIdOrPublicIdAsync(It.IsAny<string>())).ReturnsAsync(service);
+            SetupProjectById(OwnedProject());
 
             var (_, _, data) = await _service.GetByIdAsync("srv-abcdefghij", OwnerId, isAdmin: false);
 
-   Assert.Empty(data!.DeploymentUrls!);
+            Assert.Empty(data!.DeploymentUrls!);
             Assert.Null(data.DeploymentUrl);
-   }
+        }
 
         [Fact]
         public async Task GetByIdAsync_EmptyPublicId_FallsBackToNumericId()
-  {
-        var service = ExistingService();
-       service.PublicId = string.Empty;
+        {
+            var service = ExistingService();
+            service.PublicId = string.Empty;
             _serviceRepository.Setup(r => r.GetByIdOrPublicIdAsync(It.IsAny<string>())).ReturnsAsync(service);
-   SetupProjectById(OwnedProject());
+            SetupProjectById(OwnedProject());
 
-   var (_, _, data) = await _service.GetByIdAsync("13", OwnerId, isAdmin: false);
+            var (_, _, data) = await _service.GetByIdAsync("13", OwnerId, isAdmin: false);
 
-   Assert.Equal("13", data!.PublicId);
+            Assert.Equal("13", data!.PublicId);
         }
     }
 }

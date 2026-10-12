@@ -180,4 +180,172 @@ public class ReportServiceTests
         Assert.Equal(0.0, stats.SuccessRate);
         Assert.Null(stats.AverageDurationSeconds);
     }
+
+    [Fact]
+    public void ComputeStatistics_WhenAllDeploymentsSuccessful_Returns100PercentSuccessRate()
+    {
+        var items = new List<DeploymentReportItem>
+        {
+            new() { Id = 1, Status = "succeeded", DurationSeconds = 50.0 },
+            new() { Id = 2, Status = "ready", DurationSeconds = 70.0 },
+            new() { Id = 3, Status = "SUCCEEDED", DurationSeconds = 90.0 },
+        };
+
+        var stats = ReportService.ComputeStatistics(items);
+
+        Assert.Equal(3, stats.TotalDeployments);
+        Assert.Equal(3, stats.SuccessfulDeployments);
+        Assert.Equal(0, stats.FailedDeployments);
+        Assert.Equal(100.0, stats.SuccessRate);
+        Assert.Equal(70.0, stats.AverageDurationSeconds);
+    }
+
+    [Fact]
+    public void ComputeStatistics_WhenAllDeploymentsFailed_Returns0PercentSuccessRate()
+    {
+        var items = new List<DeploymentReportItem>
+        {
+            new() { Id = 1, Status = "failed", DurationSeconds = 15.0 },
+            new() { Id = 2, Status = "error", DurationSeconds = 25.0 },
+            new() { Id = 3, Status = "FAILED", DurationSeconds = null },
+        };
+
+        var stats = ReportService.ComputeStatistics(items);
+
+        Assert.Equal(3, stats.TotalDeployments);
+        Assert.Equal(0, stats.SuccessfulDeployments);
+        Assert.Equal(3, stats.FailedDeployments);
+        Assert.Equal(0.0, stats.SuccessRate);
+        Assert.Equal(20.0, stats.AverageDurationSeconds);
+    }
+
+    [Fact]
+    public void ComputeStatistics_WhenDeploymentsArePendingOrRunning_CountedInTotalOnly()
+    {
+        var items = new List<DeploymentReportItem>
+        {
+            new() { Id = 1, Status = "Running", DurationSeconds = null },
+            new() { Id = 2, Status = "Pending", DurationSeconds = null },
+            new() { Id = 3, Status = "Queued", DurationSeconds = null },
+            new() { Id = 4, Status = "Succeeded", DurationSeconds = 120.0 },
+        };
+
+        var stats = ReportService.ComputeStatistics(items);
+
+        Assert.Equal(4, stats.TotalDeployments);
+        Assert.Equal(1, stats.SuccessfulDeployments);
+        Assert.Equal(0, stats.FailedDeployments);
+        Assert.Equal(25.0, stats.SuccessRate);
+        Assert.Equal(120.0, stats.AverageDurationSeconds);
+    }
+
+    [Fact]
+    public void ComputeStatistics_WhenSingleCompletedDeployment_AverageDurationEqualsThatDuration()
+    {
+        var items = new List<DeploymentReportItem>
+        {
+            new() { Id = 1, Status = "Succeeded", DurationSeconds = 42.42 }
+        };
+
+        var stats = ReportService.ComputeStatistics(items);
+
+        Assert.Equal(1, stats.TotalDeployments);
+        Assert.Equal(1, stats.SuccessfulDeployments);
+        Assert.Equal(0, stats.FailedDeployments);
+        Assert.Equal(100.0, stats.SuccessRate);
+        Assert.Equal(42.42, stats.AverageDurationSeconds);
+    }
+
+    [Fact]
+    public void ComputeStatistics_WhenDeploymentHasZeroDuration_CalculatesAverageCorrectly()
+    {
+        var items = new List<DeploymentReportItem>
+        {
+            new() { Id = 1, Status = "Failed", DurationSeconds = 0.0 },
+            new() { Id = 2, Status = "Succeeded", DurationSeconds = 100.0 }
+        };
+
+        var stats = ReportService.ComputeStatistics(items);
+
+        Assert.Equal(2, stats.TotalDeployments);
+        Assert.Equal(50.0, stats.AverageDurationSeconds);
+    }
+
+    [Fact]
+    public async Task GetDeploymentReportAsync_WhenAdminUser_CallsRepositoryWithIsAdminTrue()
+    {
+        var query = new DeploymentReportQuery();
+        _repoMock
+            .Setup(r => r.GetReportRowsAsync(99, true, null, null, null, null, null))
+            .ReturnsAsync(new List<DeploymentReportEntity>());
+
+        var result = await _service.GetDeploymentReportAsync(99, true, query);
+
+        _repoMock.Verify(r => r.GetReportRowsAsync(99, true, null, null, null, null, null), Times.Once);
+        Assert.NotNull(result);
+        Assert.Empty(result.Items);
+    }
+
+    [Fact]
+    public async Task GetDeploymentReportAsync_WhenNullFilterValues_PassesNullsToRepository()
+    {
+        var query = new DeploymentReportQuery
+        {
+            ProjectId = null,
+            Environment = null,
+            Status = null,
+            StartDate = null,
+            EndDate = null
+        };
+
+        _repoMock
+            .Setup(r => r.GetReportRowsAsync(10, false, null, null, null, null, null))
+            .ReturnsAsync(new List<DeploymentReportEntity>());
+
+        var result = await _service.GetDeploymentReportAsync(10, false, query);
+
+        _repoMock.Verify(r => r.GetReportRowsAsync(10, false, null, null, null, null, null), Times.Once);
+        Assert.NotNull(result);
+    }
+
+    [Fact]
+    public async Task GetDeploymentReportAsync_MapsNullableEntityFieldsGracefully()
+    {
+        var entities = new List<DeploymentReportEntity>
+        {
+            new()
+            {
+                Id = 1,
+                PublicId = "dep-1",
+                Environment = "Production",
+                Version = "1.0",
+                CommitSha = null,
+                CommitMessage = null,
+                Status = "Running",
+                StartedAt = DateTime.UtcNow,
+                CompletedAt = null,
+                FailureReason = null,
+                ProjectName = null,
+                ServiceName = null,
+                UserName = null,
+            }
+        };
+
+        _repoMock
+            .Setup(r => r.GetReportRowsAsync(1, false, null, null, null, null, null))
+            .ReturnsAsync(entities);
+
+        var result = await _service.GetDeploymentReportAsync(1, false, new DeploymentReportQuery());
+
+        Assert.Single(result.Items);
+        var item = result.Items[0];
+        Assert.Null(item.CommitSha);
+        Assert.Null(item.CommitMessage);
+        Assert.Null(item.CompletedAt);
+        Assert.Null(item.FailureReason);
+        Assert.Null(item.ProjectName);
+        Assert.Null(item.ServiceName);
+        Assert.Null(item.UserName);
+        Assert.Null(item.DurationSeconds);
+    }
 }

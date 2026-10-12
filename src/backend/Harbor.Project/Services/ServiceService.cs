@@ -149,18 +149,28 @@ namespace Harbor.Project.Services
             }
             else
             {
-                if (request.Provider != null)
-                {
-                    service.Provider = string.IsNullOrWhiteSpace(request.Provider) ? null : request.Provider.Trim();
-                }
-
-                if (request.ProviderToken != null)
-                {
-                    service.ProviderToken = string.IsNullOrWhiteSpace(request.ProviderToken) ? null : _secretProtector.Protect(request.ProviderToken.Trim());
-                }
+if (request.Provider != null)
+            {
+                service.Provider = string.IsNullOrWhiteSpace(request.Provider) ? null : request.Provider.Trim();
             }
 
-            var updated = await _serviceRepository.UpdateAsync(service);
+            if (request.ProviderToken != null)
+            {
+                service.ProviderToken = string.IsNullOrWhiteSpace(request.ProviderToken) ? null : _secretProtector.Protect(request.ProviderToken.Trim());
+            }
+        }
+
+        if (request.BuildCommand != null)
+        {
+            service.BuildCommand = string.IsNullOrWhiteSpace(request.BuildCommand) ? null : request.BuildCommand.Trim();
+        }
+
+        if (request.StartCommand != null)
+        {
+            service.StartCommand = string.IsNullOrWhiteSpace(request.StartCommand) ? null : request.StartCommand.Trim();
+        }
+
+        var updated = await _serviceRepository.UpdateAsync(service);
             if (!updated) return (false, "Failed to update service.", null);
 
             await _cache.RemoveAsync(CacheKeys.ServicesByProject(project.Id));

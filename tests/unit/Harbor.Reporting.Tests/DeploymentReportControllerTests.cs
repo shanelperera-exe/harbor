@@ -133,4 +133,99 @@ public class DeploymentReportControllerTests
 
         Assert.IsType<UnauthorizedResult>(result.Result);
     }
+
+    [Fact]
+    public async Task GetDeploymentReport_WhenUserClaimNotAnInteger_ReturnsUnauthorized()
+    {
+        SetUserContext("not-a-number");
+
+        var query = new DeploymentReportQuery();
+        var result = await _controller.GetDeploymentReport(query);
+
+        Assert.IsType<UnauthorizedResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task GetDeploymentReport_WhenStartDateEqualsEndDate_ReturnsOk()
+    {
+        SetUserContext("42");
+
+        var sameDay = new DateTime(2026, 3, 15, 0, 0, 0, DateTimeKind.Utc);
+        var query = new DeploymentReportQuery
+        {
+            StartDate = sameDay,
+            EndDate = sameDay
+        };
+
+        var expectedReport = new DeploymentReportResponse
+        {
+            AppliedFilters = query,
+            Statistics = new DeploymentReportStatistics(),
+            Items = new List<DeploymentReportItem>()
+        };
+
+        _serviceMock
+            .Setup(s => s.GetDeploymentReportAsync(42, false, query))
+            .ReturnsAsync(expectedReport);
+
+        var result = await _controller.GetDeploymentReport(query);
+
+        var okResult = Assert.IsType<OkObjectResult>(result.Result);
+        var report = Assert.IsType<DeploymentReportResponse>(okResult.Value);
+        Assert.NotNull(report);
+    }
+
+    [Fact]
+    public async Task GetDeploymentReport_WhenOnlyStartDateProvided_ReturnsOk()
+    {
+        SetUserContext("42");
+
+        var query = new DeploymentReportQuery
+        {
+            StartDate = new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc)
+        };
+
+        var expectedReport = new DeploymentReportResponse
+        {
+            AppliedFilters = query,
+            Statistics = new DeploymentReportStatistics(),
+            Items = new List<DeploymentReportItem>()
+        };
+
+        _serviceMock
+            .Setup(s => s.GetDeploymentReportAsync(42, false, query))
+            .ReturnsAsync(expectedReport);
+
+        var result = await _controller.GetDeploymentReport(query);
+
+        var okResult = Assert.IsType<OkObjectResult>(result.Result);
+        Assert.NotNull(okResult.Value);
+    }
+
+    [Fact]
+    public async Task GetDeploymentReport_WhenOnlyEndDateProvided_ReturnsOk()
+    {
+        SetUserContext("42");
+
+        var query = new DeploymentReportQuery
+        {
+            EndDate = new DateTime(2026, 3, 31, 0, 0, 0, DateTimeKind.Utc)
+        };
+
+        var expectedReport = new DeploymentReportResponse
+        {
+            AppliedFilters = query,
+            Statistics = new DeploymentReportStatistics(),
+            Items = new List<DeploymentReportItem>()
+        };
+
+        _serviceMock
+            .Setup(s => s.GetDeploymentReportAsync(42, false, query))
+            .ReturnsAsync(expectedReport);
+
+        var result = await _controller.GetDeploymentReport(query);
+
+        var okResult = Assert.IsType<OkObjectResult>(result.Result);
+        Assert.NotNull(okResult.Value);
+    }
 }

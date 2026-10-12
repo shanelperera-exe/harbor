@@ -39,22 +39,22 @@ public class EnvironmentConfigurationService(
         if (environment is null || !environment.IsActive) return (false, "Environment not found or inactive.", false, null);
 
         // --- Validate deployment information ---
-        string? deploymentUrl = null;
-        if (!string.IsNullOrWhiteSpace(request.DeploymentUrl))
-        {
-            deploymentUrl = request.DeploymentUrl.Trim();
-            if (deploymentUrl.Length > MaxUrlLength || !Uri.TryCreate(deploymentUrl, UriKind.Absolute, out var parsedUrl)
-                || (parsedUrl.Scheme != Uri.UriSchemeHttp && parsedUrl.Scheme != Uri.UriSchemeHttps))
-                return (false, "Deployment URL must be a valid absolute http(s) URL.", false, null);
-        }
+        // Provider is REQUIRED - must be provided and non-empty
+        if (string.IsNullOrWhiteSpace(request.Provider))
+            return (false, "Provider is required.", false, null);
+        
+        var provider = request.Provider.Trim();
+        if (provider.Length > MaxProviderLength)
+            return (false, $"Provider cannot exceed {MaxProviderLength} characters.", false, null);
 
-        string? provider = null;
-        if (!string.IsNullOrWhiteSpace(request.Provider))
-        {
-            provider = request.Provider.Trim();
-            if (provider.Length > MaxProviderLength)
-                return (false, $"Provider cannot exceed {MaxProviderLength} characters.", false, null);
-        }
+        // DeploymentUrl is REQUIRED when Provider is specified
+        if (string.IsNullOrWhiteSpace(request.DeploymentUrl))
+            return (false, "Deployment URL is required when provider is specified.", false, null);
+
+        var deploymentUrl = request.DeploymentUrl.Trim();
+        if (deploymentUrl.Length > MaxUrlLength || !Uri.TryCreate(deploymentUrl, UriKind.Absolute, out var parsedUrl)
+            || (parsedUrl.Scheme != Uri.UriSchemeHttp && parsedUrl.Scheme != Uri.UriSchemeHttps))
+            return (false, "Deployment URL must be a valid absolute http(s) URL.", false, null);
 
         // --- Validate configuration + secure values (required, well-formed, unique keys) ---
         var validationError = ValidateItems(request.Configuration, "Configuration")

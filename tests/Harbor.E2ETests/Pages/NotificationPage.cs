@@ -12,19 +12,33 @@ namespace Harbor.E2ETests.Pages
         {
             _driver = driver;
             _wait = new WebDriverWait(driver, TimeSpan.FromSeconds(20));
+            _wait.IgnoreExceptionTypes(typeof(NoSuchElementException), typeof(StaleElementReferenceException));
         }
 
-        public IWebElement NotificationBellButton => _wait.Until(d => d.FindElement(By.Id("notification-bell-btn")));
-        public IWebElement NotificationBadge => _wait.Until(d => d.FindElement(By.Id("notification-badge")));
-        public IWebElement NotificationPanel => _wait.Until(d => d.FindElement(By.Id("notification-panel")));
-        public IWebElement NotificationsEmptyState => _wait.Until(d => d.FindElement(By.Id("notifications-empty")));
-        public IWebElement MarkAllReadButton => _wait.Until(d => d.FindElement(By.Id("mark-all-read-btn")));
+        private IWebElement NotificationBellButton => _wait.Until(d => d.FindElement(By.CssSelector("[data-testid='notification-bell-btn']")));
+        private IWebElement NotificationBadge => _driver.FindElement(By.CssSelector("[data-testid='notification-badge']"));
+        private IWebElement NotificationPanel => _wait.Until(d => d.FindElement(By.CssSelector("[data-testid='notification-panel']")));
+        private IWebElement NotificationsEmptyState => _driver.FindElement(By.CssSelector("[data-testid='notifications-empty']"));
+        private IWebElement MarkAllReadButton => _driver.FindElement(By.CssSelector("[data-testid='mark-all-read-btn']"));
 
         public bool IsNotificationBellVisible()
         {
             try
             {
                 return NotificationBellButton.Displayed;
+            }
+            catch (NoSuchElementException)
+            {
+                return false;
+            }
+        }
+
+        public bool IsNotificationBellPresent()
+        {
+            try
+            {
+                var el = _driver.FindElement(By.CssSelector("[data-testid='notification-bell-btn']"));
+                return el != null;
             }
             catch (NoSuchElementException)
             {
@@ -94,8 +108,8 @@ namespace Harbor.E2ETests.Pages
 
         public void ClosePanelByClickingOutside()
         {
-            // Click somewhere else on the page
-            _driver.FindElement(By.TagName("body")).Click();
+            // Click on the notification bell button again to close (more reliable than body click)
+            ClickNotificationBell();
             _wait.Until(d => !IsNotificationPanelVisible());
         }
 

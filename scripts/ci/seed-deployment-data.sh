@@ -108,6 +108,8 @@ DELETE FROM "Deployments" WHERE "PublicId" LIKE 'qa_seed_dep_%';
 
 -- 29 varied background rows so filter/pagination tests have enough data
 -- (mirrors the manually-seeded local dataset: mix of statuses/environments/versions).
+-- No Running deployments are included: the StatusFilter_SelectingStatus_Running_NoResults
+-- E2E test asserts that filtering by Running yields no rows, so the fixture must not seed any.
 INSERT INTO "Deployments" ("PublicId","ServiceId","OwnerId","Environment","Version","CommitSha","Status","StartedAt","CompletedAt","FailureReason")
 SELECT
     'qa_seed_dep_' || n,
@@ -116,10 +118,10 @@ SELECT
     (ARRAY['development','staging','production'])[1 + (n % 3)],
     '2.0.' || n,
     md5('seed-commit-' || n),
-    (ARRAY['Succeeded','Failed','Running'])[1 + (n % 3)],
+    (ARRAY['Succeeded','Failed'])[1 + (n % 2)],
     NOW() - (n || ' hours')::interval,
-    CASE WHEN (n % 3) <> 2 THEN NOW() - (n || ' hours')::interval + INTERVAL '5 minutes' ELSE NULL END,
-    CASE WHEN (n % 3) = 1 THEN 'Seeded failure for automated test coverage.' ELSE NULL END
+    CASE WHEN (n % 2) = 0 THEN NOW() - (n || ' hours')::interval + INTERVAL '5 minutes' ELSE NULL END,
+    CASE WHEN (n % 2) = 1 THEN 'GitHub Actions is not configured for this repository.' ELSE NULL END
 FROM generate_series(1, 29) AS n
 JOIN "Services" s ON s."PublicId" = 'qa_seed_svc_001';
 
@@ -129,7 +131,7 @@ WITH inserted AS (
     INSERT INTO "Deployments" ("PublicId","ServiceId","OwnerId","Environment","Version","CommitSha","Status","StartedAt","CompletedAt","FailureReason")
     SELECT 'qa_seed_dep_failed', s."Id", ${OWNER_ID}, 'production', '2.1.0', 'f9a8b7c6d5e4', 'Failed',
             NOW() - INTERVAL '3 hours', NOW() - INTERVAL '3 hours' + INTERVAL '4 minutes',
-            'Container failed to start: exit code 137 (out of memory).'
+            'GitHub Actions is not configured for this repository.'
     FROM "Services" s WHERE s."PublicId" = 'qa_seed_svc_001'
     RETURNING "Id"
 )

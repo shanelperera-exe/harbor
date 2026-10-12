@@ -148,7 +148,7 @@ SQL
 echo "Deployment test data seeded successfully."
 
 # Seed notifications for E2E tests that need real notification data
-run_psql -v ON_ERROR_STOP=1 <<SQL
+run_psql -v ON_ERROR_STOP=1 <<'SQL'
 -- Clear any existing seed notifications first
 DELETE FROM "Notifications" WHERE "UserId" = ${OWNER_ID} AND "DeploymentId" IS NOT NULL;
 

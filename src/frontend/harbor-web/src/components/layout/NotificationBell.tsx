@@ -96,8 +96,14 @@ export default function NotificationBell() {
     return () => document.removeEventListener('keydown', handleKey);
   }, []);
 
-  async function togglePanel() {
-    if (!open) await refresh();
+  // Refresh notifications when panel opens
+  useEffect(() => {
+    if (open) {
+      refresh().catch(() => {});
+    }
+  }, [open, refresh]);
+
+  function togglePanel() {
     setOpen(v => !v);
   }
 
@@ -108,6 +114,7 @@ export default function NotificationBell() {
       {/* Bell button */}
       <button
         id="notification-bell-btn"
+        data-testid="notification-bell-btn"
         type="button"
         aria-label={`Notifications${hasUnread ? ` — ${unreadCount} unread` : ''}`}
         aria-haspopup="dialog"
@@ -135,15 +142,14 @@ export default function NotificationBell() {
       </button>
 
       {/* Dropdown panel */}
-      {open && (
-        <div
-          role="dialog"
-          aria-label="Notifications panel"
-          id="notification-panel"
-          data-testid="notification-panel"
-          className="absolute right-0 top-full mt-1 z-[9999] w-[22rem] bg-white dark:bg-[oklch(0.21_0.03_263.45)] border border-gray-300 dark:border-[#525252] rounded-sm shadow-lg overflow-hidden"
-          style={{ animation: 'notifIn 0.1s ease-out' }}
-        >
+      <div
+        role="dialog"
+        aria-label="Notifications panel"
+        id="notification-panel"
+        data-testid="notification-panel"
+        className={`absolute right-0 top-full mt-1 z-[9999] w-[22rem] bg-white dark:bg-[oklch(0.21_0.03_263.45)] border border-gray-300 dark:border-[#525252] rounded-sm shadow-lg overflow-hidden ${open ? 'block' : 'hidden'}`}
+        style={{ animation: open ? 'notifIn 0.1s ease-out' : 'none' }}
+      >
           <style>{`
             @keyframes notifIn {
               from { opacity: 0; transform: scale(0.97) translateY(-4px); }
@@ -167,6 +173,7 @@ export default function NotificationBell() {
             {hasUnread && (
               <button
                 id="mark-all-read-btn"
+                data-testid="mark-all-read-btn"
                 type="button"
                 onClick={async () => { await markAllRead(); }}
                 className="flex items-center gap-1 text-[12px] text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors"
@@ -217,8 +224,7 @@ export default function NotificationBell() {
               </a>
             </div>
           )}
-        </div>
-      )}
+      </div>
     </div>
   );
 }

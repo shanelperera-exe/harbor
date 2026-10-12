@@ -108,6 +108,25 @@ namespace Harbor.E2ETests.Pages
                 // If rows exist, they must all match. If no rows, that's valid for empty results.
                 return statuses.Count == 0 || statuses.All(s => s == expected);
             });
+
+            // Wait for pagination to reset to first page (filter change should reset pagination)
+            // OR for empty result (no rows) - in which case pagination might not exist
+            _wait.Until(d =>
+            {
+                var rows = d.FindElements(By.CssSelector("[data-testid='deployment-row']"));
+                if (rows.Count == 0)
+                {
+                    return true; // Empty result - no pagination needed
+                }
+                try
+                {
+                    return ReadPageLabel().Replace(",", "").Contains("Showing 1 to ");
+                }
+                catch (NoSuchElementException)
+                {
+                    return false; // Pagination element not yet rendered
+                }
+            });
             
             // Additional small wait to ensure React rendering is complete
             System.Threading.Thread.Sleep(200);
@@ -223,16 +242,21 @@ namespace Harbor.E2ETests.Pages
                 ReadPageLabel().Replace(",", "").Contains("Showing 1 to "));
         }
 
-        public void ClickNext() => ClickPageButton(NextButton);
+        public void ClickNext() => ClickPageButton(By.CssSelector("[data-testid='next-page-button']"));
 
-        public void ClickPrevious() => ClickPageButton(PreviousButton);
+        public void ClickPrevious() => ClickPageButton(By.CssSelector("[data-testid='prev-page-button']"));
 
-        private void ClickPageButton(IWebElement button)
+        private void ClickPageButton(By locator)
         {
             var before = _wait.Until(d => ReadPageLabel());
+            
+            // Re-find button each time to avoid stale element after page reload
+            var button = _wait.Until(d => d.FindElement(locator));
             ((IJavaScriptExecutor)_driver).ExecuteScript("arguments[0].scrollIntoView({block:'center'});", button);
             _wait.Until(d => button.Displayed && button.Enabled);
-            button.Click();
+            
+            // Use JavaScript click to avoid interception/stale issues
+            ((IJavaScriptExecutor)_driver).ExecuteScript("arguments[0].click();", button);
 
             // Wait for the bar to come back with a different range, i.e. the refetch for the new
             // page has landed.

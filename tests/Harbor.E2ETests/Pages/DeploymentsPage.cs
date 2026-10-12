@@ -89,14 +89,25 @@ namespace Harbor.E2ETests.Pages
             }
 
             // Wait for dropdown animation to complete (option should be fully visible)
-            _wait.Until(d => {
-                try {
+            // Use retry loop because the option element may be re-rendered during animation
+            for (var attempt = 0; attempt < 10; attempt++)
+            {
+                try
+                {
                     var style = option.GetAttribute("style");
-                    return style == null || !style.Contains("opacity: 0") && !style.Contains("translateY(-10px)");
-                } catch {
-                    return false;
+                    if (style == null || (!style.Contains("opacity: 0") && !style.Contains("translateY(-10px)")))
+                    {
+                        break; // Animation complete
+                    }
                 }
-            });
+                catch (StaleElementReferenceException)
+                {
+                    // Re-find the option element if it went stale
+                    option = FindVisibleOptionOrNull(target, TimeSpan.FromSeconds(1));
+                    if (option == null) break;
+                }
+                System.Threading.Thread.Sleep(100);
+            }
 
             System.Threading.Thread.Sleep(300);
             ((IJavaScriptExecutor)_driver).ExecuteScript("arguments[0].scrollIntoView({block:'center'});", option);

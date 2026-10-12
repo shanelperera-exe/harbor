@@ -148,7 +148,7 @@ SQL
 echo "Deployment test data seeded successfully."
 
 # Seed notifications for E2E tests that need real notification data
-run_psql -v ON_ERROR_STOP=1 <<'SQL'
+run_psql -v ON_ERROR_STOP=1 <<SQL
 -- Clear any existing seed notifications first
 DELETE FROM "Notifications" WHERE "UserId" = ${OWNER_ID} AND "DeploymentId" IS NOT NULL;
 
@@ -197,7 +197,7 @@ FROM failed_dep f;
 
 -- Create a second test user for isolation test
 INSERT INTO "Users" ("Username", "Email", "PasswordHash", "Role", "PublicId")
-SELECT 'qa_tester3', 'qa_tester3@harbor.local', '$2a$11$dummyhashforseededuser', 'User', 'qa_seed_user_003'
+SELECT 'qa_tester3', 'qa_tester3@harbor.local', '\$2a\$11\$dummyhashforseededuser', 'User', 'qa_seed_user_003'
 WHERE NOT EXISTS (SELECT 1 FROM "Users" WHERE "Username" = 'qa_tester3');
 
 -- Get second user's ID and create notifications for them

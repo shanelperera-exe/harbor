@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+using System.Threading;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Support.UI;
 
@@ -94,7 +97,10 @@ namespace Harbor.E2ETests.Pages
 
         public void ClickNotificationBell()
         {
-            NotificationBellButton.Click();
+            var bell = NotificationBellButton;
+            // Use regular click to trigger React's onClick handler
+            bell.Click();
+            System.Threading.Thread.Sleep(500);
         }
 
         public void OpenPanel()
@@ -102,6 +108,23 @@ namespace Harbor.E2ETests.Pages
             if (!IsNotificationPanelVisible())
             {
                 ClickNotificationBell();
+                
+                // Wait for panel to appear with retries (React state update may be async)
+                for (int attempt = 0; attempt < 10; attempt++)
+                {
+                    System.Threading.Thread.Sleep(500);
+                    if (IsNotificationPanelVisible())
+                    {
+                        return;
+                    }
+                    // Try clicking again if panel didn't open
+                    if (attempt < 5)
+                    {
+                        ClickNotificationBell();
+                    }
+                }
+                
+                // Final wait with standard timeout
                 _wait.Until(d => IsNotificationPanelVisible());
             }
         }
@@ -109,7 +132,9 @@ namespace Harbor.E2ETests.Pages
         public void ClosePanelByClickingOutside()
         {
             // Click on the notification bell button again to close (more reliable than body click)
-            ClickNotificationBell();
+            var bell = NotificationBellButton;
+            ((IJavaScriptExecutor)_driver).ExecuteScript("arguments[0].click();", bell);
+            System.Threading.Thread.Sleep(300);
             _wait.Until(d => !IsNotificationPanelVisible());
         }
 

@@ -16,9 +16,7 @@ env:
   DOTNET_VERSION: "10.0.x"
   NODE_VERSION: "24"
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Job 1 — Build & lint frontend workspaces (independent of backend)
-# ─────────────────────────────────────────────────────────────────────────────
+# Job 1 — Build frontend
 jobs:
   build-frontend:
     name: Build Frontend
@@ -42,9 +40,7 @@ jobs:
         working-directory: src/frontend
         run: npm run build
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Job 2 — Restore and build the .NET solution (independent of frontend)
-# ─────────────────────────────────────────────────────────────────────────────
+  # Job 2 — Build backend
   build-backend:
     name: Build Backend
     runs-on: ubuntu-latest
@@ -63,10 +59,7 @@ jobs:
       - name: Build solution
         run: dotnet build --no-restore --configuration Release
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Job 3 — Integration and E2E tests (requires both build jobs)
-# PostgreSQL runs as a service container — no docker compose required.
-# ─────────────────────────────────────────────────────────────────────────────
+  # Job 3 — Integration and E2E tests
   test:
     name: Test
     runs-on: ubuntu-latest
@@ -83,6 +76,7 @@ jobs:
           --health-interval 5s
           --health-timeout 3s
           --health-retries 10
+
       postgres:
         image: postgres:16-alpine
         env:
@@ -117,33 +111,54 @@ jobs:
           --health-timeout 5s
           --health-retries 15
 
+      kafka:
+        image: apache/kafka:3.8.0
+        ports:
+          - 9092:9092
+        env:
+          KAFKA_NODE_ID: "1"
+          KAFKA_PROCESS_ROLES: "broker,controller"
+          KAFKA_LISTENERS: "PLAINTEXT://:9092,CONTROLLER://:9093"
+          KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://localhost:9092"
+          KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT"
+          KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+          KAFKA_CONTROLLER_QUORUM_VOTERS: "1@localhost:9093"
+          KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
+          KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: "1"
+          KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: "1"
+          KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: "0"
+
     env:
-      # ── Database ─────────────────────────────────────────────────────────
+      # Database
       POSTGRES_SERVER: localhost
       POSTGRES_PORT: "5432"
       POSTGRES_DATABASE: harbor_db
       POSTGRES_USER: harboruser
       POSTGRES_PASSWORD: harborpass
       POSTGRES_SSL_MODE: Prefer
-      # ── Auth / JWT ────────────────────────────────────────────────────────
+
+      # Auth / JWT
       JWT_SECRET: super_secret_jwt_key_that_is_at_least_32_bytes_long_for_testing
       JWT_ISSUER: HarborAuth
       JWT_AUDIENCE: HarborClients
       ADMIN_EMAIL: admin@harbor.local
       ADMIN_PASSWORD: Admin123!
-      # ── URLs ─────────────────────────────────────────────────────────────
+
+      # URLs
       API_GATEWAY_URL: http://localhost:5053
       AUTH_SERVICE_URL: http://localhost:5196
       FRONTEND_URL: http://localhost:5173
       ALLOWED_ORIGINS: "http://localhost:5173,http://localhost:5174,http://localhost:8080,http://localhost:8081"
-      # ── SMTP (stub values — no real mail sent in CI) ──────────────────────
+
+      # SMTP
       SMTP_HOST: localhost
       SMTP_PORT: "25"
       SMTP_USERNAME: test
       SMTP_PASSWORD: test
       SMTP_FROM_NAME: Harbor CI
       SMTP_FROM_EMAIL: ci@harbor.local
-      # ── GitHub App (stub values) ──────────────────────────────────────────
+
+      # GitHub App
       GH_APP_ID: "0"
       GH_APP_CLIENT_ID: test-gh-client-id
       GH_APP_CLIENT_SECRET: test-gh-client-secret
@@ -152,10 +167,12 @@ jobs:
       GH_APP_WEBHOOK_SECRET: test-gh-webhook-secret
       GH_API_BASE_URL: https://api.github.com/
       GITHUB_WEBHOOK_SECRET: test-github-webhook-secret
-      # ── Google OAuth (stub values) ────────────────────────────────────────
+
+      # Google OAuth
       GOOGLE_CLIENT_ID: test-google-client-id
       GOOGLE_CLIENT_SECRET: test-google-client-secret
-      # ── Kafka ─────────────────────────────────────────────────────────────
+
+      # Kafka
       KAFKA_CONNECTION_STRING: ""
       KAFKA_BOOTSTRAP_SERVERS: localhost:9092
       KAFKA_DEPLOYMENT_TOPIC: deployment-events
@@ -173,15 +190,12 @@ jobs:
       - name: Restore NuGet packages
         run: dotnet restore
 
-      # Build Debug so test instrumentation works without a separate build step.
       - name: Build solution (Debug)
         run: dotnet build --no-restore --configuration Debug
 
-      # Generate the secrets-encryption key at runtime so it is never stored anywhere.
       - name: Generate runtime secrets
         run: echo "ENVIRONMENT_SECRETS_KEY=$(openssl rand -base64 32)" >> $GITHUB_ENV
 
-      # Write .env so DotNetEnv picks it up when services call Env.TraversePath().Load().
       - name: Write .env for service startup
         run: |
           {
@@ -224,18 +238,16 @@ jobs:
           } > .env
 
       - name: Start backend services
-        # Services share the "schemaversions" journal table, and Harbor.Deployment
-        # migration 0007 has a foreign key onto "Services" which Harbor.Project
-        # creates. Starting everything at once races on both, so MigrationRunner
-        # retries the transient 23505/42P01 until the other service finishes.
         run: |
           dotnet run --project src/backend/Harbor.Authentication --no-build &
+
           ReverseProxy__Clusters__authCluster__Destinations__destination1__Address=http://localhost:5196 \
           ReverseProxy__Clusters__projectCluster__Destinations__destination1__Address=http://localhost:5079 \
           ReverseProxy__Clusters__deploymentCluster__Destinations__destination1__Address=http://localhost:5288 \
           ReverseProxy__Clusters__environmentCluster__Destinations__destination1__Address=http://localhost:5292 \
           ReverseProxy__Clusters__reportingCluster__Destinations__destination1__Address=http://localhost:5243 \
           dotnet run --project src/backend/Harbor.ApiGateway --no-build &
+
           dotnet run --project src/backend/Harbor.Project --no-build &
           dotnet run --project src/backend/Harbor.Deployment --no-build &
           dotnet run --project src/backend/Harbor.Environment --no-build &
@@ -281,13 +293,9 @@ jobs:
           for i in $(seq 1 30); do
             if curl -sf -o /dev/null "http://localhost:5173/"; then
               echo "Frontend is ready after ${i}s"
-              # Warm up Vite transpilation so E2E tests don't hit cold-compile delays.
               curl -sf "http://localhost:5173/src/main.tsx" > /dev/null || true
               curl -sf "http://localhost:5173/src/pages/auth/Login.tsx" > /dev/null || true
               curl -sf "http://localhost:5173/src/pages/auth/CreateAccount.tsx" > /dev/null || true
-              # Pre-warm the Deployments route so its modules are compiled before the
-              # StatusFilter E2E test navigates there; a cold compile can consume most
-              # of Selenium's wait budget and cause a spurious 20-second timeout.
               curl -sf "http://localhost:5173/src/pages/deployments/Deployments.tsx" > /dev/null || true
               curl -sf "http://localhost:5173/src/components/ui/FilterDropdown.tsx" > /dev/null || true
               # Pre-warm the Reports route for DeploymentReportTests
@@ -297,6 +305,7 @@ jobs:
             fi
             sleep 1
           done
+
           if ! curl -sf -o /dev/null "http://localhost:5173/"; then
             echo "::error::Frontend did not become ready within 30s"
             exit 1
@@ -311,7 +320,7 @@ jobs:
           ./scripts/ci/seed-deployment-data.sh
         env:
           AUTH_URL: http://localhost:5196
-          POSTGRES_CONTAINER: ""      # empty → use system psql, not docker exec
+          POSTGRES_CONTAINER: ""
           POSTGRES_HOST: localhost
           POSTGRES_PORT: "5432"
           POSTGRES_USER: harboruser
@@ -333,11 +342,6 @@ jobs:
           if-no-files-found: ignore
 
       - name: Run E2E tests
-        # Runs after unit/integration tests (which spin up Testcontainers-backed Postgres
-        # containers) have finished rather than in the same solution-wide dotnet test.
-        # MSBuild fanned that single command across parallel nodes, so Selenium/Chrome
-        # competed with Docker container startup for CPU, causing intermittent
-        # WebDriverTimeoutException on the first element-wait of the run.
         run: |
           dotnet test --no-build --configuration Debug --verbosity normal \
             tests/Harbor.E2ETests/Harbor.E2ETests.csproj \

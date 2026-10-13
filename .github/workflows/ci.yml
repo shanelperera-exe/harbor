@@ -90,6 +90,26 @@ jobs:
           --health-interval 5s
           --health-timeout 3s
           --health-retries 10
+      kafka:
+        image: apache/kafka:3.7.0
+        ports:
+          - 9092:9092
+        env:
+          KAFKA_NODE_ID: 1
+          KAFKA_PROCESS_ROLES: broker,controller
+          KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+          KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+          KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+          KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+          KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+          KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+          KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+          KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+        options: >-
+          --health-cmd "nc -zv localhost 9092"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 15
 
       kafka:
         image: apache/kafka:3.8.0
@@ -231,6 +251,7 @@ jobs:
           dotnet run --project src/backend/Harbor.Project --no-build &
           dotnet run --project src/backend/Harbor.Deployment --no-build &
           dotnet run --project src/backend/Harbor.Environment --no-build &
+          dotnet run --project src/backend/Harbor.Reporting --no-build &
 
           wait_for_http() {
             local name="$1" url="$2"
@@ -247,10 +268,11 @@ jobs:
           }
 
           wait_for_http "Harbor.Authentication" "http://localhost:5196/swagger/v1/swagger.json"
-          wait_for_http "Harbor.ApiGateway" "http://localhost:5053/health"
-          wait_for_http "Harbor.Project" "http://localhost:5079/swagger/v1/swagger.json"
-          wait_for_http "Harbor.Deployment" "http://localhost:5288/swagger/v1/swagger.json"
-          wait_for_http "Harbor.Environment" "http://localhost:5292/swagger/v1/swagger.json"
+          wait_for_http "Harbor.ApiGateway"     "http://localhost:5053/health"
+          wait_for_http "Harbor.Project"        "http://localhost:5079/swagger/v1/swagger.json"
+          wait_for_http "Harbor.Deployment"     "http://localhost:5288/swagger/v1/swagger.json"
+          wait_for_http "Harbor.Environment"    "http://localhost:5292/swagger/v1/swagger.json"
+          wait_for_http "Harbor.Reporting"      "http://localhost:5243/swagger/v1/swagger.json"
 
       - name: Setup Node.js (for frontend dev server)
         uses: actions/setup-node@v4
@@ -276,6 +298,8 @@ jobs:
               curl -sf "http://localhost:5173/src/pages/auth/CreateAccount.tsx" > /dev/null || true
               curl -sf "http://localhost:5173/src/pages/deployments/Deployments.tsx" > /dev/null || true
               curl -sf "http://localhost:5173/src/components/ui/FilterDropdown.tsx" > /dev/null || true
+              # Pre-warm the Reports route for DeploymentReportTests
+              curl -sf "http://localhost:5173/src/pages/reports/DeploymentReport.tsx" > /dev/null || true
               sleep 3
               break
             fi

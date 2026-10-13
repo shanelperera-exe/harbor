@@ -4,7 +4,7 @@ namespace Harbor.Deployment.Repositories;
 
 public interface IDeploymentRepository
 {
-    Task<(IReadOnlyList<DeploymentEntity> Items, int TotalCount)> GetHistoryAsync(int ownerId, string? projectId, string? environment, string? serviceId, string? status, int skip, int take);
+    Task<(IReadOnlyList<DeploymentEntity> Items, int TotalCount)> GetHistoryAsync(int ownerId, string? projectId, string? environment, string? serviceId, string? status, int skip, int take, bool isAdmin = false);
     Task<(IReadOnlyList<DeploymentEntity> Items, int TotalCount)> GetHistoryAsync(int ownerId, int serviceId, string? status, int skip, int take);
     Task<DeploymentEntity?> GetByIdAsync(int id, int ownerId);
     Task<DeploymentEntity?> GetEntityByIdAsync(int id);
@@ -20,6 +20,9 @@ public interface IDeploymentRepository
     Task SetWorkflowRunAsync(int deploymentId, long workflowRunId, string runUrl);
     Task<DeploymentEntity?> GetByWorkflowRunIdAsync(long workflowRunId);
     Task AddLogsAsync(int deploymentId, string logText);
+    Task<bool> UpdateDeploymentUrlAsync(int deploymentId, string deploymentUrl);
+    Task<(string? Provider, string? EncryptedToken)?> GetServiceProviderAndTokenAsync(int serviceId);
+    Task<bool> UpdateServiceDeploymentUrlAsync(int serviceId, string deploymentUrl);
 
     // ── CI Run tracking (2.1) ──────────────────────────────────────────────────
     Task<int> CreateCiRunAsync(CiRunEntity ciRun);
@@ -34,7 +37,13 @@ public interface IDeploymentRepository
     // ── Deployment rollback (2.2) ──────────────────────────────────────────────
     /// <summary>Fetches a succeeded deployment by ID (ownership verified in service layer).</summary>
     Task<DeploymentEntity?> GetSucceededForRedeployAsync(int deploymentId);
+    Task<DeploymentEntity?> GetSucceededForRedeployAsync(string identifier);
 
     /// <summary>Creates a fresh deployment record as a copy of a previous one.</summary>
     Task<int> CreateFromSourceAsync(DeploymentEntity source);
+
+    // ── Centralized dashboard (US-20) ──────────────────────────────────────────
+    Task<IReadOnlyList<DashboardProjectEntity>> GetDashboardProjectsAsync(int userId, bool isAdmin);
+    Task<IReadOnlyList<DashboardDeploymentEntity>> GetDashboardRecentDeploymentsAsync(int userId, bool isAdmin, int limit = 10);
+    Task<DashboardMetricsEntity> GetDashboardMetricsAsync(int userId, bool isAdmin);
 }

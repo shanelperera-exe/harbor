@@ -57,7 +57,7 @@ services:
     environment:
       REDIS_CONNECTION_STRING: redis:6379
     ports:
-      - "5000:8080"
+      - "${API_GATEWAY_PORT:-5000}:8080"
     volumes:
       - dp_keys:/root/.aspnet/DataProtection-Keys
     depends_on:
@@ -101,10 +101,6 @@ services:
     volumes:
       - dp_keys:/root/.aspnet/DataProtection-Keys
     healthcheck:
-      # There is no /health endpoint in this service and the runtime image has
-      # no curl. A listening TCP port is the correct signal: DatabaseInitializer
-      # runs before app.Run(), so the port only opens once migrations have
-      # completed and the "Services" table exists for deployment-service.
       test: ["CMD-SHELL", "timeout 2 bash -c '</dev/tcp/127.0.0.1/8080' || exit 1"]
       interval: 5s
       timeout: 5s
@@ -158,12 +154,6 @@ services:
         condition: service_started
       redis:
         condition: service_started
-      # Harbor.Deployment migration 0007 has a foreign key onto "Services",
-      # which project-service creates. Starting them together makes the
-      # fresh-database migration race, and Harbor.Deployment exits with
-      # 42P01: relation "Services" does not exist. depends_on only orders
-      # container start, not migration completion, so wait for the healthcheck
-      # that fires after DatabaseInitializer has finished.
       project-service:
         condition: service_healthy
     restart: unless-stopped
@@ -205,7 +195,39 @@ services:
       - "8081:80"
     restart: unless-stopped
 
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: harbor-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infrastructure/monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./infrastructure/monitoring/prometheus/alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.enable-lifecycle'
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: harbor-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./infrastructure/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./infrastructure/monitoring/grafana/dashboards:/etc/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   dp_keys:
   redis_data:
+  grafana_data:

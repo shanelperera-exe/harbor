@@ -1,7 +1,7 @@
 import { useOutletContext, useParams } from 'react-router-dom';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { IoLogoGithub, IoTimeOutline } from 'react-icons/io5';
-import { MdPublic } from 'react-icons/md';
+import { MdPublic, MdOutlineCloud } from 'react-icons/md';
 import { Copy, Loader2 } from 'lucide-react';
 import { LuExternalLink } from 'react-icons/lu';
 import { useEffect, useState } from 'react';
@@ -13,8 +13,10 @@ import { VscDebugRerun } from 'react-icons/vsc';
 import { PiTimer } from 'react-icons/pi';
 import UserAvatar from '../../components/ui/UserAvatar';
 import { getDeploymentDetails, redeployDeployment, mapDeployStatus, type DeploymentDetails as IDeploymentDetails } from '../../services/deploymentService';
+import { getServiceDomains } from '../../services/domainService';
 import { DeploymentLogs } from './DeploymentLogs';
 import { Icon } from '../../components/icons';
+import { CloudProviderBadge } from '../../components/ui/CloudProviderBadge';
 
 const getEnvironmentColorBorder = (env: string) => {
   const e = env.toLowerCase();
@@ -39,10 +41,11 @@ function readStoredUser() {
 
 export default function DeploymentDetails() {
   const { service, deployRefreshKey } = useOutletContext<{ service: any; deployRefreshKey: number }>();
-  const { deploymentId } = useParams();
+  const { projectId, deploymentId } = useParams();
   const [deployment, setDeployment] = useState<IDeploymentDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [redeploying, setRedeploying] = useState(false);
+  const [primaryDomain, setPrimaryDomain] = useState<string | null>(null);
 
   const storedUser = readStoredUser();
   const currentUsername: string = storedUser.username ?? '';
@@ -66,6 +69,17 @@ export default function DeploymentDetails() {
     };
     fetchDeploy();
   }, [deploymentId, deployRefreshKey]);
+
+  useEffect(() => {
+    if (projectId && (service?.id || service?.publicId)) {
+      getServiceDomains(projectId, service.id || service.publicId)
+        .then(domains => {
+          const primary = domains.find(d => d.isPrimary) || domains.find(d => !d.isSystem) || domains[0];
+          if (primary) setPrimaryDomain(primary.domain);
+        })
+        .catch(() => {});
+    }
+  }, [projectId, service?.id, service?.publicId]);
 
   if (!service) return null;
 
@@ -102,11 +116,17 @@ export default function DeploymentDetails() {
     return <div className="p-8 text-center text-gray-500 w-full">Deployment not found.</div>;
   }
 
-  // Find the exact URL for this deployment's environment
-  let displayUrl = service.deploymentUrl;
-  if (service.deploymentUrls && service.deploymentUrls.length > 0) {
-    const matched = service.deploymentUrls.find((d: any) => d.environment.toLowerCase() === deployment.environment.toLowerCase());
-    if (matched && matched.url) displayUrl = matched.url;
+  // Find the exact URL for this deployment (preferring immutable deployment URL from cloud provider, then service env url, then custom domains)
+  let displayUrl = deployment.deploymentUrl && deployment.deploymentUrl !== '[]' ? deployment.deploymentUrl : '';
+  if (!displayUrl && service.deploymentUrls && service.deploymentUrls.length > 0) {
+    const matched = service.deploymentUrls.find((d: any) => d.environment?.toLowerCase() === (deployment.environment || 'production').toLowerCase());
+    if (matched && matched.url && matched.url !== '[]') displayUrl = matched.url;
+  }
+  if (!displayUrl && service.deploymentUrl && service.deploymentUrl !== '[]') {
+    displayUrl = service.deploymentUrl;
+  }
+  if (!displayUrl && primaryDomain) {
+    displayUrl = primaryDomain;
   }
 
   return (
@@ -141,7 +161,7 @@ export default function DeploymentDetails() {
               <button
                 onClick={handleRedeploy}
                 disabled={redeploying}
-                className="h-10 px-4 flex items-center justify-center gap-2 bg-white dark:bg-[#1a1a1a] hover:bg-gray-50 dark:hover:bg-[#272727] text-gray-900 dark:text-white font-[Geist] font-medium border border-gray-300 dark:border-[#525252] transition-colors rounded-sm disabled:opacity-50 shadow-sm"
+                className="h-10 px-4 flex items-center justify-center gap-2 bg-white dark:bg-[#1a1a1a] hover:bg-gray-50 dark:hover:bg-[#272727] text-gray-900 dark:text-white font-[Geist] font-medium border border-gray-300 dark:border-[#525252] transition-colors rounded-sm disabled:opacity-50"
               >
                 {redeploying ? <Loader2 className="w-4 h-4 animate-spin" /> : <VscDebugRerun className="w-4 h-4" />}
                 Redeploy
@@ -248,8 +268,14 @@ export default function DeploymentDetails() {
                 <span>Deployment URL ({deployment.environment || 'Production'}):</span>
                 <a href={displayUrl ? (displayUrl.startsWith('http') ? displayUrl : `https://${displayUrl}`) : '#'} target="_blank" rel="noopener noreferrer" className="hover:underline text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
                   {displayUrl || 'No URL available'}
-                  <LuExternalLink className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                  {displayUrl && <LuExternalLink className="w-4 h-4 text-blue-600 dark:text-blue-400" />}
                 </a>
+              </div>
+
+              <div className="flex items-center gap-2 mt-2 text-[15px] text-gray-700 dark:text-[#a1a1aa] font-[Geist]">
+                <MdOutlineCloud className="flex-shrink-0 w-5 h-5 text-gray-700 dark:text-[#f0f0f0]" aria-hidden="true" />
+                <span>Cloud Provider:</span>
+                <CloudProviderBadge provider={service.provider} deploymentUrl={displayUrl} />
               </div>
             </div>
 

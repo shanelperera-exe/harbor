@@ -21,18 +21,120 @@ namespace Harbor.E2ETests.Pages
 
         public void NavigateTo()
         {
-            _driver.Navigate().GoToUrl("http://localhost:5173/login");
+            for (var attempt = 1; attempt <= 2; attempt++)
+            {
+                _driver.Navigate().GoToUrl("http://localhost:5173/login");
+
+                try
+                {
+                    _wait.Until(d => d.FindElement(By.CssSelector("[data-testid='username-input']")).Displayed);
+                    
+                    // Wait for React to fully hydrate (dev server cold compile can delay this)
+                    System.Threading.Thread.Sleep(500);
+                    return;
+                }
+                catch (WebDriverTimeoutException) when (attempt < 2)
+                {
+                    _driver.Navigate().Refresh();
+                }
+            }
         }
 
         public void Login(string username, string password)
         {
+            LoginExpectingSuccess(username, password);
+        }
+
+        public void LoginExpectingSuccess(string username, string password)
+        {
+            // Wait for React app to render (username input should be present and visible)
+            var wait = new WebDriverWait(_driver, TimeSpan.FromSeconds(30));
+            wait.Until(d => {
+                try {
+                    var el = d.FindElement(By.CssSelector("[data-testid='username-input']"));
+                    return el.Displayed;
+                } catch {
+                    return false;
+                }
+            });
+            
             UsernameInput.Clear();
             UsernameInput.SendKeys(username);
             
             PasswordInput.Clear();
             PasswordInput.SendKeys(password);
             
+            Console.WriteLine("=== Before click, URL: " + _driver.Url);
+            
             LoginButton.Click();
+            
+            // Wait for navigation away from login page - use a more robust wait
+            wait.Until(d => {
+                try {
+                    return !d.Url.Contains("/login");
+                } catch {
+                    return false;
+                }
+            });
+            Console.WriteLine("=== After wait, URL: " + _driver.Url);
+            
+            // Print browser console logs for debugging
+            try {
+                var logs = _driver.Manage().Logs.GetLog(LogType.Browser);
+                foreach (var log in logs)
+                {
+                    Console.WriteLine($"BROWSER LOG: {log.Level} - {log.Message}");
+                }
+            } catch {
+                // Ignore if logs not available
+            }
+        }
+
+        public void LoginExpectingFailure(string username, string password)
+        {
+            // Wait for React app to render
+            var wait = new WebDriverWait(_driver, TimeSpan.FromSeconds(30));
+            wait.Until(d => {
+                try {
+                    var el = d.FindElement(By.CssSelector("[data-testid='username-input']"));
+                    return el.Displayed;
+                } catch {
+                    return false;
+                }
+            });
+            
+            UsernameInput.Clear();
+            UsernameInput.SendKeys(username);
+            
+            PasswordInput.Clear();
+            PasswordInput.SendKeys(password);
+            
+            Console.WriteLine("=== Before click (expecting failure), URL: " + _driver.Url);
+            
+            LoginButton.Click();
+            
+            // Wait for error message to appear (stay on login page)
+            wait.Until(d => {
+                try {
+                    var err = d.FindElement(By.CssSelector("[data-testid='error-message']"));
+                    return err.Displayed && !string.IsNullOrEmpty(err.Text);
+                } catch {
+                    return false;
+                }
+            });
+            
+            Console.WriteLine("=== After click + error wait, URL: " + _driver.Url);
+            
+            // Print browser console logs for debugging
+            try {
+                var logs = _driver.Manage().Logs.GetLog(LogType.Browser);
+                foreach (var log in logs)
+                {
+                    Console.WriteLine($"BROWSER LOG: {log.Level} - {log.Message}");
+                }
+            } catch {
+                // Ignore if logs not available
+            }
         }
 
         public string GetErrorMessage()

@@ -13,6 +13,7 @@ using Harbor.Authentication.Services;
 using Harbor.Authentication.Models;
 using Harbor.Authentication.Repositories;
 using Harbor.Caching.Extensions;
+using Harbor.Common.Observability;
 Env.TraversePath().Load();
 
 var builder = WebApplication.CreateBuilder(args);
@@ -20,6 +21,11 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 builder.Services.AddHarborCaching(builder.Configuration);
+
+builder.Services.AddHealthChecks()
+    .AddHarborLiveness("Harbor.Authentication")
+    .AddHarborDbCheck<Harbor.Authentication.Data.DbConnectionFactory>(f => f.CreateConnection())
+    .AddHarborCacheCheck();
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedHost | ForwardedHeaders.XForwardedProto;
@@ -222,6 +228,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseHarborObservability();
 app.UseCors("DefaultPolicy");
 app.UseForwardedHeaders();
 if (!builder.Configuration.GetValue("DisableHttpsRedirection", false))
@@ -232,6 +239,7 @@ app.UseMiddleware<Harbor.Caching.Middleware.TokenBlacklistMiddleware>();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHarborObservability();
 
 app.MapGet("/api/test-db", (Harbor.Authentication.Data.DbConnectionFactory dbFactory) =>
 {

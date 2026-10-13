@@ -1,12 +1,12 @@
 using DotNetEnv;
 using Harbor.Environment.Data;
 using Harbor.Environment.Repositories;
-using Harbor.Environment.Security;
 using Harbor.Environment.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Harbor.Caching.Extensions;
+using Harbor.Common.Observability;
 
 if (string.IsNullOrEmpty(System.Environment.GetEnvironmentVariable("JWT_SECRET")))
 {
@@ -19,6 +19,11 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddHarborCaching(builder.Configuration);
 
 builder.Services.AddControllers();
+
+builder.Services.AddHealthChecks()
+    .AddHarborLiveness("Harbor.Environment")
+    .AddHarborDbCheck<Harbor.Environment.Data.DbConnectionFactory>(f => f.CreateConnection())
+    .AddHarborCacheCheck();
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
 if (allowedOrigins == null || allowedOrigins.Length == 0)
 {
@@ -65,7 +70,7 @@ builder.Services.AddScoped<IEnvironmentRepository, EnvironmentRepository>();
 builder.Services.AddScoped<IEnvironmentService, EnvironmentService>();
 builder.Services.AddScoped<IEnvironmentConfigurationRepository, EnvironmentConfigurationRepository>();
 builder.Services.AddScoped<IEnvironmentConfigurationService, EnvironmentConfigurationService>();
-builder.Services.AddSingleton<IEnvironmentSecretProtector, EnvironmentSecretProtector>();
+builder.Services.AddSingleton<Harbor.Common.Security.IHarborSecretProtector, Harbor.Common.Security.HarborSecretProtector>();
 var app = builder.Build();
 DatabaseInitializer.Initialize(app.Configuration);
 
@@ -76,6 +81,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseHarborObservability();
 app.UseCors("DefaultPolicy");
 if (!builder.Configuration.GetValue("DisableHttpsRedirection", false))
     app.UseHttpsRedirection();
@@ -85,6 +91,7 @@ app.UseMiddleware<Harbor.Caching.Middleware.TokenBlacklistMiddleware>();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHarborObservability();
 
 app.Run();
 

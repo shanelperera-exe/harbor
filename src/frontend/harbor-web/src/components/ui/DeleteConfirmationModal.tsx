@@ -44,7 +44,7 @@ export function DeleteConfirmationModal({
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 px-4" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) { onClose(); } }}>
-      <div className="inline-block w-full text-left align-middle transform page-primary bg-white dark:bg-[oklch(0.21_0.03_263.45)] shadow-lg border border-solid border-gray-300 dark:border-[#525252] max-w-xl rounded-sm">
+      <div className="inline-block w-full text-left align-middle transform page-primary bg-white dark:bg-[oklch(0.21_0.03_263.45)] border border-solid border-gray-300 dark:border-[#525252] max-w-xl rounded-sm">
         <form onSubmit={onConfirm}>
           <div className="flex flex-col gap-2 items-start border-solid border-b border-gray-300 dark:border-[#525252] p-6 relative">
             <div className="w-full">
@@ -67,7 +67,7 @@ export function DeleteConfirmationModal({
             
             {children}
             
-            <div>Type <span data-testid="expected-confirm-text" className="font-mono font-bold text-red-600 dark:text-red-400 bg-gray-100 dark:bg-[#1a1a1a] px-1.5 py-0.5 rounded border border-gray-200 dark:border-[#333] select-all shadow-sm">{expectedConfirmText}</span> below to confirm.</div>
+            <div>Type <span data-testid="expected-confirm-text" className="font-mono font-medium text-red-600 dark:text-red-400 bg-gray-100 dark:bg-[#1a1a1a] px-1.5 py-0.5 rounded border border-gray-200 dark:border-[#333] select-all">{expectedConfirmText}</span> below to confirm.</div>
             
             <div className="flex flex-col mt-2">
               <label htmlFor="sudo-command" className="sr-only">Sudo Command</label>
@@ -89,7 +89,7 @@ export function DeleteConfirmationModal({
           </div>
           
           <div className="w-full flex justify-start space-x-2 p-6 border-solid border-t border-gray-300 dark:border-[#525252]">
-            <button type="submit" data-testid="confirm-delete-button" disabled={!isDeleteConfirmed || isDeleting} className={`h-10 py-2.5 px-4 flex items-center group/button transition-colors rounded-sm font-medium ${isDeleteConfirmed && !isDeleting ? 'bg-[#e23642] hover:bg-[#c0222d] text-white cursor-pointer' : 'bg-[#fad1d3] dark:bg-red-900/30 text-[#c0222d] dark:text-red-500/50 cursor-not-allowed'}`}>
+            <button type="submit" data-testid="confirm-delete-button" disabled={!isDeleteConfirmed || isDeleting} className={`h-10 py-2.5 px-4 flex items-center group/button transition-colors rounded-sm font-medium ${isDeleteConfirmed && !isDeleting ? 'bg-red-600 hover:bg-red-700 text-white cursor-pointer' : 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 cursor-not-allowed'}`}>
               {isDeleting ? 'Deleting...' : deleteButtonLabel}
             </button>
             <button type="button" onClick={onClose} className="h-10 py-2.5 px-3 flex items-center border border-solid border-gray-300 dark:border-[#525252] hover:bg-gray-100 dark:hover:bg-[#272727] text-gray-900 dark:text-[#f0f0f0] rounded-sm transition-colors">

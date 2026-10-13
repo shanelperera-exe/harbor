@@ -1,27 +1,24 @@
+using System;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace Harbor.Environment.Security;
+namespace Harbor.Common.Security;
 
 /// <summary>
 /// AES-256-GCM secret protector. The key comes only from configuration/environment variables
 /// (see ENVIRONMENT_SECRETS_KEY in .env) — it is never hard-coded, never logged, and never
 /// returned from any endpoint.
 /// </summary>
-public class EnvironmentSecretProtector : IEnvironmentSecretProtector
+public class HarborSecretProtector : IHarborSecretProtector
 {
     private const int NonceSize = 12; // 96-bit nonce, standard for AES-GCM
     private const int TagSize = 16;   // 128-bit authentication tag
 
     private readonly byte[] _key;
 
-    public EnvironmentSecretProtector(IConfiguration configuration)
+    public HarborSecretProtector()
     {
-        // IsNullOrWhiteSpace, not "??": an unset ENVIRONMENT_SECRETS_KEY arrives as an empty
-        // string, which decodes to zero bytes and misreports the cause.
-        var keyValue = configuration["ENVIRONMENT_SECRETS_KEY"];
-        if (string.IsNullOrWhiteSpace(keyValue))
-            keyValue = System.Environment.GetEnvironmentVariable("ENVIRONMENT_SECRETS_KEY");
+        var keyValue = System.Environment.GetEnvironmentVariable("ENVIRONMENT_SECRETS_KEY");
         if (string.IsNullOrWhiteSpace(keyValue))
             throw new InvalidOperationException("ENVIRONMENT_SECRETS_KEY is not configured.");
 

@@ -1,8 +1,8 @@
 using Harbor.Environment.DTOs;
 using Harbor.Environment.Models;
 using Harbor.Environment.Repositories;
-using Harbor.Environment.Security;
 using Harbor.Environment.Services;
+using Harbor.Common.Security;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -13,7 +13,7 @@ public class EnvironmentConfigurationServiceTests
 {
     private readonly Mock<IEnvironmentRepository> _environmentRepository = new();
     private readonly Mock<IEnvironmentConfigurationRepository> _configurationRepository = new();
-    private readonly Mock<IEnvironmentSecretProtector> _secretProtector = new();
+    private readonly Mock<IHarborSecretProtector> _secretProtector = new();
     private readonly Mock<ILogger<EnvironmentConfigurationService>> _logger = new();
     private readonly EnvironmentConfigurationService _service;
 
@@ -159,7 +159,7 @@ public class EnvironmentConfigurationServiceTests
         var result = await _service.ConfigureAsync("1", 42, request, 5, false);
 
         Assert.False(result.Success);
-        Assert.Equal("Deployment URL is required.", result.Error);
+        Assert.Equal("Deployment URL is required when provider is specified.", result.Error);
         _configurationRepository.Verify(r => r.ReplaceAllAsync(It.IsAny<int>(), It.IsAny<List<EnvironmentConfigurationEntity>>()), Times.Never);
     }
 

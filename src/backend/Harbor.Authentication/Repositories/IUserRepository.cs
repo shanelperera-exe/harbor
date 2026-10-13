@@ -27,5 +27,8 @@ namespace Harbor.Authentication.Repositories
         Task<UserPreferences> UpsertPreferencesAsync(int userId, string dashboardTheme, string logTheme);
         Task<bool> RemoveExternalIdentityAsync(int userId, string provider);
         Task<bool> DeleteAccountAsync(int userId);
+        Task<List<Harbor.Authentication.DTOs.AdminUserDto>> GetAllUsersAsync();
+        Task<bool> UpdateUserRoleAsync(int userId, string role);
+        Task<bool> UpdateUserStatusAsync(int userId, string status);
     }
 }

@@ -82,7 +82,10 @@ DO \$\$
 DECLARE
     v_project_id INTEGER;
     v_service_id INTEGER;
+    v_project_alpha_id INTEGER;
+    v_service_alpha_id INTEGER;
 BEGIN
+    -- Project for DeploymentsTests (existing name)
     SELECT "Id" INTO v_project_id FROM "Projects" WHERE "Name" = 'qa_seeded_project';
     IF v_project_id IS NULL THEN
         INSERT INTO "Projects" ("Name","Description","OwnerId","PublicId")
@@ -96,6 +99,21 @@ BEGIN
         VALUES (v_project_id,'qa_seeded_service','api','qa-seeded-service','main','qa_seed_svc_001','deploy.yml')
         RETURNING "Id" INTO v_service_id;
     END IF;
+
+    -- Project Alpha for DeploymentReportTests
+    SELECT "Id" INTO v_project_alpha_id FROM "Projects" WHERE "Name" = 'Project Alpha';
+    IF v_project_alpha_id IS NULL THEN
+        INSERT INTO "Projects" ("Name","Description","OwnerId","PublicId")
+        VALUES ('Project Alpha','Alpha project for deployment report tests',${OWNER_ID},'qa_seed_proj_alpha')
+        RETURNING "Id" INTO v_project_alpha_id;
+    END IF;
+
+    SELECT "Id" INTO v_service_alpha_id FROM "Services" WHERE "ProjectId" = v_project_alpha_id;
+    IF v_service_alpha_id IS NULL THEN
+        INSERT INTO "Services" ("ProjectId","Name","Type","RepositoryName","RepositoryBranch","PublicId","WorkflowFile")
+        VALUES (v_project_alpha_id,'Alpha Service','api','alpha-service','main','qa_seed_svc_alpha','deploy.yml')
+        RETURNING "Id" INTO v_service_alpha_id;
+    END IF;
 END
 \$\$;
 
@@ -108,6 +126,8 @@ DELETE FROM "Deployments" WHERE "PublicId" LIKE 'qa_seed_dep_%';
 
 -- 29 varied background rows so filter/pagination tests have enough data
 -- (mirrors the manually-seeded local dataset: mix of statuses/environments/versions).
+-- No Running deployments are included: the StatusFilter_SelectingStatus_Running_NoResults
+-- E2E test asserts that filtering by Running yields no rows, so the fixture must not seed any.
 INSERT INTO "Deployments" ("PublicId","ServiceId","OwnerId","Environment","Version","CommitSha","Status","StartedAt","CompletedAt","FailureReason")
 SELECT
     'qa_seed_dep_' || n,
@@ -116,12 +136,29 @@ SELECT
     (ARRAY['development','staging','production'])[1 + (n % 3)],
     '2.0.' || n,
     md5('seed-commit-' || n),
-    (ARRAY['Succeeded','Failed','Running'])[1 + (n % 3)],
+    (ARRAY['Succeeded','Failed'])[1 + (n % 2)],
     NOW() - (n || ' hours')::interval,
-    CASE WHEN (n % 3) <> 2 THEN NOW() - (n || ' hours')::interval + INTERVAL '5 minutes' ELSE NULL END,
-    CASE WHEN (n % 3) = 1 THEN 'Seeded failure for automated test coverage.' ELSE NULL END
+    CASE WHEN (n % 2) = 0 THEN NOW() - (n || ' hours')::interval + INTERVAL '5 minutes' ELSE NULL END,
+    CASE WHEN (n % 2) = 1 THEN 'GitHub Actions is not configured for this repository.' ELSE NULL END
 FROM generate_series(1, 29) AS n
 JOIN "Services" s ON s."PublicId" = 'qa_seed_svc_001';
+
+-- Additional deployments for Project Alpha / Alpha Service (for DeploymentReportTests)
+-- Need at least one Succeeded + Production deployment for Scenario3
+INSERT INTO "Deployments" ("PublicId","ServiceId","OwnerId","Environment","Version","CommitSha","Status","StartedAt","CompletedAt","FailureReason")
+SELECT
+    'qa_seed_dep_alpha_' || n,
+    s."Id",
+    ${OWNER_ID},
+    (ARRAY['development','staging','production'])[1 + (n % 3)],
+    '1.0.' || n,
+    md5('alpha-commit-' || n),
+    (ARRAY['Succeeded','Failed'])[1 + (n % 2)],
+    NOW() - (n || ' hours')::interval,
+    CASE WHEN (n % 2) = 0 THEN NOW() - (n || ' hours')::interval + INTERVAL '5 minutes' ELSE NULL END,
+    CASE WHEN (n % 2) = 1 THEN 'GitHub Actions is not configured for this repository.' ELSE NULL END
+FROM generate_series(1, 10) AS n
+JOIN "Services" s ON s."PublicId" = 'qa_seed_svc_alpha';
 
 -- One specific Failed deployment with a real failure reason and real logs,
 -- required by DeploymentsTests.DetailsPanel_WithPopulatedFailedDeployment_ShowsFailureReasonAndLogs.
@@ -129,7 +166,7 @@ WITH inserted AS (
     INSERT INTO "Deployments" ("PublicId","ServiceId","OwnerId","Environment","Version","CommitSha","Status","StartedAt","CompletedAt","FailureReason")
     SELECT 'qa_seed_dep_failed', s."Id", ${OWNER_ID}, 'production', '2.1.0', 'f9a8b7c6d5e4', 'Failed',
             NOW() - INTERVAL '3 hours', NOW() - INTERVAL '3 hours' + INTERVAL '4 minutes',
-            'Container failed to start: exit code 137 (out of memory).'
+            'GitHub Actions is not configured for this repository.'
     FROM "Services" s WHERE s."PublicId" = 'qa_seed_svc_001'
     RETURNING "Id"
 )
@@ -144,3 +181,89 @@ FROM inserted, (VALUES
 SQL
 
 echo "Deployment test data seeded successfully."
+
+# Seed notifications for E2E tests that need real notification data
+run_psql -v ON_ERROR_STOP=1 <<SQL
+-- Clear any existing seed notifications first
+DELETE FROM "Notifications" WHERE "UserId" = ${OWNER_ID} AND "DeploymentId" IS NOT NULL;
+
+-- Get deployment IDs for linking notifications (using the same format as NotificationAwareDeploymentRepository)
+WITH deployments AS (
+    SELECT d."Id", d."Status", d."Environment", d."Version", d."ServiceId", d."PublicId", s."Name" AS "ServiceName"
+    FROM "Deployments" d
+    JOIN "Services" s ON d."ServiceId" = s."Id"
+    WHERE d."PublicId" LIKE 'qa_seed_dep_%'
+    LIMIT 10
+)
+INSERT INTO "Notifications" ("UserId", "DeploymentId", "Type", "Title", "Message")
+SELECT 
+    ${OWNER_ID},
+    d."Id",
+    CASE 
+        WHEN d."Status" = 'Succeeded' THEN 'success'
+        ELSE 'failure'
+    END,
+    CASE 
+        WHEN d."Status" = 'Succeeded' THEN 'Deployment succeeded — ' || d."ServiceName"
+        ELSE 'Deployment failed — ' || d."ServiceName"
+    END,
+    CASE 
+        WHEN d."Status" = 'Succeeded' 
+        THEN 'Version ' || d."Version" || ' deployed successfully to ' || d."Environment" || '.'
+        ELSE 'Version ' || d."Version" || ' failed to deploy to ' || d."Environment" || '. Reason: GitHub Actions is not configured for this repository.'
+    END
+FROM deployments d;
+
+-- Also create one unread success and one unread failure for the specific test scenarios
+WITH failed_dep AS (
+    SELECT d."Id", d."Environment", d."Version", s."Name" AS "ServiceName"
+    FROM "Deployments" d
+    JOIN "Services" s ON d."ServiceId" = s."Id"
+    WHERE d."PublicId" = 'qa_seed_dep_failed'
+)
+INSERT INTO "Notifications" ("UserId", "DeploymentId", "Type", "Title", "Message")
+SELECT 
+    ${OWNER_ID},
+    f."Id",
+    'failure',
+    'Deployment failed — ' || f."ServiceName",
+    'Version ' || f."Version" || ' failed to deploy to ' || f."Environment" || '. Reason: GitHub Actions is not configured for this repository.'
+FROM failed_dep f;
+
+-- Create a second test user for isolation test
+INSERT INTO "Users" ("Username", "Email", "PasswordHash", "Role", "PublicId")
+SELECT 'qa_tester3', 'qa_tester3@harbor.local', '\$2a\$11\$g9oGHHaC8SEGvTpCvYb7zONwAY95rOKa8CIMYburupXZrTpdpV3be', 'User', 'qa_seed_user_003'
+WHERE NOT EXISTS (SELECT 1 FROM "Users" WHERE "Username" = 'qa_tester3');
+
+-- Get second user's ID and create notifications for them
+WITH user2 AS (
+    SELECT "Id" FROM "Users" WHERE "Username" = 'qa_tester3'
+),
+dep1 AS (
+    SELECT d."Id", d."Environment", d."Version", s."Name" AS "ServiceName"
+    FROM "Deployments" d
+    JOIN "Services" s ON d."ServiceId" = s."Id"
+    WHERE d."PublicId" = 'qa_seed_dep_1'
+)
+INSERT INTO "Notifications" ("UserId", "DeploymentId", "Type", "Title", "Message")
+SELECT 
+    u2."Id",
+    d."Id",
+    'success',
+    'Deployment succeeded — ' || d."ServiceName",
+    'Version ' || d."Version" || ' deployed successfully to ' || d."Environment" || '.'
+FROM user2 u2, dep1 d;
+
+-- Mark first 3 notifications as unread for qa_tester2 (for badge/unread count tests)
+UPDATE "Notifications"
+SET "IsRead" = false
+WHERE "UserId" = ${OWNER_ID}
+  AND "Id" IN (
+    SELECT "Id" FROM "Notifications" 
+    WHERE "UserId" = ${OWNER_ID} 
+    ORDER BY "CreatedAt" DESC 
+    LIMIT 3
+  );
+SQL
+
+echo "Notification test data seeded successfully."

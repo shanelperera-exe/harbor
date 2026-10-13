@@ -11,6 +11,7 @@ import FilterDropdown from '../../components/ui/FilterDropdown';
 import { getDeploymentHistory, type Deployment, mapDeployStatus } from '../../services/deploymentService';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import ServiceHeader from './ServiceHeader';
+import SectionTitle from '../../components/ui/SectionTitle';
 import { BiSolidBolt } from "react-icons/bi";
 
 const POLL_INTERVAL_MS = 5000;
@@ -198,10 +199,11 @@ export default function ServiceDeploys() {
 
       <main className="px-4 md:px-12 mt-8 mb-20 flex flex-col gap-6">
       {/* Deployments Title */}
-      <h2 className="flex items-center justify-end gap-4 text-3xl font-medium text-gray-900 dark:text-white">
-        <Icon name="deploy" className="w-8 h-8" aria-hidden="true" />
-        Deployments
-      </h2>
+      <SectionTitle
+        icon={<Icon name="deploy" />}
+        title="Deployments"
+        description="Track every deploy of this service across your environments."
+      />
 
       {/* Search + Filters Toolbar */}
       <div className="flex flex-col gap-3">

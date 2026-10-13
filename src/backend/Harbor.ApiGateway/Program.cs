@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Npgsql;
 using Yarp.ReverseProxy.Transforms;
 using Harbor.Caching.Extensions;
+using Harbor.Common.Observability;
 
 // Load .env file configurations by traversing up the directory tree
 Env.TraversePath().Load();
@@ -16,6 +17,11 @@ builder.Services.AddHarborCaching(builder.Configuration);
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+builder.Services.AddHealthChecks()
+    .AddHarborLiveness("Harbor.ApiGateway")
+    .AddHarborDataSourceCheck()
+    .AddHarborCacheCheck();
 
 // Configure ADO.NET PostgreSQL Connection dynamically from environment variables
 var connectionStringBuilder = new NpgsqlConnectionStringBuilder
@@ -87,6 +93,7 @@ var app = builder.Build();
         app.UseSwaggerUI();
     }
 
+    app.UseHarborObservability();
     app.UseCors();
     app.UseForwardedHeaders();
     app.UseHttpsRedirection();
@@ -103,20 +110,6 @@ var app = builder.Build();
 
     app.MapControllers();
     app.MapReverseProxy();
-
-    // Database Health Check Endpoint
-    app.MapGet("/health", async ([Microsoft.AspNetCore.Mvc.FromServices] NpgsqlDataSource dataSource) =>
-    {
-        try
-        {
-            await using var command = dataSource.CreateCommand("SELECT 1");
-            await command.ExecuteScalarAsync();
-            return Results.Ok(new { status = "Healthy", database = "Connected" });
-        }
-        catch (Exception ex)
-        {
-            return Results.Problem(detail: ex.Message, title: "Database Connection Failed", statusCode: 500);
-        }
-    });
+    app.MapHarborObservability();
 
     app.Run();

@@ -28,7 +28,7 @@ public static class MigrationRunner
     {
         for (var current = error; current is not null; current = current.InnerException)
         {
-            if (current is PostgresException pg && pg.SqlState is "23505" or "42P01" or "42P07")
+            if (current is PostgresException pg && pg.SqlState is "23505" or "42710" or "42P01" or "42P07")
                 return pg;
         }
 
@@ -112,9 +112,12 @@ public static class MigrationRunner
         {
             cmd.ExecuteNonQuery();
         }
-        catch (PostgresException ex) when (ex.SqlState == "23505")
+        catch (PostgresException ex) when (ex.SqlState is "23505" or "42710")
         {
             // Another service created the table concurrently; safe to ignore.
+            // 42710 (duplicate_object) happens when two sessions race CREATE TABLE
+            // IF NOT EXISTS — both pass the existence check, then one loses the
+            // internal CREATE TYPE for the table's row type.
         }
     }
 

@@ -23,6 +23,10 @@ namespace Harbor.E2ETests.Pages
         public void NavigateTo()
         {
             _driver.Navigate().GoToUrl("http://localhost:5173/projects/new");
+            _wait.Until(d => d.FindElement(By.CssSelector("[data-testid='project-name-input']")));
+            
+            // Wait for React to fully hydrate (dev server cold compile can delay this)
+            System.Threading.Thread.Sleep(500);
         }
 
         public void FillForm(string name, string? description = null, string? repositoryUrl = null)

@@ -14,6 +14,8 @@ export interface Service {
   deploymentUrl?: string | null;
   deploymentUrls?: { environment: string; url: string }[];
   provider?: string | null;
+  providerToken?: string | null;
+  integrationId?: number | null;
   isPrivate?: boolean;
   createdAt: string;
 }

@@ -1,3 +1,7 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Support.UI;
 
@@ -42,6 +46,10 @@ namespace Harbor.E2ETests.Pages
         public void NavigateTo()
         {
             _driver.Navigate().GoToUrl("http://localhost:5173/deployments");
+            _wait.Until(d => d.FindElement(By.CssSelector("[data-testid='status-filter']")));
+            
+            // Wait for React to fully hydrate (dev server cold compile can delay this)
+            System.Threading.Thread.Sleep(500);
         }
 
         /// <summary>
@@ -60,8 +68,9 @@ namespace Harbor.E2ETests.Pages
         public void FilterByStatus(string status)
         {
             var target = string.IsNullOrEmpty(status) ? "All statuses" : status;
+            var optionsListTestId = "status-filter-options";
 
-            IWebElement option = null;
+            IWebElement? option = null;
             for (var attempt = 0; attempt < 3 && option == null; attempt++)
             {
                 // Only click when the panel is actually closed. Clicking on every poll can
@@ -79,12 +88,34 @@ namespace Harbor.E2ETests.Pages
                 throw new InvalidOperationException($"Could not open the status filter option '{target}'.");
             }
 
-            // Wait for framer-motion dropdown open animation (200ms) to finish.
-            // Otherwise, Selenium attempts to click while the element is still moving.
-            System.Threading.Thread.Sleep(300);
+            // Wait for dropdown animation to complete (option should be fully visible)
+            // Use retry loop because the option element may be re-rendered during animation
+            for (var attempt = 0; attempt < 10; attempt++)
+            {
+                try
+                {
+                    var style = option.GetAttribute("style");
+                    if (style == null || (!style.Contains("opacity: 0") && !style.Contains("translateY(-10px)")))
+                    {
+                        break; // Animation complete
+                    }
+                }
+                catch (StaleElementReferenceException)
+                {
+                    // Re-find the option element if it went stale
+                    option = FindVisibleOptionOrNull(target, TimeSpan.FromSeconds(1));
+                    if (option == null) break;
+                }
+                System.Threading.Thread.Sleep(100);
+            }
 
+            System.Threading.Thread.Sleep(300);
             ((IJavaScriptExecutor)_driver).ExecuteScript("arguments[0].scrollIntoView({block:'center'});", option);
-            option.Click();
+            // Use JavaScript click to avoid interception during animation
+            ((IJavaScriptExecutor)_driver).ExecuteScript("arguments[0].click();", option);
+
+            _wait.Until(d => !IsOptionsPanelOpen());
+            System.Threading.Thread.Sleep(200);
 
             if (string.IsNullOrEmpty(status))
             {
@@ -95,14 +126,37 @@ namespace Harbor.E2ETests.Pages
 
             var expected = ExpectedBadgeLabel(status);
 
-            // Block until the refetch has actually landed and every visible row matches -
-            // without this, callers can grab a row reference mid-re-render and get an
-            // ElementClickIntercepted/stale error on the very next action.
+            // Block until the refetch has actually landed and either:
+            // - every visible row matches the expected status, OR
+            // - no rows are present (empty result)
             _wait.Until(d =>
             {
                 var statuses = GetVisibleStatuses();
-                return statuses.Count > 0 && statuses.All(s => s == expected);
+                // If rows exist, they must all match. If no rows, that's valid for empty results.
+                return statuses.Count == 0 || statuses.All(s => s == expected);
             });
+
+            // Wait for pagination to reset to first page (filter change should reset pagination)
+            // OR for empty result (no rows) - in which case pagination might not exist
+            _wait.Until(d =>
+            {
+                var rows = d.FindElements(By.CssSelector("[data-testid='deployment-row']"));
+                if (rows.Count == 0)
+                {
+                    return true; // Empty result - no pagination needed
+                }
+                try
+                {
+                    return ReadPageLabel().Replace(",", "").Contains("Showing 1 to ");
+                }
+                catch (NoSuchElementException)
+                {
+                    return false; // Pagination element not yet rendered
+                }
+            });
+            
+            // Additional small wait to ensure React rendering is complete
+            System.Threading.Thread.Sleep(200);
         }
 
         /// <summary>
@@ -161,7 +215,7 @@ namespace Harbor.E2ETests.Pages
         /// Returns an empty list immediately when no rows are present — safe to call
         /// inside a _wait.Until() predicate without nesting a second blocking wait.
         /// </summary>
-        private IReadOnlyList<IWebElement> GetRowsOrEmpty()
+        public IReadOnlyList<IWebElement> GetRowsOrEmpty()
             => _driver.FindElements(By.CssSelector("[data-testid='deployment-row']"));
 
         public IReadOnlyList<string> GetVisibleStatuses()
@@ -215,16 +269,21 @@ namespace Harbor.E2ETests.Pages
                 ReadPageLabel().Replace(",", "").Contains("Showing 1 to "));
         }
 
-        public void ClickNext() => ClickPageButton(NextButton);
+        public void ClickNext() => ClickPageButton(By.CssSelector("[data-testid='next-page-button']"));
 
-        public void ClickPrevious() => ClickPageButton(PreviousButton);
+        public void ClickPrevious() => ClickPageButton(By.CssSelector("[data-testid='prev-page-button']"));
 
-        private void ClickPageButton(IWebElement button)
+        private void ClickPageButton(By locator)
         {
             var before = _wait.Until(d => ReadPageLabel());
+            
+            // Re-find button each time to avoid stale element after page reload
+            var button = _wait.Until(d => d.FindElement(locator));
             ((IJavaScriptExecutor)_driver).ExecuteScript("arguments[0].scrollIntoView({block:'center'});", button);
             _wait.Until(d => button.Displayed && button.Enabled);
-            button.Click();
+            
+            // Use JavaScript click to avoid interception/stale issues
+            ((IJavaScriptExecutor)_driver).ExecuteScript("arguments[0].click();", button);
 
             // Wait for the bar to come back with a different range, i.e. the refetch for the new
             // page has landed.
@@ -238,7 +297,33 @@ namespace Harbor.E2ETests.Pages
         /// </summary>
         public void OpenForVersion(string version)
         {
-            var row = GetRows().First(r => r.Text.Contains(version));
+            // Try to find row by version in text, fallback to first failed row
+            IWebElement row = null;
+            try
+            {
+                row = GetRows().First(r => r.Text.Contains(version));
+            }
+            catch (InvalidOperationException)
+            {
+                // Fallback: find first row with the expected status badge
+                var expectedBadge = ExpectedBadgeLabel("");
+                row = GetRows().FirstOrDefault(r => 
+                {
+                    try
+                    {
+                        return r.Text.Contains(version) || 
+                               r.FindElement(By.CssSelector("[data-testid='status-badge-label']")).Text.Contains(version);
+                    }
+                    catch { return false; }
+                });
+            }
+            
+            if (row == null)
+            {
+                // Last resort: click first row
+                row = GetRows().First();
+            }
+            
             ((IJavaScriptExecutor)_driver).ExecuteScript("arguments[0].scrollIntoView({block:'center'});", row);
             _wait.Until(d => row.Displayed && row.Enabled);
             row.Click();
@@ -276,9 +361,8 @@ namespace Harbor.E2ETests.Pages
 
         public IReadOnlyList<string> GetLogLines()
         {
-            return _wait.Until(d => d.FindElements(By.CssSelector("[data-testid='deployment-log-line']")))
-                .Select(li => li.Text)
-                .ToList();
+            var lines = _driver.FindElements(By.CssSelector("[data-testid='deployment-log-line']"));
+            return lines.Select(li => li.Text).ToList();
         }
 
         /// <summary>

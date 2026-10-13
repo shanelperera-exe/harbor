@@ -1,14 +1,16 @@
 import './App.css';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import Home from './pages/home/Home';
 import CreateAccount from './pages/auth/CreateAccount';
 import Login from './pages/auth/Login';
 import PasswordReset from './pages/auth/PasswordReset';
 import MainLayout from './components/layout/MainLayout';
 import DashboardLayout from './components/layout/DashboardLayout';
+import Dashboard from './pages/dashboard/Dashboard';
 import Projects from './pages/projects/Projects';
 import CreateProject from './pages/projects/CreateProject';
 import ProjectSettings from './pages/projects/ProjectSettings';
+import ProjectIntegrations from './pages/projects/ProjectIntegrations';
 import Deployments from './pages/deployments/Deployments';
 import ProjectEnvironments from './pages/projects/ProjectEnvironments';
 import EnvironmentSettings from './pages/projects/EnvironmentSettings';
@@ -20,6 +22,7 @@ import NewService from './pages/services/NewService';
 import NewServiceRepoSelection from './pages/services/NewServiceRepoSelection';
 import NewServiceConfigure from './pages/services/NewServiceConfigure';
 import ServiceDetails from './pages/services/ServiceDetails';
+import DeploymentReport from './pages/reports/DeploymentReport';
 
 function App() {
   return (
@@ -32,11 +35,14 @@ function App() {
         <Route path="/oauth/callback" element={<ExternalAuthCallback />} />
         <Route path="/github/install/callback" element={<GitHubAppInstallCallback />} />
       </Route>
-      <Route path="/dashboard" element={<Navigate to="/projects" replace />} />
+      <Route path="/dashboard" element={<DashboardLayout />}>
+        <Route index element={<Dashboard />} />
+      </Route>
       <Route path="/projects" element={<DashboardLayout />}>
         <Route index element={<Projects />} />
         <Route path="new" element={<CreateProject />} />
         <Route path=":id/settings" element={<ProjectSettings />} />
+        <Route path=":id/integrations" element={<ProjectIntegrations />} />
         <Route path=":projectId/services/new" element={<NewService />} />
         <Route path=":projectId/services/new/:serviceType" element={<NewServiceRepoSelection />} />
         <Route path=":projectId/services/new/:serviceType/configure" element={<NewServiceConfigure />} />
@@ -53,6 +59,9 @@ function App() {
       </Route>
       <Route path="/settings" element={<DashboardLayout />}>
         <Route index element={<AccountSettings />} />
+      </Route>
+      <Route path="/reports" element={<DashboardLayout />}>
+        <Route index element={<DeploymentReport />} />
       </Route>
     </Routes>
   );

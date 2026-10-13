@@ -10,6 +10,7 @@ import ServiceLogs from './ServiceLogs';
 import DeploymentDetails from './DeploymentDetails';
 import ServiceMetrics from './ServiceMetrics';
 import ServiceEnvironment from './ServiceEnvironment';
+import ServiceDomains from './ServiceDomains';
 import ServiceSettings from './ServiceSettings';
 import ServiceCiRuns from './ServiceCiRuns';
 import { createDeployment, CiGateError } from '../../services/deploymentService';
@@ -178,7 +179,9 @@ export function DeployModal({ service, projectId, onClose, onDeployed, mode = 'l
               <Icon name="projects" className="flex-shrink-0 w-5 h-5" aria-hidden="true" />
             </div>
             <div className="min-w-0">
-              <div className="text-[15px] font-medium text-white truncate">{service?.name}</div>
+              <div className="text-[15px] font-medium text-white truncate">
+                {service?.name && !service.name.startsWith('srv-') ? service.name : 'portfolio'}
+              </div>
               {service?.repositoryName && (
                 <div className="text-[13px] text-[#8f8f8f] flex items-center gap-1 truncate">
                   <FaGithub className="w-3.5 h-3.5 flex-shrink-0" />
@@ -217,7 +220,7 @@ export function DeployModal({ service, projectId, onClose, onDeployed, mode = 'l
                 </button>
 
                 {envDropdownOpen && (
-                  <ul className="absolute top-full left-0 right-0 mt-1 bg-[oklch(0.21_0.03_263.45)] border border-[#4d4d4d] rounded-sm z-[100] shadow-xl max-h-60 overflow-y-auto">
+                  <ul className="absolute top-full left-0 right-0 mt-1 bg-[oklch(0.21_0.03_263.45)] border border-[#4d4d4d] rounded-sm z-[100] max-h-60 overflow-y-auto">
                     {environments.map(env => {
                       const type = env.type.toLowerCase();
                       const isProduction = type === 'production';
@@ -286,7 +289,7 @@ export function DeployModal({ service, projectId, onClose, onDeployed, mode = 'l
                 className="h-10 truncate w-full m-0 py-2.5 pl-9 pr-3 bg-transparent border border-[#6b6b6b] hover:border-[#b3b3b3] focus:border-[#2563eb] focus:ring-1 focus:ring-[#2563eb] outline-none text-[#f0f0f0] text-[16px] placeholder:text-[#8f8f8f] transition-colors disabled:opacity-50 disabled:cursor-not-allowed rounded-sm font-mono"
               />
               {mode === 'specific' && commitDropdownOpen && commitsList.length > 0 && (
-                <ul className="absolute top-full left-0 right-0 mt-1 bg-[oklch(0.21_0.03_263.45)] border border-[#4d4d4d] rounded-sm z-[100] shadow-xl max-h-60 overflow-y-auto">
+                <ul className="absolute top-full left-0 right-0 mt-1 bg-[oklch(0.21_0.03_263.45)] border border-[#4d4d4d] rounded-sm z-[100] max-h-60 overflow-y-auto">
                   {commitsList
                     .filter(c => c.sha.startsWith(branch) || c.message.toLowerCase().includes(branch.toLowerCase()))
                     .map(commit => (
@@ -436,7 +439,7 @@ function ServiceLayout() {
 
   return (
     <div className="flex flex-col flex-1 w-full max-w-[1920px] mx-auto">
-      <Outlet context={{ service, deployRefreshKey }} />
+      <Outlet context={{ service, setService, deployRefreshKey }} />
     </div>
   );
 }
@@ -452,6 +455,7 @@ export default function ServiceDetails() {
          <Route path="logs" element={<ServiceLogs />} />
         <Route path="metrics" element={<ServiceMetrics />} />
         <Route path="environment" element={<ServiceEnvironment />} />
+        <Route path="domains" element={<ServiceDomains />} />
         <Route path="settings" element={<ServiceSettings />} />
       </Route>
     </Routes>

@@ -1,0 +1,11 @@
+CREATE TABLE IF NOT EXISTS project_integrations (
+    id SERIAL PRIMARY KEY,
+    project_id INTEGER NOT NULL REFERENCES "Projects"("Id") ON DELETE CASCADE,
+    provider_type VARCHAR(50) NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    provider_token TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+ALTER TABLE "Services"
+ADD COLUMN IF NOT EXISTS "IntegrationId" INTEGER REFERENCES project_integrations(id) ON DELETE SET NULL;

@@ -3,15 +3,17 @@ import { useParams, useOutletContext } from 'react-router-dom';
 import { Copy, Database } from 'lucide-react';
 import { IoLogoGithub } from "react-icons/io";
 import { LuExternalLink } from "react-icons/lu";
-import { MdPublic } from "react-icons/md";
+import { MdPublic, MdOutlineCloud } from "react-icons/md";
 import { BiSolidBolt } from "react-icons/bi";
 import { FiChevronDown } from 'react-icons/fi';
 import { motion } from 'motion/react';
 import { MdFiberNew } from 'react-icons/md';
 import { getDeploymentHistory, type Deployment, mapDeployStatus } from '../../services/deploymentService';
+import { getServiceDomains } from '../../services/domainService';
 import { DeployModal } from './ServiceDetails';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { Icon } from '../../components/icons';
+import { CloudProviderBadge } from '../../components/ui/CloudProviderBadge';
 
 const getEnvironmentColor = (env: string) => {
   const e = env.toLowerCase();
@@ -35,7 +37,19 @@ export default function ServiceHeader({ onDeployed }: ServiceHeaderProps) {
   const [deployMenuOpen, setDeployMenuOpen] = useState(false);
   const [deployMode, setDeployMode] = useState<'latest' | 'specific'>('latest');
   const [latestDeployed, setLatestDeployed] = useState<Deployment | null>(null);
+  const [primaryDomain, setPrimaryDomain] = useState<string | null>(null);
   const deployMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (projectId && (service?.id || service?.publicId)) {
+      getServiceDomains(projectId, service.id || service.publicId)
+        .then(domains => {
+          const primary = domains.find(d => d.isPrimary) || domains.find(d => !d.isSystem) || domains[0];
+          if (primary) setPrimaryDomain(primary.domain);
+        })
+        .catch(() => {});
+    }
+  }, [projectId, service?.id, service?.publicId]);
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -111,7 +125,9 @@ export default function ServiceHeader({ onDeployed }: ServiceHeaderProps) {
         <div className="flex flex-col md:flex-row md:items-start justify-between gap-y-4">
           <div className="flex-1 min-w-0">
             <h1 className="flex flex-wrap items-center gap-4 text-5xl font-medium text-gray-900 dark:text-white pr-4">
-              <div className="min-w-0 break-words">{service.name}</div>
+              <div className="min-w-0 break-words">
+                {service?.name && !service.name.startsWith('srv-') ? service.name : 'portfolio'}
+              </div>
             </h1>
           </div>
 
@@ -135,7 +151,7 @@ export default function ServiceHeader({ onDeployed }: ServiceHeaderProps) {
                   closed: { scaleY: 0, opacity: 0, transition: { duration: 0.2 } }
                 }}
                 style={{ originY: "top" }}
-                className="flex flex-col p-1.5 rounded-sm bg-white dark:bg-[#1a1a1a] border border-gray-300 dark:border-[#525252] absolute top-[120%] right-0 min-w-[220px] overflow-hidden z-[100] shadow-lg shadow-black/5 dark:shadow-black/20"
+                className="flex flex-col p-1.5 rounded-sm bg-white dark:bg-[#1a1a1a] border border-gray-300 dark:border-[#525252] absolute top-[120%] right-0 min-w-[220px] overflow-hidden z-[100]"
               >
                 <li
                   onClick={() => {
@@ -274,16 +290,30 @@ export default function ServiceHeader({ onDeployed }: ServiceHeaderProps) {
                   </div>
                 ))}
               </div>
-            ) : (
-              <div className="flex items-center gap-2 mt-1 text-[15px] text-gray-700 dark:text-[#a1a1aa] font-[Geist]">
-                <Icon name="globe" className="flex-shrink-0 w-5 h-5 text-gray-700 dark:text-[#f0f0f0]" aria-hidden="true" />
-                <span>Deployment URL (Production):</span>
-                <a href={service.deploymentUrl ? (service.deploymentUrl.startsWith('http') ? service.deploymentUrl : `https://${service.deploymentUrl}`) : '#'} target="_blank" rel="noopener noreferrer" className="hover:underline text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
-                  {service.deploymentUrl || 'No URL available'}
-                  <LuExternalLink className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                </a>
-              </div>
-            )}
+            ) : (() => {
+              const effectiveUrl = (service.deploymentUrl && service.deploymentUrl !== '[]') 
+                ? service.deploymentUrl 
+                : (primaryDomain || '');
+              return (
+                <div className="flex items-center gap-2 mt-1 text-[15px] text-gray-700 dark:text-[#a1a1aa] font-[Geist]">
+                  <Icon name="globe" className="flex-shrink-0 w-5 h-5 text-gray-700 dark:text-[#f0f0f0]" aria-hidden="true" />
+                  <span>Deployment URL (Production):</span>
+                  <a href={effectiveUrl ? (effectiveUrl.startsWith('http') ? effectiveUrl : `https://${effectiveUrl}`) : '#'} target="_blank" rel="noopener noreferrer" className="hover:underline text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
+                    {effectiveUrl || 'No URL available'}
+                    {effectiveUrl && <LuExternalLink className="w-4 h-4 text-blue-600 dark:text-blue-400" />}
+                  </a>
+                </div>
+              );
+            })()}
+
+            <div className="flex items-center gap-2 mt-2 text-[15px] text-gray-700 dark:text-[#a1a1aa] font-[Geist]">
+              <MdOutlineCloud className="flex-shrink-0 w-5 h-5 text-gray-700 dark:text-[#f0f0f0]" aria-hidden="true" />
+              <span>Cloud Provider:</span>
+              <CloudProviderBadge 
+                provider={service.provider} 
+                deploymentUrl={service.deploymentUrl || primaryDomain} 
+              />
+            </div>
           </div>
         </div>
       </header>

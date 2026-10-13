@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
+import lottie from 'lottie-web';
 import { ArrowRightIcon } from '../../components/ui/icons';
 import ThemeToggle from '../../components/ui/ThemeToggle';
 
@@ -104,39 +105,60 @@ const DynamicHeading = () => {
 
 export default function Home() {
   const isLoggedIn = !!localStorage.getItem('harbor_token');
+  const animationContainer = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (animationContainer.current) {
+      const anim = lottie.loadAnimation({
+        container: animationContainer.current,
+        renderer: 'svg',
+        loop: true,
+        autoplay: true,
+        path: '/animations/hero-wide.json'
+      });
+      return () => anim.destroy();
+    }
+  }, []);
 
   return (
-    <div className="w-full min-h-screen flex flex-col items-start px-5 lg:px-[78px] pt-[150px] lg:pt-[30vh]">
-      <div className="w-full max-w-[1920px] mx-auto flex flex-col justify-start">
-        <DynamicHeading />
-        
-        <p className="mt-6 lg:mt-8 text-[18px] lg:text-[22px] text-gray-600 dark:text-[#a1a1aa] font-light max-w-[650px] leading-[1.6] font-sans">
-          Centralize your DevOps lifecycle. Manage projects, configure environments, and monitor application deployments through a single, intuitive dashboard.
-        </p>
-        
-        <div className="mt-10 lg:mt-12 flex items-center">
-          <Link 
-            to={isLoggedIn ? "/projects" : "/register"} 
-            className="ease transition-colors group relative z-[1] flex cursor-pointer items-center overflow-hidden whitespace-nowrap justify-between motion-safe:duration-150 motion-reduce:duration-0 lg:motion-safe:duration-300 lg:motion-reduce:duration-0 bg-gray-900 dark:bg-white text-white dark:text-black hover:text-white dark:hover:text-white lg:hover:text-white dark:lg:hover:text-white h-[70px] text-[20px] py-[20px] px-[24px] gap-[15px] lg:[--button-arrow-offset:2px] font-sans rounded-sm"
-            style={{ letterSpacing: '0.2px', lineHeight: '150%' }}
-          >
-            {/* Animated Background Layer */}
-            <span 
-              className="ease pointer-events-none absolute inset-0 z-[0] block h-full w-full opacity-100 transition-transform origin-right scale-x-0 lg:group-hover:origin-left lg:group-hover:scale-x-100 motion-safe:duration-300 bg-[#2563eb]"
-            ></span>
-
-            {/* Button Text */}
-            <span 
-              className="ease relative z-[1] inline-block transition-transform motion-safe:duration-300 translate-x-0 group-hover:translate-x-[var(--button-arrow-offset)]"
+    <div className="w-full min-h-screen flex flex-col items-start px-5 lg:px-[78px] pt-[150px] lg:pt-[20vh] relative overflow-hidden">
+      <div className="w-full max-w-[1920px] mx-auto flex flex-col lg:flex-row justify-between items-center gap-12 lg:gap-8 z-10">
+        <div className="w-full lg:w-1/2 flex flex-col justify-start">
+          <DynamicHeading />
+          
+          <p className="mt-6 lg:mt-8 text-[18px] lg:text-[22px] text-gray-600 dark:text-[#a1a1aa] font-light max-w-[650px] leading-[1.6] font-sans">
+            Centralize your DevOps lifecycle. Manage projects, configure environments, and monitor application deployments through a single, intuitive dashboard.
+          </p>
+          
+          <div className="mt-10 lg:mt-12 flex items-center">
+            <Link 
+              to={isLoggedIn ? "/projects" : "/register"} 
+              className="ease transition-colors group relative z-[1] flex cursor-pointer items-center overflow-hidden whitespace-nowrap justify-between motion-safe:duration-150 motion-reduce:duration-0 lg:motion-safe:duration-300 lg:motion-reduce:duration-0 bg-gray-900 dark:bg-white text-white dark:text-black hover:text-white dark:hover:text-white lg:hover:text-white dark:lg:hover:text-white h-[70px] text-[20px] py-[20px] px-[24px] gap-[15px] lg:[--button-arrow-offset:2px] font-sans rounded-sm"
+              style={{ letterSpacing: '0.2px', lineHeight: '150%' }}
             >
-              {isLoggedIn ? 'Dashboard' : 'Get Started'}
-            </span>
+              {/* Animated Background Layer */}
+              <span 
+                className="ease pointer-events-none absolute inset-0 z-[0] block h-full w-full opacity-100 transition-transform origin-right scale-x-0 lg:group-hover:origin-left lg:group-hover:scale-x-100 motion-safe:duration-300 bg-[#2563eb]"
+              ></span>
 
-            {/* SVG Icon */}
-            <ArrowRightIcon className="ease relative z-[1] translate-x-0 transition-transform motion-safe:duration-300 group-hover:-translate-x-[var(--button-arrow-offset)] w-[15px] h-[15px] rotate-0 transform" />
-          </Link>
+              {/* Button Text */}
+              <span 
+                className="ease relative z-[1] inline-block transition-transform motion-safe:duration-300 translate-x-0 group-hover:translate-x-[var(--button-arrow-offset)]"
+              >
+                {isLoggedIn ? 'Dashboard' : 'Get Started'}
+              </span>
+
+              {/* SVG Icon */}
+              <ArrowRightIcon className="ease relative z-[1] translate-x-0 transition-transform motion-safe:duration-300 group-hover:-translate-x-[var(--button-arrow-offset)] w-[15px] h-[15px] rotate-0 transform" />
+            </Link>
+          </div>
         </div>
 
+        <div className="w-full lg:w-1/2 flex justify-center lg:justify-end mt-12 lg:mt-0 pointer-events-none relative">
+          <div className="w-full max-w-[700px] aspect-square lg:aspect-auto relative flex items-center justify-center">
+            <div className="w-full h-full relative z-10" ref={animationContainer}></div>
+          </div>
+        </div>
       </div>
       <ThemeToggle />
     </div>

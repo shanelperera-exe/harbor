@@ -5,6 +5,7 @@ import { Breadcrumbs } from './Breadcrumbs';
 import UserAvatar from '../ui/UserAvatar';
 import { useTheme, type Theme } from '../../contexts/ThemeContext';
 import { Icon } from '../icons';
+import NotificationBell from './NotificationBell';
 // ─── Profile dropdown ──────────────────────────────────────────────────────────
 
 function ProfileDropdown({
@@ -351,6 +352,9 @@ export default function DashboardHeader({
             <Icon name="help" aria-label="Help" />
           </button>
         </div>
+
+        {/* Notification Bell (US-21) */}
+        <NotificationBell />
 
         {/* Profile avatar + dropdown */}
         <div ref={dropdownRef} className="inline-flex relative h-full items-center">

@@ -1,6 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
-using Harbor.Environment.Security;
+using Harbor.Common.Security;
 using Microsoft.Extensions.Configuration;
 using Xunit;
 
@@ -28,15 +28,10 @@ namespace Harbor.Environment.Tests
             System.Environment.SetEnvironmentVariable(ConfigKeyName, _originalEnvValue);
         }
 
-        private static IConfiguration ConfigurationWithKey(byte[]? keyBytes = null)
+        private static void SetKeyForTest(byte[]? keyBytes = null)
         {
             var key = keyBytes ?? RandomNumberGenerator.GetBytes(32);
-            return new ConfigurationBuilder()
-                .AddInMemoryCollection(new Dictionary<string, string?>
-                {
-                    [ConfigKeyName] = Convert.ToBase64String(key)
-                })
-                .Build();
+            System.Environment.SetEnvironmentVariable(ConfigKeyName, Convert.ToBase64String(key));
         }
 
         // ---------- Round trip ----------
@@ -44,7 +39,8 @@ namespace Harbor.Environment.Tests
         [Fact]
         public void ProtectThenUnprotect_RestoresOriginalPlaintext()
         {
-            var protector = new EnvironmentSecretProtector(ConfigurationWithKey());
+            SetKeyForTest();
+            var protector = new HarborSecretProtector();
 
             const string secret = "super-secret-database-password";
 
@@ -63,7 +59,8 @@ namespace Harbor.Environment.Tests
         [InlineData("unicode: héllo wörld 日本語 🚀")]
         public void ProtectThenUnprotect_RestoresValueOfAnyShape(string plaintext)
         {
-            var protector = new EnvironmentSecretProtector(ConfigurationWithKey());
+            SetKeyForTest();
+            var protector = new HarborSecretProtector();
 
             Assert.Equal(plaintext, protector.Unprotect(protector.Protect(plaintext)));
         }
@@ -71,7 +68,8 @@ namespace Harbor.Environment.Tests
         [Fact]
         public void Protect_ProducesBase64Output()
         {
-            var protector = new EnvironmentSecretProtector(ConfigurationWithKey());
+            SetKeyForTest();
+            var protector = new HarborSecretProtector();
 
             var protectedValue = protector.Protect("secret");
 
@@ -83,7 +81,8 @@ namespace Harbor.Environment.Tests
         [Fact]
         public void Protect_IncludesNonceAndAuthenticationTag()
         {
-            var protector = new EnvironmentSecretProtector(ConfigurationWithKey());
+            SetKeyForTest();
+            var protector = new HarborSecretProtector();
             const string secret = "abcdefghijklmnopqrstuvwxyz";
 
             var combined = Convert.FromBase64String(protector.Protect(secret));
@@ -99,7 +98,8 @@ namespace Harbor.Environment.Tests
         {
             // A fresh random nonce per call means encrypting identical plaintext must not
             // produce identical output, otherwise stored secrets would be comparable.
-            var protector = new EnvironmentSecretProtector(ConfigurationWithKey());
+            SetKeyForTest();
+            var protector = new HarborSecretProtector();
 
             var first = protector.Protect("same-secret");
             var second = protector.Protect("same-secret");
@@ -112,7 +112,8 @@ namespace Harbor.Environment.Tests
         [Fact]
         public void Protect_AcrossManyCalls_AllValuesUnprotectCorrectly()
         {
-            var protector = new EnvironmentSecretProtector(ConfigurationWithKey());
+            SetKeyForTest();
+            var protector = new HarborSecretProtector();
 
             for (var i = 0; i < 50; i++)
             {
@@ -126,7 +127,8 @@ namespace Harbor.Environment.Tests
         [Fact]
         public void Unprotect_TamperedCiphertext_ThrowsAuthenticationTagMismatch()
         {
-            var protector = new EnvironmentSecretProtector(ConfigurationWithKey());
+            SetKeyForTest();
+            var protector = new HarborSecretProtector();
             var combined = Convert.FromBase64String(protector.Protect("secret-value"));
 
             // Flip a bit in the final ciphertext byte.
@@ -139,7 +141,8 @@ namespace Harbor.Environment.Tests
         [Fact]
         public void Unprotect_TamperedNonce_ThrowsAuthenticationTagMismatch()
         {
-            var protector = new EnvironmentSecretProtector(ConfigurationWithKey());
+            SetKeyForTest();
+            var protector = new HarborSecretProtector();
             var combined = Convert.FromBase64String(protector.Protect("secret-value"));
 
             combined[0] ^= 0xFF; // first byte of the nonce
@@ -151,7 +154,8 @@ namespace Harbor.Environment.Tests
         [Fact]
         public void Unprotect_TamperedTag_ThrowsAuthenticationTagMismatch()
         {
-            var protector = new EnvironmentSecretProtector(ConfigurationWithKey());
+            SetKeyForTest();
+            var protector = new HarborSecretProtector();
             var combined = Convert.FromBase64String(protector.Protect("secret-value"));
 
             combined[13] ^= 0xFF; // inside the 16-byte authentication tag
@@ -163,7 +167,8 @@ namespace Harbor.Environment.Tests
         [Fact]
         public void Unprotect_TruncatedPayload_Throws()
         {
-            var protector = new EnvironmentSecretProtector(ConfigurationWithKey());
+            SetKeyForTest();
+            var protector = new HarborSecretProtector();
             var combined = Convert.FromBase64String(protector.Protect("secret-value"));
 
             // Shorter than nonce + tag, so the slices cannot be formed.
@@ -175,7 +180,8 @@ namespace Harbor.Environment.Tests
         [Fact]
         public void Unprotect_NonBase64Input_ThrowsFormatException()
         {
-            var protector = new EnvironmentSecretProtector(ConfigurationWithKey());
+            SetKeyForTest();
+            var protector = new HarborSecretProtector();
 
             Assert.Throws<FormatException>(() => protector.Unprotect("this is not base64!!"));
         }
@@ -185,8 +191,13 @@ namespace Harbor.Environment.Tests
         [Fact]
         public void Unprotect_WithDifferentKey_ThrowsAuthenticationTagMismatch()
         {
-            var encryptor = new EnvironmentSecretProtector(ConfigurationWithKey());
-            var decryptor = new EnvironmentSecretProtector(ConfigurationWithKey());
+            SetKeyForTest();
+            var encryptor = new HarborSecretProtector();
+            
+            // Change key for decryptor
+            var newKey = RandomNumberGenerator.GetBytes(32);
+            System.Environment.SetEnvironmentVariable(ConfigKeyName, Convert.ToBase64String(newKey));
+            var decryptor = new HarborSecretProtector();
 
             var protectedValue = encryptor.Protect("secret-value");
 
@@ -197,9 +208,9 @@ namespace Harbor.Environment.Tests
         [Fact]
         public void InstancesSharingSameKey_CanDecryptEachOthersValues()
         {
-            var key = RandomNumberGenerator.GetBytes(32);
-            var first = new EnvironmentSecretProtector(ConfigurationWithKey(key));
-            var second = new EnvironmentSecretProtector(ConfigurationWithKey(key));
+            SetKeyForTest();
+            var first = new HarborSecretProtector();
+            var second = new HarborSecretProtector();
 
             Assert.Equal("shared-secret", second.Unprotect(first.Protect("shared-secret")));
         }
@@ -210,9 +221,7 @@ namespace Harbor.Environment.Tests
         public void Constructor_MissingKey_ThrowsInvalidOperationException()
         {
             System.Environment.SetEnvironmentVariable(ConfigKeyName, null);
-            var configuration = new ConfigurationBuilder().Build();
-
-            var ex = Assert.Throws<InvalidOperationException>(() => new EnvironmentSecretProtector(configuration));
+            var ex = Assert.Throws<InvalidOperationException>(() => new HarborSecretProtector());
 
             Assert.Contains(ConfigKeyName, ex.Message);
         }
@@ -220,14 +229,8 @@ namespace Harbor.Environment.Tests
         [Fact]
         public void Constructor_NonBase64Key_ThrowsInvalidOperationException()
         {
-            var configuration = new ConfigurationBuilder()
-                .AddInMemoryCollection(new Dictionary<string, string?>
-                {
-                    [ConfigKeyName] = "not-valid-base64-!!!"
-                })
-                .Build();
-
-            var ex = Assert.Throws<InvalidOperationException>(() => new EnvironmentSecretProtector(configuration));
+            System.Environment.SetEnvironmentVariable(ConfigKeyName, "not-valid-base64-!!!");
+            var ex = Assert.Throws<InvalidOperationException>(() => new HarborSecretProtector());
 
             Assert.Contains("base64", ex.Message);
         }
@@ -240,38 +243,38 @@ namespace Harbor.Environment.Tests
         [InlineData(64)]
         public void Constructor_KeyNotThirtyTwoBytes_ThrowsInvalidOperationException(int keyLength)
         {
-            var configuration = ConfigurationWithKey(RandomNumberGenerator.GetBytes(keyLength));
-
-            var ex = Assert.Throws<InvalidOperationException>(() => new EnvironmentSecretProtector(configuration));
+            System.Environment.SetEnvironmentVariable(ConfigKeyName, Convert.ToBase64String(RandomNumberGenerator.GetBytes(keyLength)));
+            var ex = Assert.Throws<InvalidOperationException>(() => new HarborSecretProtector());
 
             Assert.Contains("32 bytes", ex.Message);
         }
 
         [Fact]
-        public void Constructor_FallsBackToProcessEnvironmentVariable_WhenConfigMissing()
+        public void Constructor_ReadsKeyFromEnvironmentVariable()
         {
             var key = RandomNumberGenerator.GetBytes(32);
             System.Environment.SetEnvironmentVariable(ConfigKeyName, Convert.ToBase64String(key));
 
-            var configuration = new ConfigurationBuilder().Build();
-            var protector = new EnvironmentSecretProtector(configuration);
+            var protector = new HarborSecretProtector();
 
             Assert.Equal("env-secret", protector.Unprotect(protector.Protect("env-secret")));
         }
 
         [Fact]
-        public void Constructor_PrefersConfigurationOverProcessEnvironment()
+        public void Constructor_DifferentEnvironmentKeys_CannotDecryptEachOthersValues()
         {
-            System.Environment.SetEnvironmentVariable(ConfigKeyName, Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)));
+            // Set first key and encrypt
+            var key1 = RandomNumberGenerator.GetBytes(32);
+            System.Environment.SetEnvironmentVariable(ConfigKeyName, Convert.ToBase64String(key1));
+            var protector1 = new HarborSecretProtector();
+            var protectedValue = protector1.Protect("secret");
 
-            var configKey = RandomNumberGenerator.GetBytes(32);
-            var protector = new EnvironmentSecretProtector(ConfigurationWithKey(configKey));
+            // Change to different key and try to decrypt
+            var key2 = RandomNumberGenerator.GetBytes(32);
+            System.Environment.SetEnvironmentVariable(ConfigKeyName, Convert.ToBase64String(key2));
+            var protector2 = new HarborSecretProtector();
 
-            var other = new EnvironmentSecretProtector(ConfigurationWithKey(RandomNumberGenerator.GetBytes(32)));
-
-            // Decrypting with an unrelated instance fails, proving the config key won.
-            Assert.Throws<AuthenticationTagMismatchException>(
-                () => other.Unprotect(protector.Protect("secret")));
+            Assert.Throws<AuthenticationTagMismatchException>(() => protector2.Unprotect(protectedValue));
         }
     }
 }

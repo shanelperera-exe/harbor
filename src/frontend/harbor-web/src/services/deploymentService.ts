@@ -21,6 +21,7 @@ export interface Deployment {
   serviceName?: string | null;
   serviceType?: string | null;
   userName?: string | null;
+  deploymentUrl?: string | null;
 }
 
 export interface DeploymentLog {

@@ -8,6 +8,8 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Harbor.Deployment.Kafka;
 using Harbor.Caching.Extensions;
+using Harbor.Common.Security;
+using Harbor.Common.Observability;
 
 if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("JWT_SECRET")))
 {
@@ -20,6 +22,13 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddHarborCaching(builder.Configuration);
 
 builder.Services.AddControllers();
+
+builder.Services.AddHealthChecks()
+    .AddHarborLiveness("Harbor.Deployment")
+    .AddHarborDbCheck<Harbor.Deployment.Data.DbConnectionFactory>(f => f.CreateConnection())
+    .AddHarborCacheCheck();
+
+_ = Harbor.Deployment.Observability.HarborDeploymentMetrics.DeploymentsTotal;
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
 if (allowedOrigins == null || allowedOrigins.Length == 0)
 {
@@ -79,9 +88,21 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 builder.Services.AddAuthorization();
 builder.Services.AddSingleton<DbConnectionFactory>();
-builder.Services.AddScoped<IDeploymentRepository, DeploymentRepository>();
+// Register the real repository under its concrete type so the decorator can resolve it.
+builder.Services.AddScoped<DeploymentRepository>();
+// Decorate IDeploymentRepository: the notification-aware wrapper calls the real repo
+// and creates in-app notifications on terminal status transitions (US-21).
+builder.Services.AddScoped<IDeploymentRepository>(sp =>
+    new Harbor.Deployment.Services.NotificationAwareDeploymentRepository(
+        sp.GetRequiredService<DeploymentRepository>(),
+        sp.GetRequiredService<INotificationRepository>(),
+        sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Harbor.Deployment.Services.NotificationAwareDeploymentRepository>>()));
+builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
 builder.Services.AddScoped<IDeploymentService, DeploymentService>();
 builder.Services.AddScoped<IInstallationTokenResolver, InstallationTokenResolver>();
+builder.Services.AddSingleton<IHarborSecretProtector, HarborSecretProtector>();
+builder.Services.AddScoped<ICloudProviderSyncService, CloudProviderSyncService>();
+builder.Services.AddHttpClient();
 
 builder.Services.Configure<KafkaOptions>(options =>
 {
@@ -145,6 +166,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseHarborObservability();
 app.UseCors("DefaultPolicy");
 if (!builder.Configuration.GetValue("DisableHttpsRedirection", false))
     app.UseHttpsRedirection();
@@ -153,6 +175,7 @@ app.UseMiddleware<Harbor.Caching.Middleware.TokenBlacklistMiddleware>();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHarborObservability();
 
 app.Run();
 

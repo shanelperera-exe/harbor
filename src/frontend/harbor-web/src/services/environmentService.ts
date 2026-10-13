@@ -23,6 +23,7 @@ export interface ConfigurationItem {
 export interface SecureValueEntry {
   key: string;
   isSet: boolean;
+  value?: string;
 }
 
 export interface SecureValueInput {

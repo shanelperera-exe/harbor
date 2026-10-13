@@ -1,0 +1,1 @@
+ALTER TABLE "Services" ADD COLUMN "ProviderToken" VARCHAR(2000);

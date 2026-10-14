@@ -1,15 +1,20 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Harbor.Common.Observability;
 using Harbor.Deployment.Data;
+using Harbor.Deployment.Kafka;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Npgsql;
+using Testcontainers.PostgreSql;
 using Xunit;
 
 namespace Harbor.Observability.IntegrationTests;
@@ -18,48 +23,81 @@ public class ObservabilityTestAppFactory : WebApplicationFactory<Program>, IAsyn
 {
     public const string ScrapeToken = "observability-integration-test-scrape-token";
 
+    internal readonly PostgreSqlContainer _db = new PostgreSqlBuilder()
+        .WithImage("postgres:16-alpine")
+        .WithDatabase("harbor_observability_test")
+        .WithUsername("harbor_test")
+        .WithPassword("harbor_test")
+        .Build();
+
     public async Task InitializeAsync()
     {
-        var config = new ConfigurationBuilder().AddEnvironmentVariables().Build();
-        var connectionString = DatabaseInitializer.ResolveConnectionString(config);
+        await _db.StartAsync();
 
-        try
-        {
-            await using var connection = new NpgsqlConnection(connectionString);
-            await connection.OpenAsync();
+        await using var connection = new NpgsqlConnection(_db.GetConnectionString());
+        await connection.OpenAsync();
 
-            await using var setup = new NpgsqlCommand("""
-                CREATE TABLE IF NOT EXISTS "Projects" (
-                    "Id"         SERIAL  PRIMARY KEY,
-                    "PublicId"   VARCHAR(50),
-                    "Name"       VARCHAR(100) NOT NULL,
-                    "OwnerId"    INTEGER NOT NULL DEFAULT 1,
-                    "IsArchived" BOOLEAN NOT NULL DEFAULT FALSE,
-                    "CreatedAt"  TIMESTAMPTZ NOT NULL DEFAULT now()
-                );
+        await using var setup = new NpgsqlCommand("""
+            CREATE TABLE IF NOT EXISTS "Projects" (
+                "Id"         SERIAL  PRIMARY KEY,
+                "PublicId"   VARCHAR(50),
+                "Name"       VARCHAR(100) NOT NULL,
+                "OwnerId"    INTEGER NOT NULL DEFAULT 1,
+                "IsArchived" BOOLEAN NOT NULL DEFAULT FALSE,
+                "CreatedAt"  TIMESTAMPTZ NOT NULL DEFAULT now()
+            );
 
-                CREATE TABLE IF NOT EXISTS "Services" (
-                    "Id"             SERIAL  PRIMARY KEY,
-                    "PublicId"       VARCHAR(50),
-                    "ProjectId"      INTEGER REFERENCES "Projects"("Id"),
-                    "Name"           VARCHAR(100) NOT NULL,
-                    "Type"           VARCHAR(50) NOT NULL DEFAULT 'Backend',
-                    "RepositoryName" VARCHAR(500),
-                    "RepositoryBranch" VARCHAR(200),
-                    "WorkflowFile"   VARCHAR(200)
-                );
-            """, connection);
+            CREATE TABLE IF NOT EXISTS "Services" (
+                "Id"             SERIAL  PRIMARY KEY,
+                "PublicId"       VARCHAR(50),
+                "ProjectId"      INTEGER REFERENCES "Projects"("Id"),
+                "Name"           VARCHAR(100) NOT NULL,
+                "Type"           VARCHAR(50) NOT NULL DEFAULT 'Backend',
+                "RepositoryName" VARCHAR(500),
+                "RepositoryBranch" VARCHAR(200),
+                "WorkflowFile"   VARCHAR(200)
+            );
 
-            await setup.ExecuteNonQueryAsync();
-        }
-        catch
-        {
-            // If postgres is not directly reachable at initialization time,
-            // let Program.cs proceed normally.
-        }
+            CREATE TABLE IF NOT EXISTS "Users" (
+                "Id"       SERIAL  PRIMARY KEY,
+                "Username" VARCHAR(100) NOT NULL,
+                "Email"    VARCHAR(255) NOT NULL DEFAULT ''
+            );
+
+            CREATE TABLE IF NOT EXISTS "Environments" (
+                "Id"           SERIAL  PRIMARY KEY,
+                "PublicId"     VARCHAR(50),
+                "ProjectId"    INTEGER NOT NULL,
+                "Name"         VARCHAR(100) NOT NULL,
+                "Type"         VARCHAR(50) NOT NULL,
+                "DeploymentUrl" VARCHAR(500),
+                "IsActive"     BOOLEAN NOT NULL DEFAULT TRUE
+            );
+
+            CREATE TABLE IF NOT EXISTS "Deployments" (
+                "Id" SERIAL PRIMARY KEY,
+                "ProjectId" INTEGER NOT NULL,
+                "OwnerId" INTEGER NOT NULL,
+                "Environment" VARCHAR(100) NOT NULL,
+                "Version" VARCHAR(200) NOT NULL,
+                "CommitSha" VARCHAR(100),
+                "Status" VARCHAR(30) NOT NULL,
+                "StartedAt" TIMESTAMPTZ NOT NULL,
+                "CompletedAt" TIMESTAMPTZ,
+                "FailureReason" TEXT
+            );
+
+            CREATE INDEX IF NOT EXISTS "IX_Deployments_Owner_Project_StartedAt"
+                ON "Deployments" ("OwnerId", "ProjectId", "StartedAt" DESC);
+        """, connection);
+
+        await setup.ExecuteNonQueryAsync();
     }
 
-    public new Task DisposeAsync() => Task.CompletedTask;
+    public new async Task DisposeAsync()
+    {
+        await _db.DisposeAsync();
+    }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -72,10 +110,20 @@ public class ObservabilityTestAppFactory : WebApplicationFactory<Program>, IAsyn
                 ["JWT_ISSUER"] = "harbor",
                 ["JWT_AUDIENCE"] = "harbor-api",
                 ["DisableHttpsRedirection"] = "true",
+                ["ConnectionStrings:HarborDb"] = _db.GetConnectionString(),
                 ["KAFKA_BOOTSTRAP_SERVERS"] = "localhost:9092",
                 ["KAFKA_DEPLOYMENT_TOPIC"] = "deployment-events",
                 ["METRICS_SCRAPE_TOKEN"] = ScrapeToken
             });
+        });
+
+        builder.ConfigureServices(services =>
+        {
+            var consumerDescriptor = services.FirstOrDefault(d => d.ImplementationType?.Name == "KafkaConsumerService");
+            if (consumerDescriptor != null)
+            {
+                services.Remove(consumerDescriptor);
+            }
         });
     }
 }

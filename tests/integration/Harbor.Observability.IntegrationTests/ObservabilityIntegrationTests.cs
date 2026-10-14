@@ -5,16 +5,62 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Harbor.Common.Observability;
+using Harbor.Deployment.Data;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
+using Npgsql;
 using Xunit;
 
 namespace Harbor.Observability.IntegrationTests;
 
-public class ObservabilityTestAppFactory : WebApplicationFactory<Program>
+public class ObservabilityTestAppFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
     public const string ScrapeToken = "observability-integration-test-scrape-token";
+
+    public async Task InitializeAsync()
+    {
+        var config = new ConfigurationBuilder().AddEnvironmentVariables().Build();
+        var connectionString = DatabaseInitializer.ResolveConnectionString(config);
+
+        try
+        {
+            await using var connection = new NpgsqlConnection(connectionString);
+            await connection.OpenAsync();
+
+            await using var setup = new NpgsqlCommand("""
+                CREATE TABLE IF NOT EXISTS "Projects" (
+                    "Id"         SERIAL  PRIMARY KEY,
+                    "PublicId"   VARCHAR(50),
+                    "Name"       VARCHAR(100) NOT NULL,
+                    "OwnerId"    INTEGER NOT NULL DEFAULT 1,
+                    "IsArchived" BOOLEAN NOT NULL DEFAULT FALSE,
+                    "CreatedAt"  TIMESTAMPTZ NOT NULL DEFAULT now()
+                );
+
+                CREATE TABLE IF NOT EXISTS "Services" (
+                    "Id"             SERIAL  PRIMARY KEY,
+                    "PublicId"       VARCHAR(50),
+                    "ProjectId"      INTEGER REFERENCES "Projects"("Id"),
+                    "Name"           VARCHAR(100) NOT NULL,
+                    "Type"           VARCHAR(50) NOT NULL DEFAULT 'Backend',
+                    "RepositoryName" VARCHAR(500),
+                    "RepositoryBranch" VARCHAR(200),
+                    "WorkflowFile"   VARCHAR(200)
+                );
+            """, connection);
+
+            await setup.ExecuteNonQueryAsync();
+        }
+        catch
+        {
+            // If postgres is not directly reachable at initialization time,
+            // let Program.cs proceed normally.
+        }
+    }
+
+    public new Task DisposeAsync() => Task.CompletedTask;
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");

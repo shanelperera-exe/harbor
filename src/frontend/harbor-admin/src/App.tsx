@@ -6,6 +6,7 @@ import MainLayout from './components/layout/MainLayout';
 import DashboardLayout from './components/layout/DashboardLayout';
 import Dashboard from './pages/dashboard/Dashboard';
 import SystemHealth from './pages/health/SystemHealth';
+import Observability from './pages/observability/Observability';
 import UsersManagement from './pages/users/UsersManagement';
 import Projects from './pages/projects/Projects';
 import GlobalDomains from './pages/domains/GlobalDomains';
@@ -28,6 +29,7 @@ function App() {
       <Route element={<DashboardLayout />}>
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/health" element={<SystemHealth />} />
+        <Route path="/observability" element={<Observability />} />
         <Route path="/users" element={<UsersManagement />} />
         <Route path="/projects" element={<Projects />} />
         <Route path="/domains" element={<GlobalDomains />} />

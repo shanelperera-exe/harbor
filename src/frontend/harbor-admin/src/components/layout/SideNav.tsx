@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   Activity, 
+  LineChart,
   Users, 
   FolderGit2, 
   Globe, 
@@ -166,6 +167,7 @@ export default function SideNav({
             <NavSection title="Telemetry">
               <NavItem label="Control Plane" to="/dashboard" icon={<LayoutDashboard className="w-4 h-4" />} />
               <NavItem label="System Health" to="/health" icon={<Activity className="w-4 h-4" />} badge="Live" />
+              <NavItem label="Observability" to="/observability" icon={<LineChart className="w-4 h-4" />} />
             </NavSection>
 
             <NavSection title="Tenants & Resources">

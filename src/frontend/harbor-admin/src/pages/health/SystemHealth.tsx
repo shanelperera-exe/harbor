@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { 
   Activity, 
   RefreshCw, 
@@ -7,7 +8,8 @@ import {
   XCircle, 
   Cpu, 
   Server, 
-  Zap
+  Zap,
+  LineChart
 } from 'lucide-react';
 import { 
   getSystemHealthTelemetry, 
@@ -109,15 +111,25 @@ export default function SystemHealth() {
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={fetchTelemetry}
-          disabled={loading}
-          className="inline-flex items-center space-x-2 text-xs font-medium px-3 py-2 border border-gray-300 dark:border-[#3c4043] rounded-sm hover:bg-gray-100 dark:hover:bg-[#2c2d30] transition-colors focus:outline-none disabled:opacity-50"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-          <span>Probe All Services</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <Link
+            id="health-open-observability"
+            to="/observability"
+            className="inline-flex items-center space-x-2 text-xs font-medium px-3 py-2 border border-gray-300 dark:border-[#3c4043] rounded-sm hover:bg-gray-100 dark:hover:bg-[#2c2d30] transition-colors focus:outline-none"
+          >
+            <LineChart className="w-3.5 h-3.5" />
+            <span>Metrics Dashboards</span>
+          </Link>
+          <button
+            type="button"
+            onClick={fetchTelemetry}
+            disabled={loading}
+            className="inline-flex items-center space-x-2 text-xs font-medium px-3 py-2 border border-gray-300 dark:border-[#3c4043] rounded-sm hover:bg-gray-100 dark:hover:bg-[#2c2d30] transition-colors focus:outline-none disabled:opacity-50"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            <span>Probe All Services</span>
+          </button>
+        </div>
       </div>
 
       {/* Cluster Overview Banner */}

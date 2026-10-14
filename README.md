@@ -137,7 +137,7 @@ harbor/
 │   ├── development/                 # Local dev helper scripts
 │   ├── docker/                      # Docker helper scripts
 │   └── run-load-tests.sh            # JMeter runner
-├── .github/workflows/               # ci.yml (build/test) and cd.yml (deploy to Azure)
+├── .github/workflows/               # ci.yml (build/unit/integration), e2e.yml (E2E suite), cd.yml (deploy to Azure)
 ├── docker-compose.yml                # One-command local stack (Postgres, Mailpit, all services)
 ├── .env.example                     # Template for the required .env file
 ├── harbor_postman_collection.json    # Manual API verification collection
@@ -403,21 +403,32 @@ E2E tests are run in a **separate `dotnet test` invocation** from unit/integrati
 
 ### CI — [`ci.yml`](.github/workflows/ci.yml)
 
-Runs on every push/PR to `main`, `master`, `develop`, and `feature/*`. This pipeline **is** Harbor's automated frontend–backend integration check, not just a build step:
+Runs on every push/PR to `main`, `master`, `develop`, and `feature/*`. Designed for fast developer feedback (< 3–4 minutes):
 
-1. Generates a throwaway `.env` for the run.
-2. Starts PostgreSQL via `docker compose up -d postgres`.
-3. Installs frontend dependencies and builds both React apps (`npm run build --workspaces`).
-4. Restores and builds the whole .NET solution.
-5. Boots **all five active backend services** in the background, with the Gateway's `ReverseProxy` cluster addresses overridden via environment variables to point at the actual dynamic ports the other services started on — then polls each service's `/swagger` or `/health` endpoint until it responds before continuing.
-6. Boots the **harbor-web** dev server with `VITE_API_BASE_URL` pointed at the live Gateway, and warms up Vite's transpilation of the pages E2E tests will hit.
-7. Seeds deployment test data by calling the real Authentication API and inserting via `psql` ([`scripts/ci/seed-deployment-data.sh`](scripts/ci/seed-deployment-data.sh)).
-8. Runs unit + integration tests.
-9. Runs the full Selenium E2E suite against the live frontend + live backend + live database, as a separate step (see [Testing Strategy](#testing-strategy) for why).
+1. **Build Frontend**: Installs dependencies and builds all React workspaces (`npm run build`).
+2. **Build Backend**: Restores NuGet dependencies and compiles the .NET solution (`dotnet build -c Release`).
+3. **Unit & Integration Tests**: Runs in parallel after backend build using lightweight container services (PostgreSQL, Redis, Kafka) with ASP.NET Core `WebApplicationFactory` (`dotnet test --filter "FullyQualifiedName!~Harbor.E2ETests"`). Test results are saved as TRX artifacts.
+
+### E2E Testing — [`e2e.yml`](.github/workflows/e2e.yml)
+
+Harbor decouples heavy browser-based End-to-End tests from standard PR pushes to prevent CI bottlenecks and flakiness. The full Selenium test suite runs in a dedicated pipeline:
+
+1. **Nightly Schedule**: Automatically runs every day at 02:00 UTC against `main`.
+2. **On-Demand (`workflow_dispatch`)**: Can be manually triggered from the GitHub Actions tab for any branch, with an optional test filter parameter (e.g. `FullyQualifiedName~DeploymentsTests`).
+3. **PR Opt-In via Label**: Add the `run-e2e` or `e2e` label to any Pull Request to automatically trigger the full E2E suite before merging.
+4. **Post-Merge**: Runs on push to `main` to ensure regression validation.
+
+**Workflow Steps:**
+1. Spins up PostgreSQL, Redis, and Kafka container services and generates a runtime `.env`.
+2. Restores and builds the .NET solution in Debug mode.
+3. Boots all backend services (`Authentication`, `ApiGateway`, `Project`, `Deployment`, `Environment`, `Reporting`) in the background and polls `/health` and `/swagger` endpoints.
+4. Starts the frontend Vite dev server and pre-warms routes.
+5. Seeds deployment test data via [`scripts/ci/seed-deployment-data.sh`](scripts/ci/seed-deployment-data.sh).
+6. Executes headless Chrome Selenium tests (`tests/Harbor.E2ETests/Harbor.E2ETests.csproj`), uploading TRX test reports and backend/frontend debug logs on failure.
 
 ### CD — [`cd.yml`](.github/workflows/cd.yml)
 
-Runs on push to `main` (or manually). Builds and pushes all backend service images to Azure Container Registry, then deploys the five backend APIs as *internal* Azure Container Apps and the Gateway + two frontends as *external* Container Apps, wired together via `ReverseProxy` addresses at deploy time. Full step-by-step Azure setup is documented in [`docs/azure-deployment-guide.md`](docs/azure-deployment-guide.md).
+Runs on push to `main` (triggered automatically when CI succeeds) or manually via `workflow_dispatch`. Builds and pushes all backend service images to Azure Container Registry, then deploys the backend APIs as *internal* Azure Container Apps and the Gateway + frontends as *external* Container Apps, wired together via `ReverseProxy` addresses at deploy time. Full step-by-step Azure setup is documented in [`docs/azure-deployment-guide.md`](docs/azure-deployment-guide.md).
 
 ---
 

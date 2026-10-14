@@ -12,11 +12,13 @@ public static class HarborObservabilityExtensions
     /// <summary>
     /// Adds Correlation ID, Global Exception Handling, and Prometheus HTTP metrics middleware to the HTTP request pipeline.
     /// Should be placed near the beginning of the pipeline.
+    /// Also guards /metrics with <see cref="MetricsEndpointGuardMiddleware"/> (bearer scrape token).
     /// </summary>
     public static IApplicationBuilder UseHarborObservability(this IApplicationBuilder app)
     {
         app.UseMiddleware<CorrelationIdMiddleware>();
         app.UseMiddleware<GlobalExceptionHandlingMiddleware>();
+        app.UseMiddleware<MetricsEndpointGuardMiddleware>();
         app.UseHttpMetrics();
         return app;
     }

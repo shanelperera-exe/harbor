@@ -1,0 +1,15 @@
+# Prometheus image for Azure Container Apps. Build context: infrastructure/monitoring
+#   docker build -f infrastructure/monitoring/prometheus/Dockerfile.azure infrastructure/monitoring
+FROM prom/prometheus:v2.51.0
+
+COPY prometheus/prometheus.azure.yml /etc/prometheus/prometheus.yml
+COPY prometheus/alert_rules.yml /etc/prometheus/alert_rules.yml
+COPY prometheus/docker-entrypoint.azure.sh /etc/prometheus/docker-entrypoint.sh
+
+USER nobody
+EXPOSE 9090
+
+# TODO(security/ops): /prometheus is ephemeral; mount an Azure Files volume to keep
+# TSDB history across restarts and redeploys.
+ENTRYPOINT ["/bin/sh", "/etc/prometheus/docker-entrypoint.sh"]
+CMD []

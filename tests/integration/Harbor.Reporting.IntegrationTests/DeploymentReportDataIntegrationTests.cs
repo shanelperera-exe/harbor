@@ -27,6 +27,45 @@ public class DeploymentReportDataIntegrationTests : IClassFixture<ReportingApiFa
         await using var conn = new NpgsqlConnection(ReportingApiFactory.TestConnectionString);
         await conn.OpenAsync();
 
+        // Ensure tables exist
+        await using var setupCmd = new NpgsqlCommand(@"
+            CREATE TABLE IF NOT EXISTS ""Users"" (
+                ""Id"" SERIAL PRIMARY KEY,
+                ""Username"" VARCHAR(100) NOT NULL,
+                ""Email"" VARCHAR(200),
+                ""PasswordHash"" VARCHAR(255) NOT NULL DEFAULT 'test-hash',
+                ""Role"" VARCHAR(50) NOT NULL DEFAULT 'User'
+            );
+            CREATE TABLE IF NOT EXISTS ""Projects"" (
+                ""Id"" SERIAL PRIMARY KEY,
+                ""PublicId"" VARCHAR(50),
+                ""Name"" VARCHAR(100) NOT NULL,
+                ""OwnerId"" INTEGER NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS ""Services"" (
+                ""Id"" SERIAL PRIMARY KEY,
+                ""PublicId"" VARCHAR(50),
+                ""ProjectId"" INTEGER,
+                ""Name"" VARCHAR(100) NOT NULL,
+                ""Type"" VARCHAR(50) NOT NULL DEFAULT 'Backend'
+            );
+            CREATE TABLE IF NOT EXISTS ""Deployments"" (
+                ""Id"" SERIAL PRIMARY KEY,
+                ""PublicId"" VARCHAR(50),
+                ""ServiceId"" INTEGER,
+                ""OwnerId"" INTEGER,
+                ""Environment"" VARCHAR(50),
+                ""Version"" VARCHAR(50),
+                ""CommitSha"" VARCHAR(100),
+                ""CommitMessage"" TEXT,
+                ""Status"" VARCHAR(50),
+                ""StartedAt"" TIMESTAMPTZ NOT NULL DEFAULT now(),
+                ""CompletedAt"" TIMESTAMPTZ,
+                ""FailureReason"" TEXT
+            );
+        ", conn);
+        await setupCmd.ExecuteNonQueryAsync();
+
         // Clean tables
         await using var cleanCmd = new NpgsqlCommand(@"
             TRUNCATE TABLE ""Deployments"", ""Services"", ""Projects"", ""Users"" CASCADE;
@@ -35,9 +74,9 @@ public class DeploymentReportDataIntegrationTests : IClassFixture<ReportingApiFa
 
         // Seed Users
         await using var seedUsers = new NpgsqlCommand(@"
-            INSERT INTO ""Users"" (""Id"", ""Username"", ""Email"") VALUES
-            (101, 'developer1', 'dev1@example.com'),
-            (102, 'developer2', 'dev2@example.com');
+            INSERT INTO ""Users"" (""Id"", ""PublicId"", ""Username"", ""Email"", ""PasswordHash"", ""Role"") VALUES
+            (101, 'usr-dev-1', 'developer1', 'dev1@example.com', 'test-hash', 'User'),
+            (102, 'usr-dev-2', 'developer2', 'dev2@example.com', 'test-hash', 'User');
         ", conn);
         await seedUsers.ExecuteNonQueryAsync();
 

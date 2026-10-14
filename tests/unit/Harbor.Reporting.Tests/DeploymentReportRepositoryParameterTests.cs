@@ -9,28 +9,23 @@ public class DeploymentReportRepositoryParameterTests
 {
     private readonly ReportingDbConnectionFactory _dbFactory;
 
-public DeploymentReportRepositoryParameterTests()
+    static DeploymentReportRepositoryParameterTests()
+    {
+        try
         {
-            // Use environment variables for connection (matching CI setup) with local defaults.
-            // In CI, these are set by the GitHub Actions workflow:
-            // POSTGRES_SERVER=localhost, POSTGRES_PORT=5432, POSTGRES_DATABASE=harbor_db,
-            // POSTGRES_USER=harboruser, POSTGRES_PASSWORD=harborpass
-            var inMemorySettings = new Dictionary<string, string?>
-            {
-                // Don't set ConnectionStrings:HarborDb - let the factory fall back to env vars
-                // This matches the CI environment where POSTGRES_* env vars are configured
-                ["POSTGRES_SERVER"] = Environment.GetEnvironmentVariable("POSTGRES_SERVER") ?? "localhost",
-                ["POSTGRES_PORT"] = Environment.GetEnvironmentVariable("POSTGRES_PORT") ?? "5432",
-                ["POSTGRES_DATABASE"] = Environment.GetEnvironmentVariable("POSTGRES_DATABASE") ?? "harbor_db",
-                ["POSTGRES_USER"] = Environment.GetEnvironmentVariable("POSTGRES_USER") ?? "harboruser",
-                ["POSTGRES_PASSWORD"] = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD") ?? "harborpass",
-            };
-            IConfiguration config = new ConfigurationBuilder()
-                .AddInMemoryCollection(inMemorySettings)
-                .Build();
-
-            _dbFactory = new ReportingDbConnectionFactory(config);
+            DotNetEnv.Env.TraversePath().Load();
         }
+        catch
+        {
+            // Ignore if .env is missing or unreadable
+        }
+    }
+
+    public DeploymentReportRepositoryParameterTests()
+    {
+        IConfiguration config = new ConfigurationBuilder().Build();
+        _dbFactory = new ReportingDbConnectionFactory(config);
+    }
 
         private bool CanConnect()
         {
@@ -38,6 +33,50 @@ public DeploymentReportRepositoryParameterTests()
             {
                 using var conn = _dbFactory.CreateConnection();
                 conn.Open();
+
+                using var cmd = conn.CreateCommand();
+                cmd.CommandText = """
+                    CREATE TABLE IF NOT EXISTS "Users" (
+                        "Id" SERIAL PRIMARY KEY,
+                        "PublicId" VARCHAR(50) DEFAULT 'usr-test',
+                        "Username" VARCHAR(100) NOT NULL,
+                        "Email" VARCHAR(200),
+                        "PasswordHash" VARCHAR(255) NOT NULL DEFAULT 'test-hash',
+                        "Role" VARCHAR(50) NOT NULL DEFAULT 'User'
+                    );
+
+                    CREATE TABLE IF NOT EXISTS "Projects" (
+                        "Id" SERIAL PRIMARY KEY,
+                        "PublicId" VARCHAR(50) DEFAULT 'prj-test',
+                        "Name" VARCHAR(100) NOT NULL,
+                        "OwnerId" INTEGER NOT NULL DEFAULT 1
+                    );
+
+                    CREATE TABLE IF NOT EXISTS "Services" (
+                        "Id" SERIAL PRIMARY KEY,
+                        "PublicId" VARCHAR(50) DEFAULT 'srv-test',
+                        "ProjectId" INTEGER,
+                        "Name" VARCHAR(100) NOT NULL,
+                        "Type" VARCHAR(50) NOT NULL DEFAULT 'Backend'
+                    );
+
+                    CREATE TABLE IF NOT EXISTS "Deployments" (
+                        "Id" SERIAL PRIMARY KEY,
+                        "PublicId" VARCHAR(50),
+                        "ServiceId" INTEGER,
+                        "OwnerId" INTEGER,
+                        "Environment" VARCHAR(50),
+                        "Version" VARCHAR(50),
+                        "CommitSha" VARCHAR(100),
+                        "CommitMessage" TEXT,
+                        "Status" VARCHAR(50),
+                        "StartedAt" TIMESTAMPTZ NOT NULL DEFAULT now(),
+                        "CompletedAt" TIMESTAMPTZ,
+                        "FailureReason" TEXT
+                    );
+                """;
+                cmd.ExecuteNonQuery();
+
                 return true;
             }
             catch

@@ -143,21 +143,21 @@ public class KafkaConsumerService : BackgroundService
 
     internal string? DetermineNewState(string currentStatus, string eventStatus)
     {
-        if (currentStatus == "Successful" || currentStatus == "Failed")
+        if (currentStatus == "Successful" || currentStatus == "Succeeded" || currentStatus == "Failed")
         {
             return null; // Terminal state, cannot transition further
         }
 
-        if (currentStatus == "Running" && eventStatus == "DeploymentStarted")
+        if (currentStatus == "Running" && (eventStatus == "DeploymentStarted" || eventStatus == "Running"))
         {
             return null; // Already running
         }
 
         return eventStatus switch
         {
-            "DeploymentStarted" => "Running",
-            "DeploymentSucceeded" => "Successful",
-            "DeploymentFailed" => "Failed",
+            "DeploymentStarted" or "Running" => "Running",
+            "DeploymentSucceeded" or "Succeeded" or "Successful" => "Successful",
+            "DeploymentFailed" or "Failed" => "Failed",
             _ => null // Unknown event status
         };
     }

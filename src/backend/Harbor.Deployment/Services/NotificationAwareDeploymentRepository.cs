@@ -20,7 +20,7 @@ public class NotificationAwareDeploymentRepository(
     {
         var updated = await inner.UpdateStatusAsync(deploymentId, status, failureReason);
 
-        if (updated && (status == "Successful" || status == "Failed"))
+        if (updated && IsTerminal(status))
         {
             await TryCreateNotificationAsync(deploymentId, status, failureReason);
         }
@@ -28,12 +28,40 @@ public class NotificationAwareDeploymentRepository(
         return updated;
     }
 
+    public async Task<bool> UpdateTriggerResultAsync(int deploymentId, string status, string? failureReason, string? triggerError)
+    {
+        var updated = await inner.UpdateTriggerResultAsync(deploymentId, status, failureReason, triggerError);
+
+        if (updated && IsTerminal(status))
+        {
+            await TryCreateNotificationAsync(deploymentId, status, failureReason);
+        }
+
+        return updated;
+    }
+
+    private static bool IsTerminal(string status) =>
+        status.Equals("Successful", StringComparison.OrdinalIgnoreCase) ||
+        status.Equals("Succeeded", StringComparison.OrdinalIgnoreCase) ||
+        status.Equals("Failed", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsSuccess(string status) =>
+        status.Equals("Successful", StringComparison.OrdinalIgnoreCase) ||
+        status.Equals("Succeeded", StringComparison.OrdinalIgnoreCase);
+
     // ── Notification helper ───────────────────────────────────────────────────
 
     private async Task TryCreateNotificationAsync(int deploymentId, string status, string? failureReason)
     {
         try
         {
+            // Check for duplicate notification before creating
+            if (await notificationRepository.ExistsForDeploymentAsync(deploymentId))
+            {
+                logger.LogInformation("Notification already exists for deployment {DeploymentId}; skipping duplicate.", deploymentId);
+                return;
+            }
+
             // Fetch the full deployment to get OwnerId and context metadata.
             var deployment = await inner.GetEntityByIdAsync(deploymentId);
             if (deployment == null)
@@ -42,7 +70,14 @@ public class NotificationAwareDeploymentRepository(
                 return;
             }
 
-            var type    = status == "Successful" ? "success" : "failure";
+            if (deployment.OwnerId <= 0)
+            {
+                logger.LogWarning("NotificationAwareDeploymentRepository: deployment {DeploymentId} has invalid OwnerId ({OwnerId}); skipping notification.", deploymentId, deployment.OwnerId);
+                return;
+            }
+
+            var isSuccess = IsSuccess(status);
+            var type    = isSuccess ? "success" : "failure";
             var service = deployment.ServiceName ?? $"Service #{deployment.ServiceId}";
             var env     = deployment.Environment;
             var version = deployment.Version;
@@ -50,7 +85,7 @@ public class NotificationAwareDeploymentRepository(
             string title;
             string message;
 
-            if (status == "Successful")
+            if (isSuccess)
             {
                 title   = $"Deployment succeeded — {service}";
                 message = $"Version {version} deployed successfully to {env}.";
@@ -105,9 +140,6 @@ public class NotificationAwareDeploymentRepository(
 
     public Task<int> CreateAsync(DeploymentEntity deployment)
         => inner.CreateAsync(deployment);
-
-    public Task<bool> UpdateTriggerResultAsync(int deploymentId, string status, string? failureReason, string? triggerError)
-        => inner.UpdateTriggerResultAsync(deploymentId, status, failureReason, triggerError);
 
     public Task<string?> GetRepositoryNameAsync(int serviceId)
         => inner.GetRepositoryNameAsync(serviceId);

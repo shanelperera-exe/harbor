@@ -80,6 +80,109 @@ public class NotificationAwareDeploymentRepositoryTests
             n.Message.Contains("OOM"))), Times.Once);
     }
 
+    [Fact]
+    public async Task UpdateStatusAsync_SucceededStatus_CreatesSuccessNotification()
+    {
+        // Arrange
+        var deployment = new DeploymentEntity
+        {
+            Id = 30, OwnerId = 15, ServiceId = 4,
+            ServiceName = "frontend", Environment = "production", Version = "3.0.0", Status = "Running"
+        };
+        _innerMock.Setup(r => r.UpdateStatusAsync(30, "Succeeded", null)).ReturnsAsync(true);
+        _innerMock.Setup(r => r.GetEntityByIdAsync(30)).ReturnsAsync(deployment);
+        _notifMock.Setup(r => r.CreateAsync(It.IsAny<NotificationEntity>())).ReturnsAsync(101);
+
+        // Act
+        var result = await _decorator.UpdateStatusAsync(30, "Succeeded", null);
+
+        // Assert
+        Assert.True(result);
+        _notifMock.Verify(r => r.CreateAsync(It.Is<NotificationEntity>(n =>
+            n.UserId       == 15            &&
+            n.DeploymentId == 30            &&
+            n.Type         == "success"     &&
+            n.Title.Contains("frontend")    &&
+            n.Message.Contains("3.0.0"))), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateTriggerResultAsync_SucceededStatus_CreatesSuccessNotification()
+    {
+        // Arrange
+        var deployment = new DeploymentEntity
+        {
+            Id = 40, OwnerId = 22, ServiceId = 6,
+            ServiceName = "auth-service", Environment = "staging", Version = "1.2.0", Status = "Running"
+        };
+        _innerMock.Setup(r => r.UpdateTriggerResultAsync(40, "Succeeded", null, null)).ReturnsAsync(true);
+        _innerMock.Setup(r => r.GetEntityByIdAsync(40)).ReturnsAsync(deployment);
+        _notifMock.Setup(r => r.CreateAsync(It.IsAny<NotificationEntity>())).ReturnsAsync(102);
+
+        // Act
+        var result = await _decorator.UpdateTriggerResultAsync(40, "Succeeded", null, null);
+
+        // Assert
+        Assert.True(result);
+        _notifMock.Verify(r => r.CreateAsync(It.Is<NotificationEntity>(n =>
+            n.UserId       == 22            &&
+            n.DeploymentId == 40            &&
+            n.Type         == "success"     &&
+            n.Title.Contains("auth-service"))), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateTriggerResultAsync_FailedStatus_CreatesFailureNotification()
+    {
+        // Arrange
+        var deployment = new DeploymentEntity
+        {
+            Id = 41, OwnerId = 22, ServiceId = 6,
+            ServiceName = "auth-service", Environment = "staging", Version = "1.2.0", Status = "Running"
+        };
+        _innerMock.Setup(r => r.UpdateTriggerResultAsync(41, "Failed", "Build error", null)).ReturnsAsync(true);
+        _innerMock.Setup(r => r.GetEntityByIdAsync(41)).ReturnsAsync(deployment);
+        _notifMock.Setup(r => r.CreateAsync(It.IsAny<NotificationEntity>())).ReturnsAsync(103);
+
+        // Act
+        var result = await _decorator.UpdateTriggerResultAsync(41, "Failed", "Build error", null);
+
+        // Assert
+        Assert.True(result);
+        _notifMock.Verify(r => r.CreateAsync(It.Is<NotificationEntity>(n =>
+            n.UserId       == 22            &&
+            n.DeploymentId == 41            &&
+            n.Type         == "failure"     &&
+            n.Message.Contains("Build error"))), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateTriggerResultAsync_NonTerminalStatus_DoesNotCreateNotification()
+    {
+        _innerMock.Setup(r => r.UpdateTriggerResultAsync(5, "Running", null, null)).ReturnsAsync(true);
+
+        var result = await _decorator.UpdateTriggerResultAsync(5, "Running", null, null);
+
+        Assert.True(result);
+        _notifMock.Verify(r => r.CreateAsync(It.IsAny<NotificationEntity>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Notification_DuplicateProtection_DoesNotCreateDuplicate()
+    {
+        // Arrange
+        _innerMock.Setup(r => r.UpdateStatusAsync(50, "Succeeded", null)).ReturnsAsync(true);
+        _notifMock.Setup(r => r.ExistsForDeploymentAsync(50)).ReturnsAsync(true);
+
+        // Act
+        var result = await _decorator.UpdateStatusAsync(50, "Succeeded", null);
+
+        // Assert
+        Assert.True(result);
+        _notifMock.Verify(r => r.CreateAsync(It.IsAny<NotificationEntity>()), Times.Never);
+        _innerMock.Verify(r => r.GetEntityByIdAsync(It.IsAny<int>()), Times.Never);
+    }
+
     [Theory]
     [InlineData("Running")]
     [InlineData("Pending")]

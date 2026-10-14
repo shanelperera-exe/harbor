@@ -168,8 +168,8 @@ public class DeploymentRepository(DbConnectionFactory dbFactory) : IDeploymentRe
         await using var command = connection.CreateCommand();
         command.CommandText = @"SELECT d.""Id"", d.""PublicId"", d.""ServiceId"", d.""OwnerId"", d.""Environment"", d.""Version"", d.""CommitSha"", d.""Status"", d.""StartedAt"", d.""CompletedAt"", d.""FailureReason"", d.""WorkflowFile"", d.""WorkflowRef"", d.""TriggerError"", d.""WorkflowRunId"", d.""WorkflowRunUrl"", p.""Name"" AS ""ProjectName"", s.""Name"" AS ""ServiceName"", s.""Type"" AS ""ServiceType"", u.""Username"" AS ""UserName"", d.""CommitMessage"", d.""DeploymentUrl"" 
                                 FROM ""Deployments"" d 
-                                JOIN ""Services"" s ON d.""ServiceId"" = s.""Id"" 
-                                JOIN ""Projects"" p ON s.""ProjectId"" = p.""Id"" 
+                                LEFT JOIN ""Services"" s ON d.""ServiceId"" = s.""Id"" 
+                                LEFT JOIN ""Projects"" p ON s.""ProjectId"" = p.""Id"" 
                                 LEFT JOIN ""Users"" u ON d.""OwnerId"" = u.""Id"" 
                                 WHERE d.""Id"" = @id";
         command.Parameters.AddWithValue("id", id);

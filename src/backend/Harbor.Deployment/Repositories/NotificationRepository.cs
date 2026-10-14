@@ -48,8 +48,8 @@ public class NotificationRepository(DbConnectionFactory dbFactory) : INotificati
                 p.""Name""  AS ""ProjectName""
             FROM ""Notifications"" n
             JOIN ""Deployments"" d  ON n.""DeploymentId"" = d.""Id""
-            JOIN ""Services""   s  ON d.""ServiceId""    = s.""Id""
-            JOIN ""Projects""   p  ON s.""ProjectId""    = p.""Id""
+            LEFT JOIN ""Services""   s  ON d.""ServiceId""    = s.""Id""
+            LEFT JOIN ""Projects""   p  ON s.""ProjectId""    = p.""Id""
             WHERE n.""UserId"" = @userId
             ORDER BY n.""CreatedAt"" DESC
             LIMIT @limit;";
@@ -93,6 +93,22 @@ public class NotificationRepository(DbConnectionFactory dbFactory) : INotificati
         cmd.Parameters.AddWithValue("userId", userId);
 
         return Convert.ToInt32(await cmd.ExecuteScalarAsync());
+    }
+
+    public async Task<bool> ExistsForDeploymentAsync(int deploymentId)
+    {
+        await using var connection = dbFactory.CreateConnection();
+        await connection.OpenAsync();
+
+        await using var cmd = connection.CreateCommand();
+        cmd.CommandText = @"
+            SELECT EXISTS (
+                SELECT 1 FROM ""Notifications"" WHERE ""DeploymentId"" = @deploymentId
+            );";
+        cmd.Parameters.AddWithValue("deploymentId", deploymentId);
+
+        var result = await cmd.ExecuteScalarAsync();
+        return Convert.ToBoolean(result);
     }
 
     public async Task<bool> MarkAsReadAsync(int notificationId, int userId)

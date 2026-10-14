@@ -13,6 +13,9 @@ public interface INotificationRepository
     /// <summary>Returns the count of unread notifications for a user.</summary>
     Task<int> GetUnreadCountAsync(int userId);
 
+    /// <summary>Checks whether a notification already exists for the specified deployment.</summary>
+    Task<bool> ExistsForDeploymentAsync(int deploymentId);
+
     /// <summary>Marks a single notification as read. Returns false when not found or not owned.</summary>
     Task<bool> MarkAsReadAsync(int notificationId, int userId);
 

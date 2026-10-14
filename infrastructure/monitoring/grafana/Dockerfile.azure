@@ -1,0 +1,15 @@
+# Grafana image for Azure Container Apps. Build context: infrastructure/monitoring
+#   docker build -f infrastructure/monitoring/grafana/Dockerfile.azure infrastructure/monitoring
+FROM grafana/grafana:10.4.0
+
+USER root
+
+# Provisioning config & dashboards
+COPY grafana/provisioning/dashboards/dashboards.yml /etc/grafana/provisioning/dashboards/dashboards.yml
+COPY grafana/provisioning/datasources/prometheus.azure.yml /etc/grafana/provisioning/datasources/prometheus.yml
+COPY grafana/dashboards/ /etc/grafana/dashboards/
+
+RUN chown -R grafana:root /etc/grafana/provisioning /etc/grafana/dashboards
+
+USER grafana
+EXPOSE 3000

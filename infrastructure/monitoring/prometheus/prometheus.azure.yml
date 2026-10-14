@@ -1,0 +1,89 @@
+# Prometheus configuration for Azure Container Apps (harbor-env-prod).
+#
+# Differences from the local docker-compose config (prometheus.yml):
+#   * Targets are ACA app names (in-environment ingress listens on :80 -> container :8080).
+#   * Every scrape sends a bearer token (METRICS_SCRAPE_TOKEN) which the Harbor services
+#     require on /metrics outside local development. The entrypoint writes it to
+#     /tmp/prometheus-runtime/scrape_token at startup.
+#   * Job names and labels are identical so alert_rules.yml and Grafana dashboards work unchanged.
+#   * No self-scrape job: the Prometheus UI/API is protected by basic auth (web.yml).
+
+global:
+  # NOTE: scraping counts as HTTP traffic, so backend apps configured with
+  # min-replicas 0 will stay warm while Prometheus is running.
+  scrape_interval: 30s
+  scrape_timeout: 10s
+  evaluation_interval: 30s
+  external_labels:
+    environment: production
+    platform: azure-container-apps
+
+rule_files:
+  - "/etc/prometheus/alert_rules.yml"
+
+scrape_configs:
+  - job_name: "harbor-api-gateway"
+    metrics_path: "/metrics"
+    authorization:
+      type: Bearer
+      credentials_file: /tmp/prometheus-runtime/scrape_token
+    static_configs:
+      - targets: ["harbor-api-gateway:80"]
+        labels:
+          service: "harbor-api-gateway"
+          tier: "edge"
+
+  - job_name: "harbor-authentication"
+    metrics_path: "/metrics"
+    authorization:
+      type: Bearer
+      credentials_file: /tmp/prometheus-runtime/scrape_token
+    static_configs:
+      - targets: ["harbor-auth-api:80"]
+        labels:
+          service: "harbor-authentication"
+          tier: "backend"
+
+  - job_name: "harbor-project"
+    metrics_path: "/metrics"
+    authorization:
+      type: Bearer
+      credentials_file: /tmp/prometheus-runtime/scrape_token
+    static_configs:
+      - targets: ["harbor-project-api:80"]
+        labels:
+          service: "harbor-project"
+          tier: "backend"
+
+  - job_name: "harbor-environment"
+    metrics_path: "/metrics"
+    authorization:
+      type: Bearer
+      credentials_file: /tmp/prometheus-runtime/scrape_token
+    static_configs:
+      - targets: ["harbor-env-api:80"]
+        labels:
+          service: "harbor-environment"
+          tier: "backend"
+
+  - job_name: "harbor-deployment"
+    metrics_path: "/metrics"
+    authorization:
+      type: Bearer
+      credentials_file: /tmp/prometheus-runtime/scrape_token
+    static_configs:
+      - targets: ["harbor-deploy-api:80"]
+        labels:
+          service: "harbor-deployment"
+          tier: "backend"
+
+  - job_name: "harbor-reporting"
+    metrics_path: "/metrics"
+    authorization:
+      type: Bearer
+      credentials_file: /tmp/prometheus-runtime/scrape_token
+    static_configs:
+      - targets: ["harbor-report-api:80"]
+        labels:
+          service: "harbor-reporting"
+          tier: "backend"

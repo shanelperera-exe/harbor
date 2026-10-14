@@ -14,6 +14,7 @@ namespace Harbor.Observability.IntegrationTests;
 
 public class ObservabilityTestAppFactory : WebApplicationFactory<Program>
 {
+    public const string ScrapeToken = "observability-integration-test-scrape-token";
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
@@ -26,7 +27,8 @@ public class ObservabilityTestAppFactory : WebApplicationFactory<Program>
                 ["JWT_AUDIENCE"] = "harbor-api",
                 ["DisableHttpsRedirection"] = "true",
                 ["KAFKA_BOOTSTRAP_SERVERS"] = "localhost:9092",
-                ["KAFKA_DEPLOYMENT_TOPIC"] = "deployment-events"
+                ["KAFKA_DEPLOYMENT_TOPIC"] = "deployment-events",
+                ["METRICS_SCRAPE_TOKEN"] = ScrapeToken
             });
         });
     }
@@ -35,10 +37,30 @@ public class ObservabilityTestAppFactory : WebApplicationFactory<Program>
 public class ObservabilityIntegrationTests : IClassFixture<ObservabilityTestAppFactory>
 {
     private readonly HttpClient _client;
+    private readonly HttpClient _anonymousClient;
 
     public ObservabilityIntegrationTests(ObservabilityTestAppFactory factory)
     {
         _client = factory.CreateClient();
+        _client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", ObservabilityTestAppFactory.ScrapeToken);
+        _anonymousClient = factory.CreateClient();
+    }
+
+    [Fact]
+    public async Task Metrics_WithoutScrapeToken_Returns404()
+    {
+        var response = await _anonymousClient.GetAsync("/metrics");
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Metrics_WithInvalidScrapeToken_Returns404()
+    {
+        var request = new HttpRequestMessage(HttpMethod.Get, "/metrics");
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", "wrong-token");
+        var response = await _anonymousClient.SendAsync(request);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]

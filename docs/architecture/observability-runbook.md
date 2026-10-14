@@ -5,7 +5,8 @@ This runbook outlines the operational monitoring, telemetry endpoints, dashboard
 ---
 
 ## 1. Quick Reference: Endpoints & Ports
-
+ 
+### 1.1 Local Development (Docker Compose)
 | Component / Service | Port | Health Endpoints | Metrics Endpoint |
 | :--- | :--- | :--- | :--- |
 | **Harbor API Gateway** | `5000` / `8080` | `/health`, `/health/live`, `/health/ready` | `/metrics` |
@@ -16,6 +17,17 @@ This runbook outlines the operational monitoring, telemetry endpoints, dashboard
 | **Harbor Reporting Service** | `5005` / `8080` | `/health`, `/health/live`, `/health/ready` | `/metrics` |
 | **Prometheus Server** | `9090` | N/A | `http://localhost:9090/targets` |
 | **Grafana UI** | `3000` | N/A | `http://localhost:3000` (`admin`/`admin`) |
+
+### 1.2 Azure Production (`harbor-env-prod` in `rg-harbor-centralindia`)
+| Component / Service | Ingress / Scope | Access URL / Internal Name | Authentication |
+| :--- | :--- | :--- | :--- |
+| **Harbor Admin Portal** | External | `https://admin.harborapp.tech/observability` | Harbor Admin JWT |
+| **Grafana UI** | External | `https://grafana.harborapp.tech` (or ACA FQDN) | `GF_SECURITY_ADMIN_USER` / `GF_SECURITY_ADMIN_PASSWORD` |
+| **Prometheus Server** | Internal | `http://harbor-prometheus:80` (ACA internal) | HTTP Basic Auth (`PROMETHEUS_BASIC_AUTH_USER` / `_PASSWORD`) |
+| **Microservices `/metrics`** | Internal & Edge | `/metrics` (all microservices) | Bearer token: `Authorization: Bearer <METRICS_SCRAPE_TOKEN>` |
+
+> [!NOTE]
+> In production Azure deployments, `/metrics` endpoints reject anonymous calls with `404 Not Found` unless a valid `METRICS_SCRAPE_TOKEN` bearer header is supplied. Prometheus presents this token automatically when scraping microservices within the ACA environment.
 
 ---
 

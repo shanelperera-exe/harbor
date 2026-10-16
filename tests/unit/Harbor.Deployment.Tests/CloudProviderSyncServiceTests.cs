@@ -118,14 +118,66 @@ public class CloudProviderSyncServiceTests
     }
 
     [Fact]
-    public async Task FetchLiveDeploymentUrlAsync_EmptyInputs_ReturnsNull()
+    public async Task FetchLiveDeploymentUrlAsync_Render_ReturnsUrl()
     {
+        var responseJson = JsonSerializer.Serialize(new[]
+        {
+            new
+            {
+                serviceDetails = new
+                {
+                    url = "https://myservice.onrender.com"
+                }
+            }
+        });
+
+        var handlerMock = new Mock<HttpMessageHandler>();
+        handlerMock
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(new HttpResponseMessage
+            {
+                StatusCode = HttpStatusCode.OK,
+                Content = new StringContent(responseJson)
+            });
+
+        var client = new HttpClient(handlerMock.Object);
+        _httpClientFactoryMock.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(client);
+
         var service = new CloudProviderSyncService(
             _httpClientFactoryMock.Object,
             _secretProtectorMock.Object,
             NullLogger<CloudProviderSyncService>.Instance);
 
-        var result = await service.FetchLiveDeploymentUrlAsync("", "", null);
+        var result = await service.FetchLiveDeploymentUrlAsync("Render", "test_token", null);
+
+        Assert.Equal("https://myservice.onrender.com", result);
+    }
+
+    [Fact]
+    public async Task FetchLiveDeploymentUrlAsync_Render_NonSuccess_ReturnsNull()
+    {
+        var handlerMock = new Mock<HttpMessageHandler>();
+        handlerMock
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.Unauthorized));
+
+        var client = new HttpClient(handlerMock.Object);
+        _httpClientFactoryMock.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(client);
+
+        var service = new CloudProviderSyncService(
+            _httpClientFactoryMock.Object,
+            _secretProtectorMock.Object,
+            NullLogger<CloudProviderSyncService>.Instance);
+
+        var result = await service.FetchLiveDeploymentUrlAsync("Render", "test_token", null);
 
         Assert.Null(result);
     }

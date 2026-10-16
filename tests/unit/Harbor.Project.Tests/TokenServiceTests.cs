@@ -263,5 +263,86 @@ namespace Harbor.Project.Tests
             Assert.False(result.HasToken);
             Assert.True(result.IsNotConnected);
         }
+
+        [Fact]
+        public async Task GetGitHubTokenAsync_NoTokenProperty_ReturnsNull()
+        {
+            var service = CreateService(out _, """{ "foo": "bar" }""");
+            Assert.Null(await service.GetGitHubTokenAsync(7));
+        }
+
+        [Fact]
+        public async Task GetGitHubInstallationTokenAsync_AllBranches()
+        {
+            var serviceFail = CreateService(out _, "error", HttpStatusCode.InternalServerError);
+            Assert.Null(await serviceFail.GetGitHubInstallationTokenAsync(7));
+
+            var serviceNoToken = CreateService(out _, """{ "other": 123 }""");
+            Assert.Null(await serviceNoToken.GetGitHubInstallationTokenAsync(7));
+
+            var exp = DateTimeOffset.UtcNow.AddHours(2);
+            var serviceWithExp = CreateService(out _, $$"""{ "token": "tok1", "expiresAt": "{{exp:O}}" }""");
+            var resWithExp = await serviceWithExp.GetGitHubInstallationTokenAsync(7);
+            Assert.NotNull(resWithExp);
+            Assert.Equal("tok1", resWithExp.Token);
+
+            var serviceWithoutExp = CreateService(out _, """{ "token": "tok2" }""");
+            var resWithoutExp = await serviceWithoutExp.GetGitHubInstallationTokenAsync(7);
+            Assert.NotNull(resWithoutExp);
+            Assert.Equal("tok2", resWithoutExp.Token);
+        }
+
+        [Fact]
+        public async Task GetGitHubTokenResultAsync_InstallationErrorBranches()
+        {
+            // Empty body in 500 error
+            var serviceEmpty = CreateService(out _, "   ", HttpStatusCode.InternalServerError);
+            var resEmpty = await serviceEmpty.GetGitHubTokenResultAsync(7);
+            Assert.False(resEmpty.HasToken);
+
+            // Long body (>400 chars)
+            var longBody = new string('x', 500);
+            var serviceLong = CreateService(out _, longBody, HttpStatusCode.InternalServerError);
+            var resLong = await serviceLong.GetGitHubTokenResultAsync(7);
+            Assert.False(resLong.HasToken);
+
+            // Malformed JSON on 200 OK
+            var serviceBadJson = CreateService(out _, "{ not-valid-json", HttpStatusCode.OK);
+            var resBadJson = await serviceBadJson.GetGitHubTokenResultAsync(7);
+            Assert.False(resBadJson.HasToken);
+
+            // Valid JSON without token property on 200 OK
+            var serviceMissingToken = CreateService(out _, """{ "something": "else" }""", HttpStatusCode.OK);
+            var resMissing = await serviceMissingToken.GetGitHubTokenResultAsync(7);
+            Assert.False(resMissing.HasToken);
+        }
+
+        [Fact]
+        public async Task GetGitHubTokenResultAsync_OAuthErrorBranches()
+        {
+            // Installation fails, OAuth returns 500
+            var handler500 = FakeHttpMessageHandler.Sequence(
+                (HttpStatusCode.NotFound, "not found"),
+                (HttpStatusCode.InternalServerError, "server error"));
+            var service500 = new TokenService(new HttpClient(handler500), BuildConfiguration());
+            var res500 = await service500.GetGitHubTokenResultAsync(7);
+            Assert.False(res500.HasToken);
+
+            // Installation fails, OAuth returns malformed json
+            var handlerBadJson = FakeHttpMessageHandler.Sequence(
+                (HttpStatusCode.NotFound, "not found"),
+                (HttpStatusCode.OK, "{ bad json"));
+            var serviceBadJson = new TokenService(new HttpClient(handlerBadJson), BuildConfiguration());
+            var resBadJson = await serviceBadJson.GetGitHubTokenResultAsync(7);
+            Assert.False(resBadJson.HasToken);
+
+            // Installation fails, OAuth returns valid json with empty/whitespace token
+            var handlerNoTok = FakeHttpMessageHandler.Sequence(
+                (HttpStatusCode.NotFound, "not found"),
+                (HttpStatusCode.OK, """{ "token": "" }"""));
+            var serviceNoTok = new TokenService(new HttpClient(handlerNoTok), BuildConfiguration());
+            var resNoTok = await serviceNoTok.GetGitHubTokenResultAsync(7);
+            Assert.False(resNoTok.HasToken);
+        }
     }
 }

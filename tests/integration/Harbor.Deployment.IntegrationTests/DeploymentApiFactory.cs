@@ -122,7 +122,8 @@ public class DeploymentApiFactory : WebApplicationFactory<Program>, IAsyncLifeti
                 "Type"          VARCHAR(50) NOT NULL DEFAULT 'Backend',
                 "RepositoryName" VARCHAR(500),
                 "RepositoryBranch" VARCHAR(200),
-                "WorkflowFile"  VARCHAR(200)
+                "WorkflowFile"  VARCHAR(200),
+                "DeploymentUrl" VARCHAR(500)
             );
 
             -- Users table (owned by Harbor.Authentication)

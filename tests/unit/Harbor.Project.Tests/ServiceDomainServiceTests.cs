@@ -114,5 +114,84 @@ namespace Harbor.Project.Tests
             Assert.Equal("This domain is already registered for this service.", error);
             Assert.Null(domain);
         }
+
+        [Fact]
+        public async Task AddDomainAsync_ServiceNotFound_ReturnsError()
+        {
+            _domainRepo.Setup(r => r.GetByDomainAsync(10, "app.example.com")).ReturnsAsync((ServiceDomainEntity?)null);
+            _serviceRepo.Setup(r => r.GetByIdAsync(10)).ReturnsAsync((ServiceEntity?)null);
+
+            var (success, error, domain) = await _service.AddDomainAsync(10, new CreateServiceDomainRequest
+            {
+                Domain = "app.example.com"
+            });
+
+            Assert.False(success);
+            Assert.Equal("Service not found.", error);
+            Assert.Null(domain);
+        }
+
+        [Fact]
+        public async Task GetDomainsAsync_AutoCreatesSystemDomainWhenDeploymentUrlPresent()
+        {
+            var service = new ServiceEntity { Id = 10, DeploymentUrl = "https://app-123.harbor.app/" };
+            _serviceRepo.Setup(r => r.GetByIdAsync(10)).ReturnsAsync(service);
+            _domainRepo.SetupSequence(r => r.GetByServiceIdAsync(10))
+                .ReturnsAsync(new List<ServiceDomainEntity>())
+                .ReturnsAsync(new List<ServiceDomainEntity>
+                {
+                    new() { Id = 1, Domain = "app-123.harbor.app", IsSystem = true, Status = "Active" }
+                });
+
+            var domains = await _service.GetDomainsAsync(10);
+            Assert.Single(domains);
+            Assert.Equal("app-123.harbor.app", domains[0].Domain);
+            _domainRepo.Verify(r => r.CreateAsync(It.Is<ServiceDomainEntity>(e => e.IsSystem && e.Domain == "app-123.harbor.app")), Times.Once);
+        }
+
+        [Fact]
+        public async Task DeleteDomainAsync_AllBranches()
+        {
+            _domainRepo.Setup(r => r.GetByIdAsync(1)).ReturnsAsync((ServiceDomainEntity?)null);
+            Assert.False(await _service.DeleteDomainAsync(10, 1));
+
+            _domainRepo.Setup(r => r.GetByIdAsync(2)).ReturnsAsync(new ServiceDomainEntity { Id = 2, ServiceId = 999 });
+            Assert.False(await _service.DeleteDomainAsync(10, 2));
+
+            _domainRepo.Setup(r => r.GetByIdAsync(3)).ReturnsAsync(new ServiceDomainEntity { Id = 3, ServiceId = 10 });
+            _domainRepo.Setup(r => r.DeleteAsync(3)).ReturnsAsync(true);
+            Assert.True(await _service.DeleteDomainAsync(10, 3));
+        }
+
+        [Fact]
+        public async Task SetPrimaryAsync_AllBranches()
+        {
+            _domainRepo.Setup(r => r.GetByIdAsync(1)).ReturnsAsync((ServiceDomainEntity?)null);
+            Assert.False(await _service.SetPrimaryAsync(10, 1));
+
+            _domainRepo.Setup(r => r.GetByIdAsync(2)).ReturnsAsync(new ServiceDomainEntity { Id = 2, ServiceId = 999 });
+            Assert.False(await _service.SetPrimaryAsync(10, 2));
+
+            _domainRepo.Setup(r => r.GetByIdAsync(3)).ReturnsAsync(new ServiceDomainEntity { Id = 3, ServiceId = 10 });
+            _domainRepo.Setup(r => r.SetPrimaryAsync(10, 3)).ReturnsAsync(true);
+            Assert.True(await _service.SetPrimaryAsync(10, 3));
+        }
+
+        [Fact]
+        public async Task VerifyDomainAsync_AllBranches()
+        {
+            _domainRepo.Setup(r => r.GetByIdAsync(1)).ReturnsAsync((ServiceDomainEntity?)null);
+            var (s1, err1) = await _service.VerifyDomainAsync(10, 1);
+            Assert.False(s1);
+
+            _domainRepo.Setup(r => r.GetByIdAsync(2)).ReturnsAsync(new ServiceDomainEntity { Id = 2, ServiceId = 999 });
+            var (s2, err2) = await _service.VerifyDomainAsync(10, 2);
+            Assert.False(s2);
+
+            _domainRepo.Setup(r => r.GetByIdAsync(3)).ReturnsAsync(new ServiceDomainEntity { Id = 3, ServiceId = 10, Domain = "localhost" });
+            var (s3, status3) = await _service.VerifyDomainAsync(10, 3);
+            Assert.True(s3);
+            Assert.Equal("Active", status3);
+        }
     }
 }

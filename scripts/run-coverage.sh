@@ -20,9 +20,27 @@ echo "  Harbor Code Coverage & Branch Coverage Tool (Coverlet)   "
 echo "=========================================================="
 
 MODE="all"
-if [[ "$1" == "--unit-only" ]]; then
-    MODE="unit"
-fi
+OPEN_BROWSER=false
+
+for arg in "$@"; do
+    case "$arg" in
+        --unit-only)
+            MODE="unit"
+            ;;
+        --open)
+            OPEN_BROWSER=true
+            ;;
+        --help|-h)
+            echo "Usage: ./run-coverage.sh [OPTIONS]"
+            echo ""
+            echo "Options:"
+            echo "  --unit-only    Run only unit test projects (skip integration tests)"
+            echo "  --open         Automatically open the HTML coverage report in browser"
+            echo "  --help, -h     Show this help message"
+            exit 0
+            ;;
+    esac
+done
 
 # Clean previous results
 rm -rf "$RESULTS_DIR"
@@ -44,6 +62,7 @@ INTEGRATION_PROJECTS=(
     "tests/integration/Harbor.Authentication.IntegrationTests/Harbor.Authentication.IntegrationTests.csproj"
     "tests/integration/Harbor.Project.IntegrationTests/Harbor.Project.IntegrationTests.csproj"
     "tests/integration/Harbor.Environment.IntegrationTests/Harbor.Environment.IntegrationTests.csproj"
+    "tests/integration/Harbor.Reporting.IntegrationTests/Harbor.Reporting.IntegrationTests.csproj"
 )
 
 run_test_project() {
@@ -91,3 +110,39 @@ echo -e "\n=========================================================="
 echo "  HTML Report: $REPORT_DIR/index.html"
 echo "  Markdown Summary: $REPORT_DIR/SummaryGithub.md"
 echo "=========================================================="
+
+open_report() {
+    local html_path="$REPORT_DIR/index.html"
+    echo -e "\n🌐 Opening coverage report in your browser..."
+
+    # WSL environment (Windows host browser)
+    if grep -qi microsoft /proc/version 2>/dev/null && command -v powershell.exe &> /dev/null && command -v wslpath &> /dev/null; then
+        local win_path
+        win_path="$(wslpath -w "$html_path")"
+        powershell.exe -NoProfile -Command "Start-Process '$win_path'" &> /dev/null &
+    elif command -v wslview &> /dev/null; then
+        wslview "$html_path" &> /dev/null &
+    elif command -v open &> /dev/null; then
+        open "$html_path" &> /dev/null &
+    elif command -v xdg-open &> /dev/null; then
+        xdg-open "$html_path" &> /dev/null &
+    elif command -v powershell.exe &> /dev/null; then
+        powershell.exe -NoProfile -Command "Start-Process '$html_path'" &> /dev/null &
+    elif [[ -n "$BROWSER" ]]; then
+        "$BROWSER" "$html_path" &> /dev/null &
+    else
+        echo "Could not detect a default browser launcher."
+        echo "Please open the file manually: $html_path"
+    fi
+}
+
+if [[ "$OPEN_BROWSER" == true ]]; then
+    open_report
+elif [[ -t 0 ]]; then
+    read -t 15 -p "Would you like to open the report in your browser? (y/N) [auto-skip in 15s]: " -r user_choice || true
+    echo ""
+    if [[ "$user_choice" =~ ^[Yy]$ ]]; then
+        open_report
+    fi
+fi
+

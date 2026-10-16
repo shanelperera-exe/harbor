@@ -1,4 +1,7 @@
 using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 using Harbor.Deployment.Controllers;
 using Harbor.Deployment.DTOs;
 using Harbor.Deployment.Services;
@@ -9,6 +12,7 @@ using Xunit;
 
 namespace Harbor.Deployment.Tests;
 
+[Collection("WebhookSecretCollection")]
 public class DeploymentsControllerTests
 {
     private readonly Mock<IDeploymentService> _serviceMock = new();
@@ -247,5 +251,131 @@ public class DeploymentsControllerTests
         var created = Assert.IsType<ObjectResult>(result.Result);
         var body = Assert.IsType<CreateDeploymentResponse>(created.Value);
         Assert.Equal("deadbeef", body.CommitSha);
+    }
+
+    // ---------- GetCiRuns ----------
+
+    [Fact]
+    public async Task GetCiRuns_NoUserId_ReturnsUnauthorized()
+    {
+        SetUser(userId: null);
+        var query = new CiRunQuery { ServiceId = "10", Page = 1, PageSize = 10 };
+        var result = await _controller.GetCiRuns(query);
+        Assert.IsType<UnauthorizedResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task GetCiRuns_ValidUser_ReturnsOk()
+    {
+        SetUser(userId: 7);
+        var query = new CiRunQuery { ServiceId = "10", Page = 1, PageSize = 10 };
+        _serviceMock.Setup(s => s.GetCiRunsAsync(7, "10", 1, 10))
+            .ReturnsAsync(new CiRunListResponse { Items = Array.Empty<CiRunResponse>(), TotalCount = 0, Page = 1, PageSize = 10 });
+
+        var result = await _controller.GetCiRuns(query);
+        Assert.IsType<OkObjectResult>(result.Result);
+    }
+
+    // ---------- Redeploy ----------
+
+    [Fact]
+    public async Task Redeploy_NoUser_ReturnsUnauthorized()
+    {
+        SetUser(userId: null);
+        var result = await _controller.Redeploy("dep-1");
+        Assert.IsType<UnauthorizedResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task Redeploy_FailedLookup_ReturnsNotFound()
+    {
+        SetUser(userId: 7);
+        _serviceMock.Setup(s => s.RedeployAsync("dep-1", 7, false))
+            .ReturnsAsync((false, "Deployment not found", (int?)null, "Failed", (string?)null));
+
+        var result = await _controller.Redeploy("dep-1");
+        Assert.IsType<NotFoundObjectResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task Redeploy_Success_ReturnsCreated()
+    {
+        SetUser(userId: 7);
+        _serviceMock.Setup(s => s.RedeployAsync("dep-1", 7, false))
+            .ReturnsAsync((true, (string?)null, (int?)55, "Queued", (string?)null));
+
+        var result = await _controller.Redeploy("dep-1");
+        var objResult = Assert.IsType<ObjectResult>(result.Result);
+        Assert.Equal(StatusCodes.Status201Created, objResult.StatusCode);
+    }
+
+    // ---------- UpdateStatus ----------
+
+    [Fact]
+    public async Task UpdateStatus_NoSecret_ReturnsUnauthorized()
+    {
+        Environment.SetEnvironmentVariable("GH_APP_WEBHOOK_SECRET", null);
+        Environment.SetEnvironmentVariable("GITHUB_APP_WEBHOOK_SECRET", null);
+        Environment.SetEnvironmentVariable("GITHUB_WEBHOOK_SECRET", null);
+
+        var result = await _controller.UpdateStatus(1);
+        Assert.IsType<UnauthorizedResult>(result);
+    }
+
+    [Fact]
+    public async Task UpdateStatus_InvalidSignature_ReturnsUnauthorized()
+    {
+        const string secret = "webhook-secret-123";
+        Environment.SetEnvironmentVariable("GH_APP_WEBHOOK_SECRET", secret);
+
+        var payload = "{\"Status\":\"Running\"}";
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Headers["X-Harbor-Signature"] = "invalid-sig";
+        httpContext.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(payload));
+        _controller.ControllerContext = new ControllerContext { HttpContext = httpContext };
+
+        var result = await _controller.UpdateStatus(1);
+        Assert.IsType<UnauthorizedResult>(result);
+    }
+
+    [Fact]
+    public async Task UpdateStatus_ValidSignature_InvalidStatus_ReturnsBadRequest()
+    {
+        const string secret = "webhook-secret-123";
+        Environment.SetEnvironmentVariable("GH_APP_WEBHOOK_SECRET", secret);
+
+        var payload = "{\"Status\":\"InvalidStatus\"}";
+        using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(secret));
+        var hash = Convert.ToHexString(hmac.ComputeHash(Encoding.UTF8.GetBytes(payload))).ToLowerInvariant();
+
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Headers["X-Harbor-Signature"] = hash;
+        httpContext.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(payload));
+        _controller.ControllerContext = new ControllerContext { HttpContext = httpContext };
+
+        var result = await _controller.UpdateStatus(1);
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Contains("Status must be Running, Succeeded, or Failed", badRequest.Value!.ToString());
+    }
+
+    [Fact]
+    public async Task UpdateStatus_ValidSignature_ValidStatus_Success_ReturnsNoContent()
+    {
+        const string secret = "webhook-secret-123";
+        Environment.SetEnvironmentVariable("GH_APP_WEBHOOK_SECRET", secret);
+
+        var payload = "{\"Status\":\"Succeeded\"}";
+        using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(secret));
+        var hash = Convert.ToHexString(hmac.ComputeHash(Encoding.UTF8.GetBytes(payload))).ToLowerInvariant();
+
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Headers["X-Harbor-Signature"] = hash;
+        httpContext.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(payload));
+        _controller.ControllerContext = new ControllerContext { HttpContext = httpContext };
+
+        _serviceMock.Setup(s => s.UpdateStatusAsync(1, "Succeeded", (string?)null)).ReturnsAsync(true);
+
+        var result = await _controller.UpdateStatus(1);
+        Assert.IsType<NoContentResult>(result);
     }
 }

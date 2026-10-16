@@ -60,7 +60,7 @@ graph TB
     subgraph External["External Services & Providers"]
         GitHub["GitHub REST API & Actions<br/>(workflow_dispatch & Webhooks)"]
         Mail["SMTP Server<br/>(Brevo / Mailpit)"]
-        LogsCloud["Cloud Providers<br/>(AWS, Azure, GCP, Docker, K8s, Render, Vercel)"]
+        LogsCloud["Cloud Providers<br/>(AWS, Azure, GCP, Docker, K8s, Render, Vercel, DigitalOcean, Railway)"]
         Prometheus["Prometheus & Grafana<br/>Observability Stack"]
     end
 
@@ -185,6 +185,7 @@ graph TB
     - `RenderLogAdapter` (Render API)
     - `VercelLogAdapter` (Vercel deployment logs)
     - `DigitalOceanLogAdapter` (DigitalOcean App Platform)
+    - `RailwayLogAdapter` (Railway GraphQL API & telemetry)
   - **Real-Time SignalR Hub**: `ServiceLogsHub` establishes full-duplex WebSockets on `/hubs/logs`. Clients subscribe to live log streams for specific services (`SubscribeToService`). The hub buffers recent logs in Redis (`logs:buffer:{serviceId}`) and replays them immediately upon client connection.
   - **Native Log Polling Worker**: Background `NativeLogPollerWorker` continuously synchronizes logs for actively subscribed services.
 

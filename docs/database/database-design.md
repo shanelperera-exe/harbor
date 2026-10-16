@@ -306,7 +306,7 @@ Microservices configured within projects.
 | `GitBranch` | `VARCHAR(255)` | `NOT NULL, DEFAULT 'main'` | Default Git branch to deploy. |
 | `WorkflowFile` | `VARCHAR(255)` | `NOT NULL, DEFAULT 'deploy.yml'` | Target GitHub Actions workflow file. |
 | `DeploymentUrl` | `VARCHAR(500)` | `NULLABLE` | Default deployed endpoint URL. |
-| `Provider` | `VARCHAR(50)` | `NOT NULL, DEFAULT 'Docker'` | Target cloud host: `Azure`, `AWS`, `Docker`, `Render`, `Vercel`. |
+| `Provider` | `VARCHAR(50)` | `NOT NULL, DEFAULT 'Docker'` | Target cloud host: `Azure`, `AWS`, `Docker`, `Render`, `Vercel`, `DigitalOcean`, `Railway`. |
 | `IsPrivate` | `BOOLEAN` | `NOT NULL, DEFAULT FALSE` | Indicates whether the repository is private. |
 | `ProviderToken` | `TEXT` | `NULLABLE` | Encrypted cloud deployment token if applicable. |
 | `CreatedAt` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | Timestamp created. |

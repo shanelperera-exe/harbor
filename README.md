@@ -131,7 +131,7 @@ graph TD
 | **Webhook Ingestion** | Ingest real-time completion callbacks from GitHub Actions with HMAC SHA-256 verification | `Harbor.Deployment` |
 | **SignalR Log Streaming** | Full-duplex WebSocket log streaming with real-time token and secret redaction | `Harbor.Reporting` |
 | **DORA Metrics & Reports** | Calculate deployment frequency, lead time, cycle time, and cross-service audit trails | `Harbor.Reporting` |
-| **Multi-Cloud Log Adapters** | Standardized log normalization across AWS, Azure, GCP, Docker, K8s, Render, Vercel, DigitalOcean | `Harbor.Reporting` |
+| **Multi-Cloud Log Adapters** | Standardized log normalization across AWS, Azure, GCP, Docker, K8s, Render, Vercel, DigitalOcean, Railway | `Harbor.Reporting` |
 | **Token Blacklisting** | Distributed Redis-backed JWT invalidation ensuring instant session termination on logout | `Harbor.Authentication` |
 
 ## Tech Stack
@@ -605,7 +605,7 @@ Key architectural choices and rationale:
 
 ## Known Limitations & Roadmap
 
-- **Harbor.Reporting**: Fully implemented with parameterized cross-service deployment reporting (`/api/reporting/deployments`), audit logs (`/api/reporting/audit`), 8 multi-cloud log adapters (AWS, Azure, GCP, Docker, K8s, Render, Vercel, DigitalOcean), and full-duplex SignalR log streaming (`/hubs/logs`).
+- **Harbor.Reporting**: Fully implemented with parameterized cross-service deployment reporting (`/api/reporting/deployments`), audit logs (`/api/reporting/audit`), 9 multi-cloud log adapters (AWS, Azure, GCP, Docker, K8s, Render, Vercel, DigitalOcean, Railway), and full-duplex SignalR log streaming (`/hubs/logs`).
 - **Kafka & Event Streaming**: Fully operational with `KafkaProducerService` publishing `DeploymentLifecycleEvent` and `KafkaConsumerService` reconciling status in consumer group `harbor-deployment-group`. Compatible with both local Apache Kafka and Azure Event Hubs over Kafka protocol.
 - **GitHub Actions & Webhook Integration**: Fully implemented. Dispatches workflows via GitHub App installation tokens and receives completion callbacks at `POST /api/deployments/webhooks/github` with automated sensitive log scrubbing and URL extraction.
 - **Observability**: Fully wired across all services with `/health/live`, `/health/ready`, `/health`, and Prometheus `/metrics` scraping endpoints guarded by bearer token authentication.

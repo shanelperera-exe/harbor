@@ -21,7 +21,7 @@ C4Context
     }
 
     System_Ext(github, "GitHub & GitHub Actions", "Source control repository host and CI/CD workflow execution engine.")
-    System_Ext(cloud_providers, "Cloud Infrastructure Providers", "AWS, Azure, GCP, Kubernetes, Docker, Render, Vercel hosting deployed applications and execution logs.")
+    System_Ext(cloud_providers, "Cloud Infrastructure Providers", "AWS, Azure, GCP, Kubernetes, Docker, Render, Vercel, DigitalOcean, Railway hosting deployed applications and execution logs.")
     System_Ext(email_service, "SMTP Mail Gateway", "Brevo (production) or Mailpit (local) delivering password resets and invitation emails.")
     System_Ext(observability, "Prometheus & Grafana", "Collects platform telemetry and renders operational dashboards.")
 
@@ -76,7 +76,7 @@ Harbor serves two distinct primary personas, plus automated machine interactions
 | External System | Integration Purpose | Communication Protocol & Auth |
 |:---|:---|:---|
 | **GitHub App & REST API** | • User authentication via OAuth 2.0<br/>• Browsing repositories, branches, and commit SHAs<br/>• Dispatching `workflow_dispatch` triggers<br/>• Receiving webhook callbacks | HTTPS / REST<br/>• RS256 JWT (App authentication)<br/>• Installation Access Token (scoped to user/org)<br/>• Webhook HMAC signature |
-| **Cloud Logging Providers** | Aggregates runtime application logs across heterogeneous hosting environments (AWS CloudWatch, Azure Log Analytics, GCP Logging, Kubernetes, Docker, Render, Vercel, DigitalOcean). | HTTPS / REST / Socket APIs<br/>Provider-specific API tokens & service accounts managed in `ProviderAdapterFactory`. |
+| **Cloud Logging Providers** | Aggregates runtime application logs across heterogeneous hosting environments (AWS CloudWatch, Azure Log Analytics, GCP Logging, Kubernetes, Docker, Render, Vercel, DigitalOcean, Railway). | HTTPS / REST / Socket APIs<br/>Provider-specific API tokens & service accounts managed in `ProviderAdapterFactory`. |
 | **SMTP Mail Server** | Sends transactional user communications (password reset tokens, account activation, team invitations). | SMTP / TLS<br/>• Local: Mailpit (`localhost:1025`)<br/>• Cloud: Brevo (Sendinblue) over port 587 with API credentials. |
 | **Prometheus & Grafana** | Automated scraping of microservice health and custom telemetry metrics (`HarborDeploymentMetrics`). | HTTP `/metrics`<br/>Bearer token authentication via `METRICS_SCRAPE_TOKEN`. |
 

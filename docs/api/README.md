@@ -543,7 +543,7 @@ Ingests streaming log batches for a service.
 - **Responses**: `200 OK`.
 
 #### `POST /api/reporting/webhooks/{provider}/{serviceId}`
-Receives native log streams and status callbacks from external cloud providers (Docker, AWS, Azure, GCP, Render, Vercel).
+Receives native log streams and status callbacks from external cloud providers (Docker, AWS, Azure, GCP, Render, Vercel, DigitalOcean, Railway).
 - **Access**: Webhook Token
 
 ---

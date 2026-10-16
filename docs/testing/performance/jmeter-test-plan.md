@@ -1,98 +1,89 @@
-# JMeter Performance Test Plan
+# JMeter Performance Test Plan — Complete Harbor Platform
 
-## Overview
-This document outlines the performance, load, and stress testing strategy for the Harbor backend APIs using Apache JMeter.
+## 1. Overview
+This document outlines the performance, load, stress, and end-to-end integration testing strategy for the Harbor platform using Apache JMeter 5.6.3.
 
-*Note: Numerical targets have not yet been defined by the project for US1. This is a template for future testing.*
+The performance suite covers all microservices in the Harbor ecosystem:
+1. `Harbor.ApiGateway` (Reverse proxy, routing transforms, health monitoring)
+2. `Harbor.Authentication` (User registration, BCrypt hashing, JWT issuance & verification, Redis blacklist)
+3. `Harbor.Project` (Project lifecycle, service catalog, repository metadata)
+4. `Harbor.Environment` (Environment variables, AES encrypted secrets management)
+5. `Harbor.Deployment` (Deployment history, large log streaming, dashboard metrics, notification center)
+6. `Harbor.Reporting` (Deployment reports, CSV exports, multi-criteria filtering, admin audit trails)
 
-## 1. Objectives
-- Validate the Harbor application's stability under expected load.
-- Identify performance bottlenecks in the API or database layer.
-- Measure API response times against defined thresholds.
+---
 
-## 2. Scope
-Targeted REST API endpoints supporting high-traffic user journeys.
+## 2. Test Execution Engine & Commands
 
-## 3. Target APIs / Features
+Tests can be executed individually via JMeter CLI or collectively via the automated test suite runner:
 
-| API | Method | Path | Purpose |
-|---|---|---|---|
-| Harbor Authentication | POST | `/api/Auth/login` | Obtain JWT for authenticated tests |
-| Harbor API Gateway | GET | `/api/deployments/{publicId}` | **US-19: Deployment details and logs** |
-| Harbor API Gateway | GET | `/api/deployments` | Deployment history list (paginated) |
+### 2.1 Automated Full Suite Execution
+```bash
+# Execute all 20 performance test plans against local Docker stack:
+python3 scripts/performance/run-performance-suite.py
 
-### US-19 Deployment Details
+# Or with custom target host/port:
+API_HOST=localhost API_PORT=5000 python3 scripts/performance/run-performance-suite.py
+```
 
-The `GET /api/deployments/{publicId}` endpoint returns deployment metadata, failure information,
-and all log rows for a single deployment. It is tested through the API Gateway at
-`http://localhost:5053` (not directly against the Deployment service).
+### 2.2 Individual Test Execution
+```bash
+# Example: Run E2E User Journey
+jmeter -n -t tests/performance/HarborEndToEndUserJourneyLoadTest.jmx \
+  -Japi_host=localhost -Japi_port=5000 \
+  -l tests/performance/results/HarborEndToEndUserJourneyLoadTest.jtl
 
-Key characteristics:
-- Logs are retrieved via `GetLogsAsync` with **no LIMIT or pagination** — the entire log set
-  is loaded, sanitized, and serialized in one pass.
-- The endpoint joins `Deployments` → `Services` → `Projects` → `Users` and additionally
-  queries `ServiceAccess` and `Environments` for the deployment URL.
-- Log messages, `FailureReason`, and `TriggerError` are sanitized through
-  `DeploymentLogSanitizer` before being returned.
+# Example: Run Deployment Details Large Payload (US-19)
+jmeter -n -t tests/performance/DeploymentDetailsLoadTest.jmx \
+  -Japi_host=localhost -Japi_port=5000 -Jjwt_token="<TOKEN>" \
+  -l tests/performance/results/DeploymentDetailsLoadTest.jtl
+```
 
-## 4. Load Model
+---
 
-| Scenario | Model | Rationale |
-|---|---|---|
-| A — Baseline | Single user, single request | Establish normal response time for a deployment with few logs |
-| B — Large Payload | Single user, single request | Measure performance impact of 2,000 log rows |
-| C — Concurrent Load | 50 users, 10 iterations each (500 total requests) | Measure system behaviour under sustained concurrent load |
+## 3. Test Suite Inventory
 
-## 5. Load Parameters
+| # | Test Plan File | Microservice | Primary Endpoint | Workload Model |
+|:---|:---|:---|:---|:---|
+| 1 | `GatewayHealthBaseline.jmx` | API Gateway | `GET /health` | 50 threads x 10 loops (500 samples) |
+| 2 | `AuthJWTValidationTest.jmx` | Authentication | `GET /api/protected/developer-area` | 50 threads x 10 loops (500 samples) |
+| 3 | `AuthRegistrationTest.jmx` | Authentication | `POST /api/auth/register` | 50 threads x 10 loops (500 samples) |
+| 4 | `AuthLoadTest.jmx` | Authentication | `POST /api/auth/login` | 50 threads x 10 loops (500 samples) |
+| 5 | `AuthSpikeTest.jmx` | Authentication | `POST /api/auth/login` | 100 threads surge within 3s (500 samples) |
+| 6 | `AuthStressTest.jmx` | Authentication | `POST /api/auth/login` | 200 threads x 5 loops (1,000 samples) |
+| 7 | `ProjectCatalogLoadTest.jmx` | Project | `GET /api/projects`, `.../services` | 25 threads x 10 loops (500 samples) |
+| 8 | `EnvironmentConfigLoadTest.jmx` | Environment | `GET /api/projects/.../environments` | 20 threads x 10 loops (200 samples) |
+| 9 | `DashboardBaseline.jmx` | Deployment | `GET /api/deployments/dashboard` | 1 thread x 10 loops (10 samples) |
+| 10 | `DashboardLoadTest.jmx` | Deployment | `GET /api/deployments/dashboard` | 10 & 50 users (700 samples) |
+| 11 | `DeploymentHistoryLoadTest.jmx` | Deployment | `GET /api/deployments` (filtered) | 20 threads x 10 loops (600 samples) |
+| 12 | `DeploymentDetailsBaseline.jmx` | Deployment | `GET /api/deployments/qa_seed_dep_failed` | Single user baseline |
+| 13 | `DeploymentDetailsLargePayload.jmx` | Deployment | `GET /api/deployments/qa_seed_dep_perf_large` | 2,000 log lines payload baseline |
+| 14 | `DeploymentDetailsConcurrentLoad.jmx` | Deployment | `GET /api/deployments/qa_seed_dep_perf_large` | 50 concurrent users x 10 loops (500 samples) |
+| 15 | `DeploymentDetailsLoadTest.jmx` | Deployment | `GET /api/deployments/...` (US-19) | Multi-scenario suite (502 samples) |
+| 16 | `NotificationLoadTest.jmx` | Deployment | `GET /api/notifications` | 20 threads x 10 loops (400 samples) |
+| 17 | `DeploymentReportBaseline.jmx` | Reporting | `GET /api/reports/deployments` | Single user baseline (10 samples) |
+| 18 | `DeploymentReportLoadTest.jmx` | Reporting | `GET /api/reports/deployments` | 25 users x 5 loops (500 samples) |
+| 19 | `AuditLogsLoadTest.jmx` | Reporting | `GET /api/reports/audit` | 20 users x 5 loops (100 samples) |
+| 20 | `HarborEndToEndUserJourneyLoadTest.jmx` | All Services | 10-step full developer workflow | 15 users x 5 loops (750 samples) |
 
-- **Concurrent users:** 50 (Scenario C); 1 (Scenarios A and B)
-- **Ramp-up period (seconds):** 10 (Scenario C); 1 (Scenarios A and B)
-- **Iterations per user:** 10 (Scenario C); 1 (Scenarios A and B)
-- **Think time:** None (back-to-back requests)
-- **Target host:** `localhost`
-- **Target port:** `5053` (API Gateway)
+---
 
-## 6. Test Scenarios
+## 4. Test Data & Fixtures
 
-### Scenario A — Baseline (Small Logs)
-- **Deployment:** `qa_seed_dep_failed` (~4 log rows, seeded by `seed-deployment-data.sh`)
-- **Objective:** Establish normal response-time baseline
+| Fixture Identifier | Seeding Script | Description |
+|:---|:---|:---|
+| `qa_tester2` | `scripts/ci/seed-deployment-data.sh` | Main authenticated developer user |
+| `admin` | `Harbor.Authentication/Program.cs` | Administrator user for audit trail testing |
+| `qa_seed_proj_001` | `scripts/ci/seed-deployment-data.sh` | Seeded project with services & environments |
+| `qa_seed_dep_failed` | `scripts/ci/seed-deployment-data.sh` | Failed deployment record with ~4 logs |
+| `qa_seed_dep_perf_large` | `scripts/ci/seed-performance-data.sh` | Deployment record with 2,000 execution logs |
 
-### Scenario B — Large Log Payload (2,000 rows)
-- **Deployment:** `qa_seed_dep_perf_large` (2,000 log rows, seeded by `seed-performance-data.sh`)
-- **Objective:** Measure latency and payload size when returning and sanitizing a large log set
+---
 
-### Scenario C — Concurrent Load (50 users x 10 iterations)
-- **Deployment:** `qa_seed_dep_perf_large` (2,000 log rows)
-- **Objective:** Measure throughput, error rate, and resource behaviour under concurrent load
+## 5. Performance SLAs & Acceptance Criteria
 
-## 7. Test Data
-
-| Fixture | Source | Row Count |
-|---|---|---|
-| `qa_seed_dep_failed` | `scripts/ci/seed-deployment-data.sh` | ~4 log rows |
-| `qa_seed_dep_perf_large` | `scripts/ci/seed-performance-data.sh` | 2,000 log rows |
-
-## 8. Metrics to Monitor
-
-- Response time (Avg, Min, Max, 90th/95th Percentile)
-- Throughput (Requests per second)
-- Error rate (%)
-- Response size in bytes
-
-## 9. Acceptance Criteria
-
-No official performance SLA is defined for Harbor APIs. Results are measured and reported.
-Future SLO definitions should target:
-- 95th percentile response time for Scenario B: TBD
-- Error rate: < 1%
-- Throughput: TBD
-
-## 10. Environment
-
-Performance tests are executed against a local Docker Compose environment.
-
-## 11. JMeter Artifact Location
-
-- Test plan: `tests/performance/DeploymentDetailsLoadTest.jmx`
-- Results template: `docs/testing/performance/deployment-performance-results.md`
+- **Gateway & In-Memory Operations**: Average latency < 20 ms, p95 < 50 ms.
+- **Database Query Operations**: Average latency < 50 ms, p95 < 100 ms.
+- **CPU-Bound Hashing (BCrypt work factor 11)**: Average latency < 250 ms, p95 < 350 ms.
+- **Error Rate Threshold**: < 1.0% under normal load; < 5.0% under extreme saturation stress.
+- **Data Integrity**: Zero authentication leakages, zero container crashes, zero deadlocks.

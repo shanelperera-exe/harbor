@@ -34,6 +34,10 @@ public static class DeploymentUrlExtractor
         // DigitalOcean App Platform
         new Regex(@"https://[a-zA-Z0-9_\-\.]+\.ondigitalocean\.app", RegexOptions.Compiled | RegexOptions.IgnoreCase),
 
+        // Railway
+        new Regex(@"https://[a-zA-Z0-9_\-\.]+\.up\.railway\.app", RegexOptions.Compiled | RegexOptions.IgnoreCase),
+        new Regex(@"https://[a-zA-Z0-9_\-\.]+\.railway\.app", RegexOptions.Compiled | RegexOptions.IgnoreCase),
+
         // Generic explicit outputs like "Production: https://..." or "Deployed to: https://..."
         new Regex(@"(?:Production|Deployed to|Deployment URL|Endpoint|URL):\s*(https://[^\s\x1b\]\>]+)", RegexOptions.Compiled | RegexOptions.IgnoreCase)
     };

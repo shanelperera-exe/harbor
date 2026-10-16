@@ -212,4 +212,65 @@ public class LogAdaptersTests
         Assert.NotEmpty(logs);
         Assert.Equal("Render", adapter.ProviderName);
     }
+
+    [Fact]
+    public async Task RailwayLogAdapter_Success_ReturnsLogs()
+    {
+        var json = """
+        {
+          "data": {
+            "me": {
+              "id": "user-railway-1",
+              "name": "Railway Engineer",
+              "email": "engineer@example.com",
+              "projects": {
+                "edges": [
+                  {
+                    "node": {
+                      "id": "proj-abc",
+                      "name": "Production App"
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+        """;
+
+        _httpHandlerMock.Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(new HttpResponseMessage
+            {
+                StatusCode = HttpStatusCode.OK,
+                Content = new StringContent(json)
+            });
+
+        var adapter = new RailwayLogAdapter(Mock.Of<ILogger<RailwayLogAdapter>>(), _clientFactoryMock.Object);
+        var logs = await adapter.FetchLatestLogsAsync("svc-1", "rlw_token", CancellationToken.None);
+
+        Assert.NotEmpty(logs);
+        Assert.Equal("Railway", adapter.ProviderName);
+        Assert.Contains(logs, l => l.Message.Contains("Railway Engineer"));
+    }
+
+    [Fact]
+    public async Task RailwayLogAdapter_Unauthorized_ReturnsErrorLog()
+    {
+        _httpHandlerMock.Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.Unauthorized));
+
+        var adapter = new RailwayLogAdapter(Mock.Of<ILogger<RailwayLogAdapter>>(), _clientFactoryMock.Object);
+        var logs = await adapter.FetchLatestLogsAsync("svc-1", "bad_token", CancellationToken.None);
+
+        Assert.NotEmpty(logs);
+        Assert.Contains(logs, l => l.Level == "error");
+    }
 }

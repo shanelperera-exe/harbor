@@ -19,6 +19,8 @@ public class DeploymentUrlExtractorTests
     [InlineData("Azure Static Web App: https://mango-ocean-123.azurestaticapps.net/", "https://mango-ocean-123.azurestaticapps.net")]
     [InlineData("Azure Container App: https://my-container.azurecontainerapps.io", "https://my-container.azurecontainerapps.io")]
     [InlineData("DigitalOcean App Platform: https://api-service-xyz.ondigitalocean.app", "https://api-service-xyz.ondigitalocean.app")]
+    [InlineData("Railway App: https://my-service-production.up.railway.app", "https://my-service-production.up.railway.app")]
+    [InlineData("Deployed to https://my-railway-app.railway.app", "https://my-railway-app.railway.app")]
     [InlineData("Production: https://custom-endpoint.example.com", "https://custom-endpoint.example.com")]
     [InlineData("Deployed to: https://service.internal.io;", "https://service.internal.io")]
     [InlineData("Deployment URL: https://app.company.org/path", "https://app.company.org/path")]

@@ -51,6 +51,39 @@ namespace Harbor.Project.Tests
         }
 
         [Fact]
+        public async Task AddDomainAsync_RailwayProvider_CalculatesRailwayCnameTarget()
+        {
+            // Arrange
+            var service = new ServiceEntity 
+            { 
+                Id = 10, 
+                Name = "web-service", 
+                Provider = "Railway",
+                DeploymentUrl = "https://my-app.up.railway.app"
+            };
+            _serviceRepo.Setup(r => r.GetByIdAsync(10)).ReturnsAsync(service);
+            _domainRepo.Setup(r => r.GetByDomainAsync(10, "app.example.com")).ReturnsAsync((ServiceDomainEntity?)null);
+            _domainRepo.Setup(r => r.GetByServiceIdAsync(10)).ReturnsAsync(new List<ServiceDomainEntity>());
+            _domainRepo.Setup(r => r.CreateAsync(It.IsAny<ServiceDomainEntity>())).ReturnsAsync(101);
+
+            // Act
+            var (success, error, domain) = await _service.AddDomainAsync(10, new CreateServiceDomainRequest
+            {
+                Domain = "app.example.com",
+                Environment = "Production"
+            });
+
+            // Assert
+            Assert.True(success);
+            Assert.Null(error);
+            Assert.NotNull(domain);
+            Assert.Equal("app.example.com", domain.Domain);
+            Assert.Equal("CNAME", domain.DnsType);
+            Assert.Equal("app", domain.DnsHost);
+            Assert.Equal("my-app.up.railway.app", domain.DnsTarget);
+        }
+
+        [Fact]
         public async Task AddDomainAsync_ValidApexDomain_CalculatesARecord()
         {
             // Arrange

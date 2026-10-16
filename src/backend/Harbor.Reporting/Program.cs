@@ -35,6 +35,7 @@ builder.Services.AddTransient<Harbor.Reporting.Adapters.ILogProviderAdapter, Har
 builder.Services.AddTransient<Harbor.Reporting.Adapters.ILogProviderAdapter, Harbor.Reporting.Adapters.DigitalOceanLogAdapter>();
 builder.Services.AddTransient<Harbor.Reporting.Adapters.ILogProviderAdapter, Harbor.Reporting.Adapters.KubernetesLogAdapter>();
 builder.Services.AddTransient<Harbor.Reporting.Adapters.ILogProviderAdapter, Harbor.Reporting.Adapters.DockerLogAdapter>();
+builder.Services.AddTransient<Harbor.Reporting.Adapters.ILogProviderAdapter, Harbor.Reporting.Adapters.RailwayLogAdapter>();
 builder.Services.AddSingleton<Harbor.Reporting.Factories.IProviderAdapterFactory, Harbor.Reporting.Factories.ProviderAdapterFactory>();
 builder.Services.AddHostedService<Harbor.Reporting.Workers.NativeLogPollerWorker>();
 

@@ -181,4 +181,93 @@ public class CloudProviderSyncServiceTests
 
         Assert.Null(result);
     }
+
+    [Fact]
+    public async Task FetchLiveDeploymentUrlAsync_Railway_ReturnsUrl()
+    {
+        var responseJson = """
+        {
+          "data": {
+            "me": {
+              "id": "user-123",
+              "projects": {
+                "edges": [
+                  {
+                    "node": {
+                      "id": "proj-1",
+                      "name": "Production Project",
+                      "services": {
+                        "edges": [
+                          {
+                            "node": {
+                              "id": "svc-1",
+                              "name": "api-service",
+                              "serviceDomains": [
+                                {
+                                  "domain": "api-production.up.railway.app"
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+        """;
+
+        var handlerMock = new Mock<HttpMessageHandler>();
+        handlerMock
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(new HttpResponseMessage
+            {
+                StatusCode = HttpStatusCode.OK,
+                Content = new StringContent(responseJson)
+            });
+
+        var client = new HttpClient(handlerMock.Object);
+        _httpClientFactoryMock.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(client);
+
+        var service = new CloudProviderSyncService(
+            _httpClientFactoryMock.Object,
+            _secretProtectorMock.Object,
+            NullLogger<CloudProviderSyncService>.Instance);
+
+        var result = await service.FetchLiveDeploymentUrlAsync("Railway", "test_token", null);
+
+        Assert.Equal("https://api-production.up.railway.app", result);
+    }
+
+    [Fact]
+    public async Task FetchLiveDeploymentUrlAsync_Railway_NonSuccess_ReturnsNull()
+    {
+        var handlerMock = new Mock<HttpMessageHandler>();
+        handlerMock
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.Unauthorized));
+
+        var client = new HttpClient(handlerMock.Object);
+        _httpClientFactoryMock.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(client);
+
+        var service = new CloudProviderSyncService(
+            _httpClientFactoryMock.Object,
+            _secretProtectorMock.Object,
+            NullLogger<CloudProviderSyncService>.Instance);
+
+        var result = await service.FetchLiveDeploymentUrlAsync("Railway", "test_token", null);
+
+        Assert.Null(result);
+    }
 }

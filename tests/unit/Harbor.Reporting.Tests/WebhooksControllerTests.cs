@@ -84,4 +84,37 @@ public class WebhooksControllerTests
 
         _clientsMock.Verify(c => c.Group("logs_svc-456"), Times.Once);
     }
+
+    [Fact]
+    public async Task ReceiveLogDrain_RailwayWebhook_ProcessesAndBroadcasts()
+    {
+        var payload = """
+        {
+          "type": "DEPLOY_COMPLETED",
+          "details": {
+            "status": "SUCCESS",
+            "commitMessage": "Deploy Harbor updates",
+            "commitAuthor": "Railway Bot"
+          },
+          "resource": {
+            "service": {
+              "name": "harbor-web"
+            }
+          }
+        }
+        """;
+        SetRequestBody(payload);
+
+        _cacheMock.Setup(c => c.GetAsync<List<object>>("logs:buffer:svc-rlw-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<object>());
+
+        var result = await _controller.ReceiveLogDrain("railway", "svc-rlw-1");
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        Assert.NotNull(ok.Value);
+
+        _clientsMock.Verify(c => c.Group("logs_svc-rlw-1"), Times.Once);
+        _clientProxyMock.Verify(c => c.SendCoreAsync("ReceiveLog", It.IsAny<object?[]>(), default), Times.Once);
+        _cacheMock.Verify(c => c.SetAsync("logs:buffer:svc-rlw-1", It.IsAny<List<object>>(), It.IsAny<TimeSpan?>(), default), Times.Once);
+    }
 }

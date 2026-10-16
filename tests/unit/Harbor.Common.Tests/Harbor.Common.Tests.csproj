@@ -19,5 +19,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\shared\Harbor.Common\Harbor.Common.csproj" />
+    <ProjectReference Include="..\..\..\src\shared\Harbor.Caching\Harbor.Caching.csproj" />
   </ItemGroup>
 </Project>

@@ -71,6 +71,18 @@ export function LogConfigurationModal({
           link: 'https://render.com/docs/log-streams',
           webhookUrl
         };
+      case 'railway':
+        return {
+          title: 'Railway Webhooks & Log Forwarding',
+          description: 'Railway sends real-time deployment status events and application lifecycle notifications via webhooks.',
+          steps: [
+            'Go to your Railway Dashboard and select your project.',
+            'Navigate to Settings > Webhooks.',
+            'Click Add Webhook and paste the webhook URL below.'
+          ],
+          link: 'https://docs.railway.com/guides/webhooks',
+          webhookUrl
+        };
       case 'digitalocean':
         return {
           title: 'DigitalOcean Log Forwarding',

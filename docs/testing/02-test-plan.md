@@ -1,109 +1,85 @@
 # Harbor Project Test Plan
 
-## Purpose
-This document outlines the specific test plan for the Harbor project. It serves as the blueprint for testing activities, detailing the scope, resources, schedule, and processes required to validate the application.
+## 1. Purpose
+This document defines the comprehensive master test plan for the Harbor platform across all four development sprints. It details the testing scope, toolchain, environment prerequisites, schedule, and quality verification workflows required to ensure software delivery of the highest caliber.
 
-## Scope
-The testing scope is defined by the user stories and technical tasks prioritized in the Jira backlog for the active sprints. It covers both frontend (React) and backend (ASP.NET Web API) components, as well as database integrations (MySQL).
+---
 
-## Features Under Test
-*Note: This list is derived from the current Harbor Jira backlog.*
-- Application Foundation Configuration (US1)
-  - React frontend startup
-  - ASP.NET Web API backend startup
-  - MySQL database connectivity
-  - Swagger UI accessibility
-- `[TO BE COMPLETED: Update as more features are added to the backlog]`
+## 2. Scope & Features Under Test
+The testing scope encompasses all functional and non-functional requirements prioritized in the Harbor product backlog, covering both frontend Single-Page Applications (`harbor-web`, `harbor-admin`) and all backend microservices fronted by the YARP API Gateway:
 
-## Features Not Yet In Scope
-- `[TO BE COMPLETED: Update based on backlog prioritization]`
+### 2.1 Sprint 1: Application Foundation & Identity (US-01 – US-05)
+- Microservices startup, Docker networking, API Gateway reverse proxy routing.
+- User registration, BCrypt password hashing (work factor 11), login, and JWT issuance.
+- Role-Based Access Control (RBAC) differentiating `Developer` and `Admin` permissions.
+- User profile management, account deactivation, and UI preference persistence.
 
-## Test Levels
-- Unit Testing
-- Integration Testing
-- API Testing
-- Functional Testing
-- Security Testing
-- End-to-End Testing
-- Performance Testing
+### 2.2 Sprint 2: Projects & Environment Tiers (US-06 – US-11)
+- Project registration, updates, soft archiving, and ownership checks.
+- Service definitions within projects (repository URLs, branch, workflow file, cloud provider).
+- Deployment environment lifecycle (`Development`, `Staging`, `Production`) and deactivation.
+- Environment variables and AES-256-GCM authenticated encryption for sensitive secrets at rest.
+- Deployment configuration management.
 
-## Test Types
-- Smoke Testing
-- Regression Testing
-- Exploratory Testing
-- Automated Testing
+### 2.3 Sprint 3: GitHub Integration & Deployment Engine (US-12 – US-17)
+- GitHub App integration, RS256 JWT generation, and temporary installation access tokens.
+- Interactive branch selection and recent commit SHA retrieval via GitHub API proxies.
+- Triggering CI/CD deployments via GitHub Actions `workflow_dispatch` with 6 mandatory inputs.
+- Custom domain routing, CNAME DNS checks, and automated domain verification.
+- Asynchronous domain event streaming via Apache Kafka and Azure Event Hubs (`deployment-events`).
 
-## Test Environments
-Refer to [03-test-environment.md](03-test-environment.md) for detailed environment definitions.
-- Local Development
-- Test `[NOT YET IMPLEMENTED]`
-- Staging `[NOT YET IMPLEMENTED]`
-- Production `[NOT YET IMPLEMENTED]`
+### 2.4 Sprint 4: Visibility, Notifications & Reporting (US-18 – US-22)
+- Real-time deployment status reconciliation (`Pending` -> `Queued` -> `Running` -> `Succeeded`/`Failed`).
+- GitHub webhook callback ingestion (`POST /api/deployments/webhooks/github`).
+- Sensitive log sanitization (`DeploymentLogSanitizer`) and deployed URL extraction (`DeploymentUrlExtractor`).
+- In-app notification creation, unread badge tracking, and read state persistence.
+- Cross-service deployment reports and administrative audit logs using parameterized queries.
+- Real-time full-duplex log streaming via SignalR WebSockets (`/hubs/logs`).
 
-## Test Data
-Test data will be generated utilizing scripts or defined manually for specific test cases. Placeholder data will be used where appropriate until standard data generation tools are in place.
+---
 
-## Tools
-- **Issue Tracking & Test Management**: Jira
-- **Documentation**: GitHub (Markdown)
-- **API Documentation & Testing**: Swagger/OpenAPI, Postman (optional)
-- **E2E Automation**: Selenium (when implemented)
-- **Performance Testing**: JMeter (when implemented)
-- **Code Coverage**: `[TO BE COMPLETED]`
+## 3. Test Levels & Strategies
 
-## Roles
-- **BA**: Requirements definition.
-- **Developer**: Unit testing, defect remediation.
-- **QA Engineer**: Test case creation, execution, reporting.
-- **DevOps**: Environment management.
+| Test Level | Scope | Frameworks & Tooling | Target Criteria |
+|:---|:---|:---|:---|
+| **Unit Testing** | Individual classes, algorithms, regex sanitizers, crypto, controllers | xUnit, Moq, Vitest, `@testing-library/react` | 100% pass rate; ≥ 80% line coverage (Achieved: **94.6%**) |
+| **Integration Testing** | Repository SQL queries, schema migrations, Kafka producers/consumers | Testcontainers for .NET (PostgreSQL 15), Confluent.Kafka | Real container-backed validation; zero mock data leakage |
+| **API Contract Testing** | Gateway routing, RFC 7807 problem details, auth filters, CORS | REST client suites, Swagger OpenAPI specification | All status codes and payload contracts strictly verified |
+| **E2E Automation** | Complete user journeys (login -> create project -> configure env -> deploy) | Selenium WebDriver, Page Object Model (POM) | Automated regression validation of core user paths |
+| **Performance Testing** | Throughput, concurrent user resilience, latency percentiles | Apache JMeter (`.jmx` test plans and `.jtl` execution logs) | Auth < 50ms, Dashboard < 25ms, Reporting query < 65ms |
+| **Security Validation** | Secret encryption, token blacklist, log scrubbers, RBAC | OWASP ZAP, BCrypt, AES-GCM tag verification, Redis blacklist | Zero sensitive token leakage; sub-millisecond token revocation |
 
-## Test Schedule
-- **Sprint 1**: Foundation testing, initial test planning.
-- **Sprint 2**: `[TO BE COMPLETED]`
-- **Sprint 3**: `[TO BE COMPLETED]`
-- **Sprint 4**: `[TO BE COMPLETED]`
+---
 
-## Test Execution Workflow
-1. Identify User Story in Jira.
-2. Draft Test Cases based on Acceptance Criteria.
-3. Review and approve Test Cases.
-4. Execute Test Cases (Manual or Automated).
-5. Log results (Pass/Fail/Blocked) with evidence.
+## 4. Test Environments
+For detailed environment architecture, see [03-test-environment.md](03-test-environment.md):
+- **Local Development**: Docker Compose running PostgreSQL 15, Redis 7, Kafka KRaft, and Mailpit alongside bare-metal .NET 10 microservices and Vite frontends.
+- **Automated CI (GitHub Actions)**: Headless test runner utilizing Testcontainers for ephemeral database instances.
+- **Staging / Azure Production**: Azure Container Apps environment (`rg-harbor-centralindia`) connected to Azure Database for PostgreSQL Flexible Server, Azure Cache for Redis, and Azure Event Hubs.
 
-## Defect Workflow
-1. Identify defect during execution.
-2. Log defect in Jira with steps to reproduce and evidence.
-3. Developer assigns and resolves the defect.
-4. Defect moves to 'Ready for Retest'.
+---
 
-## Retesting Workflow
-1. QA Engineer verifies the defect fix against the original steps.
-2. If fixed, mark Defect as Closed and update Test Case execution to Pass.
-3. If not fixed, mark Defect as Reopened.
+## 5. Tooling Ecosystem
+- **Backlog & Issue Tracking**: Jira
+- **Code Repository & Documentation**: GitHub (`docs/` repository directory)
+- **Interactive API Documentation**: Swagger UI / OpenAPI (`/swagger`)
+- **Backend Test Instrumentation**: xUnit, Moq, Coverlet Data Collector, ReportGenerator
+- **Frontend Test Instrumentation**: Vitest, JSDOM, React Testing Library
+- **E2E Automation**: Selenium WebDriver in C# (`tests/Harbor.E2ETests`)
+- **Performance & Load Testing**: Apache JMeter (`tests/performance/*.jmx`)
 
-## Regression Workflow
-1. Identify regression suite based on impacted areas.
-2. Execute regression suite prior to release.
-3. Log any regression defects found.
+---
 
-## Entry Criteria
-- Features are code-complete.
-- Unit tests are passing.
-- Test environment is available.
+## 6. Roles & Responsibilities
+- **Product Owner / Business Analyst**: User story definition, acceptance criteria, and demo sign-off.
+- **Backend / Frontend Developers**: Feature implementation, unit testing, and immediate defect remediation.
+- **QA Engineers**: Test case drafting, integration testing, E2E automation maintenance, performance benchmarking, and sprint QA reporting.
+- **DevOps Engineers**: Container registry maintenance, CI/CD pipeline automation, Azure Container Apps scaling, and monitoring infrastructure.
 
-## Exit Criteria
-- 100% of planned test cases executed.
-- 0 Critical/High defects open.
-- Documentation updated.
+---
 
-## Test Deliverables
-- Test Strategy
-- Test Plan
-- Documented Test Cases
-- Execution Logs
-- Defect Reports
-- Sprint QA Reports
-
-## Risks
-- Lack of test data hindering testing of edge cases.
-- Dependencies on external systems (if any) delaying integration testing.
+## 7. Sprint Execution Schedule
+- **Sprint 1**: Foundation testing, identity management, JWT verification, and initial test strategy.
+- **Sprint 2**: Project and service catalog testing, environment tiers, and AES-256-GCM secret validation.
+- **Sprint 3**: GitHub App integration, `workflow_dispatch` dispatching, custom domains, and Kafka event streaming.
+- **Sprint 4**: Deployment status reconciliation, log sanitization, notification delivery, cross-service reporting, JMeter load testing, and final QA sign-off.

@@ -7,7 +7,7 @@ import { DeleteConfirmationModal } from '../../components/ui/DeleteConfirmationM
 import { ChevronDown } from 'lucide-react';
 import { FaAws, FaDigitalOcean } from "react-icons/fa";
 import { VscAzure } from "react-icons/vsc";
-import { SiGooglecloud, SiRender, SiDocker } from "react-icons/si";
+import { SiGooglecloud, SiRender, SiDocker, SiRailway } from "react-icons/si";
 import { IoLogoVercel } from "react-icons/io5";
 import { getProjectIntegrations, type ProjectIntegration } from '../../services/projectIntegrationService';
 
@@ -179,6 +179,7 @@ export default function ServiceSettings() {
       case 'Vercel': return IoLogoVercel;
       case 'DigitalOcean': return FaDigitalOcean;
       case 'Docker': return SiDocker;
+      case 'Railway': return SiRailway;
       default: return null;
     }
   })() : null;

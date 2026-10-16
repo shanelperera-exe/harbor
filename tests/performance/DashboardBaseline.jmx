@@ -47,10 +47,10 @@
         </HeaderManager>
         <hashTree />
         <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="GET /api/dashboard">
-          <stringProp name="HTTPSampler.domain">localhost</stringProp>
-          <stringProp name="HTTPSampler.port">5004</stringProp>
+          <stringProp name="HTTPSampler.domain">${__P(api_host,localhost)}</stringProp>
+          <stringProp name="HTTPSampler.port">${__P(api_port,5000)}</stringProp>
           <stringProp name="HTTPSampler.protocol">http</stringProp>
-          <stringProp name="HTTPSampler.path">/api/dashboard</stringProp>
+          <stringProp name="HTTPSampler.path">${__P(api_path,/api/deployments/dashboard)}</stringProp>
           <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
           <stringProp name="HTTPSampler.method">GET</stringProp>
           <boolProp name="HTTPSampler.use_keepalive">true</boolProp>

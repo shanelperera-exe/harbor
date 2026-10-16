@@ -92,7 +92,13 @@ namespace Harbor.Project.Services
             string dnsHost = isApex ? "@" : parts[0];
             string dnsTarget = isApex 
                 ? "76.76.21.21" 
-                : (service.Provider?.ToLower() == "vercel" ? "cname.vercel-dns.com" : "cname.harbor.app");
+                : (service.Provider?.ToLower() == "vercel" 
+                    ? "cname.vercel-dns.com" 
+                    : (service.Provider?.ToLower() == "railway" 
+                        ? (!string.IsNullOrWhiteSpace(service.DeploymentUrl) && CleanHost(service.DeploymentUrl).EndsWith(".up.railway.app", StringComparison.OrdinalIgnoreCase)
+                            ? CleanHost(service.DeploymentUrl)
+                            : "dns.railway.app")
+                        : "cname.harbor.app"));
 
             var entity = new ServiceDomainEntity
             {

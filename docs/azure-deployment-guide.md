@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/harbor_light_notext.svg" alt="Harbor Logo" width="100" />
+</p>
+
 # Harbor Microservices - Azure Container Apps Deployment Guide
 
 **Target Audience:** DevOps Engineer / Cloud Administrator
@@ -307,19 +311,24 @@ https://harbor-admin-ui.<default-domain>
 3. Click **Run workflow** (or simply merge a Pull Request into the `main` or `develop` branch).
 4. The pipeline runs in a strict order, because each stage depends on the URLs the previous one created:
 
-   ```text
-   ┌─ harbor-auth-api
-   ├─ harbor-project-api
-   ├─ harbor-env-api
-   ├─ harbor-deploy-api          (5 backend APIs in parallel)
-   └─ harbor-report-api
-             │
-             ▼
-      harbor-api-gateway         (reads the backend internal FQDNs)
-             │
-             ▼  (gateway FQDN read back from Azure)
-   ┌─ harbor-admin-ui            (2 frontends in parallel)
-   └─ harbor-web-ui
+   ```mermaid
+   graph TD
+       subgraph Stage1["Stage 1: Internal Backend APIs (Parallel)"]
+           Auth["harbor-auth-api"]
+           Proj["harbor-project-api"]
+           Env["harbor-env-api"]
+           Deploy["harbor-deploy-api"]
+           Report["harbor-report-api"]
+       end
+
+       Stage1 --> Gateway["Stage 2: harbor-api-gateway<br/>(Reads internal FQDNs)"]
+
+       subgraph Stage3["Stage 3: External Frontends (Parallel)"]
+           Admin["harbor-admin-ui"]
+           Web["harbor-web-ui"]
+       end
+
+       Gateway --> Stage3
    ```
 
    - The 5 Backend APIs are deployed as *Internal* apps (hidden from the public internet).

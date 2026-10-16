@@ -14,9 +14,6 @@ namespace Harbor.Reporting.Repositories;
 /// </summary>
 public class DeploymentReportRepository(ReportingDbConnectionFactory dbFactory) : IDeploymentReportRepository
 {
-    private static readonly string[] SuccessStatuses = ["succeeded", "ready"];
-    private static readonly string[] FailureStatuses = ["failed", "error"];
-
     public async Task<IReadOnlyList<DeploymentReportEntity>> GetReportRowsAsync(
         int userId,
         bool isAdmin,

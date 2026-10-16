@@ -1,0 +1,408 @@
+{
+  "timestamp": "2026-10-17T02:49:51.666680",
+  "total": 20,
+  "passed": 20,
+  "failed": 0,
+  "results": [
+    {
+      "test_name": "AuditLogsLoadTest",
+      "file": "AuditLogsLoadTest.jmx",
+      "status": "PASS",
+      "metrics": {
+        "samples": 100,
+        "successes": 100,
+        "failures": 0,
+        "error_pct": 0.0,
+        "avg_ms": 8.51,
+        "median_ms": 9.0,
+        "min_ms": 2.0,
+        "max_ms": 23.0,
+        "p90_ms": 12.0,
+        "p95_ms": 13.0,
+        "p99_ms": 23.0,
+        "throughput": 21.226915729144554
+      },
+      "duration": 6.891064167022705
+    },
+    {
+      "test_name": "AuthJWTValidationTest",
+      "file": "AuthJWTValidationTest.jmx",
+      "status": "PASS",
+      "metrics": {
+        "samples": 500,
+        "successes": 500,
+        "failures": 0,
+        "error_pct": 0.0,
+        "avg_ms": 5.002,
+        "median_ms": 5.0,
+        "min_ms": 1.0,
+        "max_ms": 17.0,
+        "p90_ms": 9.0,
+        "p95_ms": 10.0,
+        "p99_ms": 12.0,
+        "throughput": 50.859525989217786
+      },
+      "duration": 11.204451560974121
+    },
+    {
+      "test_name": "AuthLoadTest",
+      "file": "AuthLoadTest.jmx",
+      "status": "PASS",
+      "metrics": {
+        "samples": 500,
+        "successes": 500,
+        "failures": 0,
+        "error_pct": 0.0,
+        "avg_ms": 114.468,
+        "median_ms": 113.0,
+        "min_ms": 102.0,
+        "max_ms": 155.0,
+        "p90_ms": 124.0,
+        "p95_ms": 125.0,
+        "p99_ms": 131.0,
+        "throughput": 46.21926418931411
+      },
+      "duration": 13.125298261642456
+    },
+    {
+      "test_name": "AuthRegistrationTest",
+      "file": "AuthRegistrationTest.jmx",
+      "status": "PASS",
+      "metrics": {
+        "samples": 500,
+        "successes": 500,
+        "failures": 0,
+        "error_pct": 0.0,
+        "avg_ms": 116.176,
+        "median_ms": 116.0,
+        "min_ms": 105.0,
+        "max_ms": 233.0,
+        "p90_ms": 121.0,
+        "p95_ms": 124.0,
+        "p99_ms": 147.0,
+        "throughput": 46.41663572224285
+      },
+      "duration": 13.430676937103271
+    },
+    {
+      "test_name": "AuthSpikeTest",
+      "file": "AuthSpikeTest.jmx",
+      "status": "PASS",
+      "metrics": {
+        "samples": 500,
+        "successes": 500,
+        "failures": 0,
+        "error_pct": 0.0,
+        "avg_ms": 480.532,
+        "median_ms": 455.0,
+        "min_ms": 124.0,
+        "max_ms": 1347.0,
+        "p90_ms": 803.0,
+        "p95_ms": 966.0,
+        "p99_ms": 1227.0,
+        "throughput": 94.05568096313017
+      },
+      "duration": 7.818128824234009
+    },
+    {
+      "test_name": "AuthStressTest",
+      "file": "AuthStressTest.jmx",
+      "status": "PASS",
+      "metrics": {
+        "samples": 1000,
+        "successes": 1000,
+        "failures": 0,
+        "error_pct": 0.0,
+        "avg_ms": 220.34,
+        "median_ms": 209.0,
+        "min_ms": 108.0,
+        "max_ms": 501.0,
+        "p90_ms": 311.0,
+        "p95_ms": 350.0,
+        "p99_ms": 440.0,
+        "throughput": 97.18172983479107
+      },
+      "duration": 13.070521593093872
+    },
+    {
+      "test_name": "DashboardBaseline",
+      "file": "DashboardBaseline.jmx",
+      "status": "PASS",
+      "metrics": {
+        "samples": 10,
+        "successes": 10,
+        "failures": 0,
+        "error_pct": 0.0,
+        "avg_ms": 8.9,
+        "median_ms": 8.0,
+        "min_ms": 5.0,
+        "max_ms": 23.0,
+        "p90_ms": 23.0,
+        "p95_ms": 23.0,
+        "p99_ms": 23.0,
+        "throughput": 116.27906976744187
+      },
+      "duration": 2.491274118423462
+    },
+    {
+      "test_name": "DashboardLoadTest",
+      "file": "DashboardLoadTest.jmx",
+      "status": "PASS",
+      "metrics": {
+        "samples": 700,
+        "successes": 700,
+        "failures": 0,
+        "error_pct": 0.0,
+        "avg_ms": 10.555714285714286,
+        "median_ms": 10.0,
+        "min_ms": 3.0,
+        "max_ms": 26.0,
+        "p90_ms": 17.0,
+        "p95_ms": 19.0,
+        "p99_ms": 22.0,
+        "throughput": 23.777173913043477
+      },
+      "duration": 31.712287664413452
+    },
+    {
+      "test_name": "DeploymentDetailsBaseline",
+      "file": "DeploymentDetailsBaseline.jmx",
+      "status": "PASS",
+      "metrics": {
+        "samples": 1,
+        "successes": 1,
+        "failures": 0,
+        "error_pct": 0.0,
+        "avg_ms": 30.0,
+        "median_ms": 30.0,
+        "min_ms": 30.0,
+        "max_ms": 30.0,
+        "p90_ms": 30.0,
+        "p95_ms": 30.0,
+        "p99_ms": 30.0,
+        "throughput": 33.333333333333336
+      },
+      "duration": 2.250952959060669
+    },
+    {
+      "test_name": "DeploymentDetailsConcurrentLoad",
+      "file": "DeploymentDetailsConcurrentLoad.jmx",
+      "status": "PASS",
+      "metrics": {
+        "samples": 500,
+        "successes": 500,
+        "failures": 0,
+        "error_pct": 0.0,
+        "avg_ms": 17.878,
+        "median_ms": 16.0,
+        "min_ms": 8.0,
+        "max_ms": 75.0,
+        "p90_ms": 30.0,
+        "p95_ms": 34.0,
+        "p99_ms": 50.0,
+        "throughput": 50.080128205128204
+      },
+      "duration": 12.30191707611084
+    },
+    {
+      "test_name": "DeploymentDetailsLargePayload",
+      "file": "DeploymentDetailsLargePayload.jmx",
+      "status": "PASS",
+      "metrics": {
+        "samples": 1,
+        "successes": 1,
+        "failures": 0,
+        "error_pct": 0.0,
+        "avg_ms": 37.0,
+        "median_ms": 37.0,
+        "min_ms": 37.0,
+        "max_ms": 37.0,
+        "p90_ms": 37.0,
+        "p95_ms": 37.0,
+        "p99_ms": 37.0,
+        "throughput": 27.027027027027028
+      },
+      "duration": 1.4059267044067383
+    },
+    {
+      "test_name": "DeploymentDetailsLoadTest",
+      "file": "DeploymentDetailsLoadTest.jmx",
+      "status": "PASS",
+      "metrics": {
+        "samples": 502,
+        "successes": 502,
+        "failures": 0,
+        "error_pct": 0.0,
+        "avg_ms": 11.778884462151394,
+        "median_ms": 10.0,
+        "min_ms": 7.0,
+        "max_ms": 36.0,
+        "p90_ms": 17.0,
+        "p95_ms": 22.0,
+        "p99_ms": 33.0,
+        "throughput": 50.62525211778943
+      },
+      "duration": 12.334182500839233
+    },
+    {
+      "test_name": "DeploymentHistoryLoadTest",
+      "file": "DeploymentHistoryLoadTest.jmx",
+      "status": "PASS",
+      "metrics": {
+        "samples": 600,
+        "successes": 600,
+        "failures": 0,
+        "error_pct": 0.0,
+        "avg_ms": 9.02,
+        "median_ms": 8.0,
+        "min_ms": 4.0,
+        "max_ms": 23.0,
+        "p90_ms": 13.0,
+        "p95_ms": 15.0,
+        "p99_ms": 18.0,
+        "throughput": 119.80830670926518
+      },
+      "duration": 7.314765214920044
+    },
+    {
+      "test_name": "DeploymentReportBaseline",
+      "file": "DeploymentReportBaseline.jmx",
+      "status": "PASS",
+      "metrics": {
+        "samples": 10,
+        "successes": 10,
+        "failures": 0,
+        "error_pct": 0.0,
+        "avg_ms": 7.8,
+        "median_ms": 7.0,
+        "min_ms": 4.0,
+        "max_ms": 23.0,
+        "p90_ms": 23.0,
+        "p95_ms": 23.0,
+        "p99_ms": 23.0,
+        "throughput": 126.58227848101265
+      },
+      "duration": 2.535423755645752
+    },
+    {
+      "test_name": "DeploymentReportLoadTest",
+      "file": "DeploymentReportLoadTest.jmx",
+      "status": "PASS",
+      "metrics": {
+        "samples": 500,
+        "successes": 500,
+        "failures": 0,
+        "error_pct": 0.0,
+        "avg_ms": 8.654,
+        "median_ms": 8.0,
+        "min_ms": 2.0,
+        "max_ms": 31.0,
+        "p90_ms": 14.0,
+        "p95_ms": 15.0,
+        "p99_ms": 18.0,
+        "throughput": 51.45091582630171
+      },
+      "duration": 11.996058225631714
+    },
+    {
+      "test_name": "EnvironmentConfigLoadTest",
+      "file": "EnvironmentConfigLoadTest.jmx",
+      "status": "PASS",
+      "metrics": {
+        "samples": 200,
+        "successes": 200,
+        "failures": 0,
+        "error_pct": 0.0,
+        "avg_ms": 10.88,
+        "median_ms": 12.0,
+        "min_ms": 3.0,
+        "max_ms": 32.0,
+        "p90_ms": 14.0,
+        "p95_ms": 15.0,
+        "p99_ms": 17.0,
+        "throughput": 41.52823920265781
+      },
+      "duration": 7.163859605789185
+    },
+    {
+      "test_name": "GatewayHealthBaseline",
+      "file": "GatewayHealthBaseline.jmx",
+      "status": "PASS",
+      "metrics": {
+        "samples": 500,
+        "successes": 500,
+        "failures": 0,
+        "error_pct": 0.0,
+        "avg_ms": 2.404,
+        "median_ms": 2.0,
+        "min_ms": 0.0,
+        "max_ms": 16.0,
+        "p90_ms": 4.0,
+        "p95_ms": 4.0,
+        "p99_ms": 5.0,
+        "throughput": 102.58514567090685
+      },
+      "duration": 7.212121486663818
+    },
+    {
+      "test_name": "HarborEndToEndUserJourneyLoadTest",
+      "file": "HarborEndToEndUserJourneyLoadTest.jmx",
+      "status": "PASS",
+      "metrics": {
+        "samples": 750,
+        "successes": 750,
+        "failures": 0,
+        "error_pct": 0.0,
+        "avg_ms": 15.428,
+        "median_ms": 4.0,
+        "min_ms": 0.0,
+        "max_ms": 136.0,
+        "p90_ms": 109.0,
+        "p95_ms": 114.0,
+        "p99_ms": 126.0,
+        "throughput": 139.24990716672855
+      },
+      "duration": 5.846820831298828
+    },
+    {
+      "test_name": "NotificationLoadTest",
+      "file": "NotificationLoadTest.jmx",
+      "status": "PASS",
+      "metrics": {
+        "samples": 400,
+        "successes": 400,
+        "failures": 0,
+        "error_pct": 0.0,
+        "avg_ms": 8.32,
+        "median_ms": 8.0,
+        "min_ms": 3.0,
+        "max_ms": 24.0,
+        "p90_ms": 13.0,
+        "p95_ms": 15.0,
+        "p99_ms": 19.0,
+        "throughput": 81.9672131147541
+      },
+      "duration": 7.216082811355591
+    },
+    {
+      "test_name": "ProjectCatalogLoadTest",
+      "file": "ProjectCatalogLoadTest.jmx",
+      "status": "PASS",
+      "metrics": {
+        "samples": 500,
+        "successes": 500,
+        "failures": 0,
+        "error_pct": 0.0,
+        "avg_ms": 4.822,
+        "median_ms": 4.0,
+        "min_ms": 1.0,
+        "max_ms": 21.0,
+        "p90_ms": 8.0,
+        "p95_ms": 10.0,
+        "p99_ms": 14.0,
+        "throughput": 104.14496979795875
+      },
+      "duration": 7.2536420822143555
+    }
+  ]
+}

@@ -85,6 +85,98 @@ namespace Harbor.Reporting.Controllers
                         }
                     }
                 }
+                else if (provider.Equals("railway", StringComparison.OrdinalIgnoreCase))
+                {
+                    try
+                    {
+                        var doc = JsonDocument.Parse(payload);
+                        var root = doc.RootElement;
+
+                        if (root.ValueKind == JsonValueKind.Array)
+                        {
+                            foreach (var item in root.EnumerateArray())
+                            {
+                                var msg = item.TryGetProperty("message", out var m) ? m.GetString() : item.ToString();
+                                var lvl = item.TryGetProperty("level", out var l) ? l.GetString() : "[info]";
+                                var ts = item.TryGetProperty("timestamp", out var t) ? t.GetString() : DateTime.UtcNow.ToString("HH:mm:ss.ff");
+
+                                entries.Add(new
+                                {
+                                    timestamp = ts ?? DateTime.UtcNow.ToString("HH:mm:ss.ff"),
+                                    level = lvl ?? "[info]",
+                                    message = msg ?? "Railway log message"
+                                });
+                            }
+                        }
+                        else if (root.TryGetProperty("type", out var typeProp))
+                        {
+                            // Railway Project Webhook (e.g. DEPLOY_COMPLETED)
+                            var eventType = typeProp.GetString() ?? "DEPLOYMENT_EVENT";
+                            string status = "UNKNOWN";
+                            string commitMsg = "";
+                            string commitAuthor = "";
+
+                            if (root.TryGetProperty("details", out var details))
+                            {
+                                if (details.TryGetProperty("status", out var s)) status = s.GetString() ?? "UNKNOWN";
+                                if (details.TryGetProperty("commitMessage", out var cm)) commitMsg = cm.GetString() ?? "";
+                                if (details.TryGetProperty("commitAuthor", out var ca)) commitAuthor = ca.GetString() ?? "";
+                            }
+
+                            string serviceName = "";
+                            if (root.TryGetProperty("resource", out var res) &&
+                                res.TryGetProperty("service", out var srv) &&
+                                srv.TryGetProperty("name", out var sn))
+                            {
+                                serviceName = sn.GetString() ?? "";
+                            }
+
+                            var summary = $"[Railway Webhook] {eventType}: Status={status}";
+                            if (!string.IsNullOrWhiteSpace(serviceName)) summary += $" | Service={serviceName}";
+                            if (!string.IsNullOrWhiteSpace(commitMsg)) summary += $" | Commit: {commitMsg} ({commitAuthor})";
+
+                            entries.Add(new
+                            {
+                                timestamp = DateTime.UtcNow.ToString("HH:mm:ss.ff"),
+                                level = status.Equals("SUCCESS", StringComparison.OrdinalIgnoreCase) ? "[success]" : (status.Equals("FAILED", StringComparison.OrdinalIgnoreCase) ? "[error]" : "[info]"),
+                                message = summary
+                            });
+                        }
+                        else if (root.TryGetProperty("message", out var singleMsg))
+                        {
+                            var lvl = root.TryGetProperty("level", out var l) ? l.GetString() : "[info]";
+                            var ts = root.TryGetProperty("timestamp", out var t) ? t.GetString() : DateTime.UtcNow.ToString("HH:mm:ss.ff");
+                            entries.Add(new
+                            {
+                                timestamp = ts ?? DateTime.UtcNow.ToString("HH:mm:ss.ff"),
+                                level = lvl ?? "[info]",
+                                message = singleMsg.GetString() ?? "Railway log"
+                            });
+                        }
+                        else
+                        {
+                            entries.Add(new
+                            {
+                                timestamp = DateTime.UtcNow.ToString("HH:mm:ss.ff"),
+                                level = "[info]",
+                                message = $"[Railway Webhook] Received event payload: {payload.Trim()}"
+                            });
+                        }
+                    }
+                    catch
+                    {
+                        var lines = payload.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+                        foreach (var line in lines)
+                        {
+                            entries.Add(new
+                            {
+                                timestamp = DateTime.UtcNow.ToString("HH:mm:ss.ff"),
+                                level = "[info]",
+                                message = line.Trim()
+                            });
+                        }
+                    }
+                }
                 else
                 {
                     // Generic fallback for other PaaS providers

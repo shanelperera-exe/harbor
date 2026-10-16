@@ -11,7 +11,7 @@ namespace Harbor.Authentication.Data
             MigrationRunner.Run(connectionString);
         }
 
-        private static string ResolveConnectionString(IConfiguration configuration)
+        public static string ResolveConnectionString(IConfiguration configuration)
         {
             var cs = configuration.GetConnectionString("HarborDb");
             if (!string.IsNullOrWhiteSpace(cs)) return cs;

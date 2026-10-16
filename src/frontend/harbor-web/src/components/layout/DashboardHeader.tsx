@@ -289,8 +289,7 @@ export default function DashboardHeader({
             )}
           </button>
           <a className="flex-shrink-0 flex items-center justify-center focus:outline-none" href="/">
-            <img src="/logos/harbor_light_notext.svg" alt="Harbor" className="w-7 h-7 sm:w-8 sm:h-8 object-contain dark:hidden" />
-            <img src="/logos/harbor_dark_notext.png" alt="Harbor" className="w-7 h-7 sm:w-8 sm:h-8 object-contain hidden dark:block" />
+            <img src="/logos/harbor_light_notext.svg" alt="Harbor" className="w-7 h-7 sm:w-8 sm:h-8 object-contain" />
           </a>
         </div>
         <div className="flex-1 min-w-0 flex items-center pl-4 sm:pl-5 space-x-2">

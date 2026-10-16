@@ -51,14 +51,14 @@
             </elementProp>
             <elementProp name="" elementType="Header">
               <stringProp name="Header.name">Authorization</stringProp>
-              <stringProp name="Header.value">Bearer ${jwt_token}</stringProp>
+              <stringProp name="Header.value">Bearer ${__P(jwt_token,${jwt_token})}</stringProp>
             </elementProp>
           </collectionProp>
         </HeaderManager>
         <hashTree/>
         <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="HTTP Request - Baseline">
-          <stringProp name="HTTPSampler.domain">localhost</stringProp>
-          <stringProp name="HTTPSampler.port">5053</stringProp>
+          <stringProp name="HTTPSampler.domain">${__P(api_host,localhost)}</stringProp>
+          <stringProp name="HTTPSampler.port">${__P(api_port,5000)}</stringProp>
           <stringProp name="HTTPSampler.protocol">http</stringProp>
           <stringProp name="HTTPSampler.path">/api/deployments/${deployment_public_id_baseline}</stringProp>
           <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
@@ -141,14 +141,14 @@
             </elementProp>
             <elementProp name="" elementType="Header">
               <stringProp name="Header.name">Authorization</stringProp>
-              <stringProp name="Header.value">Bearer ${jwt_token}</stringProp>
+              <stringProp name="Header.value">Bearer ${__P(jwt_token,${jwt_token})}</stringProp>
             </elementProp>
           </collectionProp>
         </HeaderManager>
         <hashTree/>
         <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="HTTP Request - Large Payload">
-          <stringProp name="HTTPSampler.domain">localhost</stringProp>
-          <stringProp name="HTTPSampler.port">5053</stringProp>
+          <stringProp name="HTTPSampler.domain">${__P(api_host,localhost)}</stringProp>
+          <stringProp name="HTTPSampler.port">${__P(api_port,5000)}</stringProp>
           <stringProp name="HTTPSampler.protocol">http</stringProp>
           <stringProp name="HTTPSampler.path">/api/deployments/${deployment_public_id_large}</stringProp>
           <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
@@ -231,14 +231,14 @@
             </elementProp>
             <elementProp name="" elementType="Header">
               <stringProp name="Header.name">Authorization</stringProp>
-              <stringProp name="Header.value">Bearer ${jwt_token}</stringProp>
+              <stringProp name="Header.value">Bearer ${__P(jwt_token,${jwt_token})}</stringProp>
             </elementProp>
           </collectionProp>
         </HeaderManager>
         <hashTree/>
         <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="HTTP Request - Concurrent Load">
-          <stringProp name="HTTPSampler.domain">localhost</stringProp>
-          <stringProp name="HTTPSampler.port">5053</stringProp>
+          <stringProp name="HTTPSampler.domain">${__P(api_host,localhost)}</stringProp>
+          <stringProp name="HTTPSampler.port">${__P(api_port,5000)}</stringProp>
           <stringProp name="HTTPSampler.protocol">http</stringProp>
           <stringProp name="HTTPSampler.path">/api/deployments/${deployment_public_id_large}</stringProp>
           <boolProp name="HTTPSampler.follow_redirects">true</boolProp>

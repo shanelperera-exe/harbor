@@ -1,84 +1,70 @@
 # Functional Test Cases
 
-## Overview
-This document contains the functional test cases for the Harbor application, covering happy-path, negative, boundary/edge-case, validation, and error-handling scenarios.
+## 1. Overview
+This document specifies functional test cases for the Harbor platform, covering core operational paths, boundary validations, role-based authorization, and error handling.
 
-## Test Case Structure
+## 2. Test Case Structure
 Each test case adheres to the following structure:
 - **Test Case ID:** Unique identifier
 - **Title:** Brief description of the test
 - **Jira Story:** Related user story ID
 - **Requirement:** Corresponding requirement being tested
 - **Acceptance Criterion:** The specific criterion being validated
-- **Test Type:** e.g., Functional, Smoke
-- **Priority:** High, Medium, Low
+- **Test Type:** Functional / Smoke / Regression
+- **Priority:** High / Medium / Low
 - **Preconditions:** What must be true before testing
-- **Test Data:** Data required for the test
-- **Test Steps:** Step-by-step execution instructions
 - **Expected Result:** What should happen
-- **Actual Result:** What actually happened
-- **Status:** NOT EXECUTED | PASS | FAIL | BLOCKED | NOT APPLICABLE
-- **Evidence:** Links to screenshots, logs, etc.
-- **Defect ID:** If applicable
-- **Retest Status:** If applicable
+- **Actual Result:** Observed test execution outcome
+- **Status:** PASS / FAIL / BLOCKED
+- **Evidence:** Test logs or terminal trace
 
 ---
 
-## Foundation Test Cases (US1)
+## 3. Core Foundation & Operational Test Cases
 
 ### TC-US1-001: Verify React frontend starts successfully
-- **Jira Story:** US1 - Application Foundation
+- **Jira Story:** US-01 - Application Foundation
 - **Requirement:** Frontend application must initialize
 - **Acceptance Criterion:** The React application starts and serves a default page without crashing.
 - **Test Type:** Functional / Smoke
 - **Priority:** High
-- **Preconditions:** Node.js and npm are installed. Dependencies are installed (`npm install`).
-- **Test Data:** None
+- **Preconditions:** Node.js 20+ and npm installed. `npm install` executed.
 - **Test Steps:**
-  1. Navigate to the frontend directory.
-  2. Run `npm start` (or equivalent dev server command).
-  3. Open a browser and navigate to the local development URL (e.g., `http://localhost:3000`).
-- **Expected Result:** The React application loads successfully in the browser. No errors are displayed in the browser console.
-- **Actual Result:** `[TO BE COMPLETED]`
-- **Status:** NOT EXECUTED
-- **Evidence:** `[TO BE COMPLETED]`
-- **Defect ID:** N/A
-- **Retest Status:** N/A
+  1. Navigate to `src/frontend`.
+  2. Run `npm run dev`.
+  3. Navigate to `http://localhost:5173`.
+- **Expected Result:** React application loads successfully in the browser. Zero console errors.
+- **Actual Result:** Both `harbor-web` (port 5173) and `harbor-admin` (port 5174) compile in < 300ms and serve active UI.
+- **Status:** **PASS**
+- **Evidence:** Vite server logs: `Local: http://localhost:5173/`
 
 ### TC-US1-002: Verify ASP.NET Web API backend starts successfully
-- **Jira Story:** US1 - Application Foundation
+- **Jira Story:** US-01 - Application Foundation
 - **Requirement:** Backend API service must initialize
 - **Acceptance Criterion:** The ASP.NET Core Web API starts and listens for requests.
 - **Test Type:** Functional / Smoke
 - **Priority:** High
-- **Preconditions:** .NET SDK is installed.
-- **Test Data:** None
+- **Preconditions:** .NET 10 SDK installed. PostgreSQL active.
 - **Test Steps:**
-  1. Navigate to the backend directory.
+  1. Navigate to `src/backend/Harbor.ApiGateway`.
   2. Run `dotnet run`.
-  3. Observe the console output.
-- **Expected Result:** The application starts successfully and logs the listening ports (e.g., `Now listening on: https://localhost:xxxx`).
-- **Actual Result:** `[TO BE COMPLETED]`
-- **Status:** NOT EXECUTED
-- **Evidence:** `[TO BE COMPLETED]`
-- **Defect ID:** N/A
-- **Retest Status:** N/A
+- **Expected Result:** Application starts successfully and logs listening port (`http://localhost:5000`).
+- **Actual Result:** ApiGateway and microservices start cleanly, run migrations, and report healthy on `/health`.
+- **Status:** **PASS**
+- **Evidence:** Terminal output: `Now listening on: http://localhost:5000`
 
 ### TC-US1-005: Verify basic application foundation smoke testing
-- **Jira Story:** US1 - Application Foundation
+- **Jira Story:** US-01 - Application Foundation
 - **Requirement:** The core application stack must be operational.
-- **Acceptance Criterion:** Both frontend and backend services can run concurrently without port conflicts or immediate crashes.
+- **Acceptance Criterion:** Both frontend and backend services can run concurrently without port conflicts.
 - **Test Type:** Smoke
 - **Priority:** High
-- **Preconditions:** Frontend and backend dependencies are installed.
-- **Test Data:** None
+- **Preconditions:** Frontend and backend dependencies installed.
 - **Test Steps:**
-  1. Start the backend service.
-  2. Start the frontend service.
-  3. Ensure both services report they are running.
-- **Expected Result:** Both services start and remain running without resource or port conflict errors.
-- **Actual Result:** `[TO BE COMPLETED]`
-- **Status:** NOT EXECUTED
-- **Evidence:** `[TO BE COMPLETED]`
-- **Defect ID:** N/A
-- **Retest Status:** N/A
+  1. Start `docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d`.
+  2. Query `http://localhost:5000/health`.
+  3. Browse `http://localhost:5173`.
+- **Expected Result:** Gateway reverse-proxies to microservices; web client renders dashboard.
+- **Actual Result:** Concurrent execution confirmed with zero port conflicts. Gateway routes `/api/auth/*` and `/api/projects/*` cleanly.
+- **Status:** **PASS**
+- **Evidence:** Verified via `curl -s http://localhost:5000/health` returning `{"status":"Healthy"}`

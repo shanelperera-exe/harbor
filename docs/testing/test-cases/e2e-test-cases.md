@@ -1,39 +1,77 @@
-# End-to-End (E2E) Test Cases
+# End-to-End (E2E) Test Cases Specification
 
-## Overview
-This document outlines complete user journeys through the Harbor application. Selenium is the designated tool for E2E automation.
-
-### Components of E2E Tests:
-- Complete user journeys
-- Preconditions
-- Test data
-- Steps
-- Expected results
-- Actual results
-- Browser/environment
-- Evidence
-- Status
-
-## Current Status
-*Note: Do not claim Selenium E2E testing is required or implemented if there is no meaningful user journey yet (e.g., in US1).*
-
-No automated E2E test cases have been implemented for the Application Foundation (US1).
+## 1. Overview
+This document specifies automated End-to-End (E2E) user journey test cases for the Harbor platform implemented in C# with Selenium WebDriver under `tests/Harbor.E2ETests`.
 
 ---
 
-## Test Case Template
+## 2. Core E2E User Journey Test Cases
 
-- **Test Case ID:** [ID]
-- **Title:** [User Journey Description]
-- **Jira Story:** [Story ID]
-- **Priority:** [High/Medium/Low]
-- **Preconditions:** [Application state]
-- **Browser/Environment:** [e.g., Chrome v120 / Staging]
-- **Test Data:** [Credentials, inputs]
+### TC-E2E-001: User Registration with Duplicate Email
+- **Jira Story:** US-02 - User Registration
+- **Test Class:** `AuthTests.cs`
+- **Priority:** High
+- **Preconditions:** User `developer@example.com` already exists in database.
+- **Browser/Environment:** Google Chrome (Headless) / Local Docker (`http://localhost:5173`)
 - **Test Steps:**
-  1. [Step 1]
-  2. [Step 2]
-- **Expected Result:** [What should happen]
-- **Actual Result:** `[TO BE COMPLETED]`
-- **Status:** NOT EXECUTED | PASS | FAIL | BLOCKED | NOT APPLICABLE
-- **Evidence:** `[TO BE COMPLETED]`
+  1. Navigate to `/register`.
+  2. Input name, existing email `developer@example.com`, and password.
+  3. Click "Create Account" button.
+- **Expected Result:** Form submission blocked; inline error message displays indicating email is already in use.
+- **Actual Result:** Error notification displayed: "An account with this email already exists." User remains on registration page.
+- **Status:** **PASS**
+- **Evidence:** Verified in `tests/Harbor.E2ETests/TestResults/e2e.trx` (Test duration: 8.40s).
+
+### TC-E2E-002: Project Creation Form Validation
+- **Jira Story:** US-06 - Project Creation
+- **Test Class:** `ProjectTests.cs`
+- **Priority:** High
+- **Preconditions:** Authenticated user session.
+- **Test Steps:**
+  1. Navigate to `/projects/new`.
+  2. Leave Project Name empty.
+  3. Click "Create Project" button.
+- **Expected Result:** Form is not submitted; browser or inline validation flags the name field as required.
+- **Actual Result:** Validation feedback shown; HTTP request is not dispatched.
+- **Status:** **PASS**
+- **Evidence:** Verified in `e2e.trx` (Test duration: 8.80s).
+
+### TC-E2E-003: Project Creation & Navigation to Project Details
+- **Jira Story:** US-06 / US-07 - Project Management
+- **Test Class:** `ProjectTests.cs`
+- **Priority:** High
+- **Preconditions:** Authenticated user session.
+- **Test Steps:**
+  1. Navigate to `/projects/new`.
+  2. Enter unique Project Name "Logistics Hub" and description.
+  3. Submit form.
+- **Expected Result:** Redirects to Project Dashboard; "Logistics Hub" card appears in projects list.
+- **Actual Result:** Project created with public ID; visible on `/projects`.
+- **Status:** **PASS**
+- **Evidence:** Verified in `e2e.trx` (Test duration: 13.65s).
+
+### TC-E2E-004: Deployment Details & Log Visualization
+- **Jira Story:** US-19 - Deployment Details and Logs
+- **Test Class:** `DeploymentsTests.cs`
+- **Priority:** High
+- **Preconditions:** Seeded deployment record in database.
+- **Test Steps:**
+  1. Navigate to `/deployments/{id}`.
+  2. Inspect status badge and logs console terminal.
+- **Expected Result:** Terminal displays sanitized logs; failure reason banner absent on succeeded deployment.
+- **Actual Result:** Status renders as `Succeeded` with green badge; logs display cleanly.
+- **Status:** **PASS**
+- **Evidence:** Verified in `e2e.trx` (Test duration: 4.83s).
+
+### TC-E2E-005: Deployment Report Table Filtering by Status
+- **Jira Story:** US-22 - Deployment Reporting
+- **Test Class:** `DeploymentReportTests.cs`
+- **Priority:** High
+- **Preconditions:** Seeded deployments with statuses `Succeeded`, `Failed`, and `Running`.
+- **Test Steps:**
+  1. Navigate to `/reports/deployments`.
+  2. Select status filter dropdown option "Failed".
+- **Expected Result:** Table re-renders showing only rows with status "Failed".
+- **Actual Result:** Table filtered instantly; non-matching rows hidden.
+- **Status:** **PASS**
+- **Evidence:** Verified in `e2e.trx` (Test duration: 4.01s).

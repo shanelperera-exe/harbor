@@ -1,6 +1,6 @@
 import React from 'react';
 import { IoLogoVercel } from 'react-icons/io5';
-import { SiRender, SiGooglecloud, SiKubernetes } from 'react-icons/si';
+import { SiRender, SiGooglecloud, SiKubernetes, SiRailway } from 'react-icons/si';
 import { FaAws, FaDigitalOcean, FaDocker } from 'react-icons/fa';
 import { VscAzure } from 'react-icons/vsc';
 import { MdOutlineCloud } from 'react-icons/md';
@@ -26,6 +26,8 @@ export function CloudProviderBadge({ provider, deploymentUrl, className = '' }: 
     resolved = 'vercel';
   } else if (norm === 'render' || url.includes('onrender.com')) {
     resolved = 'render';
+  } else if (norm === 'railway' || url.includes('railway.app') || url.includes('up.railway.app')) {
+    resolved = 'railway';
   } else if (norm === 'aws' || norm.includes('amazon') || url.includes('amazonaws.com') || url.includes('awsapprunner.com') || url.includes('cloudfront.net')) {
     resolved = 'aws';
   } else if (norm === 'gcp' || norm.includes('google') || url.includes('run.app') || url.includes('appspot.com')) {
@@ -85,6 +87,15 @@ export function CloudProviderBadge({ provider, deploymentUrl, className = '' }: 
       logo: (
         <span className="flex items-center justify-center w-4 h-4 shrink-0">
           <SiRender className="w-3.5 h-3.5 text-white" />
+        </span>
+      ),
+    },
+    railway: {
+      name: 'Railway',
+      badgeClass: 'bg-[#18181b] text-white dark:bg-[#13111C] dark:text-white border border-[#3f3f46] dark:border-[#382D4F]',
+      logo: (
+        <span className="flex items-center justify-center w-4 h-4 shrink-0">
+          <SiRailway className="w-3.5 h-3.5 text-white" />
         </span>
       ),
     },

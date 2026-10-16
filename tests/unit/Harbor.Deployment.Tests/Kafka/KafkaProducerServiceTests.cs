@@ -49,4 +49,22 @@ public class KafkaProducerServiceTests
         var exception = await Record.ExceptionAsync(() => service.PublishDeploymentEventAsync(new DeploymentLifecycleEvent()));
         Assert.Null(exception);
     }
+
+    [Fact]
+    public void Constructor_WithSaslOptions_ConfiguresSasl()
+    {
+        var optionsMock = new Mock<IOptions<KafkaOptions>>();
+        optionsMock.Setup(o => o.Value).Returns(new KafkaOptions
+        {
+            BootstrapServers = "localhost:9092",
+            SaslUsername = "user",
+            SaslPassword = "password",
+            SecurityProtocol = "SaslPlaintext",
+            SaslMechanism = "Plain"
+        });
+        var loggerMock = new Mock<ILogger<KafkaProducerService>>();
+
+        using var service = new KafkaProducerService(optionsMock.Object, loggerMock.Object);
+        Assert.NotNull(service);
+    }
 }

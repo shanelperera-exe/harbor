@@ -70,6 +70,17 @@ public class ReportingApiFactory : WebApplicationFactory<Program>, IAsyncLifetim
                     "CompletedAt" TIMESTAMPTZ,
                     "FailureReason" TEXT
                 );
+
+                CREATE TABLE IF NOT EXISTS "AuditLogs" (
+                    "Id" SERIAL PRIMARY KEY,
+                    "Timestamp" TIMESTAMPTZ NOT NULL DEFAULT now(),
+                    "Actor" VARCHAR(100) NOT NULL,
+                    "Action" VARCHAR(100) NOT NULL,
+                    "Target" VARCHAR(100) NOT NULL,
+                    "IpAddress" VARCHAR(50) NOT NULL,
+                    "Severity" VARCHAR(50) NOT NULL,
+                    "Details" TEXT
+                );
             """, conn);
             await setup.ExecuteNonQueryAsync();
         }

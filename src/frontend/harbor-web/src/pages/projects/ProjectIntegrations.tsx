@@ -6,7 +6,7 @@ import { RiSaveLine, RiCloseLine } from 'react-icons/ri';
 import { BiLinkExternal, BiKey } from 'react-icons/bi';
 import { IoLogoVercel } from 'react-icons/io5';
 import { MdOutlineCloud } from 'react-icons/md';
-import { SiRender, SiGooglecloud, SiKubernetes } from 'react-icons/si';
+import { SiRender, SiGooglecloud, SiKubernetes, SiRailway } from 'react-icons/si';
 import { FaAws, FaDigitalOcean, FaDocker } from 'react-icons/fa';
 import { VscAzure } from 'react-icons/vsc';
 
@@ -26,6 +26,7 @@ const AVAILABLE_PROVIDERS: Array<{
   { id: 'Azure', name: 'Microsoft Azure', icon: VscAzure, iconClass: 'w-9 h-9 translate-y-[1px]', lightIcon: '/external_icons/ms_azure.webp', darkIcon: '/external_icons/ms_azure.webp', desc: 'Connect to Azure App Services and AKS' },
   { id: 'Vercel', name: 'Vercel', icon: IoLogoVercel, iconClass: 'w-8 h-8', lightIcon: '/external_icons/vercel_light.svg', darkIcon: '/external_icons/vercel_dark.svg', desc: 'Connect your Vercel team for Edge networking' },
   { id: 'Render', name: 'Render', icon: SiRender, iconClass: 'w-8 h-8', lightIcon: '/external_icons/render.svg', darkIcon: '/external_icons/render.svg', invertInDark: true, desc: 'Connect to Render for simple hosting' },
+  { id: 'Railway', name: 'Railway', icon: SiRailway, iconClass: 'w-8 h-8', lightIcon: '/external_icons/railway_light.svg', darkIcon: '/external_icons/railway_dark.svg', desc: 'Connect to Railway for container and serverless deployments' },
   { id: 'DigitalOcean', name: 'DigitalOcean', icon: FaDigitalOcean, iconClass: 'w-9 h-9 translate-y-[1px]', lightIcon: '/external_icons/digitalocean_light.svg', darkIcon: '/external_icons/digitalocean_light.svg', desc: 'Connect your DO account for Droplets and Apps' },
   { id: 'Kubernetes', name: 'Kubernetes', badge: 'Self-Hosted', icon: SiKubernetes, iconClass: 'w-9 h-9 translate-y-[1px]', lightIcon: '/external_icons/kubernetes_light.svg', darkIcon: '/external_icons/kubernetes_light.svg', desc: 'Bring your own K8s cluster' },
   { id: 'Docker', name: 'Docker', badge: 'Self-Hosted', icon: FaDocker, iconClass: 'w-11 h-11 translate-y-[1px]', lightIcon: '/external_icons/docker_light.svg', darkIcon: '/external_icons/docker_light.svg', desc: 'Connect to your own Docker Daemon or Swarm' },

@@ -24,6 +24,15 @@
 
 Harbor is a unified microservices deployment and environment orchestration platform. It empowers engineering organizations to register applications, provision multi-stage environments (`Development`, `Staging`, `Production`), store versioned configurations with AES-256-GCM secret encryption, trigger automated CI/CD runs via GitHub Actions, stream live execution logs over SignalR WebSockets, decouple lifecycle events through Apache Kafka and Azure Event Hubs, and generate cross-service audit and DORA metric reports.
 
+> [!IMPORTANT]
+> **SE3112: Advanced Software Engineering — Microservice Testing Pipeline**  
+> Complete documentation for the automated testing pipeline, individual feature ownership, tool setup, pipeline commands, and 12-minute viva presentation schedule is published in **[`docs/testing/MICROSERVICE_TESTING_PIPELINE.md`](docs/testing/MICROSERVICE_TESTING_PIPELINE.md)**.
+>
+> ```bash
+> # Run the complete unified 4-layer testing pipeline in one command
+> ./scripts/run-testing-pipeline.sh --all
+> ```
+
 > [!NOTE]
 > **Academic Case Study Context:** Harbor is built as an academic microservices case study (SE3022) delivered across four sprints. Formal QA artifacts (test strategy, test plans, sprint QA reports) are published in [`docs/testing/`](docs/testing/README.md).
 

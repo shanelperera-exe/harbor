@@ -143,11 +143,8 @@ var app = builder.Build();
 
 Harbor.Project.Data.DatabaseInitializer.Initialize(app.Configuration);
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.UseCors("DefaultPolicy");
 app.UseHarborObservability();

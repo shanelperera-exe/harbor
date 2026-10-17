@@ -95,11 +95,19 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
     // Configure the HTTP request pipeline.
-    if (app.Environment.IsDevelopment())
+    app.UseSwagger();
+    app.UseSwaggerUI(c =>
     {
-        app.UseSwagger();
-        app.UseSwaggerUI();
-    }
+        c.SwaggerEndpoint("/swagger-docs/auth/v1/swagger.json", "Harbor.Authentication API");
+        c.SwaggerEndpoint("/swagger-docs/project/v1/swagger.json", "Harbor.Project API");
+        c.SwaggerEndpoint("/swagger-docs/environment/v1/swagger.json", "Harbor.Environment API");
+        c.SwaggerEndpoint("/swagger-docs/deployment/v1/swagger.json", "Harbor.Deployment API");
+        c.SwaggerEndpoint("/swagger-docs/reporting/v1/swagger.json", "Harbor.Reporting API");
+        c.RoutePrefix = "swagger";
+        c.DocumentTitle = "Harbor Platform API Documentation";
+    });
+
+    app.MapGet("/", () => Results.Redirect("/swagger"));
 
     app.UseForwardedHeaders();
     app.UseCors();

@@ -74,12 +74,8 @@ builder.Services.AddSingleton<Harbor.Common.Security.IHarborSecretProtector, Har
 var app = builder.Build();
 DatabaseInitializer.Initialize(app.Configuration);
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.UseHarborObservability();
 app.UseCors("DefaultPolicy");

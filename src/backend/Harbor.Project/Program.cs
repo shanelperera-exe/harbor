@@ -128,8 +128,14 @@ builder.Services.AddScoped<Harbor.Project.Repositories.IProjectIntegrationReposi
 builder.Services.AddScoped<Harbor.Project.Services.IProjectIntegrationService, Harbor.Project.Services.ProjectIntegrationService>();
 builder.Services.AddScoped<Harbor.Project.Repositories.IServiceDomainRepository, Harbor.Project.Repositories.ServiceDomainRepository>();
 builder.Services.AddScoped<Harbor.Project.Services.IServiceDomainService, Harbor.Project.Services.ServiceDomainService>();
-builder.Services.AddHttpClient<Harbor.Project.Services.ITokenService, Harbor.Project.Services.TokenService>();
-builder.Services.AddHttpClient<Harbor.Project.Services.IGitHubService, Harbor.Project.Services.GitHubService>();
+builder.Services.AddHttpClient<Harbor.Project.Services.ITokenService, Harbor.Project.Services.TokenService>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(15);
+});
+builder.Services.AddHttpClient<Harbor.Project.Services.IGitHubService, Harbor.Project.Services.GitHubService>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(20);
+});
 builder.Services.AddHarborGitHubApp();
 builder.Services.AddSingleton<Harbor.Common.Security.IHarborSecretProtector, Harbor.Common.Security.HarborSecretProtector>();
 

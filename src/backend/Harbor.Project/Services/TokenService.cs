@@ -67,7 +67,11 @@ namespace Harbor.Project.Services
         public TokenService(HttpClient httpClient, IConfiguration configuration)
         {
             _httpClient = httpClient;
-            _authServiceUrl = configuration["AuthServiceUrl"] ?? "http://authentication-service:8080";
+            var authUrl = configuration["AUTH_SERVICE_URL"]
+                ?? configuration["AuthServiceUrl"]
+                ?? Environment.GetEnvironmentVariable("AUTH_SERVICE_URL")
+                ?? Environment.GetEnvironmentVariable("AuthServiceUrl");
+            _authServiceUrl = !string.IsNullOrWhiteSpace(authUrl) ? authUrl.TrimEnd('/') : "http://authentication-service:8080";
         }
 
         public async Task<string?> GetGitHubTokenAsync(int userId)

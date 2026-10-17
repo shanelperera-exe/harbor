@@ -164,6 +164,25 @@ namespace Harbor.Project.Tests
             Assert.Contains("authentication-service", handler.LastRequest!.RequestUri!.Host);
         }
 
+        [Fact]
+        public async Task Constructor_WithAuthServiceUrlEnvVar_UsesEnvVarUrl()
+        {
+            var handler = new FakeHttpMessageHandler("""{ "token": "ghs_xyz" }""");
+            var config = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["AUTH_SERVICE_URL"] = "http://harbor-auth-api"
+                })
+                .Build();
+
+            var service = new TokenService(new HttpClient(handler), config);
+            await service.GetGitHubInstallationTokenAsync(1);
+
+            Assert.Equal(
+                "http://harbor-auth-api/api/internal/users/1/installation-token",
+                handler.LastRequest!.RequestUri!.ToString());
+        }
+
         // ---------- GetGitHubTokenResultAsync: installation path ----------
 
         [Fact]

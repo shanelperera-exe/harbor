@@ -126,7 +126,6 @@ jobs:
                 "GOOGLE_CLIENT_ID=${{ vars.GOOGLE_CLIENT_ID }}" \
                 "GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET" \
                 "AUTH_SERVICE_URL=$AUTH_SERVICE_URL" \
-                "AuthServiceUrl=$AUTH_SERVICE_URL" \
                 "FRONTEND_URL=https://harborapp.tech" \
                 "API_GATEWAY_URL=https://api.harborapp.tech" \
                 "ALLOWED_ORIGINS=https://harborapp.tech,https://admin.harborapp.tech" \

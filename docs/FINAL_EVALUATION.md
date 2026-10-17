@@ -1141,6 +1141,13 @@ GITHUB_API_BASE_URL=https://api.github.com/
 API_GATEWAY_URL=http://localhost:5000
 FRONTEND_URL=http://localhost:5173
 ALLOWED_ORIGINS=http://localhost:5173,http://localhost:5174,http://localhost:5000
+
+# =============================================================================
+# 8. Ngrok Public Tunnel (Local Development Only — for GitHub Webhooks)
+# Required because GitHub Actions runner webhooks cannot reach http://localhost.
+# =============================================================================
+NGROK_AUTHTOKEN=<YOUR_NGROK_AUTHTOKEN>
+NGROK_DOMAIN=<YOUR_RESERVED_NGROK_DOMAIN>
 ```
 
 ---
@@ -1149,18 +1156,20 @@ ALLOWED_ORIGINS=http://localhost:5173,http://localhost:5174,http://localhost:500
 
 Harbor supports two local operational workflows: a fully containerized orchestration stack and a hybrid mode optimized for active development.
 
-### Option A: Complete Docker Compose Stack (Recommended for Evaluation)
-Spins up all five microservices, the YARP API Gateway, both React SPAs, PostgreSQL 15, Redis 7, Kafka in KRaft mode, and Mailpit:
+### Option A: Complete Docker Compose Stack with Ngrok Tunnel (Recommended for Evaluation)
+Spins up all five microservices, the YARP API Gateway, both React SPAs, PostgreSQL 15, Redis 7, Kafka in KRaft mode, Mailpit, and the **ngrok tunnel**.
+
+> **Why ngrok is required for local evaluation**:  
+> GitHub Actions runners and GitHub App webhooks cannot send completion callbacks to `http://localhost`. When testing end-to-end deployment workflows locally, the `ngrok` container exposes the YARP API Gateway to a secure public URL (`${NGROK_DOMAIN}`), allowing GitHub webhook deliveries (`POST /api/deployments/webhooks/github`) to reach the local deployment engine.
 
 ```bash
-# Build and start all services in the background
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build -d
+# 1. Full stack with ngrok tunnel (local development)
+# Note: Ensure NGROK_AUTHTOKEN and NGROK_DOMAIN are configured in .env or passed via CLI:
+NGROK_AUTHTOKEN=<your_token> docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build \
+  postgres redis mailpit api-gateway authentication-service project-service environment-service deployment-service reporting-service ngrok
 
-# Follow aggregate real-time logs
-docker compose logs -f
-
-# Verify container statuses
-docker compose ps
+# 2. Ngrok-only (if backend services are already running natively or in Docker)
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up ngrok
 ```
 
 #### Local Port Bindings & Service Map:

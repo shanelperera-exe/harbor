@@ -340,9 +340,9 @@ graph TB
     end
 
     subgraph Tier4["Persistence, Cache & Messaging Tier"]
-        DB[(PostgreSQL 15 Database\n- harbor_db\n- Isolated Schemas: auth, proj, env, dep, rep\n- Raw ADO.NET / Npgsql Access)]:::box
-        Redis[(Redis 7 Cache & Blacklist\n- JWT JTI Invalidation Blacklist\n- SignalR Log Replay Buffer\n- Rate Limit State Tracking)]:::box
-        Kafka[[Apache Kafka / Azure Event Hubs\n- Topic: deployment-events\n- Partition Key: ServiceId\n- Group: harbor-deployment-group]]:::box
+        DB[("PostgreSQL 15 Database\n- harbor_db\n- Isolated Schemas: auth, proj, env, dep, rep\n- Raw ADO.NET / Npgsql Access")]:::box
+        Redis[("Redis 7 Cache & Blacklist\n- JWT JTI Invalidation Blacklist\n- SignalR Log Replay Buffer\n- Rate Limit State Tracking")]:::box
+        Kafka[["Apache Kafka / Azure Event Hubs\n- Topic: deployment-events\n- Partition Key: ServiceId\n- Group: harbor-deployment-group"]]:::box
     end
 
     subgraph Tier5["External Integrations & Execution Tier"]
@@ -407,7 +407,7 @@ The sequence diagram below models the complete data flow during a deployment ope
 }}%%
 sequenceDiagram
     autonumber
-    actor Dev as Developer (harbor-web)
+    actor Dev as "Developer (harbor-web)"
     participant GW as YARP API Gateway
     participant Dep as Harbor.Deployment
     participant Auth as Harbor.Authentication
@@ -415,7 +415,7 @@ sequenceDiagram
     participant Runner as GitHub Runner
     participant DB as PostgreSQL 15
     participant Kafka as Kafka / Event Hubs
-    participant Rep as Harbor.Reporting (SignalR)
+    participant Rep as "Harbor.Reporting (SignalR)"
 
     Dev->>GW: POST /api/deployments { serviceId, envId, commitSha, version }
     GW->>Dep: Proxy Request (Bearer JWT validated, Correlation ID added)
@@ -442,8 +442,8 @@ sequenceDiagram
     GW->>Dep: Forward Runner Webhook Payload
     
     critical State Reconciliation & Sanitization
-        Dep->>Dep: DeploymentLogSanitizer.Sanitize(rawLogs) -> [REDACTED] secrets
-        Dep->>Dep: DeploymentUrlExtractor.ExtractUrl(rawLogs) -> target app URL
+        Dep->>Dep: DeploymentLogSanitizer redacts sensitive credentials
+        Dep->>Dep: DeploymentUrlExtractor extracts target application URL
         Dep->>DB: UPDATE deployments SET Status='Succeeded', CompletedAt=NOW(), Logs=sanitized
         Dep->>Kafka: Publish DeploymentLifecycleEvent (Status='Succeeded')
     end
@@ -528,8 +528,13 @@ graph TB
     Gateway_App -->|Internal HTTP| Deploy_App
     Gateway_App -->|Internal HTTP / WSS| Report_App
 
-    InternalApps -->|Port 5432 (TLS)| PG_Flex
-    Auth_App & Report_App -->|Port 6380 (TLS)| Redis_Azure
+    Auth_App -->|Port 5432 (TLS)| PG_Flex
+    Proj_App -->|Port 5432 (TLS)| PG_Flex
+    Env_App -->|Port 5432 (TLS)| PG_Flex
+    Deploy_App -->|Port 5432 (TLS)| PG_Flex
+    Report_App -->|Port 5432 (TLS)| PG_Flex
+    Auth_App -->|Port 6380 (TLS)| Redis_Azure
+    Report_App -->|Port 6380 (TLS)| Redis_Azure
     Deploy_App -->|Port 9093 (SASL_SSL)| EventHub_Azure
 ```
 
@@ -1374,7 +1379,7 @@ flowchart TD
     end
 
     subgraph CDStage["4. Continuous Deployment (cd.yml)"]
-        MergeMain{"Merged to 'main' branch\n& CI Succeeded?"}:::box
+        MergeMain{"Merged to 'main' branch\nand CI Succeeded?"}:::box
 
         subgraph DeployBackend["Job 1: Deploy Internal Microservices (Matrix)"]
             DeployAuth["harbor-auth-api"]:::box
@@ -1400,7 +1405,8 @@ flowchart TD
 
     DevPush -.->|PR Label / Nightly| SeleniumE2E
 
-    BuildFE & JobTest --> MergeMain
+    BuildFE --> MergeMain
+    JobTest --> MergeMain
     MergeMain -->|Yes| DeployBackend
     DeployBackend --> JobGateway
     JobGateway --> DeployFrontends
@@ -1690,6 +1696,11 @@ graph LR
         CatalogTest["Project & Env Queries\nAvg: 4.82 ms | 104.1 req/s"]:::box
         LargeLogTest["2,000 Log Lines Retrieval\nAvg: 17.88 ms | 50 users"]:::box
         E2EJourney["10-Step Full User Journey\nAvg: 15.43 ms | 139.2 req/s"]:::box
+
+        GatewayTest --> AuthTest
+        AuthTest --> CatalogTest
+        CatalogTest --> LargeLogTest
+        LargeLogTest --> E2EJourney
     end
 ```
 

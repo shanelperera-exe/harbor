@@ -183,31 +183,18 @@ In the initial development phase (Sprint 1), the platform foundation focused on 
 
 ```mermaid
 %%{init: {
-  'theme': 'base',
+  'theme': 'neutral',
   'themeVariables': {
-    'fontFamily': 'Courier New, monospace',
-    'darkMode': true,
-    'background': '#18181b',
-    'mainBkg': 'transparent',
-    'nodeBorder': '#ffffff',
-    'nodeTextColor': '#ffffff',
-    'lineColor': '#ffffff',
-    'edgeLabelBackground': '#18181b',
-    'clusterBkg': 'transparent',
-    'clusterBorder': '#ffffff',
-    'titleColor': '#ffffff',
-    'textColor': '#ffffff'
+    'fontFamily': 'Courier New, monospace'
   }
 }}%%
 flowchart TD
-    classDef box fill:transparent,stroke:#ffffff,stroke-width:1.5px,color:#ffffff,font-family:Courier New, monospace;
-
     subgraph Iteration1["Architecture Iteration 1 (Direct Ingress & Synchronous Coupling)"]
-        SPA1["Client SPA (Harbor Web)"]:::box
-        DirectAuth["Harbor.Authentication (:5001)"]:::box
-        DirectProj["Harbor.Project (:5002)"]:::box
-        DirectEnv["Harbor.Environment (:5003)"]:::box
-        SharedDB[("PostgreSQL\n(Unified Public Schema / ORM)")]:::box
+        SPA1["Client SPA (Harbor Web)"]
+        DirectAuth["Harbor.Authentication (:5001)"]
+        DirectProj["Harbor.Project (:5002)"]
+        DirectEnv["Harbor.Environment (:5003)"]
+        SharedDB[("PostgreSQL\n(Unified Public Schema / ORM)")]
     end
 
     SPA1 -->|Direct HTTP / Multiple Ingress Ports| DirectAuth
@@ -231,41 +218,28 @@ To resolve the limitations discovered during Iteration 1, the architecture under
 
 ```mermaid
 %%{init: {
-  'theme': 'base',
+  'theme': 'neutral',
   'themeVariables': {
-    'fontFamily': 'Courier New, monospace',
-    'darkMode': true,
-    'background': '#18181b',
-    'mainBkg': 'transparent',
-    'nodeBorder': '#ffffff',
-    'nodeTextColor': '#ffffff',
-    'lineColor': '#ffffff',
-    'edgeLabelBackground': '#18181b',
-    'clusterBkg': 'transparent',
-    'clusterBorder': '#ffffff',
-    'titleColor': '#ffffff',
-    'textColor': '#ffffff'
+    'fontFamily': 'Courier New, monospace'
   }
 }}%%
 flowchart TD
-    classDef box fill:transparent,stroke:#ffffff,stroke-width:1.5px,color:#ffffff,font-family:Courier New, monospace;
-
     subgraph Iteration2["Architecture Iteration 2 (Gateway Ingress, Event Streaming & Isolated Persistence)"]
-        ClientWeb["harbor-web (Dev Portal)"]:::box
-        ClientAdmin["harbor-admin (Admin Portal)"]:::box
-        YARP["YARP API Gateway (:5000 / :8080)\nReverse Proxy, Central CORS, Rate Limiting"]:::box
+        ClientWeb["harbor-web (Dev Portal)"]
+        ClientAdmin["harbor-admin (Admin Portal)"]
+        YARP["YARP API Gateway (:5000 / :8080)\nReverse Proxy, Central CORS, Rate Limiting"]
         
         subgraph InternalCluster["Private Microservices Subnet"]
-            Auth2["Harbor.Authentication\n(BCrypt + JWT + OAuth Broker)"]:::box
-            Proj2["Harbor.Project\n(Catalog & DNS Verification)"]:::box
-            Env2["Harbor.Environment\n(AES-256-GCM Cryptography)"]:::box
-            Deploy2["Harbor.Deployment\n(Dispatch Engine + Webhook Ingestion)"]:::box
-            Report2["Harbor.Reporting\n(DORA Metrics + SignalR Log Hub)"]:::box
+            Auth2["Harbor.Authentication\n(BCrypt + JWT + OAuth Broker)"]
+            Proj2["Harbor.Project\n(Catalog & DNS Verification)"]
+            Env2["Harbor.Environment\n(AES-256-GCM Cryptography)"]
+            Deploy2["Harbor.Deployment\n(Dispatch Engine + Webhook Ingestion)"]
+            Report2["Harbor.Reporting\n(DORA Metrics + SignalR Log Hub)"]
         end
 
-        RedisState[("Redis Cache & Blacklist\n(Sub-ms Revocation)")]:::box
-        KafkaBus[["Apache Kafka / Event Hubs\n(Topic: deployment-events)"]]:::box
-        IsoDB[("PostgreSQL 15 (harbor_db)\nStrictly Isolated Schemas via ADO.NET")]:::box
+        RedisState[("Redis Cache & Blacklist\n(Sub-ms Revocation)")]
+        KafkaBus[["Apache Kafka / Event Hubs\n(Topic: deployment-events)"]]
+        IsoDB[("PostgreSQL 15 (harbor_db)\nStrictly Isolated Schemas via ADO.NET")]
     end
 
     ClientWeb -->|Single HTTPS / WSS Ingress| YARP
@@ -303,51 +277,38 @@ The complete, production-verified component architecture of the Harbor platform 
 
 ```mermaid
 %%{init: {
-  'theme': 'base',
+  'theme': 'neutral',
   'themeVariables': {
-    'fontFamily': 'Courier New, monospace',
-    'darkMode': true,
-    'background': '#18181b',
-    'mainBkg': 'transparent',
-    'nodeBorder': '#ffffff',
-    'nodeTextColor': '#ffffff',
-    'lineColor': '#ffffff',
-    'edgeLabelBackground': '#18181b',
-    'clusterBkg': 'transparent',
-    'clusterBorder': '#ffffff',
-    'titleColor': '#ffffff',
-    'textColor': '#ffffff'
+    'fontFamily': 'Courier New, monospace'
   }
 }}%%
 graph TB
-    classDef box fill:transparent,stroke:#ffffff,stroke-width:1.5px,color:#ffffff,font-family:Courier New, monospace;
-
     subgraph Tier1["Frontend Presentation Tier (React 19 + TypeScript + Vite)"]
-        WebSPA["harbor-web (Developer Portal)\n- Project & Service Setup\n- Env Config & AES Secrets\n- Deployment Triggers & Live Logs"]:::box
-        AdminSPA["harbor-admin (Admin Dashboard)\n- User Access & Role Governance\n- Platform Observability & Auditing\n- Custom Domain Verification"]:::box
+        WebSPA["harbor-web (Developer Portal)\n- Project & Service Setup\n- Env Config & AES Secrets\n- Deployment Triggers & Live Logs"]
+        AdminSPA["harbor-admin (Admin Dashboard)\n- User Access & Role Governance\n- Platform Observability & Auditing\n- Custom Domain Verification"]
     end
 
     subgraph Tier2["Edge Routing & Gateway Tier (YARP)"]
-        Gateway["Harbor.ApiGateway\n- Path-based Reverse Proxy\n- Centralized CORS & Rate Limiting\n- WebSocket Upgrades (/hubs/logs)\n- Header Enrichment (X-Forwarded-*)"]:::box
+        Gateway["Harbor.ApiGateway\n- Path-based Reverse Proxy\n- Centralized CORS & Rate Limiting\n- WebSocket Upgrades (/hubs/logs)\n- Header Enrichment (X-Forwarded-*)"]
     end
 
     subgraph Tier3["Core Microservices Tier (ASP.NET Core / .NET 10 SDK)"]
-        AuthSvc["Harbor.Authentication\n- Local & GitHub OAuth\n- JWT Issuance & Redis Blacklist\n- GitHub App Token Broker"]:::box
-        ProjSvc["Harbor.Project\n- Project & Service Catalog\n- GitHub API Proxy (Branches/Commits)\n- Custom Domain DNS Verification"]:::box
-        EnvSvc["Harbor.Environment\n- Dev/Staging/Prod Tiers\n- AES-256-GCM Secret Protection\n- Environment Lifecycle Control"]:::box
-        DeploySvc["Harbor.Deployment\n- GitHub workflow_dispatch Trigger\n- Runner Webhook Ingestion\n- In-App Notification Dispatcher"]:::box
-        ReportSvc["Harbor.Reporting\n- DORA Metrics Engine\n- Multi-Cloud Log Adapters (9 Cloud Providers)\n- SignalR ServiceLogsHub Streaming"]:::box
+        AuthSvc["Harbor.Authentication\n- Local & GitHub OAuth\n- JWT Issuance & Redis Blacklist\n- GitHub App Token Broker"]
+        ProjSvc["Harbor.Project\n- Project & Service Catalog\n- GitHub API Proxy (Branches/Commits)\n- Custom Domain DNS Verification"]
+        EnvSvc["Harbor.Environment\n- Dev/Staging/Prod Tiers\n- AES-256-GCM Secret Protection\n- Environment Lifecycle Control"]
+        DeploySvc["Harbor.Deployment\n- GitHub workflow_dispatch Trigger\n- Runner Webhook Ingestion\n- In-App Notification Dispatcher"]
+        ReportSvc["Harbor.Reporting\n- DORA Metrics Engine\n- Multi-Cloud Log Adapters (9 Cloud Providers)\n- SignalR ServiceLogsHub Streaming"]
     end
 
     subgraph Tier4["Persistence, Cache & Messaging Tier"]
-        DB[("PostgreSQL 15 Database\n- harbor_db\n- Isolated Schemas: auth, proj, env, dep, rep\n- Raw ADO.NET / Npgsql Access")]:::box
-        Redis[("Redis 7 Cache & Blacklist\n- JWT JTI Invalidation Blacklist\n- SignalR Log Replay Buffer\n- Rate Limit State Tracking")]:::box
-        Kafka[["Apache Kafka / Azure Event Hubs\n- Topic: deployment-events\n- Partition Key: ServiceId\n- Group: harbor-deployment-group"]]:::box
+        DB[("PostgreSQL 15 Database\n- harbor_db\n- Isolated Schemas: auth, proj, env, dep, rep\n- Raw ADO.NET / Npgsql Access")]
+        Redis[("Redis 7 Cache & Blacklist\n- JWT JTI Invalidation Blacklist\n- SignalR Log Replay Buffer\n- Rate Limit State Tracking")]
+        Kafka[["Apache Kafka / Azure Event Hubs\n- Topic: deployment-events\n- Partition Key: ServiceId\n- Group: harbor-deployment-group"]]
     end
 
     subgraph Tier5["External Integrations & Execution Tier"]
-        GitHub["GitHub REST API & Actions Runners\n- Source Checkout & Container Builds\n- Webhook Status Completion Callback"]:::box
-        CloudLogs["Target Cloud Log Streams\n- AWS, Azure, GCP, K8s, Docker, Railway"]:::box
+        GitHub["GitHub REST API & Actions Runners\n- Source Checkout & Container Builds\n- Webhook Status Completion Callback"]
+        CloudLogs["Target Cloud Log Streams\n- AWS, Azure, GCP, K8s, Docker, Railway"]
     end
 
     %% Client Ingress
@@ -389,20 +350,9 @@ The sequence diagram below models the complete data flow during a deployment ope
 
 ```mermaid
 %%{init: {
-  'theme': 'base',
+  'theme': 'neutral',
   'themeVariables': {
-    'fontFamily': 'Courier New, monospace',
-    'darkMode': true,
-    'background': '#18181b',
-    'mainBkg': 'transparent',
-    'nodeBorder': '#ffffff',
-    'nodeTextColor': '#ffffff',
-    'lineColor': '#ffffff',
-    'edgeLabelBackground': '#18181b',
-    'clusterBkg': 'transparent',
-    'clusterBorder': '#ffffff',
-    'titleColor': '#ffffff',
-    'textColor': '#ffffff'
+    'fontFamily': 'Courier New, monospace'
   }
 }}%%
 sequenceDiagram
@@ -463,28 +413,15 @@ Harbor is hosted on **Microsoft Azure** utilizing containerized serverless abstr
 
 ```mermaid
 %%{init: {
-  'theme': 'base',
+  'theme': 'neutral',
   'themeVariables': {
-    'fontFamily': 'Courier New, monospace',
-    'darkMode': true,
-    'background': '#18181b',
-    'mainBkg': 'transparent',
-    'nodeBorder': '#ffffff',
-    'nodeTextColor': '#ffffff',
-    'lineColor': '#ffffff',
-    'edgeLabelBackground': '#18181b',
-    'clusterBkg': 'transparent',
-    'clusterBorder': '#ffffff',
-    'titleColor': '#ffffff',
-    'textColor': '#ffffff'
+    'fontFamily': 'Courier New, monospace'
   }
 }}%%
 graph TB
-    classDef box fill:transparent,stroke:#ffffff,stroke-width:1.5px,color:#ffffff,font-family:Courier New, monospace;
-
     subgraph InternetZone["Public Internet Zone"]
-        Users["Engineers & Administrators\n(harborapp.tech / admin.harborapp.tech)"]:::box
-        Webhooks["GitHub Actions Webhooks\n(POST api.harborapp.tech)"]:::box
+        Users["Engineers & Administrators\n(harborapp.tech / admin.harborapp.tech)"]
+        Webhooks["GitHub Actions Webhooks\n(POST api.harborapp.tech)"]
     end
 
     subgraph AzureCloud["Microsoft Azure (Region: Central India | rg-harbor-centralindia)"]
@@ -492,25 +429,25 @@ graph TB
         subgraph ACA_Env["Azure Container Apps Environment (harbor-env-prod)"]
             
             subgraph ExternalApps["External Ingress Container Apps (Publicly Accessible)"]
-                WebUI_App["harbor-web-ui\n(Custom Domain: harborapp.tech)\nPort 80 (Nginx Alpine)"]:::box
-                AdminUI_App["harbor-admin-ui\n(Custom Domain: admin.harborapp.tech)\nPort 80 (Nginx Alpine)"]:::box
-                Gateway_App["harbor-api-gateway\n(Custom Domain: api.harborapp.tech)\nPort 8080 (YARP Reverse Proxy)"]:::box
+                WebUI_App["harbor-web-ui\n(Custom Domain: harborapp.tech)\nPort 80 (Nginx Alpine)"]
+                AdminUI_App["harbor-admin-ui\n(Custom Domain: admin.harborapp.tech)\nPort 80 (Nginx Alpine)"]
+                Gateway_App["harbor-api-gateway\n(Custom Domain: api.harborapp.tech)\nPort 8080 (YARP Reverse Proxy)"]
             end
 
             subgraph InternalApps["Internal Backend Container Apps (Zero Public Access)"]
-                Auth_App["harbor-auth-api\nInternal Port 8080"]:::box
-                Proj_App["harbor-project-api\nInternal Port 8080"]:::box
-                Env_App["harbor-env-api\nInternal Port 8080"]:::box
-                Deploy_App["harbor-deploy-api\nInternal Port 8080"]:::box
-                Report_App["harbor-report-api\nInternal Port 8080"]:::box
+                Auth_App["harbor-auth-api\nInternal Port 8080"]
+                Proj_App["harbor-project-api\nInternal Port 8080"]
+                Env_App["harbor-env-api\nInternal Port 8080"]
+                Deploy_App["harbor-deploy-api\nInternal Port 8080"]
+                Report_App["harbor-report-api\nInternal Port 8080"]
             end
         end
 
         subgraph ManagedPaaS["Managed Cloud Persistence & Messaging Services"]
-            PG_Flex[("Azure Database for PostgreSQL Flexible Server\nharbor-db-prod\n- Workload: Burstable Standard_B1ms\n- Database: harbor_db (Schemas isolated)")]:::box
-            Redis_Azure[("Azure Cache for Redis\nharbor-redis-prod\n- Port: 6380 (TLS 1.2)\n- Token Blacklist & Sliding Caches")]:::box
-            EventHub_Azure[["Azure Event Hubs (Kafka 1.0+ Protocol)\nharbor-eventhub-prod.servicebus.windows.net\n- Port 9093 (SASL_SSL)\n- Topic: deployment-events"]]:::box
-            ACR_Azure["Azure Container Registry (ACR)\nacrharborprod.azurecr.io\nPrivate Container Image Repository"]:::box
+            PG_Flex[("Azure Database for PostgreSQL Flexible Server\nharbor-db-prod\n- Workload: Burstable Standard_B1ms\n- Database: harbor_db (Schemas isolated)")]
+            Redis_Azure[("Azure Cache for Redis\nharbor-redis-prod\n- Port: 6380 (TLS 1.2)\n- Token Blacklist & Sliding Caches")]
+            EventHub_Azure[["Azure Event Hubs (Kafka 1.0+ Protocol)\nharbor-eventhub-prod.servicebus.windows.net\n- Port 9093 (SASL_SSL)\n- Topic: deployment-events"]]
+            ACR_Azure["Azure Container Registry (ACR)\nacrharborprod.azurecr.io\nPrivate Container Image Repository"]
         end
     end
 
@@ -561,36 +498,23 @@ Harbor enforces parity across three standardized environment tiers:
 
 ```mermaid
 %%{init: {
-  'theme': 'base',
+  'theme': 'neutral',
   'themeVariables': {
-    'fontFamily': 'Courier New, monospace',
-    'darkMode': true,
-    'background': '#18181b',
-    'mainBkg': 'transparent',
-    'nodeBorder': '#ffffff',
-    'nodeTextColor': '#ffffff',
-    'lineColor': '#ffffff',
-    'edgeLabelBackground': '#18181b',
-    'clusterBkg': 'transparent',
-    'clusterBorder': '#ffffff',
-    'titleColor': '#ffffff',
-    'textColor': '#ffffff'
+    'fontFamily': 'Courier New, monospace'
   }
 }}%%
 flowchart LR
-    classDef box fill:transparent,stroke:#ffffff,stroke-width:1.5px,color:#ffffff,font-family:Courier New, monospace;
-
     subgraph DevEnv["1. Local Development"]
-        DockerDev["Docker Compose Stack\n- PostgreSQL 15 (:5433)\n- Redis 7 (:6379)\n- Kafka KRaft (:9092)\n- Mailpit (:8025)"]:::box
-        BareMetal[".NET 10 APIs (:5000-:5005)\nVite Dev Servers (:5173-:5174)"]:::box
+        DockerDev["Docker Compose Stack\n- PostgreSQL 15 (:5433)\n- Redis 7 (:6379)\n- Kafka KRaft (:9092)\n- Mailpit (:8025)"]
+        BareMetal[".NET 10 APIs (:5000-:5005)\nVite Dev Servers (:5173-:5174)"]
     end
 
     subgraph CIEnv["2. Automated Staging / CI"]
-        GHActions["GitHub Actions CI Runner\n- Ephemeral Testcontainers (Postgres, Redis, Kafka)\n- Headless Selenium Chrome\n- xUnit + ReportGenerator"]:::box
+        GHActions["GitHub Actions CI Runner\n- Ephemeral Testcontainers (Postgres, Redis, Kafka)\n- Headless Selenium Chrome\n- xUnit + ReportGenerator"]
     end
 
     subgraph ProdEnv["3. Production Cloud (Azure)"]
-        ACA["Azure Container Apps (Central India)\n- 8 ACA Apps (Internal + External)\n- PostgreSQL Flexible Server\n- Azure Cache for Redis\n- Azure Event Hubs (Kafka protocol)"]:::box
+        ACA["Azure Container Apps (Central India)\n- 8 ACA Apps (Internal + External)\n- PostgreSQL Flexible Server\n- Azure Cache for Redis\n- Azure Event Hubs (Kafka protocol)"]
     end
 
     DevEnv -->|git push / PR| CIEnv
@@ -630,30 +554,17 @@ Harbor enforces defense-in-depth across the network, application, data, and tele
 
 ```mermaid
 %%{init: {
-  'theme': 'base',
+  'theme': 'neutral',
   'themeVariables': {
-    'fontFamily': 'Courier New, monospace',
-    'darkMode': true,
-    'background': '#18181b',
-    'mainBkg': 'transparent',
-    'nodeBorder': '#ffffff',
-    'nodeTextColor': '#ffffff',
-    'lineColor': '#ffffff',
-    'edgeLabelBackground': '#18181b',
-    'clusterBkg': 'transparent',
-    'clusterBorder': '#ffffff',
-    'titleColor': '#ffffff',
-    'textColor': '#ffffff'
+    'fontFamily': 'Courier New, monospace'
   }
 }}%%
 flowchart TD
-    classDef box fill:transparent,stroke:#ffffff,stroke-width:1.5px,color:#ffffff,font-family:Courier New, monospace;
-
     subgraph SecurityPillars["Harbor Defense-in-Depth Model"]
-        P1["1. Network & Ingress Security\n- Zero direct microservice exposure\n- YARP proxy TLS 1.3 termination\n- Distributed sliding rate limiting"]:::box
-        P2["2. Authentication & Identity\n- BCrypt password hashing (work factor 11)\n- Stateless HMAC-SHA256 JWTs\n- Sub-ms Redis token blacklist"]:::box
-        P3["3. Cryptography at Rest\n- AES-256-GCM authenticated encryption\n- Unique 96-bit IVs + 128-bit Auth Tags\n- Automatic tamper detection"]:::box
-        P4["4. In-Flight Data Sanitization\n- DeploymentLogSanitizer regex scrubbing\n- Token / Password / ConnStr redaction\n- Guarded Prometheus metrics endpoint"]:::box
+        P1["1. Network & Ingress Security\n- Zero direct microservice exposure\n- YARP proxy TLS 1.3 termination\n- Distributed sliding rate limiting"]
+        P2["2. Authentication & Identity\n- BCrypt password hashing (work factor 11)\n- Stateless HMAC-SHA256 JWTs\n- Sub-ms Redis token blacklist"]
+        P3["3. Cryptography at Rest\n- AES-256-GCM authenticated encryption\n- Unique 96-bit IVs + 128-bit Auth Tags\n- Automatic tamper detection"]
+        P4["4. In-Flight Data Sanitization\n- DeploymentLogSanitizer regex scrubbing\n- Token / Password / ConnStr redaction\n- Guarded Prometheus metrics endpoint"]
     end
 ```
 
@@ -1223,30 +1134,17 @@ Harbor is hosted in production on **Microsoft Azure** using **Azure Container Ap
 
 ```mermaid
 %%{init: {
-  'theme': 'base',
+  'theme': 'neutral',
   'themeVariables': {
-    'fontFamily': 'Courier New, monospace',
-    'darkMode': true,
-    'background': '#18181b',
-    'mainBkg': 'transparent',
-    'nodeBorder': '#ffffff',
-    'nodeTextColor': '#ffffff',
-    'lineColor': '#ffffff',
-    'edgeLabelBackground': '#18181b',
-    'clusterBkg': 'transparent',
-    'clusterBorder': '#ffffff',
-    'titleColor': '#ffffff',
-    'textColor': '#ffffff'
+    'fontFamily': 'Courier New, monospace'
   }
 }}%%
 flowchart LR
-    classDef box fill:transparent,stroke:#ffffff,stroke-width:1.5px,color:#ffffff,font-family:Courier New, monospace;
-
-    GitMain["Push to main / CD Trigger"]:::box
-    ACRBuild["Azure Container Registry (ACR)\nImage Packaging & Vulnerability Scanning"]:::box
-    ACAInternal["Internal Backend APIs\n(auth, proj, env, deploy, report)"]:::box
-    ACAExternal["External Ingress\n(Gateway, Web UI, Admin UI)"]:::box
-    AzurePaaS[("PostgreSQL Flexible + Azure Redis +\nAzure Event Hubs Standard")]:::box
+    GitMain["Push to main / CD Trigger"]
+    ACRBuild["Azure Container Registry (ACR)\nImage Packaging & Vulnerability Scanning"]
+    ACAInternal["Internal Backend APIs\n(auth, proj, env, deploy, report)"]
+    ACAExternal["External Ingress\n(Gateway, Web UI, Admin UI)"]
+    AzurePaaS[("PostgreSQL Flexible + Azure Redis +\nAzure Event Hubs Standard")]
 
     GitMain --> ACRBuild
     ACRBuild --> ACAInternal
@@ -1350,67 +1248,54 @@ The delivery lifecycle is separated into three specialized workflow pipelines:
 
 ```mermaid
 %%{init: {
-  'theme': 'base',
+  'theme': 'neutral',
   'themeVariables': {
-    'fontFamily': 'Courier New, monospace',
-    'darkMode': true,
-    'background': '#18181b',
-    'mainBkg': 'transparent',
-    'nodeBorder': '#ffffff',
-    'nodeTextColor': '#ffffff',
-    'lineColor': '#ffffff',
-    'edgeLabelBackground': '#18181b',
-    'clusterBkg': 'transparent',
-    'clusterBorder': '#ffffff',
-    'titleColor': '#ffffff',
-    'textColor': '#ffffff'
+    'fontFamily': 'Courier New, monospace'
   }
 }}%%
 flowchart TD
-    classDef box fill:transparent,stroke:#ffffff,stroke-width:1.5px,color:#ffffff,font-family:Courier New, monospace;
-
     subgraph TriggerStage["1. Trigger & Ingestion Stage"]
-        DevPush["Developer Push / Pull Request\n(feature/*, develop, main)"]:::box
+        DevPush["Developer Push / Pull Request\n(feature/*, develop, main)"]
     end
 
     subgraph CIStage["2. Continuous Integration (ci.yml)"]
         subgraph ParallelBuild["Concurrent Compilation"]
-            BuildFE["Job 1: Build Frontend\n- Node.js 24 + npm ci\n- Vite build: harbor-web & admin"]:::box
-            BuildBE["Job 2: Build Backend\n- .NET 10 SDK + NuGet Restore\n- dotnet build -c Release"]:::box
+            BuildFE["Job 1: Build Frontend\n- Node.js 24 + npm ci\n- Vite build: harbor-web & admin"]
+            BuildBE["Job 2: Build Backend\n- .NET 10 SDK + NuGet Restore\n- dotnet build -c Release"]
         end
 
         subgraph ServiceContainers["CI Backing Services (Docker Engine)"]
-            PG_CI["PostgreSQL 16 Alpine\n(Port 5432)"]:::box
-            Redis_CI["Redis 7 Alpine\n(Port 6379)"]:::box
-            Kafka_CI["Apache Kafka 3.7 (KRaft)\n(Port 9092)"]:::box
+            PG_CI["PostgreSQL 16 Alpine\n(Port 5432)"]
+            Redis_CI["Redis 7 Alpine\n(Port 6379)"]
+            Kafka_CI["Apache Kafka 3.7 (KRaft)\n(Port 9092)"]
         end
 
-        JobTest["Job 3: Unit & Integration Tests\n- xUnit + Moq + Testcontainers\n- 1,100 test cases executed (920 unit + 180 integration)\n- Upload TRX Test Artifacts"]:::box
+        JobTest["Job 3: Unit & Integration Tests\n- xUnit + Moq + Testcontainers\n- 1,100 test cases executed (920 unit + 180 integration)\n- Upload TRX Test Artifacts"]
     end
 
     subgraph E2EStage["3. Browser Regression Suite (e2e.yml)"]
-        SeleniumE2E["Decoupled E2E Automation\n- Ephemeral Containers & Dev Server\n- Headless Chrome + Selenium POM\n- Nightly / Label: 'run-e2e'"]:::box
+        SeleniumE2E["Decoupled E2E Automation\n- Ephemeral Containers & Dev Server\n- Headless Chrome + Selenium POM\n- Nightly / Label: 'run-e2e'"]
     end
 
     subgraph CDStage["4. Continuous Deployment (cd.yml)"]
-        MergeMain{"Merged to 'main' branch\nand CI Succeeded?"}:::box
+        MergeMain{"Merged to 'main' branch\nand CI Succeeded?"}
 
         subgraph DeployBackend["Job 1: Deploy Internal Microservices (Matrix)"]
-            DeployAuth["harbor-auth-api"]:::box
-            DeployProj["harbor-project-api"]:::box
-            DeployEnv["harbor-env-api"]:::box
-            DeployDep["harbor-deploy-api"]:::box
-            DeployRep["harbor-report-api"]:::box
+            DeployAuth["harbor-auth-api"]
+            DeployProj["harbor-project-api"]
+            DeployEnv["harbor-env-api"]
+            DeployDep["harbor-deploy-api"]
+            DeployRep["harbor-report-api"]
         end
 
-        JobGateway["Job 2: Deploy API Gateway\n- harbor-api-gateway (External Ingress :8080)\n- Wire internal ACA reverse proxy addresses\n- Health probe verification"]:::box
+        JobGateway["Job 2: Deploy API Gateway\n- harbor-api-gateway (External Ingress :8080)\n- Wire internal ACA reverse proxy addresses\n- Health probe verification"]
 
         subgraph DeployFrontends["Job 3: Deploy Frontend SPAs (Matrix)"]
-            DeployWebUI["harbor-web-ui\n(Custom Domain: harborapp.tech)"]:::box
-            DeployAdminUI["harbor-admin-ui\n(Custom Domain: admin.harborapp.tech)"]:::box
+            DeployWebUI["harbor-web-ui\n(Custom Domain: harborapp.tech)"]
+            DeployAdminUI["harbor-admin-ui\n(Custom Domain: admin.harborapp.tech)"]
         end
 
-        JobObservability["Job 4: Deploy Observability\n- Prometheus & Grafana stack"]:::box
+        JobObservability["Job 4: Deploy Observability\n- Prometheus & Grafana stack"]
     end
 
     DevPush --> ParallelBuild
@@ -1502,29 +1387,16 @@ Harbor adopted a rigorous **Quality Assurance (QA) in Depth** strategy across al
 
 ```mermaid
 %%{init: {
-  'theme': 'base',
+  'theme': 'neutral',
   'themeVariables': {
-    'fontFamily': 'Courier New, monospace',
-    'darkMode': true,
-    'background': '#18181b',
-    'mainBkg': 'transparent',
-    'nodeBorder': '#ffffff',
-    'nodeTextColor': '#ffffff',
-    'lineColor': '#ffffff',
-    'edgeLabelBackground': '#18181b',
-    'clusterBkg': 'transparent',
-    'clusterBorder': '#ffffff',
-    'titleColor': '#ffffff',
-    'textColor': '#ffffff'
+    'fontFamily': 'Courier New, monospace'
   }
 }}%%
 graph TD
-    classDef box fill:transparent,stroke:#ffffff,stroke-width:1.5px,color:#ffffff,font-family:Courier New, monospace;
-
     subgraph Pyramid["Harbor Quality Assurance Pyramid"]
-        E2E_Load["System, E2E & Load Testing\n- Selenium WebDriver POM (58 Scenarios)\n- Apache JMeter Benchmarks (20 Plans, 8,074 Requests)"]:::box
-        Integration["Integration & Contract Testing\n- Testcontainers for .NET (PostgreSQL 15, Redis, Kafka)\n- 180 Integration & Database Contract Tests"]:::box
-        Unit["Unit Testing\n- xUnit + Moq (.NET 10 SDK) & Vitest (React 19)\n- 920 Backend Unit Tests + 162 Frontend Component Tests"]:::box
+        E2E_Load["System, E2E & Load Testing\n- Selenium WebDriver POM (58 Scenarios)\n- Apache JMeter Benchmarks (20 Plans, 8,074 Requests)"]
+        Integration["Integration & Contract Testing\n- Testcontainers for .NET (PostgreSQL 15, Redis, Kafka)\n- 180 Integration & Database Contract Tests"]
+        Unit["Unit Testing\n- xUnit + Moq (.NET 10 SDK) & Vitest (React 19)\n- 920 Backend Unit Tests + 162 Frontend Component Tests"]
     end
 
     Unit --> Integration
@@ -1688,31 +1560,18 @@ High-concurrency load, stress, and throughput benchmarking was executed using **
 
 ```mermaid
 %%{init: {
-  'theme': 'base',
+  'theme': 'neutral',
   'themeVariables': {
-    'fontFamily': 'Courier New, monospace',
-    'darkMode': true,
-    'background': '#18181b',
-    'mainBkg': 'transparent',
-    'nodeBorder': '#ffffff',
-    'nodeTextColor': '#ffffff',
-    'lineColor': '#ffffff',
-    'edgeLabelBackground': '#18181b',
-    'clusterBkg': 'transparent',
-    'clusterBorder': '#ffffff',
-    'titleColor': '#ffffff',
-    'textColor': '#ffffff'
+    'fontFamily': 'Courier New, monospace'
   }
 }}%%
 graph LR
-    classDef box fill:transparent,stroke:#ffffff,stroke-width:1.5px,color:#ffffff,font-family:Courier New, monospace;
-
     subgraph JMeterSuite["Apache JMeter 5.6.3 Benchmarking"]
-        GatewayTest["Gateway Health Probe\nAvg: 2.40 ms | 102.6 req/s"]:::box
-        AuthTest["BCrypt Auth & JWT\nAvg: 114.47 ms | 100 threads"]:::box
-        CatalogTest["Project & Env Queries\nAvg: 4.82 ms | 104.1 req/s"]:::box
-        LargeLogTest["2,000 Log Lines Retrieval\nAvg: 17.88 ms | 50 users"]:::box
-        E2EJourney["10-Step Full User Journey\nAvg: 15.43 ms | 139.2 req/s"]:::box
+        GatewayTest["Gateway Health Probe\nAvg: 2.40 ms | 102.6 req/s"]
+        AuthTest["BCrypt Auth & JWT\nAvg: 114.47 ms | 100 threads"]
+        CatalogTest["Project & Env Queries\nAvg: 4.82 ms | 104.1 req/s"]
+        LargeLogTest["2,000 Log Lines Retrieval\nAvg: 17.88 ms | 50 users"]
+        E2EJourney["10-Step Full User Journey\nAvg: 15.43 ms | 139.2 req/s"]
 
         GatewayTest --> AuthTest
         AuthTest --> CatalogTest

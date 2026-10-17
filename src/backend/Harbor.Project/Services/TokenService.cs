@@ -67,10 +67,7 @@ namespace Harbor.Project.Services
         public TokenService(HttpClient httpClient, IConfiguration configuration)
         {
             _httpClient = httpClient;
-            var authUrl = configuration["AUTH_SERVICE_URL"]
-                ?? configuration["AuthServiceUrl"]
-                ?? Environment.GetEnvironmentVariable("AUTH_SERVICE_URL")
-                ?? Environment.GetEnvironmentVariable("AuthServiceUrl");
+            var authUrl = configuration["AUTH_SERVICE_URL"] ?? configuration["AuthServiceUrl"];
             _authServiceUrl = !string.IsNullOrWhiteSpace(authUrl) ? authUrl.TrimEnd('/') : "http://authentication-service:8080";
         }
 

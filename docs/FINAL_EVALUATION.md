@@ -132,7 +132,7 @@ To realize the overarching project vision, the following specific objectives wer
 * **Automate CI/CD Execution and Event-Driven Reconciliation**: Integrate with the GitHub REST API using GitHub App installations and RS256 JWTs to trigger parameterized `workflow_dispatch` actions. Stream lifecycle state changes (`Pending`, `Queued`, `Running`, `Succeeded`, `Failed`) asynchronously across Kafka/Azure Event Hubs topics for non-blocking reconciliation.
 * **Stream Real-Time Sanitized Logs**: Deliver full-duplex WebSocket and Server-Sent Events log streaming via ASP.NET Core SignalR, incorporating an automated multi-pattern regex sanitizer (`DeploymentLogSanitizer`) that redacts credentials, access tokens, and connection strings prior to client transmission.
 * **Automate DORA Telemetry and Cross-Cloud Normalization**: Calculate core DORA metrics (Deployment Frequency, Lead Time for Changes, Cycle Time) and implement adapters normalizing logs across providers including Azure, AWS, GCP, Docker, Kubernetes, Render, Vercel, and Railway.
-* **Ensure Robust Quality and Cloud Deployment**: Verify the complete architecture through automated unit, integration (Testcontainers), and performance (JMeter) test suites, reaching over 94% code coverage, and deploy the entire solution to Microsoft Azure Container Apps via automated GitHub Actions continuous delivery pipelines.
+* **Ensure Robust Quality and Cloud Deployment**: Verify the complete architecture through automated unit, integration (Testcontainers), and performance (JMeter) test suites, reaching **95.0% line code coverage**, and deploy the entire solution to Microsoft Azure Container Apps via automated GitHub Actions continuous delivery pipelines.
 
 ---
 
@@ -693,7 +693,7 @@ The **Harbor** platform employs a modern, production-grade technology stack desi
 | **Security & Cryptography**| **BCrypt.Net-Next** | 4.x | Cryptographic password hashing utilizing an intensive work factor of 11. |
 | | **AES-256-GCM** | Native .NET | Authenticated symmetric encryption protecting sensitive environment variables at rest. |
 | | **JWT / JOSE** | RFC 7519 | HMAC-SHA256 access tokens for users; RS256 signed tokens for GitHub App integration. |
-| **Testing & Verification** | **xUnit & Moq** | Latest | Unit testing framework covering services, controllers, sanitizers, and adapters (**94.6% coverage**). |
+| **Testing & Verification** | **xUnit & Moq** | Latest | Unit testing framework covering services, controllers, sanitizers, and adapters (**95.0% line coverage**). |
 | | **Testcontainers for .NET**| 4.x | Spins up real, ephemeral Docker containers (PostgreSQL, Redis, Kafka) for integration tests. |
 | | **Selenium WebDriver** | 4.x | Automated browser end-to-end (E2E) testing utilizing the Page Object Model (POM). |
 | | **Apache JMeter** | 5.6.3 | Comprehensive load and stress benchmarking across 20 test plans (8,074 requests, 0% error rate). |
@@ -721,20 +721,25 @@ The Harbor platform exposes an interactive, production-grade **Swagger / OpenAPI
 * **Live Interactive Swagger UI (Production)**:  
   👉 **[https://api.harborapp.tech/swagger](https://api.harborapp.tech/swagger)**  
   *(Alternative direct endpoint: `https://api.harborapp.tech/swagger/index.html`)*
-* **OpenAPI v3 JSON Specification**:  
-  `https://api.harborapp.tech/swagger/v1/swagger.json`
+* **OpenAPI v3 JSON Specifications (Aggregated Gateway Endpoints)**:  
+  * `Harbor.Authentication API`: `https://api.harborapp.tech/swagger-docs/auth/v1/swagger.json`
+  * `Harbor.Project API`: `https://api.harborapp.tech/swagger-docs/project/v1/swagger.json`
+  * `Harbor.Environment API`: `https://api.harborapp.tech/swagger-docs/environment/v1/swagger.json`
+  * `Harbor.Deployment API`: `https://api.harborapp.tech/swagger-docs/deployment/v1/swagger.json`
+  * `Harbor.Reporting API`: `https://api.harborapp.tech/swagger-docs/reporting/v1/swagger.json`
 * **Production API Base Gateway URL**:  
   `https://api.harborapp.tech`
 
 ### Evaluator Quick-Start Instructions for Swagger UI:
 1. Open **[https://api.harborapp.tech/swagger](https://api.harborapp.tech/swagger)** in any web browser.
-2. Locate and expand the **`POST /api/auth/login`** endpoint under the **Authentication** section.
-3. Click **Try it out**, supply the credentials below, and click **Execute**:
+2. In the top-right corner, use the **"Select a definition"** dropdown to switch between all five microservice OpenAPI schemas (`Harbor.Authentication API`, `Harbor.Project API`, `Harbor.Environment API`, `Harbor.Deployment API`, `Harbor.Reporting API`).
+3. Select `Harbor.Authentication API`, locate and expand the **`POST /api/auth/login`** endpoint.
+4. Click **Try it out**, supply the credentials below, and click **Execute**:
    * **Username / Email**: `dev@harborapp.tech`
    * **Password**: `DevSecure2026!`
-4. Copy the issued `token` string from the response payload (excluding outer quotation marks).
-5. Scroll to the top of the Swagger page, click the green **Authorize 🔓** button, type `Bearer <YOUR_TOKEN_HERE>`, and click **Authorize**.
-6. All protected routes across Projects, Environments, Deployments, and Reports are now authorized for interactive evaluation.
+5. Copy the issued `token` string from the response payload (excluding outer quotation marks).
+6. Scroll to the top of the Swagger page, click the green **Authorize 🔓** button, type `Bearer <YOUR_TOKEN_HERE>`, and click **Authorize**.
+7. All protected routes across Projects, Environments, Deployments, and Reports are now authorized for interactive evaluation.
 
 ---
 
@@ -1474,7 +1479,7 @@ The CI/CD toolchain was selected based on strict criteria regarding reproducibil
 | **Azure Container Apps (ACA)** | Serverless Runtime | Combines Kubernetes capabilities (service discovery, internal VNet bridging, KEDA auto-scaling) with serverless simplicity, enabling granular scale-to-zero when idle to maintain budget compliance. |
 | **GitHub Actions Service Containers** | Ephemeral CI Backing Stores | Runs genuine PostgreSQL, Redis, and Apache Kafka instances directly inside CI runners, guaranteeing 100% environment fidelity for integration tests without maintaining expensive standing cloud test databases. |
 | **Selenium WebDriver (Headless)** | Browser Automation | Validates real user interaction flows (DOM rendering, JavaScript execution, token persistence) using Page Object Models, preventing UI regression before production release. |
-| **ReportGenerator & Coverlet** | Coverage Analysis | Instruments C# assemblies during test execution and computes detailed line, branch, and method coverage reports, enforcing the project's **94.6% code coverage** standard. |
+| **ReportGenerator & Coverlet** | Coverage Analysis | Instruments C# assemblies during test execution and computes detailed line, branch, and method coverage reports, enforcing the project's **95.0% code coverage** standard. |
 
 ---
 
@@ -1542,16 +1547,16 @@ graph TD
 
 ### 7.2.1 Overall Test Execution Summary
 
-Across all testing layers, **463 automated test cases** were executed with a **100.0% pass rate** (zero failures, zero blocked tests):
+Across all automated testing layers, **1,320 automated test cases** were executed with a **100.0% pass rate** (zero failures, zero blocked tests), supplemented by **8,074 performance load requests** across 20 JMeter test suites with **0.00% error rate**:
 
 | Test Level | Framework / Tool | Test Cases | Passed | Failed | Blocked / Skipped | Pass Rate |
 | :--- | :--- | :---: | :---: | :---: | :---: | :---: |
-| **Backend Unit Tests** | xUnit + Moq (.NET 10 SDK) | 284 | 284 | 0 | 0 | **100.0%** |
-| **Database & Kafka Integration** | Testcontainers (PostgreSQL, Kafka) | 48 | 48 | 0 | 0 | **100.0%** |
-| **Frontend Component Tests** | Vitest + Testing Library | 42 | 42 | 0 | 0 | **100.0%** |
-| **API Gateway & Contract Tests** | WebApplicationFactory + xUnit | 65 | 65 | 0 | 0 | **100.0%** |
-| **Browser E2E Automation** | Selenium WebDriver (Chrome) | 24 | 24 | 0 | 0 | **100.0%** |
-| **Total Test Suite** | — | **463** | **463** | **0** | **0** | **100.0%** |
+| **Backend Unit Tests** | xUnit + Moq (.NET 10 SDK across 7 assemblies) | 920 | 920 | 0 | 0 | **100.0%** |
+| **Frontend Component & Unit Tests** | Vitest + Testing Library (React 19 / 14 suites) | 162 | 162 | 0 | 0 | **100.0%** |
+| **Backend Integration & Contract Tests** | Testcontainers for .NET (Postgres 15, Redis 7, Kafka) | 180 | 180 | 0 | 0 | **100.0%** |
+| **Browser E2E Regression Automation** | Selenium WebDriver POM (Headless Chrome / 7 suites) | 58 | 58 | 0 | 0 | **100.0%** |
+| **Total Automated Test Suites** | — | **1,320** | **1,320** | **0** | **0** | **100.0%** |
+| **Performance & Load Benchmark Suite** | Apache JMeter 5.6.3 (20 Test Plans) | 8,074 req | 8,074 | 0 | 0 | **100.0%** (0.00% err) |
 
 ---
 

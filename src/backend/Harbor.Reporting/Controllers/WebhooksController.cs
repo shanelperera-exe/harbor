@@ -13,6 +13,8 @@ namespace Harbor.Reporting.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Route("api/reporting/webhooks")]
+    [Route("api/webhooks")]
     public class WebhooksController : ControllerBase
     {
         private readonly ILogger<WebhooksController> _logger;
@@ -27,6 +29,14 @@ namespace Harbor.Reporting.Controllers
             _logger = logger;
             _hubContext = hubContext;
             _cacheService = cacheService;
+        }
+
+        [HttpGet("{provider}/{serviceId}")]
+        [HttpHead("{provider}/{serviceId}")]
+        public IActionResult Ping(string provider, string serviceId)
+        {
+            _logger.LogInformation("Received webhook probe ping from {Provider} for service {ServiceId}", provider, serviceId);
+            return Ok(new { status = "healthy", provider, serviceId, timestamp = DateTime.UtcNow });
         }
 
         [HttpPost("{provider}/{serviceId}")]

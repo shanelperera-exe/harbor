@@ -236,7 +236,15 @@ describe('Dashboard Component (US-20)', () => {
     await waitFor(() => {
       expect(screen.getByText('Welcome to Harbor')).toBeInTheDocument();
       expect(screen.getByText(/You don't have any projects yet/)).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: /New Project/ })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /New Project/ })).toBeInTheDocument();
     });
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /New Project/ }));
+
+    expect(screen.getByTestId('create-project-modal')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Create a project' })).toBeInTheDocument();
+    expect(screen.getByTestId('new-project-name')).toBeInTheDocument();
+    expect(screen.getByTestId('new-environment-name')).toBeInTheDocument();
   });
 });

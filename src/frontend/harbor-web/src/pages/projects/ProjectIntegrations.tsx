@@ -4,11 +4,12 @@ import { getProjectIntegrations, createProjectIntegration, deleteProjectIntegrat
 import { Icon } from '../../components/icons';
 import { RiSaveLine, RiCloseLine } from 'react-icons/ri';
 import { BiLinkExternal, BiKey } from 'react-icons/bi';
-import { IoLogoVercel } from 'react-icons/io5';
+import { IoLogoVercel, IoInformationCircleOutline } from 'react-icons/io5';
 import { MdOutlineCloud } from 'react-icons/md';
 import { SiRender, SiGooglecloud, SiKubernetes, SiRailway } from 'react-icons/si';
 import { FaAws, FaDigitalOcean, FaDocker } from 'react-icons/fa';
 import { VscAzure } from 'react-icons/vsc';
+import IntegrationInstructionsModal from './IntegrationInstructionsModal';
 
 const AVAILABLE_PROVIDERS: Array<{
   id: string;
@@ -50,6 +51,8 @@ export default function ProjectIntegrations() {
   const [activeIntegrations, setActiveIntegrations] = useState<ProjectIntegration[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<typeof AVAILABLE_PROVIDERS[0] | null>(null);
+  const [instructionsProvider, setInstructionsProvider] = useState<typeof AVAILABLE_PROVIDERS[0] | null>(null);
+  const [isInstructionsOpen, setIsInstructionsOpen] = useState(false);
   const [hoveredProvider, setHoveredProvider] = useState<typeof AVAILABLE_PROVIDERS[0] | null>(null);
   const [integrationName, setIntegrationName] = useState('');
   const [apiToken, setApiToken] = useState('');
@@ -71,6 +74,16 @@ export default function ProjectIntegrations() {
   const closeModal = () => {
     setIsModalOpen(false);
     setSelectedProvider(null);
+  };
+
+  const openInstructions = (provider: typeof AVAILABLE_PROVIDERS[0]) => {
+    setInstructionsProvider(provider);
+    setIsInstructionsOpen(true);
+  };
+
+  const closeInstructions = () => {
+    setIsInstructionsOpen(false);
+    setInstructionsProvider(null);
   };
 
   const handleSave = async () => {
@@ -137,18 +150,33 @@ export default function ProjectIntegrations() {
                     className="p-6 page-primary border border-solid border-gray-300 dark:border-[#525252] rounded-sm relative group hover:border-gray-400 dark:hover:border-gray-500 transition-colors flex flex-col justify-between"
                   >
                     <div>
-                      {/* Top Header: Logo & Delete Action */}
+                      {/* Top Header: Logo & Actions */}
                       <div className="flex items-start justify-between mb-4">
                         <div className="flex items-center justify-center p-3 bg-gray-50 dark:bg-white/[0.03] rounded-md group-hover:bg-gray-100 dark:group-hover:bg-[#272727] transition-colors">
                           {providerDef ? <ProviderLogo provider={providerDef} className="w-12 h-12" /> : <BiLinkExternal className="w-12 h-12 text-gray-500" />}
                         </div>
-                        <button 
-                          onClick={() => deleteIntegration(integration.id)}
-                          className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 p-1.5 rounded-sm hover:bg-red-50 dark:hover:bg-red-950/30 transition-all"
-                          title="Delete connection"
-                        >
-                          <Icon name="trash" className="w-4 h-4" />
-                        </button>
+                        <div className="flex items-center gap-1.5">
+                          {providerDef && (
+                            <button
+                              type="button"
+                              onClick={() => openInstructions(providerDef)}
+                              className="p-1.5 rounded-sm text-gray-400 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-[#272727] transition-all cursor-pointer"
+                              title={`View ${providerDef.name} setup instructions & real docs`}
+                              aria-label={`Instructions for ${providerDef.name}`}
+                            >
+                              <IoInformationCircleOutline className="w-4 h-4" />
+                            </button>
+                          )}
+                          <button 
+                            type="button"
+                            onClick={() => deleteIntegration(integration.id)}
+                            className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 p-1.5 rounded-sm hover:bg-red-50 dark:hover:bg-red-950/30 transition-all cursor-pointer"
+                            title="Delete connection"
+                            aria-label="Delete connection"
+                          >
+                            <Icon name="trash" className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
 
                       {/* Connection Title & Provider Type */}
@@ -196,35 +224,72 @@ export default function ProjectIntegrations() {
             return (
               <div 
                 key={provider.id} 
-                className="p-6 page-primary border border-solid border-gray-300 dark:border-[#525252] rounded-sm cursor-pointer hover:border-blue-500 transition-all group"
+                className="p-6 page-primary border border-solid border-gray-300 dark:border-[#525252] rounded-sm cursor-pointer hover:border-blue-500 transition-all group flex flex-col justify-between"
                 onClick={() => openModal(provider)}
                 onMouseEnter={() => setHoveredProvider(provider)}
                 onMouseLeave={() => setHoveredProvider(null)}
               >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center justify-center p-3 bg-gray-50 dark:bg-white/[0.03] rounded-md group-hover:bg-gray-100 dark:group-hover:bg-[#272727] transition-colors">
-                    <ProviderLogo provider={provider} className="w-12 h-12" />
+                <div>
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center justify-center p-3 bg-gray-50 dark:bg-white/[0.03] rounded-md group-hover:bg-gray-100 dark:group-hover:bg-[#272727] transition-colors">
+                      <ProviderLogo provider={provider} className="w-12 h-12" />
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      {/* Info Button with React Icon info icon for Instructions and Real Docs */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openInstructions(provider);
+                        }}
+                        className="p-1.5 rounded-sm text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 bg-gray-100/80 hover:bg-gray-200/90 dark:bg-white/[0.05] dark:hover:bg-white/[0.1] border border-gray-200/80 dark:border-white/[0.06] transition-all cursor-pointer active:scale-95"
+                        title={`View ${provider.name} setup guide and real docs`}
+                        aria-label={`Instructions and docs for ${provider.name}`}
+                      >
+                        <IoInformationCircleOutline className="w-4 h-4" />
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openModal(provider);
+                        }}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-sm text-[12px] font-medium text-gray-700 dark:text-[#ccc] bg-gray-100/90 hover:bg-blue-600 hover:text-white dark:bg-white/[0.06] dark:hover:bg-blue-600 dark:hover:text-white border border-gray-200/80 dark:border-white/[0.08] hover:border-blue-600 dark:hover:border-blue-600 opacity-90 group-hover:opacity-100 transition-all duration-150 cursor-pointer"
+                      >
+                        <Icon name="plus" className="w-3.5 h-3.5" />
+                        <span>Connect</span>
+                      </button>
+                    </div>
                   </div>
-                  <button className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-sm text-[12px] font-medium text-gray-700 dark:text-[#ccc] bg-gray-100/90 hover:bg-blue-600 hover:text-white dark:bg-white/[0.06] dark:hover:bg-blue-600 dark:hover:text-white border border-gray-200/80 dark:border-white/[0.08] hover:border-blue-600 dark:hover:border-blue-600 opacity-0 group-hover:opacity-100 transition-all duration-150">
-                    <Icon name="plus" className="w-3.5 h-3.5" />
-                    <span>Connect</span>
-                  </button>
+                  <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                    <h3 className="text-[18px] font-medium leading-snug text-gray-900 dark:text-[#f0f0f0]">{provider.name}</h3>
+                    {provider.badge && (
+                      <span className="inline-flex items-center px-1.5 py-0.5 text-[11px] font-medium rounded-sm bg-gray-100 dark:bg-[#2a2a2a] text-gray-600 dark:text-[#b0b0b0] border border-gray-200 dark:border-[#404040]">
+                        {provider.badge}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[13.5px] text-gray-500 dark:text-[#a1a1aa] leading-snug font-normal">
+                    {provider.desc}
+                  </p>
                 </div>
-                <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                  <h3 className="text-[18px] font-medium leading-snug text-gray-900 dark:text-[#f0f0f0]">{provider.name}</h3>
-                  {provider.badge && (
-                    <span className="inline-flex items-center px-1.5 py-0.5 text-[11px] font-medium rounded-sm bg-gray-100 dark:bg-[#2a2a2a] text-gray-600 dark:text-[#b0b0b0] border border-gray-200 dark:border-[#404040]">
-                      {provider.badge}
-                    </span>
-                  )}
-                </div>
-                <p className="text-[13.5px] text-gray-500 dark:text-[#a1a1aa] leading-snug font-normal">
-                  {provider.desc}
-                </p>
               </div>
             );
           })}
         </div>
+
+        {/* Connection Instructions Modal */}
+        <IntegrationInstructionsModal
+          isOpen={isInstructionsOpen}
+          provider={instructionsProvider}
+          onClose={closeInstructions}
+          onOpenConnectModal={(prov) => {
+            const full = AVAILABLE_PROVIDERS.find(p => p.id === prov.id);
+            if (full) {
+              openModal(full);
+            }
+          }}
+        />
 
         {/* Connection Modal */}
         {isModalOpen && selectedProvider && (
@@ -243,7 +308,7 @@ export default function ProjectIntegrations() {
                       )}
                     </h3>
                   </div>
-                  <button onClick={closeModal} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white">
+                  <button onClick={closeModal} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white cursor-pointer">
                     <RiCloseLine className="w-6 h-6" />
                   </button>
                 </div>
@@ -271,23 +336,36 @@ export default function ProjectIntegrations() {
                     className="w-full h-10 px-3 bg-gray-50 dark:bg-[#272727] border border-gray-300 dark:border-[#525252] rounded-md text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all font-mono font-normal text-[14px]"
                     placeholder={`Enter your ${selectedProvider.id} credentials...`}
                   />
-                  <p className="mt-2 text-[13px] text-gray-500 dark:text-gray-400 flex items-center gap-1 font-normal">
-                    <Icon name="lock" /> This credential will be secured using AES-256 Envelope Encryption.
-                  </p>
+                  <div className="mt-2.5 flex items-center justify-between flex-wrap gap-2">
+                    <p className="text-[12.5px] text-gray-500 dark:text-gray-400 flex items-center gap-1 font-normal">
+                      <Icon name="lock" /> Secured with AES-256 Envelope Encryption.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        closeModal();
+                        openInstructions(selectedProvider);
+                      }}
+                      className="text-[12.5px] font-medium text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                    >
+                      <IoInformationCircleOutline className="w-4 h-4" />
+                      <span>View setup guide & docs</span>
+                    </button>
+                  </div>
                 </div>
               </div>
 
               <div className="p-6 border-t border-gray-200 dark:border-[#333] bg-gray-50 dark:bg-[#1f1f1f] flex justify-end gap-3">
                 <button 
                   onClick={closeModal}
-                  className="px-4 py-2 text-[14.5px] font-normal text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
+                  className="px-4 py-2 text-[14.5px] font-normal text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button 
                   onClick={handleSave}
                   disabled={!integrationName || !apiToken || isSubmitting}
-                  className="px-4 py-2 flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-[14.5px] font-normal rounded-md disabled:opacity-50 transition-colors"
+                  className="px-4 py-2 flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-[14.5px] font-normal rounded-md disabled:opacity-50 transition-colors cursor-pointer"
                 >
                   {isSubmitting ? (
                     <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />

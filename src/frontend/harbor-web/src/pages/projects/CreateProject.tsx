@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { createProject } from '../../services/projectService';
+import { createEnvironment } from '../../services/environmentService';
 
 export default function CreateProject() {
   const navigate = useNavigate();
@@ -32,6 +33,16 @@ export default function CreateProject() {
         description: description.trim() || undefined,
         repositoryUrl: repositoryUrl.trim() || undefined,
       });
+
+      try {
+        await createEnvironment(project.id, {
+          name: 'Production',
+          type: 'Production',
+        });
+      } catch {
+        // Continue even if environment creation fails
+      }
+
       navigate('/projects', { state: { createdProjectId: project.id } });
     } catch (err) {
       setErrors({ general: err instanceof Error ? err.message : 'Unable to create project.' });

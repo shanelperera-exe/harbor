@@ -25,6 +25,7 @@ import {
   LayoutDashboard
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { CreateProjectModal } from '../../components/projects/CreateProjectModal';
 
 const getEnvironmentColor = (env: string) => {
   const e = (env || '').toLowerCase();
@@ -39,6 +40,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [projects, setProjects] = useState<DashboardProject[]>([]);
   const [recentDeployments, setRecentDeployments] = useState<DashboardDeployment[]>([]);
   const [metrics, setMetrics] = useState<DashboardMetrics>({
@@ -107,21 +109,29 @@ export default function Dashboard() {
   // When user has no projects, present the friendly onboarding empty state
   if (projects.length === 0 && recentDeployments.length === 0) {
     return (
-      <div id="dashboard-empty" className="flex flex-col items-center justify-center w-full min-h-[60vh] bg-white dark:bg-[oklch(0.21_0.03_263.45)] text-gray-900 dark:text-white text-center px-4 transition-colors duration-300">
-        <h1 className="text-2xl font-medium mb-4 tracking-tight">Welcome to Harbor</h1>
-        <p className="text-[16px] text-gray-500 dark:text-[#a1a1aa] max-w-md mx-auto mb-8 transition-colors duration-300">
-          You don't have any projects yet. Create a new project to get started.
-        </p>
-        <div className="flex gap-4">
-          <Link
-            id="btn-new-project-empty"
-            to="/projects/new"
-            className="h-10 px-4 bg-[#2563eb] hover:bg-blue-700 text-white font-medium text-[15px] transition-colors flex items-center justify-center rounded-sm gap-1"
-          >
-            New Project <span className="text-lg leading-none mb-0.5">+</span>
-          </Link>
+      <>
+        <div id="dashboard-empty" className="flex flex-col items-center justify-center w-full min-h-[60vh] bg-white dark:bg-[oklch(0.21_0.03_263.45)] text-gray-900 dark:text-white text-center px-4 transition-colors duration-300">
+          <h1 className="text-2xl font-medium mb-4 tracking-tight">Welcome to Harbor</h1>
+          <p className="text-[16px] text-gray-500 dark:text-[#a1a1aa] max-w-md mx-auto mb-8 transition-colors duration-300">
+            You don't have any projects yet. Create a new project to get started.
+          </p>
+          <div className="flex gap-4">
+            <button
+              id="btn-new-project-empty"
+              data-testid="btn-new-project-empty"
+              onClick={() => setIsCreateModalOpen(true)}
+              className="h-10 px-4 bg-[#2563eb] hover:bg-blue-700 text-white font-medium text-[15px] transition-colors flex items-center justify-center rounded-sm gap-1"
+            >
+              New Project <span className="text-lg leading-none mb-0.5">+</span>
+            </button>
+          </div>
         </div>
-      </div>
+        <CreateProjectModal
+          isOpen={isCreateModalOpen}
+          onClose={() => setIsCreateModalOpen(false)}
+          onSuccess={() => loadData(true)}
+        />
+      </>
     );
   }
 
@@ -145,14 +155,15 @@ export default function Dashboard() {
               <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
             </button>
 
-            <Link
+            <button
               id="btn-new-project"
-              to="/projects/new"
+              data-testid="btn-new-project"
+              onClick={() => setIsCreateModalOpen(true)}
               className="inline-flex items-center gap-1.5 h-10 px-4 bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-sm font-medium rounded-sm transition-colors"
             >
               <Plus className="w-4 h-4" />
               <span>New Project</span>
-            </Link>
+            </button>
           </div>
         }
       />
@@ -410,6 +421,12 @@ export default function Dashboard() {
           </div>
         )}
       </section>
+
+      <CreateProjectModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSuccess={() => loadData(true)}
+      />
     </div>
   );
 }

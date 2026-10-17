@@ -23,6 +23,7 @@ namespace Harbor.Authentication.Controllers
         private readonly IEncryptionService _encryptionService;
         private readonly IGitHubAppApiClient _appClient;
         private readonly GitHubAppOptions _appOptions;
+        private readonly IJwtService? _jwtService;
 
         public AuthController(
             IAuthService authService, 
@@ -31,7 +32,8 @@ namespace Harbor.Authentication.Controllers
             IGitHubAppApiClient appClient,
             IOptions<GitHubAppOptions> appOptions,
             IExternalAuthService? externalAuthService = null, 
-            IGitHubAppAuthService? gitHubAppAuthService = null)
+            IGitHubAppAuthService? gitHubAppAuthService = null,
+            IJwtService? jwtService = null)
         {
             _authService = authService;
             _externalAuthService = externalAuthService;
@@ -40,6 +42,7 @@ namespace Harbor.Authentication.Controllers
             _encryptionService = encryptionService;
             _appClient = appClient;
             _appOptions = appOptions.Value;
+            _jwtService = jwtService;
         }
 
         [HttpPost("register")]
@@ -243,7 +246,18 @@ namespace Harbor.Authentication.Controllers
             var accessToken = result.Properties?.GetTokenValue("access_token");
 
             await HttpContext.SignOutAsync("External");
-            if (linkResult.Succeeded && linkResult.Principal != null && int.TryParse(linkResult.Principal.FindFirstValue("userId"), out var linkedUserId))
+
+            string? linkedUserIdStr = null;
+            if (result.Properties?.Items.TryGetValue("link_userId", out var propUserId) == true && !string.IsNullOrWhiteSpace(propUserId))
+            {
+                linkedUserIdStr = propUserId;
+            }
+            else if (linkResult.Succeeded && linkResult.Principal != null)
+            {
+                linkedUserIdStr = linkResult.Principal.FindFirstValue("userId");
+            }
+
+            if (!string.IsNullOrWhiteSpace(linkedUserIdStr) && int.TryParse(linkedUserIdStr, out var linkedUserId))
             {
                 await HttpContext.SignOutAsync("ExternalLink");
                 var (linked, linkError) = await _externalAuthService.LinkAsync(linkedUserId, result.Principal, provider.ToLowerInvariant(), accessToken);
@@ -342,7 +356,13 @@ namespace Harbor.Authentication.Controllers
             var linkIdentity2 = new ClaimsIdentity("ExternalLink");
             linkIdentity2.AddClaim(new Claim("userId", userId.ToString()));
             await HttpContext.SignInAsync("ExternalLink", new ClaimsPrincipal(linkIdentity2), new AuthenticationProperties { IsPersistent = false });
-            return Ok(new { url = $"/api/auth/external/{provider.ToLowerInvariant()}/link/start" });
+
+            var linkToken = _jwtService?.GenerateLinkToken(userId);
+            var redirectUrl = string.IsNullOrWhiteSpace(linkToken)
+                ? $"/api/auth/external/{provider.ToLowerInvariant()}/link/start"
+                : $"/api/auth/external/{provider.ToLowerInvariant()}/link/start?linkToken={Uri.EscapeDataString(linkToken)}";
+
+            return Ok(new { url = redirectUrl });
         }
 
         [Authorize]
@@ -377,7 +397,7 @@ namespace Harbor.Authentication.Controllers
 
         [AllowAnonymous]
         [HttpGet("external/{provider}/link/start")]
-        public IActionResult StartLinkedExternalLogin(string provider)
+        public async Task<IActionResult> StartLinkedExternalLogin(string provider, [FromQuery] string? linkToken = null)
         {
             if (provider.Equals("github", StringComparison.OrdinalIgnoreCase))
             {
@@ -390,7 +410,30 @@ namespace Harbor.Authentication.Controllers
                 _ => null
             };
             if (scheme == null) return NotFound(new { message = "Unsupported external login provider." });
-            return Challenge(new AuthenticationProperties { RedirectUri = $"/api/auth/external/{provider.ToLowerInvariant()}/complete" }, scheme);
+
+            var properties = new AuthenticationProperties { RedirectUri = $"/api/auth/external/{provider.ToLowerInvariant()}/complete" };
+
+            int? linkingUserId = null;
+            if (!string.IsNullOrWhiteSpace(linkToken) && _jwtService != null)
+            {
+                linkingUserId = _jwtService.ValidateLinkToken(linkToken);
+            }
+
+            if (!linkingUserId.HasValue && HttpContext?.RequestServices != null)
+            {
+                var linkResult = await HttpContext.AuthenticateAsync("ExternalLink");
+                if (linkResult.Succeeded && linkResult.Principal != null && int.TryParse(linkResult.Principal.FindFirstValue("userId"), out var cookieUserId))
+                {
+                    linkingUserId = cookieUserId;
+                }
+            }
+
+            if (linkingUserId.HasValue)
+            {
+                properties.Items["link_userId"] = linkingUserId.Value.ToString();
+            }
+
+            return Challenge(properties, scheme);
         }
 
         public record RefreshInstallationRequest(long? InstallationId = null);

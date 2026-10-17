@@ -29,21 +29,22 @@ export function LogConfigurationModal({
 
   if (!isOpen) return null;
 
-  const getBaseOrigin = () => {
-    if (import.meta.env.VITE_PUBLIC_URL) {
-      return import.meta.env.VITE_PUBLIC_URL.replace(/\/$/, '');
+  const getApiBase = () => {
+    const configuredApiBase = import.meta.env.VITE_API_BASE_URL;
+    if (configuredApiBase) {
+      const cleanBase = configuredApiBase.replace(/\/$/, '');
+      if (cleanBase.includes('localhost') || cleanBase.includes('127.0.0.1')) {
+        return 'https://api.harborapp.tech/api';
+      }
+      return cleanBase;
     }
-    // On localhost, external webhooks (Vercel, AWS, Render, etc.) require public production domain
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-      return 'https://harborapp.tech';
-    }
-    return window.location.origin;
+    return 'https://api.harborapp.tech/api';
   };
 
   const getProviderConfig = () => {
     const p = (provider || '').toLowerCase();
-    const origin = getBaseOrigin();
-    const webhookUrl = `${origin}/api/Webhooks/${p || 'custom'}/${serviceId}`;
+    const apiBase = getApiBase();
+    const webhookUrl = `${apiBase}/reporting/webhooks/${p || 'custom'}/${serviceId}`;
     
     switch (p) {
       case 'vercel':

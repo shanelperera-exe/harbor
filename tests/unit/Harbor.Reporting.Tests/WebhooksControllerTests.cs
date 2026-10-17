@@ -117,4 +117,12 @@ public class WebhooksControllerTests
         _clientProxyMock.Verify(c => c.SendCoreAsync("ReceiveLog", It.IsAny<object?[]>(), default), Times.Once);
         _cacheMock.Verify(c => c.SetAsync("logs:buffer:svc-rlw-1", It.IsAny<List<object>>(), It.IsAny<TimeSpan?>(), default), Times.Once);
     }
+
+    [Fact]
+    public void Ping_ReturnsOkResult()
+    {
+        var result = _controller.Ping("railway", "svc-rlw-1");
+        var ok = Assert.IsType<OkObjectResult>(result);
+        Assert.NotNull(ok.Value);
+    }
 }

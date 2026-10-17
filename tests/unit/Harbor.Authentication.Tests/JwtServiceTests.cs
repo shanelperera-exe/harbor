@@ -66,5 +66,27 @@ namespace Harbor.Authentication.Tests
 
             Assert.True(expiresAt > DateTime.UtcNow);
         }
+
+        [Fact]
+        public void GenerateLinkToken_ValidToken_ReturnsUserId()
+        {
+            var configuration = GetTestConfiguration();
+            var jwtService = new JwtService(configuration);
+
+            var token = jwtService.GenerateLinkToken(42);
+            var userId = jwtService.ValidateLinkToken(token);
+
+            Assert.Equal(42, userId);
+        }
+
+        [Fact]
+        public void ValidateLinkToken_InvalidOrEmptyToken_ReturnsNull()
+        {
+            var configuration = GetTestConfiguration();
+            var jwtService = new JwtService(configuration);
+
+            Assert.Null(jwtService.ValidateLinkToken(""));
+            Assert.Null(jwtService.ValidateLinkToken("invalid.token.here"));
+        }
     }
 }

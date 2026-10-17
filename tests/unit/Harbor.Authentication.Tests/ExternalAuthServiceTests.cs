@@ -206,4 +206,25 @@ public class ExternalAuthServiceTests
         _userRepoMock.Verify(r => r.AddExternalIdentityAsync(123, "github", "gh-999", "my@email.com", "myusername", "gh_token"), Times.Once);
         _userRepoMock.Verify(r => r.AddExternalLoginMethodAsync(123, "github"), Times.Once);
     }
+
+    [Fact]
+    public async Task LinkAsync_ValidAccount_InvalidatesProfileCache()
+    {
+        var cacheMock = new Mock<Harbor.Caching.ICacheService>();
+        var serviceWithCache = new ExternalAuthService(_userRepoMock.Object, _jwtServiceMock.Object, cacheMock.Object);
+
+        var principal = new ClaimsPrincipal(new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, "google-123"),
+            new Claim(ClaimTypes.Email, "my@email.com")
+        }));
+
+        _userRepoMock.Setup(r => r.GetByExternalIdentityAsync("google", "google-123"))
+            .ReturnsAsync((User?)null);
+
+        var (success, _) = await serviceWithCache.LinkAsync(777, principal, "google");
+
+        Assert.True(success);
+        cacheMock.Verify(c => c.RemoveAsync("auth:user:777", It.IsAny<CancellationToken>()), Times.Once);
+    }
 }

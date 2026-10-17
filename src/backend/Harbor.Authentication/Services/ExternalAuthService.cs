@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Harbor.Authentication.DTOs;
 using Harbor.Authentication.Models;
 using Harbor.Authentication.Repositories;
+using Harbor.Caching;
 
 namespace Harbor.Authentication.Services
 {
@@ -15,11 +16,13 @@ namespace Harbor.Authentication.Services
     {
         private readonly IUserRepository _userRepository;
         private readonly IJwtService _jwtService;
+        private readonly ICacheService? _cache;
 
-        public ExternalAuthService(IUserRepository userRepository, IJwtService jwtService)
+        public ExternalAuthService(IUserRepository userRepository, IJwtService jwtService, ICacheService? cache = null)
         {
             _userRepository = userRepository;
             _jwtService = jwtService;
+            _cache = cache;
         }
 
         public async Task<(bool Success, string? Error, LoginResponse? Data)> LoginOrRegisterAsync(ClaimsPrincipal principal, string provider, string? accessToken = null)
@@ -62,6 +65,10 @@ namespace Harbor.Authentication.Services
 
             await _userRepository.AddExternalLoginMethodAsync(user.Id, provider);
             await _userRepository.AddExternalIdentityAsync(user.Id, provider, providerUserId, email, providerUsername, accessToken);
+            if (_cache != null)
+            {
+                await _cache.RemoveAsync(CacheKeys.AuthUserById(user.Id));
+            }
             var (token, expiresAt) = _jwtService.GenerateToken(user);
             return (true, null, new LoginResponse
             {
@@ -89,6 +96,10 @@ namespace Harbor.Authentication.Services
             var providerUsername = GetProviderUsername(principal, provider);
             await _userRepository.AddExternalIdentityAsync(userId, provider, providerUserId, email, providerUsername, accessToken);
             await _userRepository.AddExternalLoginMethodAsync(userId, provider);
+            if (_cache != null)
+            {
+                await _cache.RemoveAsync(CacheKeys.AuthUserById(userId));
+            }
             return (true, null);
         }
 

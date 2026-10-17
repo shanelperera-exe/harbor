@@ -415,15 +415,15 @@ namespace Harbor.Authentication.Tests
         }
 
         [Fact]
-        public void StartLinkedExternalLogin_AllBranches()
+        public async Task StartLinkedExternalLogin_AllBranches()
         {
-            var ghResult = _controller.StartLinkedExternalLogin("github");
+            var ghResult = await _controller.StartLinkedExternalLogin("github");
             Assert.IsType<RedirectResult>(ghResult);
 
-            var unkResult = _controller.StartLinkedExternalLogin("unknown_xyz");
+            var unkResult = await _controller.StartLinkedExternalLogin("unknown_xyz");
             Assert.IsType<NotFoundObjectResult>(unkResult);
 
-            var googleResult = _controller.StartLinkedExternalLogin("google");
+            var googleResult = await _controller.StartLinkedExternalLogin("google");
             Assert.IsType<ChallengeResult>(googleResult);
         }
 

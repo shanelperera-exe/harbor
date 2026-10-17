@@ -47,5 +47,62 @@ namespace Harbor.Authentication.Services
 
             return (new JwtSecurityTokenHandler().WriteToken(token), expiresAt);
         }
+
+        public string GenerateLinkToken(int userId)
+        {
+            var claims = new[]
+            {
+                new Claim("userId", userId.ToString()),
+                new Claim("purpose", "link_account"),
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+            };
+
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_secret));
+            var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+            var expiresAt = DateTime.UtcNow.AddMinutes(10);
+
+            var token = new JwtSecurityToken(
+                issuer: _issuer,
+                audience: _audience,
+                claims: claims,
+                expires: expiresAt,
+                signingCredentials: credentials
+            );
+
+            return new JwtSecurityTokenHandler().WriteToken(token);
+        }
+
+        public int? ValidateLinkToken(string token)
+        {
+            if (string.IsNullOrWhiteSpace(token)) return null;
+
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_secret));
+            var validationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidIssuer = _issuer,
+                ValidateAudience = true,
+                ValidAudience = _audience,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = key,
+                ClockSkew = TimeSpan.FromMinutes(1)
+            };
+
+            try
+            {
+                var principal = tokenHandler.ValidateToken(token, validationParameters, out _);
+                var purpose = principal.FindFirstValue("purpose");
+                if (purpose != "link_account") return null;
+
+                var userIdStr = principal.FindFirstValue("userId");
+                return int.TryParse(userIdStr, out var userId) ? userId : null;
+            }
+            catch
+            {
+                return null;
+            }
+        }
     }
 }

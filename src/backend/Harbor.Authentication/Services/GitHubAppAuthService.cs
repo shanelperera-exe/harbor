@@ -4,6 +4,7 @@ using System.Text.Json;
 using Harbor.Authentication.DTOs;
 using Harbor.Authentication.Models;
 using Harbor.Authentication.Repositories;
+using Harbor.Caching;
 using Harbor.GitHub.Services;
 using Microsoft.Extensions.Options;
 
@@ -18,6 +19,7 @@ public sealed class GitHubAppAuthService : IGitHubAppAuthService
     private readonly IEncryptionService _encryptionService;
     private readonly IGitHubAppInstallationProvider _installationProvider;
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly ICacheService? _cache;
 
     public GitHubAppAuthService(
         IUserRepository userRepository,
@@ -26,7 +28,8 @@ public sealed class GitHubAppAuthService : IGitHubAppAuthService
         IGitHubAppApiClient appClient,
         IEncryptionService encryptionService,
         IGitHubAppInstallationProvider installationProvider,
-        IHttpClientFactory httpClientFactory)
+        IHttpClientFactory httpClientFactory,
+        ICacheService? cache = null)
     {
         _userRepository = userRepository;
         _jwtService = jwtService;
@@ -35,6 +38,7 @@ public sealed class GitHubAppAuthService : IGitHubAppAuthService
         _encryptionService = encryptionService;
         _installationProvider = installationProvider;
         _httpClientFactory = httpClientFactory;
+        _cache = cache;
     }
 
     public Task<GitHubAppAuthStartResponse?> StartAuthFlowAsync()
@@ -109,6 +113,11 @@ public sealed class GitHubAppAuthService : IGitHubAppAuthService
             await _userRepository.SetGitHubInstallationAsync(user.Id, installationId.Value);
         }
 
+        if (_cache != null)
+        {
+            await _cache.RemoveAsync(CacheKeys.AuthUserById(user.Id));
+        }
+
         var (token, expiresAt) = _jwtService.GenerateToken(user);
 
         return (true, null, new LoginResponse
@@ -139,9 +148,13 @@ public sealed class GitHubAppAuthService : IGitHubAppAuthService
         await _userRepository.AddExternalIdentityAsync(
             userId, provider, userInfo.Id.ToString(),
             userInfo.Email ?? userInfo.Name, userInfo.Login, encryptedToken);
+        await _userRepository.AddExternalLoginMethodAsync(userId, provider);
 
         if (installationId.HasValue)
             await _userRepository.SetGitHubInstallationAsync(userId, installationId.Value);
+
+        if (_cache != null)
+            await _cache.RemoveAsync(CacheKeys.AuthUserById(userId));
 
         return (true, null);
     }

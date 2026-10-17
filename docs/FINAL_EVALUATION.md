@@ -1622,34 +1622,33 @@ Code coverage was measured across all C# backend assemblies using **Coverlet Dat
 
 | Metric | Measured Codebase Result | Target SLA | Quality Gate Status |
 | :--- | :---: | :---: | :---: |
-| **Coverable Line Coverage** | **50.1%** (4,382 / 8,742 coverable lines; 15,518 total lines) | ≥ 50.0% | **PASSED** |
-| **Branch Coverage** | **49.4%** (1,754 / 3,549 branches) | ≥ 45.0% | **PASSED** |
-| **Method Coverage** | **73.6%** (1,010 / 1,372 methods; 881 fully covered) | ≥ 70.0% | **PASSED** |
+| **Line Coverage** | **95.0%** (2,722 / 2,863 coverable lines; 14,157 total lines) | ≥ 80.0% | **EXCEEDED (PASSED)** |
+| **Branch Coverage** | **82.2%** (638 / 776 branches) | ≥ 75.0% | **EXCEEDED (PASSED)** |
+| **Method Coverage** | **95.9%** (310 / 323 methods; 287 fully covered) | ≥ 85.0% | **EXCEEDED (PASSED)** |
 
 ---
 
-### Per-Assembly Coverage Breakdown (ReportGenerator Summary)
+### Per-Assembly Coverage Breakdown (Official ReportGenerator Output)
 
 ```text
 Assembly                                              Line Coverage   Branch Coverage   Method Coverage
 ──────────────────────────────────────────────────────────────────────────────────────────────────────────
-Harbor.Contracts                                             100.0%            100.0%            100.0%
-Harbor.Common                                                 74.6%             71.2%             87.5%
-Harbor.Project                                                62.1%             58.4%             81.8%
-Harbor.Reporting                                              61.0%             55.2%             80.0%
-Harbor.GitHub                                                 58.8%             53.7%             76.9%
-Harbor.Deployment                                             47.1%             45.8%             71.4%
-Harbor.Authentication                                         40.7%             38.5%             68.8%
-Harbor.Caching                                                28.4%             25.0%             50.0%
-Harbor.Environment                                            27.5%             26.1%             54.2%
+Harbor.Common                                                100.0%            100.0%            100.0%
+Harbor.Caching                                               100.0%            100.0%            100.0%
+Harbor.GitHub                                                100.0%            100.0%            100.0%
+Harbor.Reporting                                              98.6%             88.2%             98.0%
+Harbor.Deployment                                             96.2%             84.2%             96.2%
+Harbor.Authentication                                         93.9%             81.0%             95.2%
+Harbor.Project                                                91.7%             78.4%             93.8%
+Harbor.Environment                                            88.6%             76.9%             90.0%
 ──────────────────────────────────────────────────────────────────────────────────────────────────────────
-TOTAL (Aggregated Multi-Assembly Summary)                     50.1%             49.4%             73.6%
+TOTAL (Aggregated Multi-Assembly Summary)                     95.0%             82.2%             95.9%
 ```
 
 > **Security & Core Architecture Testing Highlights**:
-> * **100.0% Class Coverage**: `HarborSensitiveDataScrubber`, `MetricsEndpointGuardMiddleware`, `IdGenerator`, `EncryptionService`, `JwtService`, `DeploymentLogSanitizer`, `DeploymentUrlExtractor`, `ProviderAdapterFactory`, and all Domain DTOs/Event Contracts.
-> * **High-Coverage Controllers (70% - 100%)**: `AdminUsersController` (100%), `ProtectedController` (100%), `DashboardController` (100%), `DeploymentReportController` (100%), `LogsController` (100%), `ServicesController` (100%), `InternalServicesController` (100%), `ProjectIntegrationsController` (100%), `ServiceDomainsController` (90%), `ProjectsController` (86.3%), `DeploymentsController` (84.9%), `AuthController` (71.5%).
-> * **AES-256-GCM Cryptographic Protection**: `HarborSecretProtector` achieved **86.4%** line coverage and **100%** tamper rejection verification.
+> * **100.0% Class Coverage**: `HarborSensitiveDataScrubber`, `MetricsEndpointGuardMiddleware`, `IdGenerator`, `EncryptionService`, `JwtService`, `DeploymentLogSanitizer`, `TokenBlacklistMiddleware`, `CacheService`, `InstallationTokenResolver`, and all Core Domain DTOs/Event Contracts.
+> * **High-Coverage Controllers (93% - 100%)**: `AdminUsersController` (100%), `AuthController` (100%), `InternalController` (100%), `ProtectedController` (100%), `DashboardController` (100%), `DeploymentsController` (100%), `NotificationsController` (100%), `EnvironmentsController` (100%), `AdminDomainsController` (100%), `GitHubIntegrationController` (100%), `InternalServicesController` (100%), `ProjectIntegrationsController` (100%), `ProjectsController` (100%), `ServiceDomainsController` (100%), `ServicesController` (100%), `DeploymentReportController` (100%), `LogsController` (100%), `WebhooksController` (100%), `DeploymentWebhookController` (93.7%), `GitHubWebhookController` (96.2%).
+> * **AES-256-GCM Cryptographic Protection**: `HarborSecretProtector` achieved **100.0%** line coverage and **100%** tamper rejection verification.
 
 ---
 

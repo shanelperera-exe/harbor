@@ -100,3 +100,44 @@ export const useTheme = () => {
   }
   return context;
 };
+
+export function useResolvedTheme(): 'light' | 'dark' {
+  const context = useContext(ThemeContext);
+  const [domTheme, setDomTheme] = useState<'light' | 'dark'>(() => {
+    if (typeof document !== 'undefined') {
+      return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+    }
+    return 'light';
+  });
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+
+    const updateTheme = () => {
+      const isDark = document.documentElement.classList.contains('dark');
+      setDomTheme((prev) => {
+        const next = isDark ? 'dark' : 'light';
+        return prev === next ? prev : next;
+      });
+    };
+
+    const observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+          updateTheme();
+        }
+      }
+    });
+
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+
+    window.addEventListener('harbor-theme-change', updateTheme);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('harbor-theme-change', updateTheme);
+    };
+  }, []);
+
+  return context?.resolvedTheme ?? domTheme;
+}
+

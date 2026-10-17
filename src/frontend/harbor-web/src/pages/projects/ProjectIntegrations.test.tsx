@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import ProjectIntegrations from './ProjectIntegrations';
@@ -162,4 +162,53 @@ describe('ProjectIntegrations Component - Instructions Modal & Info Icon', () =>
     await userEvent.click(activeInfoBtn);
     expect(await screen.findByRole('heading', { name: /Amazon Web Services Integration Guide/i })).toBeInTheDocument();
   });
+
+  it('renders title with only text and no logos in heading', async () => {
+    vi.spyOn(projectIntegrationService, 'getProjectIntegrations').mockResolvedValueOnce([]);
+    await act(async () => {
+      renderComponent();
+    });
+
+    const heading = screen.getByRole('heading', { level: 1 });
+    expect(heading).toHaveTextContent(/Integrate a cloud provider/i);
+    expect(heading.querySelector('svg')).toBeNull();
+    expect(heading.querySelector('img')).toBeNull();
+  });
+
+  it('switches Railway logo according to active theme', async () => {
+    vi.spyOn(projectIntegrationService, 'getProjectIntegrations').mockResolvedValue([]);
+
+    document.documentElement.classList.remove('dark');
+    let unmountFn: () => void = () => {};
+    await act(async () => {
+      const res = render(
+        <MemoryRouter initialEntries={['/p1/integrations']}>
+          <Routes>
+            <Route path="/:id/integrations" element={<ProjectIntegrations />} />
+          </Routes>
+        </MemoryRouter>
+      );
+      unmountFn = res.unmount;
+    });
+
+    const railwayImgsLight = screen.getAllByAltText('Railway');
+    expect(railwayImgsLight[0]).toHaveAttribute('src', '/external_icons/railway_light.svg');
+    unmountFn();
+
+    document.documentElement.classList.add('dark');
+    await act(async () => {
+      render(
+        <MemoryRouter initialEntries={['/p1/integrations']}>
+          <Routes>
+            <Route path="/:id/integrations" element={<ProjectIntegrations />} />
+          </Routes>
+        </MemoryRouter>
+      );
+    });
+
+    const railwayImgsDark = screen.getAllByAltText('Railway');
+    expect(railwayImgsDark[0]).toHaveAttribute('src', '/external_icons/railway_dark.svg');
+    document.documentElement.classList.remove('dark');
+  });
 });
+

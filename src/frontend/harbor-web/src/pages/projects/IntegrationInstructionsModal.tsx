@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { RiCloseLine, RiShieldCheckLine } from 'react-icons/ri';
 import { BiLinkExternal, BiKey, BiCheck, BiCopy } from 'react-icons/bi';
 import { IoInformationCircleOutline } from 'react-icons/io5';
+import { useResolvedTheme } from '../../contexts/ThemeContext';
 import { Icon } from '../../components/icons';
 import { INTEGRATION_GUIDES, type IntegrationGuide } from './integrationGuides';
 
@@ -28,6 +29,8 @@ export default function IntegrationInstructionsModal({
   onOpenConnectModal,
 }: IntegrationInstructionsModalProps) {
   const [copiedSnippetIndex, setCopiedSnippetIndex] = useState<number | null>(null);
+  const theme = useResolvedTheme();
+  const isDark = theme === 'dark';
 
   useEffect(() => {
     if (!isOpen) {
@@ -87,21 +90,14 @@ export default function IntegrationInstructionsModal({
                 <img
                   src={provider.lightIcon}
                   alt={provider.name}
-                  className={`w-7 h-7 object-contain ${provider.invertInDark ? 'dark:invert' : ''}`}
+                  className={`w-7 h-7 object-contain ${provider.invertInDark && isDark ? 'invert' : ''}`}
                 />
               ) : (
-                <>
-                  <img
-                    src={provider.lightIcon}
-                    alt={provider.name}
-                    className="w-7 h-7 object-contain dark:hidden block"
-                  />
-                  <img
-                    src={provider.darkIcon}
-                    alt={provider.name}
-                    className="w-7 h-7 object-contain hidden dark:block"
-                  />
-                </>
+                <img
+                  src={isDark ? provider.darkIcon : provider.lightIcon}
+                  alt={provider.name}
+                  className="w-7 h-7 object-contain"
+                />
               )}
             </div>
             <div>

@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { getProjectIntegrations, createProjectIntegration, deleteProjectIntegration, type ProjectIntegration } from '../../services/projectIntegrationService';
+import { useResolvedTheme } from '../../contexts/ThemeContext';
 import { Icon } from '../../components/icons';
 import { RiSaveLine, RiCloseLine } from 'react-icons/ri';
 import { BiLinkExternal, BiKey } from 'react-icons/bi';
 import { IoLogoVercel, IoInformationCircleOutline } from 'react-icons/io5';
-import { MdOutlineCloud } from 'react-icons/md';
 import { SiRender, SiGooglecloud, SiKubernetes, SiRailway } from 'react-icons/si';
 import { FaAws, FaDigitalOcean, FaDocker } from 'react-icons/fa';
 import { VscAzure } from 'react-icons/vsc';
@@ -34,14 +34,27 @@ const AVAILABLE_PROVIDERS: Array<{
 ];
 
 const ProviderLogo = ({ provider, className = "w-12 h-12" }: { provider: typeof AVAILABLE_PROVIDERS[0], className?: string }) => {
+  const theme = useResolvedTheme();
+  const isDark = theme === 'dark';
+
   if (provider.lightIcon === provider.darkIcon) {
-    return <img src={provider.lightIcon} alt={provider.name} className={`${className} object-contain ${provider.invertInDark ? 'dark:invert' : ''}`} />;
+    return (
+      <img
+        src={provider.lightIcon}
+        alt={provider.name}
+        className={`${className} object-contain ${provider.invertInDark && isDark ? 'invert' : ''}`}
+      />
+    );
   }
+
+  const iconSrc = isDark ? provider.darkIcon : provider.lightIcon;
+
   return (
-    <>
-      <img src={provider.lightIcon} alt={provider.name} className={`${className} object-contain dark:hidden block`} />
-      <img src={provider.darkIcon} alt={provider.name} className={`${className} object-contain hidden dark:block`} />
-    </>
+    <img
+      src={iconSrc}
+      alt={provider.name}
+      className={`${className} object-contain`}
+    />
   );
 };
 
@@ -117,18 +130,14 @@ export default function ProjectIntegrations() {
     }
   };
 
-  const TitleIcon = hoveredProvider ? hoveredProvider.icon : MdOutlineCloud;
-  const titleIconClass = hoveredProvider?.iconClass || 'w-10 h-10 translate-y-[2px]';
-
   return (
     <div className="w-full lg:max-w-[calc(100vw-294px)]">
       <main className="w-full max-w-[1920px] mx-auto px-4 mb-20 md:px-12">
         <div className="my-6 md:my-12 flex flex-col gap-2">
           <h1 className="text-[36px] font-[500] leading-[40px] tracking-[-0.32px] text-gray-900 dark:text-white flex items-center gap-2.5 flex-wrap" style={{ fontFamily: 'Roobert, sans-serif' }}>
             <span>Integrate {hoveredProvider ? '' : 'a '}</span>
-            <span className={`text-gray-500 dark:text-gray-400 inline-flex items-center gap-2.5 ${!hoveredProvider ? 'underline decoration-gray-400 dark:decoration-gray-500 decoration-dashed underline-offset-4' : ''}`}>
+            <span className={`text-gray-500 dark:text-gray-400 ${!hoveredProvider ? 'underline decoration-gray-400 dark:decoration-gray-500 decoration-dashed underline-offset-4' : ''}`}>
               <span>{hoveredProvider ? hoveredProvider.name : 'cloud provider'}</span>
-              <TitleIcon className={`${titleIconClass} shrink-0 text-current transition-all`} />
             </span>
           </h1>
           <p className="text-gray-500 dark:text-[#a1a1aa] text-[16px] font-normal">

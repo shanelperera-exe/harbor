@@ -1080,8 +1080,8 @@ Configure the parameters within `.env` according to the target runtime environme
 POSTGRES_SERVER=localhost
 POSTGRES_PORT=5433
 POSTGRES_DATABASE=harbor_db
-POSTGRES_USER=harboruser
-POSTGRES_PASSWORD=harbor@1234
+POSTGRES_USER=<YOUR_POSTGRES_USER>
+POSTGRES_PASSWORD=<YOUR_POSTGRES_PASSWORD>
 POSTGRES_SSL_MODE=Disable
 
 # =============================================================================
@@ -1093,7 +1093,7 @@ REDIS_INSTANCE_NAME=harbor:
 # =============================================================================
 # 3. Authentication & JWT Token Parameters
 # =============================================================================
-JWT_SECRET=TvNyJak3GNCB6FNulgRTu1U2cH1WJBGlM/FbevKlZy0=
+JWT_SECRET=<YOUR_BASE64_256BIT_JWT_SECRET>
 JWT_ISSUER=harbor
 JWT_AUDIENCE=harbor-api
 JWT_EXPIRY_MINUTES=480
@@ -1102,9 +1102,9 @@ JWT_EXPIRY_MINUTES=480
 # 4. Cryptographic Secrets Protection (AES-256-GCM)
 # 256-bit base64 key generated via: openssl rand -base64 32
 # =============================================================================
-ENVIRONMENT_SECRETS_KEY=N8cU8nMCzBrWx1Y8kjdHkixXVD0JkymnzmW2cF59IAY=
-INTERNAL_API_KEY=HarborInternalSecretToken2026!
-METRICS_SCRAPE_TOKEN=HarborPrometheusMetricsToken2026!
+ENVIRONMENT_SECRETS_KEY=<YOUR_BASE64_256BIT_AES_KEY>
+INTERNAL_API_KEY=<YOUR_INTERNAL_API_SECRET>
+METRICS_SCRAPE_TOKEN=<YOUR_METRICS_SCRAPE_TOKEN>
 
 # =============================================================================
 # 5. Event Streaming Broker (Apache Kafka / Azure Event Hubs)
@@ -1118,11 +1118,11 @@ KAFKA_SECURITY_PROTOCOL=Plaintext
 # =============================================================================
 # 6. GitHub App Integration & Dispatch Credentials
 # =============================================================================
-GITHUB_APP_ID=5018625
-GITHUB_APP_CLIENT_ID=Iv23lijIb5QAdv7MjUcE
-GITHUB_APP_CLIENT_SECRET=d506356cb824b1b5df3f4ba9b57ff615b829fb16
-GITHUB_APP_PRIVATE_KEY_BASE64=<BASE64_ENCODED_PEM_PRIVATE_KEY>
-GITHUB_APP_WEBHOOK_SECRET=ded952f34a95bf1ad0035ebec51f078dad5d2eb22b8b63df3d351a72a3d2f68c
+GITHUB_APP_ID=<YOUR_GITHUB_APP_ID>
+GITHUB_APP_CLIENT_ID=<YOUR_GITHUB_APP_CLIENT_ID>
+GITHUB_APP_CLIENT_SECRET=<YOUR_GITHUB_APP_CLIENT_SECRET>
+GITHUB_APP_PRIVATE_KEY_BASE64=<YOUR_BASE64_ENCODED_PEM_PRIVATE_KEY>
+GITHUB_APP_WEBHOOK_SECRET=<YOUR_GITHUB_APP_WEBHOOK_SECRET>
 GITHUB_API_BASE_URL=https://api.github.com/
 
 # =============================================================================
@@ -1160,7 +1160,7 @@ docker compose ps
 | **Admin Dashboard** | `http://localhost:5174` | Administrative oversight, domain verification, audit logs |
 | **API Gateway Ingress** | `http://localhost:5000` | Unified YARP reverse proxy and Swagger UI (`/swagger`) |
 | **Mailpit SMTP Web UI** | `http://localhost:8025` | Local transactional email inbox for password resets |
-| **PostgreSQL Database** | `localhost:5433` | Database instance (`harboruser` / `harbor@1234`) |
+| **PostgreSQL Database** | `localhost:5433` | Database instance (`<POSTGRES_USER>` / `<POSTGRES_PASSWORD>`) |
 | **Redis Cache** | `localhost:6379` | In-memory distributed cache and token revocation store |
 | **Apache Kafka Broker** | `localhost:9092` | Event broker for the `deployment-events` topic |
 
@@ -1251,8 +1251,8 @@ az postgres flexible-server create \
   --resource-group rg-harbor-centralindia \
   --name harbor-db-prod \
   --location centralindia \
-  --admin-user harbor_admin \
-  --admin-password "ProdDatabaseSecure2026!" \
+  --admin-user <YOUR_DB_ADMIN_USER> \
+  --admin-password "<YOUR_DB_ADMIN_PASSWORD>" \
   --sku-name Standard_B1ms \
   --tier Burstable \
   --storage-size 32 \

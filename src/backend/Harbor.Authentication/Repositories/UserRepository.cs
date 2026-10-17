@@ -493,12 +493,28 @@ namespace Harbor.Authentication.Repositories
             return deletedUsers > 0;
         }
 
-        private static async Task<bool> TableExistsAsync(NpgsqlConnection connection, NpgsqlTransaction transaction, string tableName)
+        private static async Task<bool> TableExistsAsync(NpgsqlConnection connection, NpgsqlTransaction? transaction, string tableName)
         {
             using var command = connection.CreateCommand();
-            command.Transaction = transaction;
+            if (transaction != null) command.Transaction = transaction;
             command.CommandText = "SELECT to_regclass(@tableName) IS NOT NULL";
             command.Parameters.AddWithValue("tableName", $"public.\"{tableName}\"");
+            return (bool?)await command.ExecuteScalarAsync() ?? false;
+        }
+
+        private static async Task<bool> ColumnExistsAsync(NpgsqlConnection connection, string tableName, string columnName)
+        {
+            using var command = connection.CreateCommand();
+            command.CommandText = @"
+                SELECT EXISTS (
+                    SELECT 1 
+                    FROM information_schema.columns 
+                    WHERE table_schema = 'public' 
+                      AND table_name = @tableName 
+                      AND column_name = @columnName
+                )";
+            command.Parameters.AddWithValue("tableName", tableName);
+            command.Parameters.AddWithValue("columnName", columnName);
             return (bool?)await command.ExecuteScalarAsync() ?? false;
         }
 
@@ -517,12 +533,20 @@ namespace Harbor.Authentication.Repositories
             using var connection = _dbFactory.CreateConnection();
             await connection.OpenAsync();
 
+            var hasStatus = await ColumnExistsAsync(connection, "Users", "Status");
+            var hasProjects = await TableExistsAsync(connection, null, "Projects");
+
+            var statusSql = hasStatus ? "COALESCE(u.\"Status\", 'active')" : "'active'";
+            var projectCountSql = hasProjects 
+                ? "COALESCE((SELECT COUNT(1) FROM \"Projects\" p WHERE p.\"OwnerId\" = u.\"Id\"), 0)" 
+                : "0::bigint";
+
             using var command = connection.CreateCommand();
-            command.CommandText = @"
+            command.CommandText = $@"
                 SELECT u.""Id"", u.""PublicId"", u.""Username"", u.""Email"", u.""Role"", 
-                       COALESCE(u.""Status"", 'active') AS ""Status"", 
+                       {statusSql} AS ""Status"", 
                        u.""CreatedAt"", u.""AvatarSvg"",
-                       COALESCE((SELECT COUNT(1) FROM ""Projects"" p WHERE p.""OwnerId"" = u.""Id""), 0) AS ""ProjectCount""
+                       {projectCountSql} AS ""ProjectCount""
                 FROM ""Users"" u
                 ORDER BY u.""Id"" ASC";
 
@@ -532,14 +556,14 @@ namespace Harbor.Authentication.Repositories
                 result.Add(new Harbor.Authentication.DTOs.AdminUserDto
                 {
                     Id = reader.GetInt32(0),
-                    PublicId = reader.GetString(1),
+                    PublicId = reader.IsDBNull(1) ? string.Empty : reader.GetString(1),
                     Username = reader.GetString(2),
                     Email = reader.GetString(3),
                     Role = reader.GetString(4),
-                    Status = reader.GetString(5),
+                    Status = reader.IsDBNull(5) ? "active" : reader.GetString(5),
                     CreatedAt = reader.GetDateTime(6),
                     AvatarSvg = reader.IsDBNull(7) ? null : reader.GetString(7),
-                    ProjectCount = Convert.ToInt32(reader.GetInt64(8))
+                    ProjectCount = reader.IsDBNull(8) ? 0 : Convert.ToInt32(reader.GetInt64(8))
                 });
             }
 
@@ -563,6 +587,14 @@ namespace Harbor.Authentication.Repositories
         {
             using var connection = _dbFactory.CreateConnection();
             await connection.OpenAsync();
+
+            var hasStatus = await ColumnExistsAsync(connection, "Users", "Status");
+            if (!hasStatus)
+            {
+                using var alterCmd = connection.CreateCommand();
+                alterCmd.CommandText = "ALTER TABLE \"Users\" ADD COLUMN IF NOT EXISTS \"Status\" VARCHAR(50) NOT NULL DEFAULT 'active'";
+                await alterCmd.ExecuteNonQueryAsync();
+            }
 
             using var command = connection.CreateCommand();
             command.CommandText = "UPDATE \"Users\" SET \"Status\" = @status WHERE \"Id\" = @userId";

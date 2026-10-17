@@ -9,6 +9,7 @@ namespace Harbor.Authentication.Models
         public string PasswordHash { get; set; } = string.Empty;
         public bool HasPassword { get; set; } = true;
         public string Role { get; set; } = "Developer";
+        public string Status { get; set; } = "active";
         public string? AvatarSvg { get; set; }
         public string? PasswordResetToken { get; set; }
         public DateTime? PasswordResetTokenExpiry { get; set; }

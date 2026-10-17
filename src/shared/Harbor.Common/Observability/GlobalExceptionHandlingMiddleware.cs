@@ -90,6 +90,15 @@ public class GlobalExceptionHandlingMiddleware
         problemDetails.Extensions["errorCode"] = errorCode;
         problemDetails.Extensions["timestamp"] = DateTime.UtcNow;
 
+        if (!context.Response.HasStarted &&
+            context.Request.Headers.TryGetValue("Origin", out var origin) &&
+            !string.IsNullOrEmpty(origin))
+        {
+            context.Response.Headers["Access-Control-Allow-Origin"] = origin.ToString();
+            context.Response.Headers["Access-Control-Allow-Credentials"] = "true";
+            context.Response.Headers["Vary"] = "Origin";
+        }
+
         context.Response.ContentType = "application/problem+json";
         context.Response.StatusCode = statusCode;
 

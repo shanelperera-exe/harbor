@@ -88,4 +88,24 @@ public class ObservabilityMiddlewareTests
         Assert.DoesNotContain("SuperSecretPassword123!", detail);
         Assert.Contains("password=[REDACTED]", detail);
     }
+
+    [Fact]
+    public async Task GlobalExceptionHandlingMiddleware_WhenOriginHeaderPresent_SetsCorsHeadersOnProblemDetails()
+    {
+        var context = new DefaultHttpContext();
+        context.Request.Headers["Origin"] = "https://harborapp.tech";
+        var responseBodyStream = new MemoryStream();
+        context.Response.Body = responseBodyStream;
+
+        var loggerMock = new Mock<ILogger<GlobalExceptionHandlingMiddleware>>();
+        RequestDelegate next = _ => throw new Exception("Unexpected service failure");
+
+        var middleware = new GlobalExceptionHandlingMiddleware(next, loggerMock.Object);
+        await middleware.InvokeAsync(context);
+
+        Assert.Equal(StatusCodes.Status500InternalServerError, context.Response.StatusCode);
+        Assert.Equal("https://harborapp.tech", context.Response.Headers["Access-Control-Allow-Origin"]);
+        Assert.Equal("true", context.Response.Headers["Access-Control-Allow-Credentials"]);
+        Assert.Equal("Origin", context.Response.Headers["Vary"]);
+    }
 }

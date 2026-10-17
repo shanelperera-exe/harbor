@@ -343,6 +343,10 @@ namespace Harbor.Authentication.Tests
             var okResult = await _controller.RefreshGitHubInstallation();
             Assert.IsType<OkObjectResult>(okResult);
             _userRepoMock.Verify(r => r.SetGitHubInstallationAsync(10, 999L), Times.Once);
+
+            var directResult = await _controller.RefreshGitHubInstallation(new AuthController.RefreshInstallationRequest(172222155L));
+            Assert.IsType<OkObjectResult>(directResult);
+            _userRepoMock.Verify(r => r.SetGitHubInstallationAsync(10, 172222155L), Times.Once);
         }
 
         [Fact]

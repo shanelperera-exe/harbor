@@ -24,7 +24,15 @@ builder.Services.AddHealthChecks()
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
 if (allowedOrigins == null || allowedOrigins.Length == 0)
 {
-    allowedOrigins = new[] { "http://localhost:5173", "http://localhost:5174" };
+    var envOrigins = Environment.GetEnvironmentVariable("ALLOWED_ORIGINS");
+    if (!string.IsNullOrWhiteSpace(envOrigins))
+    {
+        allowedOrigins = envOrigins.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    }
+    else
+    {
+        allowedOrigins = new[] { "https://harborapp.tech", "https://admin.harborapp.tech", "http://localhost:5173", "http://localhost:5174" };
+    }
 }
 builder.Services.AddCors(options =>
 {
@@ -135,8 +143,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHarborObservability();
 app.UseCors("DefaultPolicy");
+app.UseHarborObservability();
 if (!builder.Configuration.GetValue("DisableHttpsRedirection", false))
     app.UseHttpsRedirection();
 

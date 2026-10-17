@@ -393,11 +393,19 @@ namespace Harbor.Authentication.Controllers
             return Challenge(new AuthenticationProperties { RedirectUri = $"/api/auth/external/{provider.ToLowerInvariant()}/complete" }, scheme);
         }
 
+        public record RefreshInstallationRequest(long? InstallationId = null);
+
         [Authorize]
         [HttpPost("github/refresh-installation")]
-        public async Task<IActionResult> RefreshGitHubInstallation()
+        public async Task<IActionResult> RefreshGitHubInstallation([FromBody(EmptyBodyBehavior = Microsoft.AspNetCore.Mvc.ModelBinding.EmptyBodyBehavior.Allow)] RefreshInstallationRequest? request = null)
         {
             if (!TryGetUserId(out var userId)) return Unauthorized();
+
+            if (request?.InstallationId is > 0)
+            {
+                await _userRepository.SetGitHubInstallationAsync(userId, request.InstallationId.Value);
+                return Ok(new { InstallationId = request.InstallationId.Value, Message = "GitHub installation linked successfully." });
+            }
 
             // Get user's encrypted GitHub token
             var accessToken = await _userRepository.GetExternalAccessTokenAsync(userId, "github");

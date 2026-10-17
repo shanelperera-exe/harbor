@@ -57,6 +57,16 @@ namespace Harbor.Project.Controllers
             {
                 return StatusCode((int)ex.StatusCode, new { message = ex.Message });
             }
+            catch (HttpRequestException ex)
+            {
+                _logger.LogError(ex, "Failed to reach GitHub API: {Message}", ex.Message);
+                return StatusCode(StatusCodes.Status502BadGateway, new { message = "Failed to communicate with GitHub API.", detail = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error retrieving repositories from GitHub: {Message}", ex.Message);
+                return StatusCode(StatusCodes.Status500InternalServerError, new { message = "An error occurred retrieving repositories.", detail = ex.Message });
+            }
         }
 
         /// <summary>

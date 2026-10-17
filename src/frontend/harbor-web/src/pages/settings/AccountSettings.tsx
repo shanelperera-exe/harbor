@@ -174,7 +174,7 @@ const hasGithubDeploymentCredential = connectedProviders.includes('github');
 
   useEffect(() => {
     async function loadGithubData() {
-      if (!isProviderConnected('github')) return;
+      if (!isProviderConnected('github') && profile.githubInstallationId == null) return;
       
       const token = localStorage.getItem('harbor_token');
       if (!token) return;

@@ -45,6 +45,11 @@ if (!string.IsNullOrEmpty(connectionStringBuilder.Host))
 var allOrigins = (Environment.GetEnvironmentVariable("ALLOWED_ORIGINS") ?? "")
     .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
+if (allOrigins.Length == 0)
+{
+    allOrigins = new[] { "https://harborapp.tech", "https://admin.harborapp.tech", "http://localhost:5173", "http://localhost:5174" };
+}
+
 var allowedOriginsSet = new HashSet<string>(allOrigins, StringComparer.OrdinalIgnoreCase);
 
 builder.Services.AddReverseProxy()
@@ -58,7 +63,10 @@ builder.Services.AddReverseProxy()
             {
                 context.HttpContext.Response.Headers["Access-Control-Allow-Origin"] = origin;
                 context.HttpContext.Response.Headers["Access-Control-Allow-Credentials"] = "true";
-                context.HttpContext.Response.Headers["Vary"] = "Origin";
+                if (!context.HttpContext.Response.Headers.ContainsKey("Vary"))
+                {
+                    context.HttpContext.Response.Headers["Vary"] = "Origin";
+                }
             }
         });
     });
@@ -93,10 +101,13 @@ var app = builder.Build();
         app.UseSwaggerUI();
     }
 
-    app.UseHarborObservability();
-    app.UseCors();
     app.UseForwardedHeaders();
-    app.UseHttpsRedirection();
+    app.UseCors();
+    app.UseHarborObservability();
+    if (!builder.Configuration.GetValue("DisableHttpsRedirection", false))
+    {
+        app.UseHttpsRedirection();
+    }
 
     // Handle GitHub App installation callback - redirect to frontend
     app.MapGet("/github/install/callback", (HttpContext ctx) =>

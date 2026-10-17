@@ -26,6 +26,11 @@ public class DeploymentUrlExtractorTests
     [InlineData("Deployment URL: https://app.company.org/path", "https://app.company.org/path")]
     [InlineData("Endpoint: https://api.sample.com", "https://api.sample.com")]
     [InlineData("URL: https://web.sample.com/", "https://web.sample.com")]
+    [InlineData("Deployed to: \"https://quoted.vercel.app\"", "https://quoted.vercel.app")]
+    [InlineData("Deployed to: 'https://single-quoted.onrender.com'", "https://single-quoted.onrender.com")]
+    [InlineData("Production: http://insecure-http-endpoint.example.com", "http://insecure-http-endpoint.example.com")]
+    [InlineData("Deployed to: https://trailing-slash.up.railway.app///", "https://trailing-slash.up.railway.app")]
+    [InlineData("Deployed to: https://service.internal.io/api/v1/", "https://service.internal.io/api/v1")]
     public void ExtractUrl_ExtractsValidProviderUrls(string logText, string expectedUrl)
     {
         var result = DeploymentUrlExtractor.ExtractUrl(logText);

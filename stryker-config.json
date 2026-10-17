@@ -1,0 +1,25 @@
+{
+  "stryker-config": {
+    "project": "Harbor.Deployment.csproj",
+    "test-projects": [
+      "tests/unit/Harbor.Deployment.Tests/Harbor.Deployment.Tests.csproj"
+    ],
+    "reporters": [
+      "Progress",
+      "Html",
+      "ClearText",
+      "Json"
+    ],
+    "thresholds": {
+      "high": 80,
+      "low": 60,
+      "break": 0
+    },
+    "mutate": [
+      "Services/DeploymentUrlExtractor.cs",
+      "Services/DeploymentLogSanitizer.cs"
+    ],
+    "concurrency": 4,
+    "log-level": "info"
+  }
+}

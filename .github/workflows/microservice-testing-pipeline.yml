@@ -5,6 +5,7 @@ on:
     branches: ["test/microservice-testing-pipeline", "main", "develop", "feature/*"]
   pull_request:
     branches: ["test/microservice-testing-pipeline", "main", "develop"]
+  workflow_dispatch:
 
 concurrency:
   group: microservice-testing-${{ github.ref }}

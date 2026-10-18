@@ -150,11 +150,11 @@ dotnet test tests/unit/Harbor.Deployment.Tests/Harbor.Deployment.Tests.csproj \
 
 The pipeline is fully automated on GitHub Actions:
 - **Triggers:** Pushes and pull requests to `test/microservice-testing-pipeline`, `main`, and feature branches.
-- **Stage 1:** Static code analysis, Roslyn analyzers, and formatting checks.
-- **Stage 2:** Unit testing with xUnit, Moq, and Coverlet coverage collector.
-- **Stage 3:** Stryker.NET mutation testing with high/low threshold evaluation.
-- **Stage 4:** Non-GUI Apache JMeter performance testing and SLA verification.
-- **Stage 5:** Aggregation and publication of unified quality artifacts.
+- **Stage 1:** Unit Testing & Mocking (xUnit, Moq, Parameterized Theories across all 7 microservices).
+- **Stage 2:** Mutation Testing (Stryker.NET AST mutation engine with threshold evaluation).
+- **Stage 3:** Load & Performance Testing (Apache JMeter concurrency, throughput, and SLA validation).
+- **Stage 4:** Code Quality, Multi-Assembly Coverage & Live SonarCloud Analysis (Coverlet, ReportGenerator, SonarCloud).
+- **Stage 5:** Aggregation and publication of unified quality artifacts and Quality Gate verification.
 
 ---
 

@@ -28,7 +28,7 @@ if [[ -f "$REPO_ROOT/.env" ]]; then
     set +a
 fi
 
-SONAR_ORG="${SONAR_ORGANIZATION:-shanelperera-exe}"
+SONAR_ORG="${SONAR_ORGANIZATION:-harbor-platform}"
 SONAR_PROJECT="${SONAR_PROJECT_KEY:-shanelperera-exe_harbor}"
 SONAR_HOST="https://sonarcloud.io"
 SONAR_TOKEN="${SONAR_TOKEN:-}"

@@ -123,8 +123,12 @@ dotnet-sonarscanner begin \
     /d:sonar.token="$SONAR_TOKEN" \
     /d:sonar.cs.cobertura.reportsPaths="$RESULTS_DIR/**/coverage.cobertura.xml" \
     /d:sonar.cs.vstest.reportsPaths="$RESULTS_DIR/**/*.trx" \
-    /d:sonar.exclusions="**/bin/**,**/obj/**,**/node_modules/**,**/dist/**,**/*.jmx,**/*.jtl,**/TestResults/**,**/StrykerOutput/**" \
+    /d:sonar.sources="src/backend,src/shared" \
+    /d:sonar.tests="tests/unit,tests/integration" \
+    /d:sonar.inclusions="**/*.cs" \
+    /d:sonar.exclusions="**/bin/**,**/obj/**,**/node_modules/**,**/dist/**,**/*.jmx,**/*.jtl,**/TestResults/**,**/StrykerOutput/**,**/frontend/**,**/web/**,**/*.js,**/*.ts,**/*.tsx,**/*.jsx,**/*.css,**/*.html" \
     /d:sonar.coverage.exclusions="**/Program.cs,**/Migrations/**,**/Data/DatabaseInitializer.cs,**/Data/DbConnectionFactory.cs,**/DTOs/**,**/Models/**,**/Responses/**" \
+    /d:sonar.scanner.skipNodeProvisioning=true \
     /d:sonar.qualitygate.wait=true
 
 echo -e "\n${BOLD}${MAGENTA}▶ [Stage 2/4] Compiling Solution with Roslyn Static Code Analysis...${RESET}"

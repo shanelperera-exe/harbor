@@ -181,7 +181,7 @@ jobs:
           echo "=========================================================================="
 
           # Pre-flight check: probe SonarQube health endpoint with 5s timeout
-          SQ_STATUS=$(curl -s --connect-timeout 5 "${SONAR_HOST}/api/system/status" 2>/dev/null | grep -o '"status":"[^"]*"' | cut -d'"' -f4 || true)
+          SQ_STATUS=$(curl -4 -s --connect-timeout 5 "${SONAR_HOST}/api/system/status" 2>/dev/null | grep -o '"status":"[^"]*"' | cut -d'"' -f4 || true)
 
           ANALYSIS_EXECUTED=false
 

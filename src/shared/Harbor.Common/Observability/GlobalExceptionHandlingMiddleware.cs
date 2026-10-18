@@ -102,6 +102,6 @@ public class GlobalExceptionHandlingMiddleware
         context.Response.ContentType = "application/problem+json";
         context.Response.StatusCode = statusCode;
 
-        await JsonSerializer.SerializeAsync(context.Response.Body, problemDetails, JsonOptions);
+        await JsonSerializer.SerializeAsync(context.Response.Body, problemDetails, JsonOptions, cancellationToken: context.RequestAborted);
     }
 }

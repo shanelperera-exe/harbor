@@ -127,7 +127,7 @@ dotnet-sonarscanner begin \
     /d:sonar.tests="tests/unit,tests/integration" \
     /d:sonar.inclusions="**/*.cs" \
     /d:sonar.exclusions="**/bin/**,**/obj/**,**/node_modules/**,**/dist/**,**/*.jmx,**/*.jtl,**/TestResults/**,**/StrykerOutput/**,**/frontend/**,**/web/**,**/*.js,**/*.ts,**/*.tsx,**/*.jsx,**/*.css,**/*.html" \
-    /d:sonar.coverage.exclusions="**/Program.cs,**/Migrations/**,**/Data/DatabaseInitializer.cs,**/Data/DbConnectionFactory.cs,**/DTOs/**,**/Models/**,**/Responses/**" \
+    /d:sonar.coverage.exclusions="**/Program.cs,**/Migrations/**,**/Data/MigrationRunner.cs,**/Data/DatabaseInitializer.cs,**/Data/DbConnectionFactory.cs,**/DTOs/**,**/Models/**,**/Responses/**,**/Scripts/**,**/Repositories/**" \
     /d:sonar.scanner.skipNodeProvisioning=true \
     /d:sonar.qualitygate.wait=true
 

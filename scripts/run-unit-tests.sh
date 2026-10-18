@@ -118,6 +118,7 @@ dotnet test tests/unit/Harbor.Deployment.Tests/Harbor.Deployment.Tests.csproj \
     --logger "console;verbosity=minimal"
 
 echo -e "\n${BOLD}${MAGENTA}▶ [Stage 2/2] Solution-Wide Microservice Unit Test Suites${RESET}"
+dotnet build Harbor.sln --configuration Release --verbosity minimal
 UNIT_PROJECTS=(
     "tests/unit/Harbor.Deployment.Tests/Harbor.Deployment.Tests.csproj"
     "tests/unit/Harbor.Project.Tests/Harbor.Project.Tests.csproj"

@@ -138,7 +138,7 @@ public class DeploymentService : IDeploymentService
 
         // ── CI Gate: warn if CI checks are failing on the target branch ───────────────────────────
         string? ciWarning = null;
-        if (!string.IsNullOrWhiteSpace(installationToken) && !request.OverrideCiGate)
+        if (!string.IsNullOrWhiteSpace(installationToken) && request.OverrideCiGate != true)
         {
             var repoParts = repositoryName.Split('/', 2);
             var ciResult = await gitHubActionsClient.GetCiStatusAsync(repoParts[0], repoParts[1], ciRef, installationToken);
@@ -148,7 +148,7 @@ public class DeploymentService : IDeploymentService
                 "pending" => ciResult.Summary,
                 _ => null
             };
-            if (ciWarning is not null && !request.OverrideCiGate)
+            if (ciWarning is not null && request.OverrideCiGate != true)
                 return (false, ciWarning, null, "CiGate", ciWarning);
         }
 
@@ -214,7 +214,7 @@ public class DeploymentService : IDeploymentService
                 }
                 catch (Exception ex)
                 {
-                    Console.Error.WriteLine($"[Harbor] Failed to capture run for deployment {captureDeploymentId}: {ex.Message}");
+                    await Console.Error.WriteLineAsync($"[Harbor] Failed to capture run for deployment {captureDeploymentId}: {ex.Message}");
                 }
             });
         }

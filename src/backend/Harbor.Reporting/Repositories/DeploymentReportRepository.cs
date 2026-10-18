@@ -26,35 +26,9 @@ public class DeploymentReportRepository(ReportingDbConnectionFactory dbFactory) 
         await using var connection = dbFactory.CreateConnection();
         await connection.OpenAsync();
 
-        // ── Build WHERE predicates ─────────────────────────────────────────────
-        // Each predicate is a fixed SQL fragment; user values only appear as @param references.
-        var predicates = new List<string>
-        {
-            // Ownership guard – admins see everything; regular users see only their projects.
-            "(@isAdmin OR p.\"OwnerId\" = @userId)"
-        };
-
-        if (!string.IsNullOrWhiteSpace(projectId))
-            predicates.Add("p.\"Id\"::text = @projectId");
-
-        if (!string.IsNullOrWhiteSpace(environment))
-            predicates.Add("LOWER(d.\"Environment\") = LOWER(@environment)");
-
-        if (!string.IsNullOrWhiteSpace(status))
-            predicates.Add("LOWER(d.\"Status\") = LOWER(@status)");
-
-        if (startDate.HasValue)
-            predicates.Add("d.\"StartedAt\" >= @startDate");
-
-        if (endDate.HasValue)
-            // Include deployments that started on the end date (end of day).
-            predicates.Add("d.\"StartedAt\" < @endDate");
-
-        var whereClause = "WHERE " + string.Join(" AND ", predicates);
-
         // ── Build the query ────────────────────────────────────────────────────
         await using var command = connection.CreateCommand();
-        command.CommandText = $@"
+        command.CommandText = @"
             SELECT
                 d.""Id"",
                 d.""PublicId"",
@@ -73,34 +47,22 @@ public class DeploymentReportRepository(ReportingDbConnectionFactory dbFactory) 
             JOIN ""Services""  s ON d.""ServiceId""  = s.""Id""
             JOIN ""Projects""  p ON s.""ProjectId""  = p.""Id""
             LEFT JOIN ""Users"" u ON d.""OwnerId""    = u.""Id""
-            {whereClause}
+            WHERE (@isAdmin = TRUE OR p.""OwnerId"" = @userId)
+              AND (CAST(@projectId AS text) IS NULL OR p.""Id""::text = @projectId)
+              AND (CAST(@environment AS text) IS NULL OR LOWER(d.""Environment"") = LOWER(@environment))
+              AND (CAST(@status AS text) IS NULL OR LOWER(d.""Status"") = LOWER(@status))
+              AND (CAST(@startDate AS timestamp with time zone) IS NULL OR d.""StartedAt"" >= @startDate)
+              AND (CAST(@endDate AS timestamp with time zone) IS NULL OR d.""StartedAt"" < @endDate)
             ORDER BY d.""StartedAt"" DESC, d.""Id"" DESC";
 
         // ── Bind parameters ────────────────────────────────────────────────────
-        command.Parameters.AddWithValue("userId",  userId);
-        command.Parameters.AddWithValue("isAdmin", isAdmin);
-
-        if (!string.IsNullOrWhiteSpace(projectId))
-            command.Parameters.AddWithValue("projectId", projectId);
-
-        if (!string.IsNullOrWhiteSpace(environment))
-            command.Parameters.AddWithValue("environment", environment);
-
-        if (!string.IsNullOrWhiteSpace(status))
-            command.Parameters.AddWithValue("status", status);
-
-        if (startDate.HasValue)
-        {
-            var startUtc = DateTime.SpecifyKind(startDate.Value, DateTimeKind.Utc);
-            command.Parameters.AddWithValue("startDate", startUtc);
-        }
-
-        if (endDate.HasValue)
-        {
-            // Add one day so "endDate = Oct 9" includes all of Oct 9.
-            var endUtc = DateTime.SpecifyKind(endDate.Value, DateTimeKind.Utc).AddDays(1);
-            command.Parameters.AddWithValue("endDate", endUtc);
-        }
+        command.Parameters.Add(new NpgsqlParameter("userId", NpgsqlTypes.NpgsqlDbType.Integer) { Value = userId });
+        command.Parameters.Add(new NpgsqlParameter("isAdmin", NpgsqlTypes.NpgsqlDbType.Boolean) { Value = isAdmin });
+        command.Parameters.Add(new NpgsqlParameter("projectId", NpgsqlTypes.NpgsqlDbType.Text) { Value = (object?)projectId ?? DBNull.Value });
+        command.Parameters.Add(new NpgsqlParameter("environment", NpgsqlTypes.NpgsqlDbType.Text) { Value = (object?)environment ?? DBNull.Value });
+        command.Parameters.Add(new NpgsqlParameter("status", NpgsqlTypes.NpgsqlDbType.Text) { Value = (object?)status ?? DBNull.Value });
+        command.Parameters.Add(new NpgsqlParameter("startDate", NpgsqlTypes.NpgsqlDbType.TimestampTz) { Value = startDate.HasValue ? (object)DateTime.SpecifyKind(startDate.Value, DateTimeKind.Utc) : DBNull.Value });
+        command.Parameters.Add(new NpgsqlParameter("endDate", NpgsqlTypes.NpgsqlDbType.TimestampTz) { Value = endDate.HasValue ? (object)DateTime.SpecifyKind(endDate.Value, DateTimeKind.Utc).AddDays(1) : DBNull.Value });
 
         // ── Read results ───────────────────────────────────────────────────────
         var results = new List<DeploymentReportEntity>();

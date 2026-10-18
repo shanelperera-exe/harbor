@@ -87,10 +87,10 @@ namespace Harbor.Reporting.Workers
                                 
                                 // Buffer in Redis
                                 string cacheKey = $"logs:buffer:{serviceId}";
-                                var recentLogs = await _cacheService.GetAsync<List<object>>(cacheKey) ?? new List<object>();
+                                var recentLogs = await _cacheService.GetAsync<List<object>>(cacheKey, stoppingToken) ?? new List<object>();
                                 recentLogs.Add(logEntry);
                                 if (recentLogs.Count > 100) recentLogs.RemoveRange(0, recentLogs.Count - 100);
-                                await _cacheService.SetAsync(cacheKey, recentLogs, TimeSpan.FromHours(24));
+                                await _cacheService.SetAsync(cacheKey, recentLogs, TimeSpan.FromHours(24), stoppingToken);
                             }
                         }
                         catch (Exception ex)

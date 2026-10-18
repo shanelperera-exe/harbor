@@ -14,57 +14,45 @@ public class DeploymentRepository(DbConnectionFactory dbFactory) : IDeploymentRe
         await using var connection = dbFactory.CreateConnection();
         await connection.OpenAsync();
 
-        var whereClauses = new List<string>();
-        if (!isAdmin)
-        {
-            whereClauses.Add("d.\"ServiceId\" IN (SELECT s.\"Id\" FROM \"Services\" s JOIN \"Projects\" p ON s.\"ProjectId\" = p.\"Id\" WHERE p.\"OwnerId\" = @ownerId)");
-        }
-        if (!string.IsNullOrWhiteSpace(projectId))
-        {
-            whereClauses.Add("p.\"Id\"::text = @projectId");
-        }
-        if (!string.IsNullOrWhiteSpace(environment))
-        {
-            whereClauses.Add("LOWER(d.\"Environment\") = LOWER(@environment)");
-        }
-        if (!string.IsNullOrWhiteSpace(serviceId))
-        {
-            whereClauses.Add("""
-                EXISTS (
-                    SELECT 1
-                    FROM "Services" s
-                    WHERE s."Id" = d."ServiceId"
-                      AND (s."PublicId" = @serviceId OR s."Id"::text = @serviceId)
-                )
-                """);
-        }
-        if (!string.IsNullOrWhiteSpace(status))
-        {
-            whereClauses.Add("LOWER(d.\"Status\") = LOWER(@status)");
-        }
-        var filter = whereClauses.Count > 0 ? "WHERE " + string.Join(" AND ", whereClauses) : "";
-
         await using var count = connection.CreateCommand();
-        count.CommandText = $@"
+        count.CommandText = @"
             SELECT COUNT(1) FROM ""Deployments"" d
             JOIN ""Services"" s ON d.""ServiceId"" = s.""Id""
             JOIN ""Projects"" p ON s.""ProjectId"" = p.""Id""
-            {filter}";
-        AddFilters(count, ownerId, projectId, environment, serviceId, status);
+            WHERE (@isAdmin = TRUE OR d.""ServiceId"" IN (SELECT s2.""Id"" FROM ""Services"" s2 JOIN ""Projects"" p2 ON s2.""ProjectId"" = p2.""Id"" WHERE p2.""OwnerId"" = @ownerId))
+              AND (@projectId IS NULL OR p.""Id""::text = @projectId)
+              AND (@environment IS NULL OR LOWER(d.""Environment"") = LOWER(@environment))
+              AND (@serviceId IS NULL OR EXISTS (
+                    SELECT 1
+                    FROM ""Services"" s3
+                    WHERE s3.""Id"" = d.""ServiceId""
+                      AND (s3.""PublicId"" = @serviceId OR s3.""Id""::text = @serviceId)
+              ))
+              AND (@status IS NULL OR LOWER(d.""Status"") = LOWER(@status))";
+        AddFilters(count, ownerId, isAdmin, projectId, environment, serviceId, status);
         var total = Convert.ToInt32(await count.ExecuteScalarAsync());
 
         await using var command = connection.CreateCommand();
-        command.CommandText = $@"
+        command.CommandText = @"
             SELECT d.""Id"", d.""PublicId"", d.""ServiceId"", d.""OwnerId"", d.""Environment"", d.""Version"", d.""CommitSha"", d.""Status"", d.""StartedAt"", d.""CompletedAt"", d.""FailureReason"", d.""WorkflowFile"", d.""WorkflowRef"", d.""TriggerError"", d.""WorkflowRunId"", d.""WorkflowRunUrl"",
                    p.""Name"" AS ""ProjectName"", s.""Name"" AS ""ServiceName"", s.""Type"" AS ""ServiceType"", u.""Username"" AS ""UserName"", d.""CommitMessage"", d.""DeploymentUrl""
             FROM ""Deployments"" d
             JOIN ""Services"" s ON d.""ServiceId"" = s.""Id""
             JOIN ""Projects"" p ON s.""ProjectId"" = p.""Id""
             LEFT JOIN ""Users"" u ON d.""OwnerId"" = u.""Id""
-            {filter}
+            WHERE (@isAdmin = TRUE OR d.""ServiceId"" IN (SELECT s2.""Id"" FROM ""Services"" s2 JOIN ""Projects"" p2 ON s2.""ProjectId"" = p2.""Id"" WHERE p2.""OwnerId"" = @ownerId))
+              AND (@projectId IS NULL OR p.""Id""::text = @projectId)
+              AND (@environment IS NULL OR LOWER(d.""Environment"") = LOWER(@environment))
+              AND (@serviceId IS NULL OR EXISTS (
+                    SELECT 1
+                    FROM ""Services"" s3
+                    WHERE s3.""Id"" = d.""ServiceId""
+                      AND (s3.""PublicId"" = @serviceId OR s3.""Id""::text = @serviceId)
+              ))
+              AND (@status IS NULL OR LOWER(d.""Status"") = LOWER(@status))
             ORDER BY d.""StartedAt"" DESC, d.""Id"" DESC
             OFFSET @skip LIMIT @take";
-        AddFilters(command, ownerId, projectId, environment, serviceId, status);
+        AddFilters(command, ownerId, isAdmin, projectId, environment, serviceId, status);
         command.Parameters.AddWithValue("skip", skip);
         command.Parameters.AddWithValue("take", take);
         
@@ -388,25 +376,14 @@ public class DeploymentRepository(DbConnectionFactory dbFactory) : IDeploymentRe
         return (await ReadDeploymentsAsync(command)).SingleOrDefault();
     }
 
-    private static void AddFilters(NpgsqlCommand command, int ownerId, string? projectId, string? environment, string? serviceId, string? status)
+    private static void AddFilters(NpgsqlCommand command, int ownerId, bool isAdmin, string? projectId, string? environment, string? serviceId, string? status)
     {
         command.Parameters.AddWithValue("ownerId", ownerId);
-        if (!string.IsNullOrWhiteSpace(projectId))
-        {
-            command.Parameters.AddWithValue("projectId", projectId);
-        }
-        if (!string.IsNullOrWhiteSpace(environment))
-        {
-            command.Parameters.AddWithValue("environment", environment);
-        }
-        if (!string.IsNullOrWhiteSpace(serviceId))
-        {
-            command.Parameters.AddWithValue("serviceId", serviceId);
-        }
-        if (!string.IsNullOrWhiteSpace(status))
-        {
-            command.Parameters.AddWithValue("status", status);
-        }
+        command.Parameters.AddWithValue("isAdmin", isAdmin);
+        command.Parameters.AddWithValue("projectId", (object?)projectId ?? DBNull.Value);
+        command.Parameters.AddWithValue("environment", (object?)environment ?? DBNull.Value);
+        command.Parameters.AddWithValue("serviceId", (object?)serviceId ?? DBNull.Value);
+        command.Parameters.AddWithValue("status", (object?)status ?? DBNull.Value);
     }
 
     private static async Task<List<DeploymentEntity>> ReadDeploymentsAsync(NpgsqlCommand command)

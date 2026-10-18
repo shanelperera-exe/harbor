@@ -61,16 +61,16 @@ namespace Harbor.Project.Services
             List<ProjectEntity>? projects;
             if (isAdmin)
             {
-                projects = await _cache.GetOrSetAsync(
+                projects = await _cache.GetOrSetAsync<List<ProjectEntity>>(
                     CacheKeys.AllProjects(),
-                    () => _projectRepository.GetAllAsync(),
+                    async () => await _projectRepository.GetAllAsync(),
                     CacheTtl.AllProjects);
             }
             else
             {
-                projects = await _cache.GetOrSetAsync(
+                projects = await _cache.GetOrSetAsync<List<ProjectEntity>>(
                     CacheKeys.ProjectsByOwner(userId),
-                    () => _projectRepository.GetByOwnerAsync(userId),
+                    async () => await _projectRepository.GetByOwnerAsync(userId),
                     CacheTtl.ProjectList);
             }
 

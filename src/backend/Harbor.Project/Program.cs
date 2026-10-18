@@ -158,7 +158,7 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapHarborObservability();
 
-app.Run();
+await app.RunAsync();
 
 /// <summary>
 /// Exposes the top-level Program for WebApplicationFactory-based integration tests.

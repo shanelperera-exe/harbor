@@ -131,4 +131,4 @@ var app = builder.Build();
     app.MapReverseProxy();
     app.MapHarborObservability();
 
-    app.Run();
+    await app.RunAsync();

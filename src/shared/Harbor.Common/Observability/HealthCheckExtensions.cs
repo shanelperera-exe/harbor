@@ -168,7 +168,7 @@ public static class HealthCheckExtensions
             status = report.Status.ToString()
         }, JsonOptions);
 
-        return context.Response.WriteAsync(json);
+        return context.Response.WriteAsync(json, context.RequestAborted);
     }
 
     private static Task WriteDetailedResponse(HttpContext context, HealthReport report)
@@ -193,7 +193,7 @@ public static class HealthCheckExtensions
         };
 
         var json = JsonSerializer.Serialize(result, JsonOptions);
-        return context.Response.WriteAsync(json);
+        return context.Response.WriteAsync(json, context.RequestAborted);
     }
 }
 

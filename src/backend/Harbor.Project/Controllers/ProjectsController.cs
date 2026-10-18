@@ -69,12 +69,11 @@ namespace Harbor.Project.Controllers
         }
 
         /// <summary>
-        /// Updates an existing project's name and description.
+        /// Retrieves a project by its identifier.
         /// </summary>
-        /// <param name="id">The id of the project to update.</param>
-        /// <param name="request">The updated project fields.</param>
-        /// <response code="200">The project was updated successfully.</response>
-        /// <response code="400">The request failed validation, the project was not found, or it is archived.</response>
+        /// <param name="id">The id of the project to retrieve.</param>
+        /// <response code="200">The project was retrieved successfully.</response>
+        /// <response code="404">The project was not found.</response>
         /// <response code="401">The caller is not authenticated.</response>
         /// <response code="403">The caller does not have permission to update this project.</response>
         [HttpGet("{id}")]

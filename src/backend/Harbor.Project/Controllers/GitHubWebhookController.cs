@@ -22,11 +22,14 @@ namespace Harbor.Project.Controllers
         }
 
         [HttpPost("github")]
-        public async Task<IActionResult> HandleGitHubWebhook()
+        public async Task<IActionResult> HandleGitHubWebhook(
+            [FromHeader(Name = "X-Hub-Signature-256")] string? signature = null,
+            [FromHeader(Name = "X-GitHub-Event")] string? eventType = null,
+            [FromHeader(Name = "X-GitHub-Delivery")] string? deliveryId = null)
         {
-            var signature = Request.Headers["X-Hub-Signature-256"].ToString();
-            var eventType = Request.Headers["X-GitHub-Event"].ToString();
-            var deliveryId = Request.Headers["X-GitHub-Delivery"].ToString();
+            signature = ResolveHeader(signature, "X-Hub-Signature-256");
+            eventType = ResolveHeader(eventType, "X-GitHub-Event");
+            deliveryId = ResolveHeader(deliveryId, "X-GitHub-Delivery");
 
             using var bodyStream = new MemoryStream();
             await Request.Body.CopyToAsync(bodyStream);
@@ -138,5 +141,14 @@ namespace Harbor.Project.Controllers
 
             return Task.CompletedTask;
         }
+
+        [NonAction]
+#pragma warning disable S6932
+        private string ResolveHeader(string? boundValue, string headerName)
+        {
+            if (!string.IsNullOrEmpty(boundValue)) return boundValue;
+            return Request?.Headers.TryGetValue(headerName, out var val) == true ? val.ToString() : string.Empty;
+        }
+#pragma warning restore S6932
     }
 }

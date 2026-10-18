@@ -21,7 +21,7 @@ namespace Harbor.Reporting.Services
             _httpClient = httpClient;
             _logger = logger;
             // Assumes project-service is reachable at this internal URL
-            _httpClient.BaseAddress = new Uri(Environment.GetEnvironmentVariable("PROJECT_SERVICE_URL") ?? "http://project-service:8080");
+            _httpClient.BaseAddress = new Uri(Environment.GetEnvironmentVariable("PROJECT_SERVICE_URL") ?? "https://project-service:8443");
         }
 
         public async Task<ServiceDetailsDto?> GetServiceDetailsAsync(string serviceId)

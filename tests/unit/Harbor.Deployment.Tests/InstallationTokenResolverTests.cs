@@ -153,7 +153,8 @@ public class InstallationTokenResolverTests
 
         await resolver.GetInstallationTokenAsync(7);
 
-        Assert.Equal("authentication-service", handler.LastRequest!.RequestUri!.Host);
-        Assert.Equal(8080, handler.LastRequest.RequestUri.Port);
+        Assert.Equal("https", handler.LastRequest!.RequestUri!.Scheme);
+        Assert.Equal("authentication-service", handler.LastRequest.RequestUri.Host);
+        Assert.Equal(8443, handler.LastRequest.RequestUri.Port);
     }
 }

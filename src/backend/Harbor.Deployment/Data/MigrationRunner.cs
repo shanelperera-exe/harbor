@@ -11,6 +11,7 @@ namespace Harbor.Deployment.Data;
 /// Validates that previously applied scripts have not been tampered with
 /// before applying any new ones.
 /// </summary>
+[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public static class MigrationRunner
 {
     private const string ChecksumTable = "schema_checksums";

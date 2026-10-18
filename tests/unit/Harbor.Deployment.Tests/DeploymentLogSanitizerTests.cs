@@ -4,7 +4,7 @@ using Xunit;
 namespace Harbor.Deployment.Tests;
 
 /// <summary>
-/// Student 2: Targeted Unit Tests to Kill Surviving Mutants in DeploymentLogSanitizer
+/// Stage 2: Targeted Unit Tests to Kill Surviving Mutants in DeploymentLogSanitizer
 /// Validates credential scrubbing, authorization header redaction, and regex boundaries.
 /// </summary>
 public class DeploymentLogSanitizerTests

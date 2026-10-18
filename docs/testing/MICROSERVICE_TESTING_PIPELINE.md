@@ -1,23 +1,23 @@
 # SE3112: Advanced Software Engineering — Microservice Testing Pipeline
 **Module:** SE3112 - Advanced Software Engineering (BSc. Hons in Computer Science - Y3S1)  
 **Assessment:** Take-Home Assessment – Microservice Testing Pipeline  
-**Weight:** 10% | **Group Size:** 4 Students | **Viva Duration:** 12 Minutes  
+**Weight:** 10% | **Team Size:** 4 Members | **Viva Duration:** 12 Minutes  
 **Target Score:** 100/100 (Grade: Very Good / High Distinction)  
 **Base Codebase:** Harbor Cloud Software Platform (CSP) Microservices (.NET 10, Kafka, Redis, PostgreSQL, React)  
 **Main Working Branch:** `test/microservice-testing-pipeline`  
 
 ---
 
-## 1. Team Members & Feature Ownership Matrix
+## 1. Feature & Testing Paradigm Ownership Matrix
 
-In accordance with the rubric requirement to assign exactly 4 distinct testing paradigms, each student has full ownership of one domain, integrated into our unified automation framework:
+In accordance with the rubric requirement to assign exactly 4 distinct testing paradigms, each core domain is integrated into our unified automation framework:
 
-| Student | Assigned Testing Paradigm | Toolchain | Target Microservices | Core Feature Implemented |
+| Stage / Paradigm | Assigned Testing Paradigm | Toolchain | Target Microservices | Core Feature Implemented |
 | :--- | :--- | :--- | :--- | :--- |
-| **Student 1** | **Unit Testing & Mocking** | `xUnit` 2.9, `Moq` 4.20, `FluentAssertions` | `Harbor.Deployment` & `Harbor.Authentication` | Parameterized `[Theory]` suites (`[InlineData]`, `[MemberData]`), strict/loose Test Doubles, behavioral invariant verification, error isolation. |
-| **Student 2** | **Mutation Testing** | `Stryker.NET` 5.0 (`dotnet-stryker`) | `Harbor.Deployment` (Domain & URL Extraction Logic) | AST mutation engine, `stryker-config.json`, Mutation Score Indicator (MSI) tracking, surviving mutant analysis, and targeted test additions. |
-| **Student 3** | **Load & Performance Testing** | `Apache JMeter` 5.6.3 + Python Runner | `Harbor.ApiGateway` & `Harbor.Deployment` | Concurrency, baseline, and spike test plans; p50/p90/p95/p99 latency analysis; throughput (TPS) measurement; dynamic HTML dashboard generation. |
-| **Student 4** | **Code Quality & Metrics** | `SonarQube` / `SonarCloud`, `Coverlet`, `ReportGenerator` | Solution-wide (all 6 backend services + libraries) | Static code analysis, Roslyn analyzers, code smells detection, CRAP risk hotspots, multi-assembly branch coverage, automated Quality Gate. |
+| **Stage 1** | **Unit Testing & Mocking** | `xUnit` 2.9, `Moq` 4.20, `FluentAssertions` | `Harbor.Deployment` & `Harbor.Authentication` | Parameterized `[Theory]` suites (`[InlineData]`, `[MemberData]`), strict/loose Test Doubles, behavioral invariant verification, error isolation. |
+| **Stage 2** | **Mutation Testing** | `Stryker.NET` 5.0 (`dotnet-stryker`) | `Harbor.Deployment` (Domain & URL Extraction Logic) | AST mutation engine, `stryker-config.json`, Mutation Score Indicator (MSI) tracking, surviving mutant analysis, and targeted test additions. |
+| **Stage 3** | **Load & Performance Testing** | `Apache JMeter` 5.6.3 + Python Runner | `Harbor.ApiGateway` & `Harbor.Deployment` | Concurrency, baseline, and spike test plans; p50/p90/p95/p99 latency analysis; throughput (TPS) measurement; dynamic HTML dashboard generation. |
+| **Stage 4** | **Code Quality & Metrics** | `SonarQube` / `SonarCloud`, `Coverlet`, `ReportGenerator` | Solution-wide (all 6 backend services + libraries) | Static code analysis, Roslyn analyzers, code smells detection, CRAP risk hotspots, multi-assembly branch coverage, automated Quality Gate. |
 
 ---
 
@@ -29,12 +29,12 @@ Harbor's microservices testing pipeline integrates 4 complementary layers of sof
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
 │                        HARBOR UNIFIED QUALITY AUTOMATION PIPELINE                      │
 ├──────────────────────────┬──────────────────────────┬──────────────────────────────────┤
-│ Quality Dimension        │ Assigned Role & Student  │ Primary Toolchain                │
+│ Quality Dimension        │ Paradigm / Stage         │ Primary Toolchain                │
 ├──────────────────────────┼──────────────────────────┼──────────────────────────────────┤
-│ 1. Logic Isolation       │ Student 1: Unit & Mocks  │ xUnit + Moq + FluentAssertions   │
-│ 2. Fault Tolerance       │ Student 2: Mutation      │ Stryker.NET (dotnet-stryker)     │
-│ 3. Concurrency & Stress  │ Student 3: Performance   │ Apache JMeter 5.6.3 (CLI/HTML)   │
-│ 4. Static Quality Gates  │ Student 4: Code Quality  │ SonarQube / Coverlet + ReportGen │
+│ 1. Logic Isolation       │ Stage 1: Unit & Mocks    │ xUnit + Moq + FluentAssertions   │
+│ 2. Fault Tolerance       │ Stage 2: Mutation        │ Stryker.NET (dotnet-stryker)     │
+│ 3. Concurrency & Stress  │ Stage 3: Performance     │ Apache JMeter 5.6.3 (CLI/HTML)   │
+│ 4. Static Quality Gates  │ Stage 4: Code Quality    │ SonarQube / Coverlet + ReportGen │
 └──────────────────────────┴──────────────────────────┴──────────────────────────────────┘
 ```
 
@@ -93,12 +93,12 @@ To execute all 4 testing stages systematically in a single automated command:
 ```
 
 ### B. Individual Testing Stage Commands
-Each student's component can also be executed independently for focused live viva demos:
+Each testing component can also be executed independently for focused live demos:
 
-#### Student 1: Unit Testing & Mocking (xUnit + Moq)
+#### Stage 1: Unit Testing & Mocking (xUnit + Moq)
 ```bash
-# Fast live-demo of Student 1's Advanced Mocking & Parameterized Theories (1.8s)
-./scripts/run-unit-tests.sh --student1
+# Fast live-demo of Stage 1 Advanced Mocking & Parameterized Theories (1.8s)
+./scripts/run-unit-tests.sh --advanced
 
 # Run complete solution unit test suite (all 950 tests across 7 microservices)
 ./scripts/run-unit-tests.sh --all
@@ -108,22 +108,22 @@ Each student's component can also be executed independently for focused live viv
 ./scripts/run-unit-tests.sh --filter "FullyQualifiedName~Pagination"
 ```
 
-#### Student 2: Mutation Testing (Stryker.NET)
+#### Stage 2: Mutation Testing (Stryker.NET)
 ```bash
-# Student 2 Dedicated Viva Command (~45s, 83.33% MSI)
-./scripts/run-mutation-tests.sh --student2
+# Stage 2 Dedicated Live Demo Command (~45s, 83.33% MSI)
+./scripts/run-mutation-tests.sh --targeted
 
 # Run mutation tests and immediately open interactive HTML report in browser
-./scripts/run-mutation-tests.sh --student2 --open
+./scripts/run-mutation-tests.sh --targeted --open
 
 # Full mutation test run across domain services
 ./scripts/run-mutation-tests.sh --all
 ```
 
-#### Student 3: Load & Performance Testing (Apache JMeter)
+#### Stage 3: Load & Performance Testing (Apache JMeter)
 ```bash
-# Student 3 Dedicated Multi-Method Viva Command (Load, Stress, Spike, Soak, Baseline)
-./scripts/run-performance-tests.sh --student3
+# Stage 3 Dedicated Multi-Method Performance Command (Load, Stress, Spike, Soak, Baseline)
+./scripts/run-performance-tests.sh --matrix
 
 # Run Concurrent Load Testing (100 VUs, SLA check p95 < 200ms)
 ./scripts/run-performance-tests.sh --load
@@ -141,10 +141,10 @@ Each student's component can also be executed independently for focused live viv
 ./scripts/run-performance-tests.sh --baseline
 
 # Launch interactive JMeter HTML dashboard in browser
-./scripts/run-performance-tests.sh --student3 --open
+./scripts/run-performance-tests.sh --matrix --open
 ```
 
-#### Student 4: Code Quality & Metrics (SonarQube / Coverlet / ReportGenerator)
+#### Stage 4: Code Quality & Metrics (SonarQube / Coverlet / ReportGenerator)
 ```bash
 # Run 6-Pillar Code Quality & Metrics Gate (Coverage, Debt, Roslyn, Architecture, Hotspots, SCA)
 ./scripts/run-code-quality.sh --unit
@@ -181,12 +181,12 @@ The pipeline is fully automated on GitHub Actions:
 
 | Time Slot | Section | Speaker | Screen Visual | Key Script Points |
 | :--- | :--- | :--- | :--- | :--- |
-| **00:00 – 02:00** (2 min) | **Group Intro & Pipeline Demo** | Group Lead | Architecture Diagram + Terminal running `./scripts/run-testing-pipeline.sh --all` | Recap Harbor microservice architecture (.NET 10, Kafka, Redis, PostgreSQL). Demonstrate how the master script triggers all 4 stages systematically. |
-| **02:00 – 04:00** (2 min) | **Student 1: Unit Testing & Mocking** | Student 1 | Terminal (`dotnet test`) + `DeploymentServiceAdvancedMockingTests.cs` | Explain parameterized `[Theory]` suites (`[InlineData]`, `[MemberData]`). Highlight strict Test Doubles for Kafka & GitHub, verifying call invariants and rollback isolation. |
-| **04:00 – 06:00** (2 min) | **Student 2: Mutation Testing** | Student 2 | Stryker Interactive HTML Report + Terminal (`./scripts/run-mutation-tests.sh --student2`) | Present Mutation Score Indicator (MSI: 83.33%, up from 45.24%). Detail real bug caught & fixed in `DeploymentLogSanitizer.cs` (Bearer double-redaction). Show how surviving bitwise mutants were killed via case-insensitive URL invariants and explain equivalent mutants. |
-| **06:00 – 08:00** (2 min) | **Student 3: Load & Performance** | Student 3 | JMeter HTML Dashboard (APDEX, Latency, TPS) + Terminal (`./scripts/run-performance-tests.sh --student3`) | Walk through the 5 Performance Methods: Baseline (1 VU, p95=3ms), Concurrent Load (100 VUs, p95=135ms < 200ms SLA), Spike (250 VUs burst in 3s, 4s recovery), Stress (500 VUs saturation breaking point, 105 r/s), and Endurance Soak (5,000 requests, zero connection/memory leaks). |
-| **08:00 – 10:00** (2 min) | **Student 4: Code Quality & Metrics** | Student 4 | ReportGenerator / SonarQube HTML Dashboard + Quality Gate terminal output | Walk through multi-assembly line (54.3%) and branch (59.7%) coverage, CRAP risk hotspots, and passing SonarQube Quality Gate (Rating A, tech debt < 4%). |
-| **10:00 – 12:00** (2 min) | **Technical VIVA / Q&A Defense** | All Students | Slide 5 (Summary Metrics) / Open for Questioning | Confident, technically deep defense of architectural choices and testing concepts. |
+| **00:00 – 02:00** (2 min) | **Team Intro & Pipeline Demo** | Team Lead | Architecture Diagram + Terminal running `./scripts/run-testing-pipeline.sh --all` | Recap Harbor microservice architecture (.NET 10, Kafka, Redis, PostgreSQL). Demonstrate how the master script triggers all 4 stages systematically. |
+| **02:00 – 04:00** (2 min) | **Stage 1: Unit Testing & Mocking** | Presenter 1 | Terminal (`dotnet test`) + `DeploymentServiceAdvancedMockingTests.cs` | Explain parameterized `[Theory]` suites (`[InlineData]`, `[MemberData]`). Highlight strict Test Doubles for Kafka & GitHub, verifying call invariants and rollback isolation. |
+| **04:00 – 06:00** (2 min) | **Stage 2: Mutation Testing** | Presenter 2 | Stryker Interactive HTML Report + Terminal (`./scripts/run-mutation-tests.sh --targeted`) | Present Mutation Score Indicator (MSI: 83.33%, up from 45.24%). Detail real bug caught & fixed in `DeploymentLogSanitizer.cs` (Bearer double-redaction). Show how surviving bitwise mutants were killed via case-insensitive URL invariants and explain equivalent mutants. |
+| **06:00 – 08:00** (2 min) | **Stage 3: Load & Performance** | Presenter 3 | JMeter HTML Dashboard (APDEX, Latency, TPS) + Terminal (`./scripts/run-performance-tests.sh --matrix`) | Walk through the 5 Performance Methods: Baseline (1 VU, p95=3ms), Concurrent Load (100 VUs, p95=135ms < 200ms SLA), Spike (250 VUs burst in 3s, 4s recovery), Stress (500 VUs saturation breaking point, 105 r/s), and Endurance Soak (5,000 requests, zero connection/memory leaks). |
+| **08:00 – 10:00** (2 min) | **Stage 4: Code Quality & Metrics** | Presenter 4 | ReportGenerator / SonarQube HTML Dashboard + Quality Gate terminal output | Walk through multi-assembly line (54.3%) and branch (59.7%) coverage, CRAP risk hotspots, and passing SonarQube Quality Gate (Rating A, tech debt < 4%). |
+| **10:00 – 12:00** (2 min) | **Technical VIVA / Q&A Defense** | All Presenters | Slide 5 (Summary Metrics) / Open for Questioning | Confident, technically deep defense of architectural choices and testing concepts. |
 
 ---
 
@@ -194,16 +194,16 @@ The pipeline is fully automated on GitHub Actions:
 
 - **Slide 1: Architectural Context & Role Ownership**
   - Harbor CSP event-driven microservices architecture.
-  - Group roster, student registration numbers, and assigned testing paradigms.
+  - Team roster and assigned testing paradigms.
 - **Slide 2: Unified Test Automation Pipeline Architecture**
   - Dual-layer automation design: GitHub Actions CI/CD workflow + Local CLI Orchestrator.
   - Test Pyramid / Quality Quadrant mapping.
-- **Slide 3: Logic Isolation & Test Quality (Students 1 & 2)**
-  - *Student 1*: Parameterized test tables, AAA pattern, strict mock verification topology (`IKafkaProducerService`, `IDeploymentRepository`).
-  - *Student 2*: AST mutant operators, Stryker configuration, Mutation Score Indicator (MSI) analysis.
-- **Slide 4: Runtime Performance & Static Code Quality (Students 3 & 4)**
-  - *Student 3*: JMeter concurrency curves, p90/p95/p99 response time percentiles, APDEX score.
-  - *Student 4*: SonarQube Quality Gate, Technical Debt breakdown, Risk Hotspot matrix (Cyclomatic Complexity vs Coverage), CRAP score analysis.
+- **Slide 3: Logic Isolation & Test Quality (Stages 1 & 2)**
+  - *Stage 1*: Parameterized test tables, AAA pattern, strict mock verification topology (`IKafkaProducerService`, `IDeploymentRepository`).
+  - *Stage 2*: AST mutant operators, Stryker configuration, Mutation Score Indicator (MSI) analysis.
+- **Slide 4: Runtime Performance & Static Code Quality (Stages 3 & 4)**
+  - *Stage 3*: JMeter concurrency curves, p90/p95/p99 response time percentiles, APDEX score.
+  - *Stage 4*: SonarQube Quality Gate, Technical Debt breakdown, Risk Hotspot matrix (Cyclomatic Complexity vs Coverage), CRAP score analysis.
 - **Slide 5: Comprehensive Quality Scorecard & Conclusions**
   - Unified Quality Metrics Matrix: 313/313 Unit Tests (100%), MSI 45.24%, JMeter 0.00% Error @ 135ms p95, Branch Coverage 59.7%, Quality Gate: PASSED.
   - Engineering conclusions and production readiness.

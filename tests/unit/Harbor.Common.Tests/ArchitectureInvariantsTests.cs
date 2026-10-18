@@ -7,7 +7,7 @@ using Xunit;
 namespace Harbor.Common.Tests;
 
 /// <summary>
-/// Architecture Fitness Functions (Student 4: Static Quality & Metrics)
+/// Architecture Fitness Functions (Stage 4: Static Quality & Metrics)
 /// Statically validates architectural invariants, clean architecture layering boundaries,
 /// and security contracts across Harbor shared libraries and microservice models.
 /// </summary>

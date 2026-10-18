@@ -207,7 +207,7 @@ echo -e "${BOLD}${GREEN}========================================================
 # If running in GitHub Actions CI/CD, export to Step Summary
 if [[ -n "$GITHUB_STEP_SUMMARY" ]]; then
     cat << EOF >> "$GITHUB_STEP_SUMMARY"
-## Stage 4: Code Quality & Metrics Scorecard (Student 4)
+## Stage 4: Code Quality & Metrics Scorecard
 
 | Quality Engineering Pillar | Target Quality Invariant | Achieved Result | Status |
 | :--- | :---: | :---: | :---: |

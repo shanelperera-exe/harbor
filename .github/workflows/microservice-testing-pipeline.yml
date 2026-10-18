@@ -15,9 +15,9 @@ env:
   DOTNET_VERSION: "10.0.x"
 
 jobs:
-  # ── STAGE 1: Unit Testing & Mocking (Student 1) ────────────────────────────
+  # ── STAGE 1: Unit Testing & Mocking ──────────────────────────────────────────
   unit-testing-and-mocking:
-    name: "Stage 1: Unit Testing & Mocking (Student 1)"
+    name: "Stage 1: Unit Testing & Mocking"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -50,12 +50,12 @@ jobs:
         if: always()
         run: |
           cat << 'EOF' >> $GITHUB_STEP_SUMMARY
-          ## Stage 1: Unit Testing & Mocking Scorecard (Student 1)
+          ## Stage 1: Unit Testing & Mocking Scorecard
 
           | Quality Metric | Verified Invariant | Status |
           | :--- | :--- | :---: |
           | **Total Solution Unit Tests** | 950 / 950 Passed (100% Green across 7 Services) | PASSED |
-          | **Student 1 Focus Microservice** | `Harbor.Deployment` Service Logic | PASSED |
+          | **Core Target Microservice** | `Harbor.Deployment` Service Logic | PASSED |
           | **Mock Framework & Behavior** | `Moq` (Strict Invariants, Verification Counts) | PASSED |
           | **Parameterized Theory Types** | `[InlineData]`, `[MemberData]`, `[ClassData]` | PASSED |
           | **Fault & Error Isolation** | Kafka/GitHub API Transient Exception Rollbacks | PASSED |
@@ -71,9 +71,9 @@ jobs:
           - **Harbor.Common.Tests:** 33 tests
           EOF
 
-  # ── STAGE 2: Mutation Testing (Student 2) ──────────────────────────────────
+  # ── STAGE 2: Mutation Testing ────────────────────────────────────────────────
   mutation-testing:
-    name: "Stage 2: Mutation Testing (Student 2)"
+    name: "Stage 2: Mutation Testing"
     runs-on: ubuntu-latest
     needs: [unit-testing-and-mocking]
     steps:
@@ -99,9 +99,9 @@ jobs:
           path: tests/unit/Harbor.Deployment.Tests/StrykerOutput/**/reports/
           retention-days: 14
 
-  # ── STAGE 3: Load & Performance Testing (Student 3) ────────────────────────
+  # ── STAGE 3: Load & Performance Testing ──────────────────────────────────────
   load-and-performance-testing:
-    name: "Stage 3: Load & Performance Testing (Student 3)"
+    name: "Stage 3: Load & Performance Testing"
     runs-on: ubuntu-latest
     needs: [mutation-testing]
     steps:
@@ -115,7 +115,7 @@ jobs:
 
       - name: Execute JMeter Performance Test & SLA Validation
         run: |
-          ./scripts/run-performance-tests.sh --student3
+          ./scripts/run-performance-tests.sh
 
       - name: Upload JMeter Performance Reports & Benchmarks
         uses: actions/upload-artifact@v4
@@ -131,9 +131,9 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
-  # ── STAGE 4: Code Quality & Metrics (Student 4) ────────────────────────────
+  # ── STAGE 4: Code Quality & Metrics ──────────────────────────────────────────
   code-quality-and-metrics:
-    name: "Stage 4: Code Quality & Metrics (Student 4)"
+    name: "Stage 4: Code Quality & Metrics"
     runs-on: ubuntu-latest
     needs: [load-and-performance-testing]
     steps:

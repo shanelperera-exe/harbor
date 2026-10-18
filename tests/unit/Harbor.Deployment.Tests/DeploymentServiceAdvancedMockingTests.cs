@@ -14,7 +14,7 @@ using Xunit;
 namespace Harbor.Deployment.Tests;
 
 /// <summary>
-/// Student 1: Advanced Unit Testing & Mocking Suite
+/// Stage 1: Advanced Unit Testing & Mocking Suite
 /// Demonstrates:
 ///   1. Parameterized testing with [Theory], [InlineData], and [MemberData].
 ///   2. Test Doubles (Mocks, Stubs, Spies) isolating Harbor.Deployment logic.

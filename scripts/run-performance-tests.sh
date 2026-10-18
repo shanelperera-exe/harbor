@@ -29,7 +29,7 @@ RESULTS_DIR="$PERF_DIR/results"
 REPORTS_DIR="$PERF_DIR/reports"
 mkdir -p "$RESULTS_DIR" "$REPORTS_DIR"
 
-MODE="student3"
+MODE="matrix"
 OPEN_BROWSER=false
 API_HOST="${API_HOST:-localhost}"
 API_PORT="${API_PORT:-5000}"
@@ -37,8 +37,8 @@ DASHBOARD_TYPE="load"
 
 for arg in "$@"; do
     case "$arg" in
-        --student3|--demo)
-            MODE="student3"
+        --matrix|--demo)
+            MODE="matrix"
             ;;
         --load)
             MODE="load"
@@ -68,7 +68,7 @@ for arg in "$@"; do
             echo "Usage: ./scripts/run-performance-tests.sh [OPTIONS]"
             echo ""
             echo "Testing Method Profiles:"
-            echo "  --student3     Execute Student 3's comprehensive multi-method suite (default)"
+            echo "  --matrix       Execute comprehensive multi-method performance suite (default)"
             echo "  --load         Run Concurrent Load Testing (100 VUs, SLA check p95 < 200ms)"
             echo "  --stress       Run Stress Testing (500 VUs, breaking point saturation analysis)"
             echo "  --spike        Run Spike Testing (250 VUs in sudden 3s burst, recovery analysis)"
@@ -207,8 +207,8 @@ print(f\"  • 95th Percentile (p95):{tot.get('pct2ResTime', 0.0):.2f} ms (SLA: 
 print(f\"  • Throughput:           {tot.get('throughput', 0.0):.2f} req/sec\")
 "
 else
-    # Default Student 3 Mode: Comprehensive Multi-Method Performance Matrix
-    echo -e "${BOLD}${CYAN}▶ Executing Student 3 Deliverable: Multi-Method Performance Matrix${RESET}"
+    # Default Mode: Comprehensive Multi-Method Performance Matrix
+    echo -e "${BOLD}${CYAN}▶ Executing Multi-Method Performance Testing Matrix${RESET}"
     echo -e "${CYAN}  Evaluating 5 Core Paradigms: Baseline, Load, Spike, Stress & Endurance${RESET}\n"
 
     python3 -c "
@@ -261,7 +261,7 @@ echo -e "${BOLD}${GREEN}========================================================
 # If running in GitHub Actions CI/CD, export to Step Summary
 if [[ -n "$GITHUB_STEP_SUMMARY" ]]; then
     cat << 'EOF' >> "$GITHUB_STEP_SUMMARY"
-## Stage 3: Load & Performance Testing Scorecard (Student 3)
+## Stage 3: Load & Performance Testing Scorecard
 
 | Performance Method | Concurrency / VUs | Samples Tested | Error Rate | p95 Latency | Sustained Throughput | Target SLA Invariant | Verification Status |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |

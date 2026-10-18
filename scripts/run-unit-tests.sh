@@ -15,7 +15,7 @@ RED="\033[31m"
 RESET="\033[0m"
 
 echo -e "${BOLD}${CYAN}========================================================================${RESET}"
-echo -e "${BOLD}${CYAN}  Harbor Microservice Unit Testing & Mocking Framework (Student 1)      ${RESET}"
+echo -e "${BOLD}${CYAN}  Harbor Microservice Unit Testing & Mocking Framework                  ${RESET}"
 echo -e "${BOLD}${CYAN}  Module: SE3112 - Isolated Logic Testing & Test Doubles Verification   ${RESET}"
 echo -e "${BOLD}${CYAN}========================================================================${RESET}"
 
@@ -25,8 +25,8 @@ VERBOSITY="minimal"
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --student1|--demo|--mocks)
-            MODE="student1"
+        --advanced|--demo|--mocks)
+            MODE="advanced"
             shift
             ;;
         --all)
@@ -50,7 +50,7 @@ while [[ $# -gt 0 ]]; do
             echo "Usage: ./scripts/run-unit-tests.sh [OPTIONS]"
             echo ""
             echo "Options:"
-            echo "  --student1, --demo       Run Student 1: Advanced Mocking & Theory Tests (Fast demo)"
+            echo "  --advanced, --demo       Run Advanced Mocking & Theory Tests (Fast demo)"
             echo "  --all                    Run complete solution unit test suite (950 tests, default)"
             echo "  --service, -s <NAME>     Run unit tests for a specific service (e.g. Deployment, Auth)"
             echo "  --filter, -f <EXPR>      Filter tests matching expression (e.g. 'FullyQualifiedName~Theory')"
@@ -70,8 +70,8 @@ mkdir -p "$RESULTS_DIR"
 
 START_TIME=$(date +%s)
 
-if [[ "$MODE" == "student1" ]]; then
-    echo -e "\n${BOLD}${MAGENTA}▶ Executing Student 1 Focus: Advanced Mocking & Parameterized Theories${RESET}"
+if [[ "$MODE" == "advanced" ]]; then
+    echo -e "\n${BOLD}${MAGENTA}▶ Executing Core Focus: Advanced Mocking & Parameterized Theories${RESET}"
     echo -e "${CYAN}  Target: Harbor.Deployment.Tests.DeploymentServiceAdvancedMockingTests${RESET}"
     echo -e "  Frameworks: xUnit 2.9 (Theories, InlineData, MemberData, ClassData) + Moq 4.20 (Strict/Loose)"
     echo -e "────────────────────────────────────────────────────────────────────────"
@@ -80,14 +80,14 @@ if [[ "$MODE" == "student1" ]]; then
         --configuration Release \
         --filter "FullyQualifiedName~DeploymentServiceAdvancedMockingTests" \
         --logger "console;verbosity=$VERBOSITY" \
-        --logger "trx;LogFileName=student1-advanced-mocks.trx" \
+        --logger "trx;LogFileName=advanced-mocks.trx" \
         --results-directory "$RESULTS_DIR"
 
     END_TIME=$(date +%s)
     DURATION=$((END_TIME - START_TIME))
 
     echo -e "\n${BOLD}${GREEN}========================================================================${RESET}"
-    echo -e "${BOLD}${GREEN}  [OK] STUDENT 1 DELIVERABLE: ALL ADVANCED MOCKING & THEORIES PASSED (${DURATION}s)${RESET}"
+    echo -e "${BOLD}${GREEN}  [OK] UNIT TESTING DELIVERABLE: ALL ADVANCED MOCKING & THEORIES PASSED (${DURATION}s)${RESET}"
     echo -e "${BOLD}${GREEN}========================================================================${RESET}"
     echo -e "  • Behavioral Invariants: Verified (Times.Once, Times.Never, Strict behavior)"
     echo -e "  • Parameterized Inputs:  Tested ([InlineData], [MemberData], [ClassData])"
@@ -111,7 +111,7 @@ if [[ "$MODE" == "service" ]]; then
 fi
 
 # Default: Run full solution unit tests (7 services, 950 tests)
-echo -e "\n${BOLD}${MAGENTA}▶ [Stage 1/2] Student 1 Core: Harbor.Deployment Advanced Mocking Suite${RESET}"
+echo -e "\n${BOLD}${MAGENTA}▶ [Stage 1/2] Core Focus: Harbor.Deployment Advanced Mocking Suite${RESET}"
 dotnet test tests/unit/Harbor.Deployment.Tests/Harbor.Deployment.Tests.csproj \
     --configuration Release \
     --filter "FullyQualifiedName~DeploymentServiceAdvancedMockingTests" \
@@ -149,7 +149,7 @@ echo -e "\n${BOLD}${GREEN}======================================================
 echo -e "${BOLD}${GREEN}    [OK] COMPLETE UNIT TESTING & MOCKING SUITE: 100% PASSED (${DURATION}s)      ${RESET}"
 echo -e "${BOLD}${GREEN}========================================================================${RESET}"
 echo -e "  • Total Unit Tests:   950 / 950 Passed across 7 Microservices"
-echo -e "  • Student 1 Focus:    Strict Moq Verification & Parameterized [Theory] Suites"
+echo -e "  • Core Methodology:   Strict Moq Verification & Parameterized [Theory] Suites"
 echo -e "  • Error Isolation:    External Kafka/GitHub Transients Verified"
 echo -e "  • TRX Test Reports:   Saved to ${RESULTS_DIR}/"
 echo -e "${BOLD}${GREEN}========================================================================${RESET}"

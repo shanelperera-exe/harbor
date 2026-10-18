@@ -29,7 +29,7 @@ OPEN_BROWSER=false
 
 for arg in "$@"; do
     case "$arg" in
-        --fast|--student2)
+        --fast|--targeted)
             MODE="fast"
             ;;
         --all)
@@ -42,7 +42,6 @@ for arg in "$@"; do
             echo "Usage: ./scripts/run-mutation-tests.sh [OPTIONS]"
             echo ""
             echo "Options:"
-            echo "  --student2     Execute Student 2's Mutation Testing suite (Stryker.NET, ~45s)"
             echo "  --fast         Run fast targeted mutation testing suite for live demo (default)"
             echo "  --all          Run full mutation testing suite on domain services"
             echo "  --open         Automatically open HTML mutation report in browser"
@@ -56,7 +55,7 @@ TEST_DIR="$REPO_ROOT/tests/unit/Harbor.Deployment.Tests"
 cd "$TEST_DIR"
 
 if [[ "$MODE" == "fast" ]]; then
-    echo -e "${CYAN}▶ Mode: Student 2 Live-Demo Run${RESET}"
+    echo -e "${CYAN}▶ Mode: Fast Targeted Mutation Run${RESET}"
     echo -e "${CYAN}  Target: Harbor.Deployment (DeploymentUrlExtractor.cs, DeploymentLogSanitizer.cs)${RESET}"
     dotnet stryker \
         -p Harbor.Deployment.csproj \
@@ -92,7 +91,7 @@ echo -e "${BOLD}${GREEN}========================================================
 # If running in GitHub Actions CI/CD, append to Step Summary
 if [[ -n "$GITHUB_STEP_SUMMARY" && -f "$LATEST_MD" ]]; then
     cat << 'EOF' >> "$GITHUB_STEP_SUMMARY"
-## Stage 2: Mutation Testing Scorecard (Student 2)
+## Stage 2: Mutation Testing Scorecard
 
 | Metric | Target / Invariant | Status |
 | :--- | :--- | :---: |

@@ -73,10 +73,10 @@ for arg in "$@"; do
             echo ""
             echo "Options:"
             echo "  --all              Run complete unified 4-layer testing pipeline (default)"
-            echo "  --unit             Run Student 1: Unit Testing & Mocking suite"
-            echo "  --mutation         Run Student 2: Mutation Testing (Stryker.NET)"
-            echo "  --perf, --load     Run Student 3: Load & Performance Testing (Apache JMeter)"
-            echo "  --quality          Run Student 4: Code Quality, Coverage & Metrics (Coverlet/ReportGen)"
+            echo "  --unit             Run Unit Testing & Mocking suite"
+            echo "  --mutation         Run Mutation Testing (Stryker.NET)"
+            echo "  --perf, --load     Run Load & Performance Testing (Apache JMeter)"
+            echo "  --quality          Run Code Quality, Coverage & Metrics (Coverlet/ReportGen)"
             echo "  --sonarcloud       Push Code Quality metrics to live SonarCloud project"
             echo "  --open             Automatically open generated HTML reports in browser"
             echo "  --help, -h         Show this help message"
@@ -87,39 +87,39 @@ done
 
 START_TIME=$(date +%s)
 
-# ── Stage 1: Unit Testing & Mocking (Student 1) ──────────────────────────────
+# ── Stage 1: Unit Testing & Mocking ──────────────────────────────────────────
 if [[ "$RUN_UNIT" == true ]]; then
     echo -e "\n${BOLD}${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
-    echo -e "${BOLD}${BLUE}  ▶ [STAGE 1/4] Unit Testing & Mocking Suite (Student 1 & Solution)    ${RESET}"
+    echo -e "${BOLD}${BLUE}  ▶ [STAGE 1/4] Unit Testing & Mocking Suite (Solution-Wide)           ${RESET}"
     echo -e "${BOLD}${BLUE}    Target: 7 Microservices (950 Unit Tests across Harbor Platform)    ${RESET}"
     echo -e "${BOLD}${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
     ./scripts/run-unit-tests.sh
 fi
 
-# ── Stage 2: Mutation Testing (Student 2) ────────────────────────────────────
+# ── Stage 2: Mutation Testing ────────────────────────────────────────────────
 if [[ "$RUN_MUTATION" == true ]]; then
     echo -e "\n${BOLD}${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
-    echo -e "${BOLD}${BLUE}  ▶ [STAGE 2/4] Mutation Testing Suite (Student 2)                    ${RESET}"
+    echo -e "${BOLD}${BLUE}  ▶ [STAGE 2/4] Mutation Testing Suite                                 ${RESET}"
     echo -e "${BOLD}${BLUE}    Target: Harbor.Deployment Domain Logic (Stryker.NET)               ${RESET}"
     echo -e "${BOLD}${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
     ./scripts/run-mutation-tests.sh --fast
     echo -e "${GREEN}  [OK] Mutation testing fault-tolerance gate: PASSED${RESET}"
 fi
 
-# ── Stage 3: Load & Performance Testing (Student 3) ──────────────────────────
+# ── Stage 3: Load & Performance Testing ──────────────────────────────────────
 if [[ "$RUN_PERF" == true ]]; then
     echo -e "\n${BOLD}${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
-    echo -e "${BOLD}${BLUE}  ▶ [STAGE 3/4] Load & Performance Testing (Student 3)                ${RESET}"
+    echo -e "${BOLD}${BLUE}  ▶ [STAGE 3/4] Load & Performance Testing                             ${RESET}"
     echo -e "${BOLD}${BLUE}    Target: Harbor.ApiGateway & Deployment Services (Apache JMeter)   ${RESET}"
     echo -e "${BOLD}${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
     ./scripts/run-performance-tests.sh --demo
     echo -e "${GREEN}  [OK] Concurrency throughput & p95 latency SLA: PASSED${RESET}"
 fi
 
-# ── Stage 4: Code Quality & Metrics (Student 4) ──────────────────────────────
+# ── Stage 4: Code Quality & Metrics ──────────────────────────────────────────
 if [[ "$RUN_QUALITY" == true ]]; then
     echo -e "\n${BOLD}${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
-    echo -e "${BOLD}${BLUE}  ▶ [STAGE 4/4] Code Quality, Coverage & Metrics (Student 4)          ${RESET}"
+    echo -e "${BOLD}${BLUE}  ▶ [STAGE 4/4] Code Quality, Coverage & Metrics                       ${RESET}"
     echo -e "${BOLD}${BLUE}    Target: Solution-wide Microservices (Roslyn + Coverlet + Sonar)   ${RESET}"
     echo -e "${BOLD}${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
     if [[ "$USE_SONARCLOUD" == true ]] || [[ -n "$SONAR_TOKEN" ]]; then

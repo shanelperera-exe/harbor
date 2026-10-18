@@ -20,6 +20,14 @@ echo -e "${BOLD}${CYAN}  Harbor Microservices Platform - Live SonarCloud Quality
 echo -e "${BOLD}${CYAN}  Module: SE3112 - Code Quality & Metrics (Live Cloud Dashboard)        ${RESET}"
 echo -e "${BOLD}${CYAN}========================================================================${RESET}"
 
+# Automatically source .env if present
+if [[ -f "$REPO_ROOT/.env" ]]; then
+    set -a
+    # shellcheck disable=SC1091
+    source "$REPO_ROOT/.env"
+    set +a
+fi
+
 SONAR_ORG="${SONAR_ORGANIZATION:-shanelperera-exe}"
 SONAR_PROJECT="${SONAR_PROJECT_KEY:-shanelperera-exe_harbor}"
 SONAR_HOST="https://sonarcloud.io"

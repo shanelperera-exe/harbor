@@ -19,6 +19,14 @@ echo -e "${BOLD}${CYAN}  SE3112: HARBOR UNIFIED MICROSERVICE TESTING & QUALITY P
 echo -e "${BOLD}${CYAN}  Cloud Software Platform Microservices (4 Testing Paradigms)          ${RESET}"
 echo -e "${BOLD}${CYAN}========================================================================${RESET}"
 
+# Automatically source .env if present
+if [[ -f "$REPO_ROOT/.env" ]]; then
+    set -a
+    # shellcheck disable=SC1091
+    source "$REPO_ROOT/.env"
+    set +a
+fi
+
 RUN_UNIT=false
 RUN_MUTATION=false
 RUN_PERF=false

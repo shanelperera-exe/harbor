@@ -33,17 +33,14 @@ jobs:
 
       - name: Execute Solution Unit Tests & Mock Invariants
         run: |
-          dotnet test --filter "FullyQualifiedName!~IntegrationTests&FullyQualifiedName!~E2ETests" \
-            --configuration Release \
-            --logger "trx;LogFileName=all-unit-tests.trx" \
-            --logger "console;verbosity=normal"
+          ./scripts/run-unit-tests.sh --all
 
       - name: Upload Unit Test Results (.trx)
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: unit-test-results
-          path: "**/all-unit-tests.trx"
+          path: "TestResults/*.trx"
           retention-days: 14
 
       - name: Publish Stage 1 Scorecard to GitHub Step Summary

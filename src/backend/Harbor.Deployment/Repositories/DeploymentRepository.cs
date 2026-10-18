@@ -1,6 +1,7 @@
 using Harbor.Deployment.Data;
 using Harbor.Deployment.Models;
 using Npgsql;
+using NpgsqlTypes;
 
 namespace Harbor.Deployment.Repositories;
 
@@ -20,15 +21,15 @@ public class DeploymentRepository(DbConnectionFactory dbFactory) : IDeploymentRe
             JOIN ""Services"" s ON d.""ServiceId"" = s.""Id""
             JOIN ""Projects"" p ON s.""ProjectId"" = p.""Id""
             WHERE (@isAdmin = TRUE OR d.""ServiceId"" IN (SELECT s2.""Id"" FROM ""Services"" s2 JOIN ""Projects"" p2 ON s2.""ProjectId"" = p2.""Id"" WHERE p2.""OwnerId"" = @ownerId))
-              AND (@projectId IS NULL OR p.""Id""::text = @projectId)
-              AND (@environment IS NULL OR LOWER(d.""Environment"") = LOWER(@environment))
-              AND (@serviceId IS NULL OR EXISTS (
+              AND (CAST(@projectId AS text) IS NULL OR p.""Id""::text = @projectId)
+              AND (CAST(@environment AS text) IS NULL OR LOWER(d.""Environment"") = LOWER(@environment))
+              AND (CAST(@serviceId AS text) IS NULL OR EXISTS (
                     SELECT 1
                     FROM ""Services"" s3
                     WHERE s3.""Id"" = d.""ServiceId""
                       AND (s3.""PublicId"" = @serviceId OR s3.""Id""::text = @serviceId)
               ))
-              AND (@status IS NULL OR LOWER(d.""Status"") = LOWER(@status))";
+              AND (CAST(@status AS text) IS NULL OR LOWER(d.""Status"") = LOWER(@status))";
         AddFilters(count, ownerId, isAdmin, projectId, environment, serviceId, status);
         var total = Convert.ToInt32(await count.ExecuteScalarAsync());
 
@@ -41,15 +42,15 @@ public class DeploymentRepository(DbConnectionFactory dbFactory) : IDeploymentRe
             JOIN ""Projects"" p ON s.""ProjectId"" = p.""Id""
             LEFT JOIN ""Users"" u ON d.""OwnerId"" = u.""Id""
             WHERE (@isAdmin = TRUE OR d.""ServiceId"" IN (SELECT s2.""Id"" FROM ""Services"" s2 JOIN ""Projects"" p2 ON s2.""ProjectId"" = p2.""Id"" WHERE p2.""OwnerId"" = @ownerId))
-              AND (@projectId IS NULL OR p.""Id""::text = @projectId)
-              AND (@environment IS NULL OR LOWER(d.""Environment"") = LOWER(@environment))
-              AND (@serviceId IS NULL OR EXISTS (
+              AND (CAST(@projectId AS text) IS NULL OR p.""Id""::text = @projectId)
+              AND (CAST(@environment AS text) IS NULL OR LOWER(d.""Environment"") = LOWER(@environment))
+              AND (CAST(@serviceId AS text) IS NULL OR EXISTS (
                     SELECT 1
                     FROM ""Services"" s3
                     WHERE s3.""Id"" = d.""ServiceId""
                       AND (s3.""PublicId"" = @serviceId OR s3.""Id""::text = @serviceId)
               ))
-              AND (@status IS NULL OR LOWER(d.""Status"") = LOWER(@status))
+              AND (CAST(@status AS text) IS NULL OR LOWER(d.""Status"") = LOWER(@status))
             ORDER BY d.""StartedAt"" DESC, d.""Id"" DESC
             OFFSET @skip LIMIT @take";
         AddFilters(command, ownerId, isAdmin, projectId, environment, serviceId, status);
@@ -378,12 +379,12 @@ public class DeploymentRepository(DbConnectionFactory dbFactory) : IDeploymentRe
 
     private static void AddFilters(NpgsqlCommand command, int ownerId, bool isAdmin, string? projectId, string? environment, string? serviceId, string? status)
     {
-        command.Parameters.AddWithValue("ownerId", ownerId);
-        command.Parameters.AddWithValue("isAdmin", isAdmin);
-        command.Parameters.AddWithValue("projectId", (object?)projectId ?? DBNull.Value);
-        command.Parameters.AddWithValue("environment", (object?)environment ?? DBNull.Value);
-        command.Parameters.AddWithValue("serviceId", (object?)serviceId ?? DBNull.Value);
-        command.Parameters.AddWithValue("status", (object?)status ?? DBNull.Value);
+        command.Parameters.Add(new NpgsqlParameter("ownerId", NpgsqlDbType.Integer) { Value = ownerId });
+        command.Parameters.Add(new NpgsqlParameter("isAdmin", NpgsqlDbType.Boolean) { Value = isAdmin });
+        command.Parameters.Add(new NpgsqlParameter("projectId", NpgsqlDbType.Text) { Value = (object?)projectId ?? DBNull.Value });
+        command.Parameters.Add(new NpgsqlParameter("environment", NpgsqlDbType.Text) { Value = (object?)environment ?? DBNull.Value });
+        command.Parameters.Add(new NpgsqlParameter("serviceId", NpgsqlDbType.Text) { Value = (object?)serviceId ?? DBNull.Value });
+        command.Parameters.Add(new NpgsqlParameter("status", NpgsqlDbType.Text) { Value = (object?)status ?? DBNull.Value });
     }
 
     private static async Task<List<DeploymentEntity>> ReadDeploymentsAsync(NpgsqlCommand command)

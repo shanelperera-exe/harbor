@@ -88,6 +88,10 @@ fi
 
 # Check for SONAR_TOKEN
 if [[ -z "$SONAR_TOKEN" ]]; then
+    if [[ -n "$CI" || ! -t 0 ]]; then
+        echo -e "${RED}[FAIL] Error: SONAR_TOKEN is required in non-interactive environment.${RESET}"
+        exit 1
+    fi
     echo -e "\n${YELLOW}[WARN] SONAR_TOKEN is not provided.${RESET}"
     echo -e "To analyze and push to your live SonarCloud project, provide your token:"
     echo -e "  1. Log into ${CYAN}https://sonarcloud.io${RESET}"

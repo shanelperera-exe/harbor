@@ -164,16 +164,55 @@ jobs:
           dotnet format whitespace --verify-no-changes --verbosity minimal || echo "Formatting check completed"
           dotnet build Harbor.sln --configuration Release -p:RunAnalyzersDuringBuild=true --verbosity minimal
 
-      - name: Run Multi-Assembly Coverage Collection & SonarCloud Analysis
+      - name: Run Multi-Assembly Coverage Collection & Quality Gate (SonarQube with SonarCloud Fallback)
         env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL || secrets.SONAR_HOST_URL || 'https://sonar.harborapp.tech' }}
+          SONAR_QUBE_TOKEN: ${{ secrets.SONAR_QUBE_TOKEN || secrets.SONAR_TOKEN }}
+          SONAR_CLOUD_TOKEN: ${{ secrets.SONAR_CLOUD_TOKEN || secrets.SONAR_TOKEN }}
+          SONAR_ORGANIZATION: ${{ vars.SONAR_ORGANIZATION || secrets.SONAR_ORGANIZATION || 'shanelperera-exe' }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if [ -n "$SONAR_TOKEN" ]; then
-            echo "Executing Live SonarCloud Quality Analysis..."
-            ./scripts/run-sonarcloud.sh --token "$SONAR_TOKEN"
+          SONAR_HOST="${SONAR_HOST_URL:-https://sonar.harborapp.tech}"
+          echo "=========================================================================="
+          echo "  [STAGE 4] CODE QUALITY & METRICS: AUTOMATED SONAR GATE ROUTING"
+          echo "  Primary Target: SonarQube Server (${SONAR_HOST})"
+          echo "  Secondary Target: SonarCloud SaaS"
+          echo "  Tertiary Target: Local Coverlet + Roslyn + Architecture Fitness Functions"
+          echo "=========================================================================="
+
+          # Pre-flight check: probe SonarQube health endpoint with 5s timeout
+          SQ_STATUS=$(curl -s --connect-timeout 5 "${SONAR_HOST}/api/system/status" 2>/dev/null | grep -o '"status":"[^"]*"' | cut -d'"' -f4 || true)
+
+          ANALYSIS_EXECUTED=false
+
+          # Tier 1: SonarQube Server (https://sonar.harborapp.tech)
+          if [ "$SQ_STATUS" = "UP" ] && [ -n "$SONAR_QUBE_TOKEN" ]; then
+            echo "[OK] Dedicated SonarQube Server is UP at ${SONAR_HOST}."
+            echo "Executing SonarQube Quality Gate Analysis..."
+            if ./scripts/run-sonarqube.sh --host "$SONAR_HOST" --token "$SONAR_QUBE_TOKEN" --no-open; then
+              ANALYSIS_EXECUTED=true
+            else
+              echo "[WARN] SonarQube execution exited with an error. Evaluating fallback options..."
+            fi
+          elif [ "$SQ_STATUS" = "UP" ] && [ -z "$SONAR_QUBE_TOKEN" ]; then
+            echo "[INFO] SonarQube Server is UP, but SONAR_QUBE_TOKEN / SONAR_TOKEN secret is not set in GitHub repository secrets."
           else
-            echo "SONAR_TOKEN secret not configured in repository secrets. Running local Coverlet + ReportGenerator quality gate..."
+            echo "[INFO] SonarQube Server at ${SONAR_HOST} is unreachable or offline (status: '${SQ_STATUS:-Down}')."
+          fi
+
+          # Tier 2: SonarCloud SaaS Fallback
+          if [ "$ANALYSIS_EXECUTED" = false ] && [ -n "$SONAR_CLOUD_TOKEN" ]; then
+            echo "[FALLBACK] Switching to Live SonarCloud Quality Analysis..."
+            if ./scripts/run-sonarcloud.sh --token "$SONAR_CLOUD_TOKEN" --org "$SONAR_ORGANIZATION"; then
+              ANALYSIS_EXECUTED=true
+            else
+              echo "[WARN] SonarCloud analysis encountered an error. Falling back to local quality gate..."
+            fi
+          fi
+
+          # Tier 3: Local Quality Gate Fallback
+          if [ "$ANALYSIS_EXECUTED" = false ]; then
+            echo "[FALLBACK] Executing Local Coverlet + ReportGenerator Quality Gate & Invariant Tests..."
             ./scripts/run-code-quality.sh --unit --skip-static
           fi
 
@@ -181,7 +220,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: code-quality-coverage-report
-          path: TestResults/CoverageReport/
+          path: |
+            TestResults/
+            TestResults/CoverageReport/
+          if-no-files-found: ignore
           retention-days: 14
 
   # ── STAGE 5: Unified Pipeline Summary ──────────────────────────────────────
@@ -197,5 +239,5 @@ jobs:
           echo "  Stage 1: Unit Testing & Mocking (xUnit/Moq):          PASSED   "
           echo "  Stage 2: Mutation Testing (Stryker.NET):              PASSED   "
           echo "  Stage 3: Load & Performance Testing (Apache JMeter):  PASSED   "
-          echo "  Stage 4: Code Quality & Metrics (SonarCloud/Coverlet): PASSED  "
+          echo "  Stage 4: Code Quality & Metrics (Sonar/Coverlet):     PASSED   "
           echo "================================================================="

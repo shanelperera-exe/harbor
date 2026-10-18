@@ -172,7 +172,7 @@ The pipeline is fully automated on GitHub Actions:
 - **Stage 1:** Unit Testing & Mocking (xUnit, Moq, Parameterized Theories across all 7 microservices).
 - **Stage 2:** Mutation Testing (Stryker.NET AST mutation engine with threshold evaluation).
 - **Stage 3:** Load & Performance Testing (Apache JMeter concurrency, throughput, and SLA validation).
-- **Stage 4:** Code Quality, Multi-Assembly Coverage & Live SonarCloud Analysis (Coverlet, ReportGenerator, SonarCloud).
+- **Stage 4:** Code Quality, Multi-Assembly Coverage & Quality Gate (Dedicated SonarQube Server at `https://sonar.harborapp.tech` with automatic SonarCloud SaaS and local Coverlet/Roslyn fallback).
 - **Stage 5:** Aggregation and publication of unified quality artifacts and Quality Gate verification.
 
 ---

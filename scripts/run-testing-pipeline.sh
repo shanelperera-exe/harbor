@@ -32,6 +32,7 @@ RUN_MUTATION=false
 RUN_PERF=false
 RUN_QUALITY=false
 USE_SONARCLOUD=false
+USE_SONARQUBE=false
 OPEN_BROWSER=false
 
 if [[ $# -eq 0 ]]; then
@@ -49,9 +50,16 @@ for arg in "$@"; do
             RUN_PERF=true
             RUN_QUALITY=true
             ;;
-        --sonar|--sonarcloud)
+        --sonarqube)
+            RUN_QUALITY=true
+            USE_SONARQUBE=true
+            ;;
+        --sonarcloud)
             RUN_QUALITY=true
             USE_SONARCLOUD=true
+            ;;
+        --sonar)
+            RUN_QUALITY=true
             ;;
         --unit)
             RUN_UNIT=true
@@ -77,6 +85,7 @@ for arg in "$@"; do
             echo "  --mutation         Run Mutation Testing (Stryker.NET)"
             echo "  --perf, --load     Run Load & Performance Testing (Apache JMeter)"
             echo "  --quality          Run Code Quality, Coverage & Metrics (Coverlet/ReportGen)"
+            echo "  --sonarqube        Push Code Quality metrics to dedicated SonarQube Server"
             echo "  --sonarcloud       Push Code Quality metrics to live SonarCloud project"
             echo "  --open             Automatically open generated HTML reports in browser"
             echo "  --help, -h         Show this help message"
@@ -122,9 +131,18 @@ if [[ "$RUN_QUALITY" == true ]]; then
     echo -e "${BOLD}${BLUE}  ▶ [STAGE 4/4] Code Quality, Coverage & Metrics                       ${RESET}"
     echo -e "${BOLD}${BLUE}    Target: Solution-wide Microservices (Roslyn + Coverlet + Sonar)   ${RESET}"
     echo -e "${BOLD}${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
-    if [[ "$USE_SONARCLOUD" == true ]] || [[ -n "$SONAR_TOKEN" ]]; then
+
+    SONAR_HOST="${SONAR_HOST_URL:-https://sonar.harborapp.tech}"
+    SQ_STATUS=$(curl -s --connect-timeout 3 "${SONAR_HOST}/api/system/status" 2>/dev/null | grep -o '"status":"[^"]*"' | cut -d'"' -f4 || true)
+
+    if [[ "$USE_SONARQUBE" == true ]] || ([[ "$SQ_STATUS" == "UP" ]] && [[ "$USE_SONARCLOUD" != true ]] && [[ -n "${SONAR_QUBE_TOKEN:-${SONAR_TOKEN:-}}" ]]); then
+        echo -e "${CYAN}Executing dedicated SonarQube Server analysis (${SONAR_HOST})...${RESET}"
+        ./scripts/run-sonarqube.sh --host "$SONAR_HOST" --no-open
+    elif [[ "$USE_SONARCLOUD" == true ]] || [[ -n "$SONAR_TOKEN" ]]; then
+        echo -e "${CYAN}Executing SonarCloud SaaS analysis...${RESET}"
         ./scripts/run-sonarcloud.sh
     else
+        echo -e "${CYAN}Executing local Coverlet + ReportGenerator quality gate...${RESET}"
         ./scripts/run-code-quality.sh --unit
     fi
     echo -e "${GREEN}  [OK] Static analysis, branch coverage & quality gate: PASSED${RESET}"

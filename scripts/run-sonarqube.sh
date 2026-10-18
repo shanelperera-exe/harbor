@@ -135,6 +135,10 @@ echo -e "  • Project Key:    ${CYAN}${SONAR_PROJECT}${RESET}"
 
 # Verify Token or Prompt
 if [[ -z "$SONAR_TOKEN" ]]; then
+    if [[ -n "$CI" || ! -t 0 ]]; then
+        echo -e "${RED}[FAIL] Error: SONAR_TOKEN or SONAR_QUBE_TOKEN is required in non-interactive environment.${RESET}"
+        exit 1
+    fi
     echo -e "\n${BOLD}${YELLOW}Authentication Token Required for SonarQube Server:${RESET}"
     echo -e "  1. Open ${CYAN}${SONAR_HOST}${RESET} in your browser."
     echo -e "  2. Log in (default: ${BOLD}admin${RESET} / ${BOLD}admin${RESET})."

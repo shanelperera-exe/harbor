@@ -93,25 +93,7 @@ if [[ "$RUN_UNIT" == true ]]; then
     echo -e "${BOLD}${BLUE}  ▶ [STAGE 1/4] Unit Testing & Mocking Suite (Student 1 & Solution)    ${RESET}"
     echo -e "${BOLD}${BLUE}    Target: 7 Microservices (950 Unit Tests across Harbor Platform)    ${RESET}"
     echo -e "${BOLD}${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
-    echo -e "${CYAN}  • Running Student 1 Focus: Harbor.Deployment Mocking & Theory Tests...${RESET}"
-    dotnet test tests/unit/Harbor.Deployment.Tests/Harbor.Deployment.Tests.csproj \
-        --configuration Debug \
-        --logger "console;verbosity=minimal"
-
-    echo -e "\n${CYAN}  • Running Solution-Wide Unit Tests across all Microservices...${RESET}"
-    REMAINING_UNITS=(
-        "tests/unit/Harbor.Common.Tests/Harbor.Common.Tests.csproj"
-        "tests/unit/Harbor.GitHub.Tests/Harbor.GitHub.Tests.csproj"
-        "tests/unit/Harbor.Environment.Tests/Harbor.Environment.Tests.csproj"
-        "tests/unit/Harbor.Authentication.Tests/Harbor.Authentication.Tests.csproj"
-        "tests/unit/Harbor.Project.Tests/Harbor.Project.Tests.csproj"
-        "tests/unit/Harbor.Reporting.Tests/Harbor.Reporting.Tests.csproj"
-    )
-    for unit_proj in "${REMAINING_UNITS[@]}"; do
-        pname="$(basename "$unit_proj" .csproj)"
-        dotnet test "$unit_proj" --configuration Debug --logger "console;verbosity=minimal" || true
-    done
-    echo -e "${GREEN}  ✓ Complete Microservice Unit Suite: 950/950 Tests PASSED across 7 Services${RESET}"
+    ./scripts/run-unit-tests.sh
 fi
 
 # ── Stage 2: Mutation Testing (Student 2) ────────────────────────────────────

@@ -1,3 +1,5 @@
+using System.Collections;
+using System.Collections.Generic;
 using Harbor.Contracts.Kafka;
 using Harbor.Deployment.DTOs;
 using Harbor.Deployment.Models;
@@ -403,5 +405,58 @@ public class DeploymentServiceAdvancedMockingTests
         _mockKafkaProducer.Verify(k => k.PublishDeploymentEventAsync(It.IsAny<DeploymentLifecycleEvent>()), Times.Never);
     }
 
+    [Theory]
+    [ClassData(typeof(DeploymentSecurityMatrixClassData))]
+    public async Task CreateAsync_ClassDataSecurityMatrix_ValidatesAccessControlPolicies(
+        string requestedServiceId, int callerUserId, bool isAdmin, string expectedErrorMessage)
+    {
+        // Arrange
+        var request = new CreateDeploymentRequest
+        {
+            ServiceId = requestedServiceId,
+            Environment = "production",
+            Version = "1.0.0",
+            Branch = "main"
+        };
+
+        if (requestedServiceId == "999" || requestedServiceId == "0")
+        {
+            _mockRepository
+                .Setup(r => r.GetServiceAccessAsync(requestedServiceId))
+                .ReturnsAsync((false, 0, false, 0, 0));
+        }
+        else
+        {
+            _mockRepository
+                .Setup(r => r.GetServiceAccessAsync("13"))
+                .ReturnsAsync((true, 7, false, 10, 13));
+        }
+
+        // Act
+        var result = await _service.CreateAsync(request, callerUserId, isAdmin);
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Equal(expectedErrorMessage, result.Error);
+        _mockRepository.Verify(r => r.CreateAsync(It.IsAny<DeploymentEntity>()), Times.Never);
+        _mockKafkaProducer.Verify(k => k.PublishDeploymentEventAsync(It.IsAny<DeploymentLifecycleEvent>()), Times.Never);
+    }
+
     #endregion
 }
+
+/// <summary>
+/// Strongly-typed ClassData provider demonstrating reusable parameterized test data in xUnit.
+/// </summary>
+public class DeploymentSecurityMatrixClassData : IEnumerable<object[]>
+{
+    public IEnumerator<object[]> GetEnumerator()
+    {
+        yield return new object[] { "999", 7, false, "Service not found." };
+        yield return new object[] { "13", 99, false, "You do not have permission to deploy this service." };
+        yield return new object[] { "0", 1, false, "Service not found." };
+    }
+
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+}
+

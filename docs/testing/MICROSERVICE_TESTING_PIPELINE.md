@@ -95,14 +95,17 @@ To execute all 4 testing stages systematically in a single automated command:
 ### B. Individual Testing Stage Commands
 Each student's component can also be executed independently for focused live viva demos:
 
-#### Student 1: Unit Testing & Mocking
+#### Student 1: Unit Testing & Mocking (xUnit + Moq)
 ```bash
-# Run unit tests and mock verifications for Harbor.Deployment
-dotnet test tests/unit/Harbor.Deployment.Tests/Harbor.Deployment.Tests.csproj
+# Fast live-demo of Student 1's Advanced Mocking & Parameterized Theories (1.8s)
+./scripts/run-unit-tests.sh --student1
 
-# Run only the advanced mocking and parameterized tests
-dotnet test tests/unit/Harbor.Deployment.Tests/Harbor.Deployment.Tests.csproj \
-  --filter "FullyQualifiedName~DeploymentServiceAdvancedMockingTests"
+# Run complete solution unit test suite (all 950 tests across 7 microservices)
+./scripts/run-unit-tests.sh --all
+
+# Filter tests by specific service or theory
+./scripts/run-unit-tests.sh --service Deployment
+./scripts/run-unit-tests.sh --filter "FullyQualifiedName~Pagination"
 ```
 
 #### Student 2: Mutation Testing (Stryker.NET)

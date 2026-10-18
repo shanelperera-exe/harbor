@@ -144,20 +144,24 @@ Each student's component can also be executed independently for focused live viv
 ./scripts/run-performance-tests.sh --student3 --open
 ```
 
-#### Student 4: Code Quality & Metrics (SonarQube / SonarCloud / Coverlet)
+#### Student 4: Code Quality & Metrics (SonarQube / Coverlet / ReportGenerator)
 ```bash
-# Run code quality, Roslyn static analysis, and multi-assembly coverage (Local ReportGenerator)
+# Run 6-Pillar Code Quality & Metrics Gate (Coverage, Debt, Roslyn, Architecture, Hotspots, SCA)
 ./scripts/run-code-quality.sh --unit
 
-# Run quality checks and immediately open HTML coverage & risk dashboard in browser
+# Run full analysis and push directly to dedicated hosted SonarQube Server (https://sonar.harborapp.tech)
+./scripts/run-sonarqube.sh
+
+# Run quality checks and immediately open local HTML coverage & risk hotspot dashboard
 ./scripts/run-code-quality.sh --unit --open
 
-# Run live SonarCloud analysis and push metrics to cloud dashboard
+# Run live SonarCloud analysis (Cloud SaaS fallback)
 ./scripts/run-sonarcloud.sh --token <YOUR_SONAR_TOKEN>
 
-# Run static code analysis only (format and rule validations)
+# Run static code analysis only (Roslyn format and CA analyzer rules)
 ./scripts/run-code-quality.sh --static-only
 ```
+
 
 ---
 

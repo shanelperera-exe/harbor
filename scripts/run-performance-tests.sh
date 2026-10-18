@@ -72,7 +72,7 @@ open_dashboard() {
         echo -e "${YELLOW}Dashboard file not found at: $html_path${RESET}"
         return
     fi
-    echo -e "\n${CYAN}🌐 Opening JMeter Performance Dashboard in your browser...${RESET}"
+    echo -e "\n${CYAN}Opening JMeter Performance Dashboard in your browser...${RESET}"
     if grep -qi microsoft /proc/version 2>/dev/null && command -v powershell.exe &> /dev/null && command -v wslpath &> /dev/null; then
         local win_path
         win_path="$(wslpath -w "$html_path")"

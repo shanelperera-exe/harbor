@@ -138,7 +138,7 @@ def run_jmeter_test(jmx_path, user_token, admin_token, max_allowed_error_pct=1.0
     
     metrics = parse_jtl(jtl_file)
     if not metrics:
-        log(f"  ❌ FAILED: No metrics generated for {test_name}. JMeter Output:\n{res.stdout}\n{res.stderr}")
+        log(f"  [FAIL] FAILED: No metrics generated for {test_name}. JMeter Output:\n{res.stdout}\n{res.stderr}")
         return {
             "test_name": test_name,
             "status": "FAIL",
@@ -149,7 +149,7 @@ def run_jmeter_test(jmx_path, user_token, admin_token, max_allowed_error_pct=1.0
     passed = metrics["error_pct"] <= max_allowed_error_pct
     status = "PASS" if passed else "FAIL"
     
-    log(f"  {'✅' if passed else '❌'} {test_name}: {status} | Samples: {metrics['samples']} | Errors: {metrics['error_pct']:.2f}% | Avg: {metrics['avg_ms']:.2f}ms | p95: {metrics['p95_ms']:.2f}ms | Throughput: {metrics['throughput']:.2f} req/s")
+    log(f"  {'[PASS]' if passed else '[FAIL]'} {test_name}: {status} | Samples: {metrics['samples']} | Errors: {metrics['error_pct']:.2f}% | Avg: {metrics['avg_ms']:.2f}ms | p95: {metrics['p95_ms']:.2f}ms | Throughput: {metrics['throughput']:.2f} req/s")
     
     return {
         "test_name": test_name,
@@ -219,10 +219,10 @@ def main():
     log(f"Performance suite summary saved to {summary_path}")
     
     if failed_tests > 0:
-        log(f"⚠️ {failed_tests} performance test(s) failed.")
+        log(f"[WARN] {failed_tests} performance test(s) failed.")
         sys.exit(1)
     else:
-        log("🎉 All performance tests completed successfully with 100% pass rate!")
+        log("[PASS] All performance tests completed successfully with 100% pass rate!")
         sys.exit(0)
 
 if __name__ == "__main__":

@@ -80,9 +80,9 @@ if [[ "$RUN_STATIC" == true ]]; then
     echo -e "\n${BOLD}${MAGENTA}▶ [Stage 1/3] Static Code Analysis & Code Smell Checks (Roslyn)${RESET}"
     echo -e "${CYAN}  Checking code formatting and syntax rules...${RESET}"
     if dotnet format whitespace --verify-no-changes --verbosity quiet; then
-        echo -e "${GREEN}  ✓ Code formatting standards: PASSED${RESET}"
+        echo -e "${GREEN}  [OK] Code formatting standards: PASSED${RESET}"
     else
-        echo -e "${YELLOW}  ⚠ Formatting inconsistencies detected (run 'dotnet format' to auto-fix).${RESET}"
+        echo -e "${YELLOW}  [WARN] Formatting inconsistencies detected (run 'dotnet format' to auto-fix).${RESET}"
     fi
 
     echo -e "${CYAN}  Running Roslyn analyzer rule validations on solution...${RESET}"
@@ -92,7 +92,7 @@ if [[ "$RUN_STATIC" == true ]]; then
         -p:EnableNETAnalyzers=true \
         -p:AnalysisLevel=latest \
         --verbosity minimal
-    echo -e "${GREEN}  ✓ Roslyn static code rules & security checks: PASSED${RESET}"
+    echo -e "${GREEN}  [OK] Roslyn static code rules & security checks: PASSED${RESET}"
 fi
 
 if [[ "$MODE" == "static-only" ]]; then
@@ -126,7 +126,7 @@ run_test_coverage() {
         --collect:"XPlat Code Coverage" \
         --results-directory "$RESULTS_DIR" \
         --logger "trx;LogFileName=${proj_name}.trx" \
-        --verbosity minimal || echo -e "${YELLOW}  ⚠ $proj_name had minor test assertions${RESET}"
+        --verbosity minimal || echo -e "${YELLOW}  [WARN] $proj_name had minor test assertions${RESET}"
 }
 
 for proj in "${UNIT_PROJECTS[@]}"; do
@@ -203,7 +203,7 @@ echo -e "${BOLD}HTML Quality Report:${RESET} ${REPORT_DIR}/index.html"
 
 open_report() {
     local html_path="$REPORT_DIR/index.html"
-    echo -e "\n${CYAN}🌐 Opening code quality dashboard in your browser...${RESET}"
+    echo -e "\n${CYAN}Opening code quality dashboard in your browser...${RESET}"
     if grep -qi microsoft /proc/version 2>/dev/null && command -v powershell.exe &> /dev/null && command -v wslpath &> /dev/null; then
         local win_path
         win_path="$(wslpath -w "$html_path")"

@@ -87,7 +87,7 @@ if [[ "$MODE" == "student1" ]]; then
     DURATION=$((END_TIME - START_TIME))
 
     echo -e "\n${BOLD}${GREEN}========================================================================${RESET}"
-    echo -e "${BOLD}${GREEN}  ✓ STUDENT 1 DELIVERABLE: ALL ADVANCED MOCKING & THEORIES PASSED (${DURATION}s)${RESET}"
+    echo -e "${BOLD}${GREEN}  [OK] STUDENT 1 DELIVERABLE: ALL ADVANCED MOCKING & THEORIES PASSED (${DURATION}s)${RESET}"
     echo -e "${BOLD}${GREEN}========================================================================${RESET}"
     echo -e "  • Behavioral Invariants: Verified (Times.Once, Times.Never, Strict behavior)"
     echo -e "  • Parameterized Inputs:  Tested ([InlineData], [MemberData], [ClassData])"
@@ -146,7 +146,7 @@ END_TIME=$(date +%s)
 DURATION=$((END_TIME - START_TIME))
 
 echo -e "\n${BOLD}${GREEN}========================================================================${RESET}"
-echo -e "${BOLD}${GREEN}     ✓ COMPLETE UNIT TESTING & MOCKING SUITE: 100% PASSED (${DURATION}s)      ${RESET}"
+echo -e "${BOLD}${GREEN}    [OK] COMPLETE UNIT TESTING & MOCKING SUITE: 100% PASSED (${DURATION}s)      ${RESET}"
 echo -e "${BOLD}${GREEN}========================================================================${RESET}"
 echo -e "  • Total Unit Tests:   950 / 950 Passed across 7 Microservices"
 echo -e "  • Student 1 Focus:    Strict Moq Verification & Parameterized [Theory] Suites"

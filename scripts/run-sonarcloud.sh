@@ -88,7 +88,7 @@ fi
 
 # Check for SONAR_TOKEN
 if [[ -z "$SONAR_TOKEN" ]]; then
-    echo -e "\n${YELLOW}⚠ SONAR_TOKEN is not provided.${RESET}"
+    echo -e "\n${YELLOW}[WARN] SONAR_TOKEN is not provided.${RESET}"
     echo -e "To analyze and push to your live SonarCloud project, provide your token:"
     echo -e "  1. Log into ${CYAN}https://sonarcloud.io${RESET}"
     echo -e "  2. Go to ${BOLD}My Account -> Security -> Generate Token${RESET}"
@@ -154,8 +154,8 @@ echo -e "\n${BOLD}${MAGENTA}▶ [Stage 4/4] Finalizing SonarCloud Analysis & Pus
 dotnet-sonarscanner end /d:sonar.token="$SONAR_TOKEN"
 
 echo -e "\n${BOLD}${GREEN}========================================================================${RESET}"
-echo -e "${BOLD}${GREEN}     ✓ LIVE SONARCLOUD ANALYSIS COMPLETED & QUALITY GATE PASSED         ${RESET}"
+echo -e "${BOLD}${GREEN}    [OK] LIVE SONARCLOUD ANALYSIS COMPLETED & QUALITY GATE PASSED         ${RESET}"
 echo -e "${BOLD}${GREEN}========================================================================${RESET}"
-echo -e "  🌐 View Live Cloud Dashboard:"
+echo -e "  View Live Cloud Dashboard:"
 echo -e "     ${BOLD}${CYAN}https://sonarcloud.io/project/overview?id=${SONAR_PROJECT}${RESET}"
 echo -e "${BOLD}${GREEN}========================================================================${RESET}"

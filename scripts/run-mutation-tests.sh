@@ -92,20 +92,20 @@ echo -e "${BOLD}${GREEN}========================================================
 # If running in GitHub Actions CI/CD, append to Step Summary
 if [[ -n "$GITHUB_STEP_SUMMARY" && -f "$LATEST_MD" ]]; then
     cat << 'EOF' >> "$GITHUB_STEP_SUMMARY"
-## 🧬 Stage 2: Mutation Testing Scorecard (Student 2)
+## Stage 2: Mutation Testing Scorecard (Student 2)
 
 | Metric | Target / Invariant | Status |
 | :--- | :--- | :---: |
-| **Mutation Framework** | Stryker.NET 5.0 (Roslyn Syntax Mutator AST) | 🟢 VERIFIED |
-| **Target Microservice** | `Harbor.Deployment` Service Core | 🟢 TESTED |
-| **Domain Services Mutated** | `DeploymentUrlExtractor.cs`, `DeploymentLogSanitizer.cs` | 🟢 TESTED |
-| **Mutators Evaluated** | Bitwise (`\|` to `&`), Equality, Conditional, String, Regex | 🟢 EVALUATED |
-| **Mutation Score Indicator (MSI)** | **83.33%** (Quality Gate: High > 80%, Break: 0%) | 🟢 PASSED |
-| **Real Defect Caught & Fixed** | Regex Double-Redaction bug in `DeploymentLogSanitizer.cs` | 🟢 REMEDIATED |
-| **Surviving Mutants Remediated** | Case-Insensitive URL Invariants & Log Sanitizer Unit Tests | 🟢 HARDENED |
-| **Execution Duration** | Optimized Fast Feedback (~45 seconds) | 🟢 PASSED |
+| **Mutation Framework** | Stryker.NET 5.0 (Roslyn Syntax Mutator AST) | VERIFIED |
+| **Target Microservice** | `Harbor.Deployment` Service Core | TESTED |
+| **Domain Services Mutated** | `DeploymentUrlExtractor.cs`, `DeploymentLogSanitizer.cs` | TESTED |
+| **Mutators Evaluated** | Bitwise (`\|` to `&`), Equality, Conditional, String, Regex | EVALUATED |
+| **Mutation Score Indicator (MSI)** | **83.33%** (Quality Gate: High > 80%, Break: 0%) | PASSED |
+| **Real Defect Caught & Fixed** | Regex Double-Redaction bug in `DeploymentLogSanitizer.cs` | REMEDIATED |
+| **Surviving Mutants Remediated** | Case-Insensitive URL Invariants & Log Sanitizer Unit Tests | HARDENED |
+| **Execution Duration** | Optimized Fast Feedback (~45 seconds) | PASSED |
 
-### 🔬 Test Suite Hardening Case Study
+### Test Suite Hardening Case Study
 1. **Initial Assessment (MSI 45.24%):** `DeploymentLogSanitizer.cs` was mutated without isolated unit test assertions, allowing 90% of mutants to survive.
 2. **Defect Discovery:** Writing `DeploymentLogSanitizerTests.cs` exposed an over-eager regex in `SensitiveSetting` that double-redacted `Authorization: Bearer <token>` into `[REDACTED] [REDACTED]`. Removing `authorization` from line 16 fixed the defect.
 3. **Regex Case-Insensitivity Hardening:** Bitwise mutators changing `RegexOptions.Compiled \| RegexOptions.IgnoreCase` into `&` survived because tests only evaluated lowercase URLs. Adding uppercase/mixed-case scheme theories killed 16 surviving mutants.
@@ -116,7 +116,7 @@ fi
 
 if [[ -n "$LATEST_HTML" && -f "$LATEST_HTML" ]]; then
     open_report() {
-        echo -e "\n${CYAN}🌐 Opening mutation report in your browser...${RESET}"
+        echo -e "\n${CYAN}Opening mutation report in your browser...${RESET}"
         if grep -qi microsoft /proc/version 2>/dev/null && command -v powershell.exe &> /dev/null && command -v wslpath &> /dev/null; then
             local win_path
             win_path="$(wslpath -w "$LATEST_HTML")"

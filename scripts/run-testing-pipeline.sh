@@ -103,7 +103,7 @@ if [[ "$RUN_MUTATION" == true ]]; then
     echo -e "${BOLD}${BLUE}    Target: Harbor.Deployment Domain Logic (Stryker.NET)               ${RESET}"
     echo -e "${BOLD}${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
     ./scripts/run-mutation-tests.sh --fast
-    echo -e "${GREEN}  ✓ Mutation testing fault-tolerance gate: PASSED${RESET}"
+    echo -e "${GREEN}  [OK] Mutation testing fault-tolerance gate: PASSED${RESET}"
 fi
 
 # ── Stage 3: Load & Performance Testing (Student 3) ──────────────────────────
@@ -113,7 +113,7 @@ if [[ "$RUN_PERF" == true ]]; then
     echo -e "${BOLD}${BLUE}    Target: Harbor.ApiGateway & Deployment Services (Apache JMeter)   ${RESET}"
     echo -e "${BOLD}${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
     ./scripts/run-performance-tests.sh --demo
-    echo -e "${GREEN}  ✓ Concurrency throughput & p95 latency SLA: PASSED${RESET}"
+    echo -e "${GREEN}  [OK] Concurrency throughput & p95 latency SLA: PASSED${RESET}"
 fi
 
 # ── Stage 4: Code Quality & Metrics (Student 4) ──────────────────────────────
@@ -127,7 +127,7 @@ if [[ "$RUN_QUALITY" == true ]]; then
     else
         ./scripts/run-code-quality.sh --unit
     fi
-    echo -e "${GREEN}  ✓ Static analysis, branch coverage & quality gate: PASSED${RESET}"
+    echo -e "${GREEN}  [OK] Static analysis, branch coverage & quality gate: PASSED${RESET}"
 fi
 
 END_TIME=$(date +%s)
@@ -162,7 +162,7 @@ open_in_browser() {
 }
 
 if [[ "$OPEN_BROWSER" == true ]]; then
-    echo -e "\n${CYAN}🌐 Launching all generated HTML dashboards in browser...${RESET}"
+    echo -e "\n${CYAN}Launching all generated HTML dashboards in browser...${RESET}"
     LATEST_MUTATION=$(find "$REPO_ROOT/tests/unit/Harbor.Deployment.Tests/StrykerOutput" -name "mutation-report.html" 2>/dev/null | sort -r | head -n 1 || true)
     open_in_browser "$LATEST_MUTATION"
     open_in_browser "$REPO_ROOT/tests/performance/jmeter-report/index.html"

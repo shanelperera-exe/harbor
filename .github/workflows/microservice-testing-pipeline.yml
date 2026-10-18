@@ -50,18 +50,18 @@ jobs:
         if: always()
         run: |
           cat << 'EOF' >> $GITHUB_STEP_SUMMARY
-          ## 🧪 Stage 1: Unit Testing & Mocking Scorecard (Student 1)
+          ## Stage 1: Unit Testing & Mocking Scorecard (Student 1)
 
           | Quality Metric | Verified Invariant | Status |
           | :--- | :--- | :---: |
-          | **Total Solution Unit Tests** | 950 / 950 Passed (100% Green across 7 Services) | 🟢 PASSED |
-          | **Student 1 Focus Microservice** | `Harbor.Deployment` Service Logic | 🟢 PASSED |
-          | **Mock Framework & Behavior** | `Moq` (Strict Invariants, Verification Counts) | 🟢 PASSED |
-          | **Parameterized Theory Types** | `[InlineData]`, `[MemberData]`, `[ClassData]` | 🟢 PASSED |
-          | **Fault & Error Isolation** | Kafka/GitHub API Transient Exception Rollbacks | 🟢 PASSED |
-          | **Execution Duration** | Fast Feedback (~25s) | 🟢 PASSED |
+          | **Total Solution Unit Tests** | 950 / 950 Passed (100% Green across 7 Services) | PASSED |
+          | **Student 1 Focus Microservice** | `Harbor.Deployment` Service Logic | PASSED |
+          | **Mock Framework & Behavior** | `Moq` (Strict Invariants, Verification Counts) | PASSED |
+          | **Parameterized Theory Types** | `[InlineData]`, `[MemberData]`, `[ClassData]` | PASSED |
+          | **Fault & Error Isolation** | Kafka/GitHub API Transient Exception Rollbacks | PASSED |
+          | **Execution Duration** | Fast Feedback (~25s) | PASSED |
 
-          ### 📦 Multi-Service Unit Test Distribution
+          ### Multi-Service Unit Test Distribution
           - **Harbor.Deployment.Tests:** 313 tests (Core Mocking & Parameterized Theories)
           - **Harbor.Project.Tests:** 229 tests
           - **Harbor.Authentication.Tests:** 130 tests

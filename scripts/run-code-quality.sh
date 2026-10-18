@@ -33,6 +33,9 @@ MIN_BRANCH_COVERAGE=40.0
 
 for arg in "$@"; do
     case "$arg" in
+        --sonarqube)
+            exec "$REPO_ROOT/scripts/run-sonarqube.sh" "${@:2}"
+            ;;
         --sonarcloud|--sonar)
             exec "$REPO_ROOT/scripts/run-sonarcloud.sh" "${@:2}"
             ;;
@@ -57,6 +60,7 @@ for arg in "$@"; do
             echo "Options:"
             echo "  --unit, --fast   Run unit tests coverage and metrics (default, fast)"
             echo "  --all            Run complete unit + integration test coverage"
+            echo "  --sonarqube      Run analysis and push to full local SonarQube Server"
             echo "  --sonarcloud     Push metrics to live SonarCloud project"
             echo "  --static-only    Run only static code analysis and format checks"
             echo "  --skip-static    Skip static analysis, run only coverage & metrics"

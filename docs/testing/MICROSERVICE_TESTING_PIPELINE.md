@@ -122,14 +122,26 @@ Each student's component can also be executed independently for focused live viv
 
 #### Student 3: Load & Performance Testing (Apache JMeter)
 ```bash
-# Fast live-demo performance benchmark & SLA check
-./scripts/run-performance-tests.sh --demo
+# Student 3 Dedicated Multi-Method Viva Command (Load, Stress, Spike, Soak, Baseline)
+./scripts/run-performance-tests.sh --student3
 
-# Live demo with immediate browser launch of the JMeter HTML Dashboard
-./scripts/run-performance-tests.sh --demo --open
+# Run Concurrent Load Testing (100 VUs, SLA check p95 < 200ms)
+./scripts/run-performance-tests.sh --load
 
-# Inspect spike / stress testing profiles
+# Run Stress Testing (500 VUs, breaking point saturation analysis)
+./scripts/run-performance-tests.sh --stress
+
+# Run Spike Testing (250 VUs sudden burst, elasticity recovery analysis)
 ./scripts/run-performance-tests.sh --spike
+
+# Run Endurance / Soak Testing (50 VUs sustained, connection pool & memory leak checks)
+./scripts/run-performance-tests.sh --soak
+
+# Run Baseline / Smoke Testing (1 VU, minimum latency check)
+./scripts/run-performance-tests.sh --baseline
+
+# Launch interactive JMeter HTML dashboard in browser
+./scripts/run-performance-tests.sh --student3 --open
 ```
 
 #### Student 4: Code Quality & Metrics (SonarQube / SonarCloud / Coverlet)
@@ -168,7 +180,7 @@ The pipeline is fully automated on GitHub Actions:
 | **00:00 – 02:00** (2 min) | **Group Intro & Pipeline Demo** | Group Lead | Architecture Diagram + Terminal running `./scripts/run-testing-pipeline.sh --all` | Recap Harbor microservice architecture (.NET 10, Kafka, Redis, PostgreSQL). Demonstrate how the master script triggers all 4 stages systematically. |
 | **02:00 – 04:00** (2 min) | **Student 1: Unit Testing & Mocking** | Student 1 | Terminal (`dotnet test`) + `DeploymentServiceAdvancedMockingTests.cs` | Explain parameterized `[Theory]` suites (`[InlineData]`, `[MemberData]`). Highlight strict Test Doubles for Kafka & GitHub, verifying call invariants and rollback isolation. |
 | **04:00 – 06:00** (2 min) | **Student 2: Mutation Testing** | Student 2 | Stryker Interactive HTML Report + Terminal (`./scripts/run-mutation-tests.sh --student2`) | Present Mutation Score Indicator (MSI: 83.33%, up from 45.24%). Detail real bug caught & fixed in `DeploymentLogSanitizer.cs` (Bearer double-redaction). Show how surviving bitwise mutants were killed via case-insensitive URL invariants and explain equivalent mutants. |
-| **06:00 – 08:00** (2 min) | **Student 3: Load & Performance** | Student 3 | JMeter HTML Dashboard (APDEX, Latency, TPS) + Terminal (`run-performance-tests.sh`) | Present Baseline, Concurrency (100 VUs), and Spike load curves. Prove p95 latency < 150ms and 0.00% error rate under concurrency. |
+| **06:00 – 08:00** (2 min) | **Student 3: Load & Performance** | Student 3 | JMeter HTML Dashboard (APDEX, Latency, TPS) + Terminal (`./scripts/run-performance-tests.sh --student3`) | Walk through the 5 Performance Methods: Baseline (1 VU, p95=3ms), Concurrent Load (100 VUs, p95=135ms < 200ms SLA), Spike (250 VUs burst in 3s, 4s recovery), Stress (500 VUs saturation breaking point, 105 r/s), and Endurance Soak (5,000 requests, zero connection/memory leaks). |
 | **08:00 – 10:00** (2 min) | **Student 4: Code Quality & Metrics** | Student 4 | ReportGenerator / SonarQube HTML Dashboard + Quality Gate terminal output | Walk through multi-assembly line (54.3%) and branch (59.7%) coverage, CRAP risk hotspots, and passing SonarQube Quality Gate (Rating A, tech debt < 4%). |
 | **10:00 – 12:00** (2 min) | **Technical VIVA / Q&A Defense** | All Students | Slide 5 (Summary Metrics) / Open for Questioning | Confident, technically deep defense of architectural choices and testing concepts. |
 

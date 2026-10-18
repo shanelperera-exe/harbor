@@ -117,15 +117,18 @@ jobs:
         run: |
           ./scripts/run-performance-tests.sh --student3
 
-      - name: Upload JMeter Multi-Method Performance Dashboards
+      - name: Upload JMeter Performance Reports & Benchmarks
         uses: actions/upload-artifact@v4
         with:
-          name: jmeter-performance-dashboards
+          name: jmeter-performance-reports
           path: |
+            tests/performance/results/
+            tests/performance/benchmarks/
             tests/performance/jmeter-report/
             tests/performance/spike-report/
             tests/performance/jmeter-stress-report/
             tests/performance/soak-report/
+          if-no-files-found: ignore
           retention-days: 14
 
   # ── STAGE 4: Code Quality & Metrics (Student 4) ────────────────────────────

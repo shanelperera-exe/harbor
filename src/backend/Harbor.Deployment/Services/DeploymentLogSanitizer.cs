@@ -4,17 +4,22 @@ namespace Harbor.Deployment.Services;
 
 internal static partial class DeploymentLogSanitizer
 {
+    private static readonly TimeSpan RegexTimeout = TimeSpan.FromSeconds(1);
+
     private static readonly Regex BearerCredential = new(
         @"(?i)(\bauthorization\s*:\s*bearer\s+)\S+",
-        RegexOptions.Compiled);
+        RegexOptions.Compiled,
+        RegexTimeout);
 
     private static readonly Regex QuotedSensitiveSetting = new(
         @"(?i)(?<![A-Za-z0-9])([""'])([A-Za-z0-9_.-]*(?:password|passwd|pwd|secret|token|api[_-]?key|client[_-]?secret|access[_-]?key|private[_-]?key|authorization)[A-Za-z0-9_.-]*)\1(\s*[:=]\s*)([""'])(?:\\.|(?!\4).)*\4",
-        RegexOptions.Compiled);
+        RegexOptions.Compiled,
+        RegexTimeout);
 
     private static readonly Regex SensitiveSetting = new(
         @"(?i)(?<![A-Za-z0-9])([A-Za-z0-9_.-]*(?:password|passwd|pwd|secret|token|api[_-]?key|client[_-]?secret|access[_-]?key|private[_-]?key)[A-Za-z0-9_.-]*)(\s*[:=]\s*)(?:""[^""]*""|'[^']*'|[^\s,;]+)",
-        RegexOptions.Compiled);
+        RegexOptions.Compiled,
+        RegexTimeout);
 
     public static string Sanitize(string? text)
     {

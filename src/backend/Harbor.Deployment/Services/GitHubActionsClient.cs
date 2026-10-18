@@ -259,8 +259,9 @@ public sealed class GitHubActionsClient(HttpClient httpClient, IOptions<GitHubAc
             foreach (var entry in archive.Entries.OrderBy(e => e.FullName))
             {
                 if (!entry.Name.EndsWith(".txt", StringComparison.OrdinalIgnoreCase)) continue;
-                sb.AppendLine($"=== {entry.FullName} ===");
+#pragma warning disable S6966 // ZipArchiveEntry.Open() does not have an asynchronous overload
                 using var reader = new System.IO.StreamReader(entry.Open());
+#pragma warning restore S6966
                 sb.AppendLine(await reader.ReadToEndAsync(cancellationToken));
             }
             return sb.Length > 0 ? sb.ToString() : null;

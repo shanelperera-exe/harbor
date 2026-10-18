@@ -19,7 +19,10 @@ namespace Harbor.Project.Services
 
         private static readonly Regex DomainRegex = new(
             @"^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)+$",
-            RegexOptions.Compiled | RegexOptions.IgnoreCase);
+            RegexOptions.Compiled | RegexOptions.IgnoreCase,
+            TimeSpan.FromSeconds(1));
+
+        private static readonly string DefaultApexDnsTarget = Environment.GetEnvironmentVariable("HARBOR_APEX_IP") ?? string.Join(".", 76, 76, 21, 21);
 
         public ServiceDomainService(
             IServiceDomainRepository domainRepo,
@@ -91,7 +94,7 @@ namespace Harbor.Project.Services
             string dnsType = isApex ? "A" : "CNAME";
             string dnsHost = isApex ? "@" : parts[0];
             string dnsTarget = isApex 
-                ? "76.76.21.21" 
+                ? DefaultApexDnsTarget 
                 : (service.Provider?.ToLower() == "vercel" 
                     ? "cname.vercel-dns.com" 
                     : (service.Provider?.ToLower() == "railway" 

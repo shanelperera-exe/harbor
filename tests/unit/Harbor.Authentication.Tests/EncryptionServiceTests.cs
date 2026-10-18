@@ -150,7 +150,7 @@ namespace Harbor.Authentication.Tests
         // ---------- Tampering / wrong key ----------
 
         [Fact]
-        public void Decrypt_WithDifferentKey_ThrowsCryptographicException()
+        public void Decrypt_WithDifferentKey_ThrowsCryptographicExceptionOrReturnsGarbage()
         {
             var encryptor = new EncryptionService(ConfigurationWithKey());
             var decryptor = new EncryptionService(ConfigurationWithKey());
@@ -158,8 +158,17 @@ namespace Harbor.Authentication.Tests
             var ciphertext = encryptor.Encrypt("secret-token");
 
             // CBC with PKCS7 has no authentication tag, so a wrong key typically surfaces
-            // as a padding error rather than returning garbage silently.
-            Assert.Throws<CryptographicException>(() => decryptor.Decrypt(ciphertext));
+            // as a padding error (CryptographicException) or in ~1/256 cases yields garbage.
+            // In all cases, it must never return the original plaintext.
+            try
+            {
+                var decrypted = decryptor.Decrypt(ciphertext);
+                Assert.NotEqual("secret-token", decrypted);
+            }
+            catch (CryptographicException)
+            {
+                // Expected padding error
+            }
         }
 
         [Fact]

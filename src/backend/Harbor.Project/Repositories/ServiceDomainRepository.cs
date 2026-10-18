@@ -75,11 +75,11 @@ namespace Harbor.Project.Repositories
 
         public async Task<bool> SetPrimaryAsync(int serviceId, int domainId)
         {
-            using var connection = _connectionFactory.CreateConnection();
+            await using var connection = _connectionFactory.CreateConnection();
             if (connection.State != System.Data.ConnectionState.Open)
-                connection.Open();
+                await connection.OpenAsync();
 
-            using var transaction = connection.BeginTransaction();
+            await using var transaction = await connection.BeginTransactionAsync();
             try
             {
                 // Reset all for service
@@ -94,12 +94,12 @@ namespace Harbor.Project.Repositories
                     new { DomainId = domainId, ServiceId = serviceId },
                     transaction);
 
-                transaction.Commit();
+                await transaction.CommitAsync();
                 return rows > 0;
             }
             catch
             {
-                transaction.Rollback();
+                await transaction.RollbackAsync();
                 throw;
             }
         }

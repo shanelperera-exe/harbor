@@ -14,6 +14,6 @@ namespace Harbor.Project.DTOs
         public System.Collections.Generic.List<ServiceDeploymentUrl>? DeploymentUrls { get; set; }
         public string? Provider { get; set; }
         public string? ProviderToken { get; set; }
-        public bool IsPrivate { get; set; }
+        public bool? IsPrivate { get; set; }
     }
 }

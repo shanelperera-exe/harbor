@@ -23,11 +23,14 @@ public sealed class DeploymentWebhookController(
     ICloudProviderSyncService? cloudProviderSync = null) : ControllerBase
 {
     [HttpPost("github")]
-    public async Task<IActionResult> HandleGitHubWebhook()
+    public async Task<IActionResult> HandleGitHubWebhook(
+        [FromHeader(Name = "X-GitHub-Event")] string? eventType = null,
+        [FromHeader(Name = "X-Hub-Signature-256")] string? signature = null,
+        [FromHeader(Name = "X-GitHub-Delivery")] string? deliveryId = null)
     {
-        var eventType = Request.Headers["X-GitHub-Event"].ToString();
-        var signature = Request.Headers["X-Hub-Signature-256"].ToString();
-        var deliveryId = Request.Headers["X-GitHub-Delivery"].ToString();
+        eventType = ResolveHeader(eventType, "X-GitHub-Event");
+        signature = ResolveHeader(signature, "X-Hub-Signature-256");
+        deliveryId = ResolveHeader(deliveryId, "X-GitHub-Delivery");
 
         // Read body once
         using var ms = new MemoryStream();
@@ -304,4 +307,13 @@ public sealed class DeploymentWebhookController(
             Encoding.ASCII.GetBytes(computed),
             Encoding.ASCII.GetBytes(provided));
     }
+
+    [NonAction]
+#pragma warning disable S6932
+    private string ResolveHeader(string? boundValue, string headerName)
+    {
+        if (!string.IsNullOrEmpty(boundValue)) return boundValue;
+        return Request?.Headers.TryGetValue(headerName, out var val) == true ? val.ToString() : string.Empty;
+    }
+#pragma warning restore S6932
 }

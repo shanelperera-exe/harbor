@@ -154,6 +154,6 @@ app.MapControllers();
 app.MapHub<Harbor.Reporting.Hubs.ServiceLogsHub>("/hubs/logs");
 app.MapHarborObservability();
 
-app.Run();
+await app.RunAsync();
 
 public partial class Program { }

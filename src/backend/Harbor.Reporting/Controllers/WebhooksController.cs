@@ -69,11 +69,11 @@ namespace Harbor.Reporting.Controllers
                             // Vercel log drain format has 'message', 'type', 'host', 'path', 'statusCode'
                             var root = doc.RootElement;
                             
-                            string message = root.TryGetProperty("message", out var msgProp) ? msgProp.GetString() : "Unknown Event";
+                            string message = (root.TryGetProperty("message", out var msgProp) ? msgProp.GetString() : null) ?? "Unknown Event";
                             string status = root.TryGetProperty("statusCode", out var statusProp) ? statusProp.GetInt32().ToString() : "---";
-                            string host = root.TryGetProperty("host", out var hostProp) ? hostProp.GetString() : "vercel.app";
-                            string path = root.TryGetProperty("path", out var pathProp) ? pathProp.GetString() : "/";
-                            string method = root.TryGetProperty("method", out var methodProp) ? methodProp.GetString() : "GET";
+                            string host = (root.TryGetProperty("host", out var hostProp) ? hostProp.GetString() : null) ?? "vercel.app";
+                            string path = (root.TryGetProperty("path", out var pathProp) ? pathProp.GetString() : null) ?? "/";
+                            string method = (root.TryGetProperty("method", out var methodProp) ? methodProp.GetString() : null) ?? "GET";
                             
                             // Try to format as HTTP Access log if it looks like one
                             string formattedMessage = (root.TryGetProperty("type", out var typeProp) && typeProp.GetString() == "request") 

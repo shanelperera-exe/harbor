@@ -254,4 +254,4 @@ app.MapGet("/api/test-db", (Harbor.Authentication.Data.DbConnectionFactory dbFac
     }
 });
 
-app.Run();
+await app.RunAsync();

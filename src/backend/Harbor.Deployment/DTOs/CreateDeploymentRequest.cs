@@ -9,5 +9,5 @@ public class CreateDeploymentRequest
     public string? CommitMessage { get; init; }
     public string? Branch { get; init; }
     /// <summary>When true, bypass the CI gate check and deploy even if CI is failing.</summary>
-    public bool OverrideCiGate { get; init; }
+    public bool? OverrideCiGate { get; init; }
 }

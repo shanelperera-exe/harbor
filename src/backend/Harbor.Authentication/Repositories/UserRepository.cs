@@ -536,19 +536,8 @@ namespace Harbor.Authentication.Repositories
             var hasStatus = await ColumnExistsAsync(connection, "Users", "Status");
             var hasProjects = await TableExistsAsync(connection, null, "Projects");
 
-            var statusSql = hasStatus ? "COALESCE(u.\"Status\", 'active')" : "'active'";
-            var projectCountSql = hasProjects 
-                ? "COALESCE((SELECT COUNT(1) FROM \"Projects\" p WHERE p.\"OwnerId\" = u.\"Id\"), 0)" 
-                : "0::bigint";
-
             using var command = connection.CreateCommand();
-            command.CommandText = $@"
-                SELECT u.""Id"", u.""PublicId"", u.""Username"", u.""Email"", u.""Role"", 
-                       {statusSql} AS ""Status"", 
-                       u.""CreatedAt"", u.""AvatarSvg"",
-                       {projectCountSql} AS ""ProjectCount""
-                FROM ""Users"" u
-                ORDER BY u.""Id"" ASC";
+            command.CommandText = BuildGetAllUsersQuery(hasProjects, hasStatus);
 
             using var reader = await command.ExecuteReaderAsync();
             while (await reader.ReadAsync())
@@ -603,5 +592,38 @@ namespace Harbor.Authentication.Repositories
 
             return await command.ExecuteNonQueryAsync() > 0;
         }
+
+        private static string BuildGetAllUsersQuery(bool hasProjects, bool hasStatus) =>
+            (hasProjects, hasStatus) switch
+            {
+                (true, true) => @"
+                    SELECT u.""Id"", u.""PublicId"", u.""Username"", u.""Email"", u.""Role"", 
+                           COALESCE(u.""Status"", 'active') AS ""Status"", 
+                           u.""CreatedAt"", u.""AvatarSvg"",
+                           COALESCE((SELECT COUNT(1) FROM ""Projects"" p WHERE p.""OwnerId"" = u.""Id""), 0) AS ""ProjectCount""
+                    FROM ""Users"" u
+                    ORDER BY u.""Id"" ASC",
+                (true, false) => @"
+                    SELECT u.""Id"", u.""PublicId"", u.""Username"", u.""Email"", u.""Role"", 
+                           'active' AS ""Status"", 
+                           u.""CreatedAt"", u.""AvatarSvg"",
+                           COALESCE((SELECT COUNT(1) FROM ""Projects"" p WHERE p.""OwnerId"" = u.""Id""), 0) AS ""ProjectCount""
+                    FROM ""Users"" u
+                    ORDER BY u.""Id"" ASC",
+                (false, true) => @"
+                    SELECT u.""Id"", u.""PublicId"", u.""Username"", u.""Email"", u.""Role"", 
+                           COALESCE(u.""Status"", 'active') AS ""Status"", 
+                           u.""CreatedAt"", u.""AvatarSvg"",
+                           0::bigint AS ""ProjectCount""
+                    FROM ""Users"" u
+                    ORDER BY u.""Id"" ASC",
+                _ => @"
+                    SELECT u.""Id"", u.""PublicId"", u.""Username"", u.""Email"", u.""Role"", 
+                           'active' AS ""Status"", 
+                           u.""CreatedAt"", u.""AvatarSvg"",
+                           0::bigint AS ""ProjectCount""
+                    FROM ""Users"" u
+                    ORDER BY u.""Id"" ASC"
+            };
     }
 }

@@ -144,7 +144,9 @@ public class DeploymentsController(IDeploymentService deploymentService) : Contr
     [HttpPost("{id:int}/status")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> UpdateStatus(int id)
+    public async Task<IActionResult> UpdateStatus(
+        int id,
+        [FromHeader(Name = "X-Harbor-Signature")] string? signature = null)
     {
         // GH_APP_WEBHOOK_SECRET is the single webhook secret for the whole app: it signs inbound
         // GitHub deliveries (see GitHubAppOptionsSetup) and also signs Harbor's own status
@@ -152,8 +154,8 @@ public class DeploymentsController(IDeploymentService deploymentService) : Contr
         var secret = Environment.GetEnvironmentVariable("GH_APP_WEBHOOK_SECRET")
             ?? Environment.GetEnvironmentVariable("GITHUB_APP_WEBHOOK_SECRET")
             ?? Environment.GetEnvironmentVariable("GITHUB_WEBHOOK_SECRET");
-        if (string.IsNullOrWhiteSpace(secret)) return Unauthorized();
-        var signature = Request.Headers["X-Harbor-Signature"].ToString();
+        signature = ResolveHeader(signature, "X-Harbor-Signature");
+        if (string.IsNullOrWhiteSpace(secret) || string.IsNullOrWhiteSpace(signature)) return Unauthorized();
         using var reader = new StreamReader(Request.Body);
         var payload = await reader.ReadToEndAsync();
         using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(secret));
@@ -170,6 +172,15 @@ public class DeploymentsController(IDeploymentService deploymentService) : Contr
     }
 
     private int? GetUserId() => int.TryParse(User.FindFirst("userId")?.Value, out var id) ? id : null;
+
+    [NonAction]
+#pragma warning disable S6932
+    private string ResolveHeader(string? boundValue, string headerName)
+    {
+        if (!string.IsNullOrEmpty(boundValue)) return boundValue;
+        return Request?.Headers.TryGetValue(headerName, out var val) == true ? val.ToString() : string.Empty;
+    }
+#pragma warning restore S6932
 }
 
 public sealed class DeploymentStatusCallback

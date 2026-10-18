@@ -58,7 +58,7 @@ namespace Harbor.Project.Services
                 DeploymentUrl = request.DeploymentUrls != null ? System.Text.Json.JsonSerializer.Serialize(request.DeploymentUrls) : request.DeploymentUrl?.Trim(),
                 Provider = request.Provider?.Trim(),
                 ProviderToken = string.IsNullOrWhiteSpace(request.ProviderToken) ? null : _secretProtector.Protect(request.ProviderToken.Trim()),
-                IsPrivate = request.IsPrivate
+                IsPrivate = request.IsPrivate ?? false
             };
 
             var id = await _serviceRepository.CreateAsync(serviceEntity);
@@ -75,9 +75,9 @@ namespace Harbor.Project.Services
             if (project == null) return (false, "Project not found.", null);
             if (!isAdmin && project.OwnerId != userId) return (false, "You do not have permission to view this project's services.", null);
 
-            var services = await _cache.GetOrSetAsync(
+            var services = await _cache.GetOrSetAsync<List<ServiceEntity>>(
                 CacheKeys.ServicesByProject(project.Id),
-                () => _serviceRepository.GetByProjectIdAsync(project.Id),
+                async () => await _serviceRepository.GetByProjectIdAsync(project.Id),
                 CacheTtl.ServiceList
             );
             return (true, null, (services ?? new List<ServiceEntity>()).Select(ToResponse).ToList());

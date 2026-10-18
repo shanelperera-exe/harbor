@@ -89,6 +89,6 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapHarborObservability();
 
-app.Run();
+await app.RunAsync();
 
 public partial class Program { }

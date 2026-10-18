@@ -133,7 +133,7 @@ if [[ "$RUN_QUALITY" == true ]]; then
     echo -e "${BOLD}${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
 
     SONAR_HOST="${SONAR_HOST_URL:-https://sonar.harborapp.tech}"
-    SQ_STATUS=$(curl -s --connect-timeout 3 "${SONAR_HOST}/api/system/status" 2>/dev/null | grep -o '"status":"[^"]*"' | cut -d'"' -f4 || true)
+    SQ_STATUS=$(curl -4 -s --connect-timeout 3 "${SONAR_HOST}/api/system/status" 2>/dev/null | grep -o '"status":"[^"]*"' | cut -d'"' -f4 || true)
 
     if [[ "$USE_SONARQUBE" == true ]] || ([[ "$SQ_STATUS" == "UP" ]] && [[ "$USE_SONARCLOUD" != true ]] && [[ -n "${SONAR_QUBE_TOKEN:-${SONAR_TOKEN:-}}" ]]); then
         echo -e "${CYAN}Executing dedicated SonarQube Server analysis (${SONAR_HOST})...${RESET}"

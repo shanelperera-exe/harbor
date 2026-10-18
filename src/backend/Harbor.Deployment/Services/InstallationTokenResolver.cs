@@ -10,7 +10,7 @@ public interface IInstallationTokenResolver
 
 public sealed class InstallationTokenResolver(HttpClient httpClient, IOptions<GitHubActionsOptions> options) : IInstallationTokenResolver
 {
-    private readonly string _authServiceUrl = options.Value.AuthServiceClientUrl ?? "http://authentication-service:8080";
+    private readonly string _authServiceUrl = options.Value.AuthServiceClientUrl ?? "https://authentication-service:8443";
 
     public async Task<string?> GetInstallationTokenAsync(int userId)
     {

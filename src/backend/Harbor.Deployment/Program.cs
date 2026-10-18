@@ -136,7 +136,7 @@ builder.Services.Configure<GitHubActionsOptions>(options =>
         builder.Configuration["GH_API_BASE_URL"],
         builder.Configuration["GITHUB_API_BASE_URL"]) ?? "https://api.github.com/";
     options.DefaultWorkflowFile = FirstNonBlank(builder.Configuration["GITHUB_ACTIONS_WORKFLOW"]) ?? "deploy.yml";
-    options.AuthServiceClientUrl = FirstNonBlank(builder.Configuration["AUTH_SERVICE_URL"]) ?? "http://authentication-service:8080";
+    options.AuthServiceClientUrl = FirstNonBlank(builder.Configuration["AUTH_SERVICE_URL"]) ?? "https://authentication-service:8443";
 
     static string? FirstNonBlank(params string?[] candidates) =>
         candidates.FirstOrDefault(c => !string.IsNullOrWhiteSpace(c));
@@ -151,7 +151,7 @@ builder.Services.AddHttpClient<IGitHubActionsClient, GitHubActionsClient>((servi
 builder.Services.AddHttpClient<IInstallationTokenResolver, InstallationTokenResolver>((services, client) =>
 {
     var options = services.GetRequiredService<Microsoft.Extensions.Options.IOptions<GitHubActionsOptions>>().Value;
-    client.BaseAddress = new Uri(options.AuthServiceClientUrl ?? "http://authentication-service:8080");
+    client.BaseAddress = new Uri(options.AuthServiceClientUrl ?? "https://authentication-service:8443");
     client.DefaultRequestHeaders.UserAgent.ParseAdd("Harbor-Deployment-Service");
     client.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
 });
@@ -173,6 +173,6 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapHarborObservability();
 
-app.Run();
+await app.RunAsync();
 
 public partial class Program { }

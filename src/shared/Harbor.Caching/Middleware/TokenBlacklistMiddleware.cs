@@ -21,7 +21,7 @@ public class TokenBlacklistMiddleware
             if (!string.IsNullOrEmpty(jti))
             {
                 // Check if the token has been revoked
-                var isRevoked = await cache.GetAsync<bool>(CacheKeys.AuthRevokedToken(jti));
+                var isRevoked = await cache.GetAsync<bool>(CacheKeys.AuthRevokedToken(jti), context.RequestAborted);
                 if (isRevoked)
                 {
                     context.Response.StatusCode = StatusCodes.Status401Unauthorized;

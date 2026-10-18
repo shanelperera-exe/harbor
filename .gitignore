@@ -35,6 +35,8 @@ apache-jmeter-*/
 jmeter.log
 *.jtl
 *-report/
+.sonarqube/
+StrykerOutput/
 
 # OS Files
 .DS_Store

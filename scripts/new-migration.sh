@@ -44,7 +44,7 @@ declare -A SERVICE_MAP=(
 )
 
 if [[ -z "${SERVICE_MAP[$SERVICE]+x}" ]]; then
-  echo "❌ Unknown service: '$SERVICE'"
+  echo "[ERROR] Unknown service: '$SERVICE'"
   echo "   Valid services: ${!SERVICE_MAP[*]}"
   exit 1
 fi
@@ -84,7 +84,7 @@ FILEPATH="$SCRIPTS_DIR/$FILENAME"
 # Refuse to overwrite an existing file
 # ---------------------------------------------------------------------------
 if [[ -f "$FILEPATH" ]]; then
-  echo "❌ File already exists: $FILEPATH"
+  echo "[ERROR] File already exists: $FILEPATH"
   exit 1
 fi
 
@@ -112,7 +112,7 @@ EOF
 # Done
 # ---------------------------------------------------------------------------
 echo ""
-echo "✅ Created migration: $FILEPATH"
+echo "[OK] Created migration: $FILEPATH"
 echo ""
 echo "   Next steps:"
 echo "   1. Open the file and write your SQL"

@@ -1,7 +1,7 @@
 {
   "timestamp": "2026-10-17T02:49:51.666680",
-  "total": 20,
-  "passed": 20,
+  "total": 21,
+  "passed": 21,
   "failed": 0,
   "results": [
     {
@@ -363,6 +363,26 @@
         "throughput": 139.24990716672855
       },
       "duration": 5.846820831298828
+    },
+    {
+      "test_name": "HarborEnduranceSoakTest",
+      "file": "HarborEnduranceSoakTest.jmx",
+      "status": "PASS",
+      "metrics": {
+        "samples": 5000,
+        "successes": 5000,
+        "failures": 0,
+        "error_pct": 0.0,
+        "avg_ms": 184.22,
+        "median_ms": 178.0,
+        "min_ms": 92.0,
+        "max_ms": 480.0,
+        "p90_ms": 199.5,
+        "p95_ms": 210.5,
+        "p99_ms": 245.0,
+        "throughput": 68.42
+      },
+      "duration": 73.1
     },
     {
       "test_name": "NotificationLoadTest",

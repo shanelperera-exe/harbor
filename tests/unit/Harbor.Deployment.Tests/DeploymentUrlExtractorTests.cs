@@ -26,6 +26,31 @@ public class DeploymentUrlExtractorTests
     [InlineData("Deployment URL: https://app.company.org/path", "https://app.company.org/path")]
     [InlineData("Endpoint: https://api.sample.com", "https://api.sample.com")]
     [InlineData("URL: https://web.sample.com/", "https://web.sample.com")]
+    [InlineData("Deployed to: \"https://quoted.vercel.app\"", "https://quoted.vercel.app")]
+    [InlineData("Deployed to: 'https://single-quoted.onrender.com'", "https://single-quoted.onrender.com")]
+    [InlineData("Production: http://insecure-http-endpoint.example.com", "http://insecure-http-endpoint.example.com")]
+    [InlineData("Deployed to: https://trailing-slash.up.railway.app///", "https://trailing-slash.up.railway.app")]
+    [InlineData("Deployed to: https://service.internal.io/api/v1/", "https://service.internal.io/api/v1")]
+    // Case-Insensitive & Uppercase Scheme Invariants (Kills RegexOptions.IgnoreCase Mutants)
+    [InlineData("Routing traffic: HTTPS://UPPERCASE-DEMO.VERCEL.APP", "https://uppercase-demo.vercel.app")]
+    [InlineData("==> Deployed to HTTPS://SERVICE.ONRENDER.COM", "https://service.onrender.com")]
+    [InlineData("Routing to Cloud Run: HTTPS://SAMPLE-APP.A.RUN.APP", "https://sample-app.a.run.app")]
+    [InlineData("Firebase Hosting: HTTPS://SAMPLE-FIREBASE.WEB.APP", "https://sample-firebase.web.app")]
+    [InlineData("Service URL: HTTPS://APP-XYZ.US-EAST-1.AWSAPPRUNNER.COM", "https://app-xyz.us-east-1.awsapprunner.com")]
+    [InlineData("CloudFront: HTTPS://D999999ABCDEF9.CLOUDFRONT.NET", "https://d999999abcdef9.cloudfront.net")]
+    [InlineData("AWS Amplify: HTTPS://PROD.AMPLIFYAPP.COM", "https://prod.amplifyapp.com")]
+    [InlineData("Lambda function URL: HTTPS://FN123.LAMBDA-URL.US-WEST-2.ON.AWS", "https://fn123.lambda-url.us-west-2.on.aws")]
+    [InlineData("Azure site live at: HTTPS://MY-APP.AZUREWEBSITES.NET", "https://my-app.azurewebsites.net")]
+    [InlineData("Azure Static Web App: HTTPS://OCEAN-123.AZURESTATICAPPS.NET", "https://ocean-123.azurestaticapps.net")]
+    [InlineData("Azure Container App: HTTPS://CONTAINER.AZURECONTAINERAPPS.IO", "https://container.azurecontainerapps.io")]
+    [InlineData("DigitalOcean: HTTPS://SERVICE.ONDIGITALOCEAN.APP", "https://service.ondigitalocean.app")]
+    [InlineData("Railway App: HTTPS://PROD.UP.RAILWAY.APP", "https://prod.up.railway.app")]
+    [InlineData("Deployed to HTTPS://PROD-APP.RAILWAY.APP", "https://prod-app.railway.app")]
+    [InlineData("production: HTTPS://CUSTOM-DOMAIN.ORG/API", "https://custom-domain.org/API")]
+    [InlineData("url: HTTP://CASE-TEST.EXAMPLE.COM", "http://case-test.example.com")]
+    [InlineData("App Runner endpoint: HTTPS://APP-XYZ.US-EAST-1.AWSAPPRUNNER.COM", "https://app-xyz.us-east-1.awsapprunner.com")]
+    [InlineData("Invoking Lambda URL: HTTPS://FN123.LAMBDA-URL.US-WEST-2.ON.AWS", "https://fn123.lambda-url.us-west-2.on.aws")]
+    [InlineData("Hosted on Railway: HTTPS://PROD.UP.RAILWAY.APP", "https://prod.up.railway.app")]
     public void ExtractUrl_ExtractsValidProviderUrls(string logText, string expectedUrl)
     {
         var result = DeploymentUrlExtractor.ExtractUrl(logText);
@@ -40,6 +65,8 @@ public class DeploymentUrlExtractorTests
     [InlineData("npm run build completed in 2.3s")]
     [InlineData("Production: not-a-valid-url")]
     [InlineData("Deployed to: ftp://invalid-scheme.com")]
+    [InlineData("Deployed to: https://")]
+    [InlineData("Deployed to: http://")]
     public void ExtractUrl_NoUrl_ReturnsNull(string? logText)
     {
         var result = DeploymentUrlExtractor.ExtractUrl(logText);

@@ -39,7 +39,7 @@ public static class DeploymentUrlExtractor
         new Regex(@"https://[a-zA-Z0-9_\-\.]+\.railway\.app", RegexOptions.Compiled | RegexOptions.IgnoreCase),
 
         // Generic explicit outputs like "Production: https://..." or "Deployed to: https://..."
-        new Regex(@"(?:Production|Deployed to|Deployment URL|Endpoint|URL):\s*(https://[^\s\x1b\]\>]+)", RegexOptions.Compiled | RegexOptions.IgnoreCase)
+        new Regex(@"(?:Production|Deployed to|Deployment URL|Endpoint|URL):\s*(https?://[^\s\x1b\]\>]+)", RegexOptions.Compiled | RegexOptions.IgnoreCase)
     };
 
     public static string? ExtractUrl(string? logText)

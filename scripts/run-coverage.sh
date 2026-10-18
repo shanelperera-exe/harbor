@@ -75,7 +75,7 @@ run_test_project() {
         --settings coverlet.runsettings \
         --collect:"XPlat Code Coverage" \
         --results-directory "$RESULTS_DIR" \
-        --verbosity minimal || echo "⚠️  $proj_name had test failures"
+        --verbosity minimal || echo "[WARN] $proj_name had test failures"
 }
 
 echo -e "\n--- Running Unit Tests ---"
@@ -113,7 +113,7 @@ echo "=========================================================="
 
 open_report() {
     local html_path="$REPORT_DIR/index.html"
-    echo -e "\n🌐 Opening coverage report in your browser..."
+    echo -e "\nOpening coverage report in your browser..."
 
     # WSL environment (Windows host browser)
     if grep -qi microsoft /proc/version 2>/dev/null && command -v powershell.exe &> /dev/null && command -v wslpath &> /dev/null; then

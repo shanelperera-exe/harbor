@@ -28,8 +28,16 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Install ReportGenerator Tool
-        run: dotnet tool install -g dotnet-reportgenerator-globaltool || true
+      - name: Setup Java 21 (Required for SonarCloud Scanner)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Install Quality & Coverage Global Tools
+        run: |
+          dotnet tool install -g dotnet-sonarscanner || true
+          dotnet tool install -g dotnet-reportgenerator-globaltool || true
 
       - name: Restore Dependencies
         run: dotnet restore Harbor.sln
@@ -39,9 +47,18 @@ jobs:
           dotnet format whitespace --verify-no-changes --verbosity minimal || echo "Formatting check completed"
           dotnet build Harbor.sln --configuration Release -p:RunAnalyzersDuringBuild=true --verbosity minimal
 
-      - name: Run Multi-Assembly Coverage Collection
+      - name: Run Multi-Assembly Coverage Collection & SonarCloud Analysis
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          ./scripts/run-code-quality.sh --unit --skip-static
+          if [ -n "$SONAR_TOKEN" ]; then
+            echo "Executing Live SonarCloud Quality Analysis..."
+            ./scripts/run-sonarcloud.sh --token "$SONAR_TOKEN"
+          else
+            echo "SONAR_TOKEN secret not configured in repository secrets. Running local Coverlet + ReportGenerator quality gate..."
+            ./scripts/run-code-quality.sh --unit --skip-static
+          fi
 
       - name: Upload Quality & Coverage Reports
         uses: actions/upload-artifact@v4

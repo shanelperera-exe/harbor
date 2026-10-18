@@ -129,13 +129,16 @@ dotnet test tests/unit/Harbor.Deployment.Tests/Harbor.Deployment.Tests.csproj \
 ./scripts/run-performance-tests.sh --spike
 ```
 
-#### Student 4: Code Quality & Metrics (SonarQube / Coverlet)
+#### Student 4: Code Quality & Metrics (SonarQube / SonarCloud / Coverlet)
 ```bash
-# Run code quality, Roslyn static analysis, and multi-assembly coverage
+# Run code quality, Roslyn static analysis, and multi-assembly coverage (Local ReportGenerator)
 ./scripts/run-code-quality.sh --unit
 
 # Run quality checks and immediately open HTML coverage & risk dashboard in browser
 ./scripts/run-code-quality.sh --unit --open
+
+# Run live SonarCloud analysis and push metrics to cloud dashboard
+./scripts/run-sonarcloud.sh --token <YOUR_SONAR_TOKEN>
 
 # Run static code analysis only (format and rule validations)
 ./scripts/run-code-quality.sh --static-only

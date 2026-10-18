@@ -23,6 +23,7 @@ RUN_UNIT=false
 RUN_MUTATION=false
 RUN_PERF=false
 RUN_QUALITY=false
+USE_SONARCLOUD=false
 OPEN_BROWSER=false
 
 if [[ $# -eq 0 ]]; then
@@ -39,6 +40,10 @@ for arg in "$@"; do
             RUN_MUTATION=true
             RUN_PERF=true
             RUN_QUALITY=true
+            ;;
+        --sonar|--sonarcloud)
+            RUN_QUALITY=true
+            USE_SONARCLOUD=true
             ;;
         --unit)
             RUN_UNIT=true
@@ -64,6 +69,7 @@ for arg in "$@"; do
             echo "  --mutation         Run Student 2: Mutation Testing (Stryker.NET)"
             echo "  --perf, --load     Run Student 3: Load & Performance Testing (Apache JMeter)"
             echo "  --quality          Run Student 4: Code Quality, Coverage & Metrics (Coverlet/ReportGen)"
+            echo "  --sonarcloud       Push Code Quality metrics to live SonarCloud project"
             echo "  --open             Automatically open generated HTML reports in browser"
             echo "  --help, -h         Show this help message"
             exit 0
@@ -111,7 +117,11 @@ if [[ "$RUN_QUALITY" == true ]]; then
     echo -e "${BOLD}${BLUE}  ▶ [STAGE 4/4] Code Quality, Coverage & Metrics (Student 4)          ${RESET}"
     echo -e "${BOLD}${BLUE}    Target: Solution-wide Microservices (Roslyn + Coverlet + Sonar)   ${RESET}"
     echo -e "${BOLD}${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
-    ./scripts/run-code-quality.sh --unit
+    if [[ "$USE_SONARCLOUD" == true ]] || [[ -n "$SONAR_TOKEN" ]]; then
+        ./scripts/run-sonarcloud.sh
+    else
+        ./scripts/run-code-quality.sh --unit
+    fi
     echo -e "${GREEN}  ✓ Static analysis, branch coverage & quality gate: PASSED${RESET}"
 fi
 

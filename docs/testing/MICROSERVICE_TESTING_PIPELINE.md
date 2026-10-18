@@ -110,11 +110,11 @@ Each student's component can also be executed independently for focused live viv
 
 #### Student 2: Mutation Testing (Stryker.NET)
 ```bash
-# Fast live-demo mutation run (~25s) with HTML report generation
-./scripts/run-mutation-tests.sh --fast
+# Student 2 Dedicated Viva Command (~45s, 83.33% MSI)
+./scripts/run-mutation-tests.sh --student2
 
-# Fast live-demo mutation run and immediately open report in browser
-./scripts/run-mutation-tests.sh --fast --open
+# Run mutation tests and immediately open interactive HTML report in browser
+./scripts/run-mutation-tests.sh --student2 --open
 
 # Full mutation test run across domain services
 ./scripts/run-mutation-tests.sh --all
@@ -167,7 +167,7 @@ The pipeline is fully automated on GitHub Actions:
 | :--- | :--- | :--- | :--- | :--- |
 | **00:00 – 02:00** (2 min) | **Group Intro & Pipeline Demo** | Group Lead | Architecture Diagram + Terminal running `./scripts/run-testing-pipeline.sh --all` | Recap Harbor microservice architecture (.NET 10, Kafka, Redis, PostgreSQL). Demonstrate how the master script triggers all 4 stages systematically. |
 | **02:00 – 04:00** (2 min) | **Student 1: Unit Testing & Mocking** | Student 1 | Terminal (`dotnet test`) + `DeploymentServiceAdvancedMockingTests.cs` | Explain parameterized `[Theory]` suites (`[InlineData]`, `[MemberData]`). Highlight strict Test Doubles for Kafka & GitHub, verifying call invariants and rollback isolation. |
-| **04:00 – 06:00** (2 min) | **Student 2: Mutation Testing** | Student 2 | Stryker Interactive HTML Report + Terminal (`run-mutation-tests.sh`) | Explain Mutation Score Indicator (MSI). Demonstrate how surviving mutants were identified in regex logic and killed with new boundary tests, boosting score. |
+| **04:00 – 06:00** (2 min) | **Student 2: Mutation Testing** | Student 2 | Stryker Interactive HTML Report + Terminal (`./scripts/run-mutation-tests.sh --student2`) | Present Mutation Score Indicator (MSI: 83.33%, up from 45.24%). Detail real bug caught & fixed in `DeploymentLogSanitizer.cs` (Bearer double-redaction). Show how surviving bitwise mutants were killed via case-insensitive URL invariants and explain equivalent mutants. |
 | **06:00 – 08:00** (2 min) | **Student 3: Load & Performance** | Student 3 | JMeter HTML Dashboard (APDEX, Latency, TPS) + Terminal (`run-performance-tests.sh`) | Present Baseline, Concurrency (100 VUs), and Spike load curves. Prove p95 latency < 150ms and 0.00% error rate under concurrency. |
 | **08:00 – 10:00** (2 min) | **Student 4: Code Quality & Metrics** | Student 4 | ReportGenerator / SonarQube HTML Dashboard + Quality Gate terminal output | Walk through multi-assembly line (54.3%) and branch (59.7%) coverage, CRAP risk hotspots, and passing SonarQube Quality Gate (Rating A, tech debt < 4%). |
 | **10:00 – 12:00** (2 min) | **Technical VIVA / Q&A Defense** | All Students | Slide 5 (Summary Metrics) / Open for Questioning | Confident, technically deep defense of architectural choices and testing concepts. |

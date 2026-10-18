@@ -13,7 +13,7 @@ internal static partial class DeploymentLogSanitizer
         RegexOptions.Compiled);
 
     private static readonly Regex SensitiveSetting = new(
-        @"(?i)(?<![A-Za-z0-9])([A-Za-z0-9_.-]*(?:password|passwd|pwd|secret|token|api[_-]?key|client[_-]?secret|access[_-]?key|private[_-]?key|authorization)[A-Za-z0-9_.-]*)(\s*[:=]\s*)(?:""[^""]*""|'[^']*'|[^\s,;]+)",
+        @"(?i)(?<![A-Za-z0-9])([A-Za-z0-9_.-]*(?:password|passwd|pwd|secret|token|api[_-]?key|client[_-]?secret|access[_-]?key|private[_-]?key)[A-Za-z0-9_.-]*)(\s*[:=]\s*)(?:""[^""]*""|'[^']*'|[^\s,;]+)",
         RegexOptions.Compiled);
 
     public static string Sanitize(string? text)

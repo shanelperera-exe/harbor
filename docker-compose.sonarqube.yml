@@ -14,6 +14,22 @@ services:
       - harbor_sonarqube_logs:/opt/sonarqube/logs
     restart: unless-stopped
 
+  # Cloudflare Tunnel exposing SonarQube as https://sonar.harborapp.tech so the GitHub-hosted
+  # microservice-testing-pipeline can reach it. In the Cloudflare Zero Trust dashboard set the
+  # tunnel's public hostname to: sonar.harborapp.tech -> http://sonarqube:9000
+  # Requires CLOUDFLARE_TUNNEL_TOKEN in the (untracked) .env file.
+  # Start with: docker compose -f docker-compose.sonarqube.yml --profile tunnel up -d
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: harbor-sonar-tunnel
+    profiles: ["tunnel"]
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN:?Set CLOUDFLARE_TUNNEL_TOKEN in .env}
+    depends_on:
+      - sonarqube
+    restart: unless-stopped
+
 volumes:
   harbor_sonarqube_data:
     name: harbor_sonarqube_data

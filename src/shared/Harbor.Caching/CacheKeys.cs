@@ -13,7 +13,7 @@ public static class CacheKeys
     public static string AllProjects() => "proj:all";
     public static string ProjectById(int id) => $"proj:id:{id}";
     public static string ProjectByPublicId(string publicId) => $"proj:pubid:{publicId}";
-    
+
     // Services
     public static string ServicesByProject(int projectId) => $"svc:proj:{projectId}";
     public static string ServiceById(int serviceId) => $"svc:id:{serviceId}";
@@ -43,17 +43,17 @@ public static class CacheTtl
     public static readonly TimeSpan AllProjects = TimeSpan.FromMinutes(2);
     public static readonly TimeSpan Service = TimeSpan.FromMinutes(10);
     public static readonly TimeSpan ServiceList = TimeSpan.FromMinutes(5);
-    
+
     public static readonly TimeSpan UserProfile = TimeSpan.FromMinutes(15);
     public static readonly TimeSpan PasswordReset = TimeSpan.FromHours(1);
-    
+
     public static readonly TimeSpan Environment = TimeSpan.FromMinutes(5);
-    
+
     public static readonly TimeSpan DeployHistory = TimeSpan.FromSeconds(30);
     public static readonly TimeSpan DeployById = TimeSpan.FromMinutes(1);
     public static readonly TimeSpan GitHubToken = TimeSpan.FromMinutes(55);
     public static readonly TimeSpan GitHubCi = TimeSpan.FromSeconds(30);
-    
+
     public static readonly TimeSpan ReportAggregate = TimeSpan.FromMinutes(5);
     public static readonly TimeSpan ReportDashboard = TimeSpan.FromMinutes(2);
 }

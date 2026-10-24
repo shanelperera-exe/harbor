@@ -158,7 +158,7 @@ jobs:
 
       - name: Verify Code Formatting & Static Analysis
         run: |
-          dotnet format whitespace --verify-no-changes --verbosity minimal || echo "Formatting check completed"
+          dotnet format whitespace --verify-no-changes --verbosity minimal
           dotnet build Harbor.sln --configuration Release -p:RunAnalyzersDuringBuild=true --verbosity minimal
 
       - name: Run Multi-Assembly Coverage Collection & Quality Gate (SonarQube with SonarCloud Fallback)
@@ -166,7 +166,7 @@ jobs:
           SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL || secrets.SONAR_HOST_URL || 'https://sonar.harborapp.tech' }}
           SONAR_QUBE_TOKEN: ${{ secrets.SONAR_QUBE_TOKEN || secrets.SONAR_TOKEN }}
           SONAR_CLOUD_TOKEN: ${{ secrets.SONAR_CLOUD_TOKEN || secrets.SONAR_TOKEN }}
-          SONAR_ORGANIZATION: ${{ vars.SONAR_ORGANIZATION || secrets.SONAR_ORGANIZATION || 'shanelperera-exe' }}
+          SONAR_ORGANIZATION: ${{ vars.SONAR_ORGANIZATION || secrets.SONAR_ORGANIZATION || 'harbor-platform' }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           SONAR_HOST="${SONAR_HOST_URL:-https://sonar.harborapp.tech}"

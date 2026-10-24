@@ -71,7 +71,7 @@ namespace Harbor.Reporting.Workers
 
                             // 3. Fetch real logs from the provider
                             var latestLogs = await adapter.FetchLatestLogsAsync(serviceId, serviceInfo.ProviderToken ?? "dummy_token", stoppingToken);
-                            
+
                             // 4. Broadcast and Cache each log
                             foreach (var log in latestLogs)
                             {
@@ -84,7 +84,7 @@ namespace Harbor.Reporting.Workers
 
                                 // Broadcast to SignalR
                                 await _hubContext.Clients.Group($"logs_{serviceId}").SendAsync("ReceiveLog", serviceId, logEntry, cancellationToken: stoppingToken);
-                                
+
                                 // Buffer in Redis
                                 string cacheKey = $"logs:buffer:{serviceId}";
                                 var recentLogs = await _cacheService.GetAsync<List<object>>(cacheKey, stoppingToken) ?? new List<object>();

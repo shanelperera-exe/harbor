@@ -90,7 +90,7 @@ public class NotificationsControllerTests
     }
 
     [Theory]
-    [InlineData(0,  1)]   // below minimum → clamped to 1
+    [InlineData(0, 1)]   // below minimum → clamped to 1
     [InlineData(100, 50)] // above maximum → clamped to 50
     [InlineData(20, 20)]  // within range → unchanged
     public async Task GetNotifications_LimitClamping_RespectsMinMax(int inputLimit, int expectedLimit)

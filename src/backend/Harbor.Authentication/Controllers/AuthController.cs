@@ -26,12 +26,12 @@ namespace Harbor.Authentication.Controllers
         private readonly IJwtService? _jwtService;
 
         public AuthController(
-            IAuthService authService, 
+            IAuthService authService,
             IUserRepository userRepository,
             IEncryptionService encryptionService,
             IGitHubAppApiClient appClient,
             IOptions<GitHubAppOptions> appOptions,
-            IExternalAuthService? externalAuthService = null, 
+            IExternalAuthService? externalAuthService = null,
             IGitHubAppAuthService? gitHubAppAuthService = null,
             IJwtService? jwtService = null)
         {

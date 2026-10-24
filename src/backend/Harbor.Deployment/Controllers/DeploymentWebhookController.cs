@@ -39,9 +39,9 @@ public sealed class DeploymentWebhookController(
 
         // Verify HMAC-SHA256 signature using the configured webhook secret
         // Check both GH_ prefixed (GitHub Environment) and GITHUB_ prefixed (legacy) env vars
-        var webhookSecret = Environment.GetEnvironmentVariable("GH_APP_WEBHOOK_SECRET") 
+        var webhookSecret = Environment.GetEnvironmentVariable("GH_APP_WEBHOOK_SECRET")
             ?? Environment.GetEnvironmentVariable("GITHUB_APP_WEBHOOK_SECRET");
-        
+
         if (!string.IsNullOrWhiteSpace(webhookSecret))
         {
             if (!VerifySignature(rawBody, signature, webhookSecret))
@@ -159,8 +159,8 @@ public sealed class DeploymentWebhookController(
                         await repository.AddLogsAsync(captureDeploymentId, logText);
                     }
 
-                    var detectedUrl = !string.IsNullOrWhiteSpace(logText) 
-                        ? DeploymentUrlExtractor.ExtractUrl(logText) 
+                    var detectedUrl = !string.IsNullOrWhiteSpace(logText)
+                        ? DeploymentUrlExtractor.ExtractUrl(logText)
                         : null;
 
                     if (string.IsNullOrWhiteSpace(detectedUrl) && cloudProviderSync != null)
@@ -168,13 +168,13 @@ public sealed class DeploymentWebhookController(
                         try
                         {
                             var providerInfo = await repository.GetServiceProviderAndTokenAsync(deployment.ServiceId);
-                            if (providerInfo != null && 
-                                !string.IsNullOrWhiteSpace(providerInfo.Value.Provider) && 
+                            if (providerInfo != null &&
+                                !string.IsNullOrWhiteSpace(providerInfo.Value.Provider) &&
                                 !string.IsNullOrWhiteSpace(providerInfo.Value.EncryptedToken))
                             {
                                 detectedUrl = await cloudProviderSync.FetchLiveDeploymentUrlAsync(
-                                    providerInfo.Value.Provider, 
-                                    providerInfo.Value.EncryptedToken, 
+                                    providerInfo.Value.Provider,
+                                    providerInfo.Value.EncryptedToken,
                                     deployment.CommitSha
                                 );
                             }

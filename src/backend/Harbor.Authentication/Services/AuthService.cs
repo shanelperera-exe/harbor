@@ -325,9 +325,9 @@ namespace Harbor.Authentication.Services
             }
 
             var preferences = await _userRepository.UpsertPreferencesAsync(userId, dashboardTheme, logTheme);
-            
+
             await _cache.RemoveAsync(CacheKeys.AuthUserById(userId));
-            
+
             return (true, null, ToPreferencesResponse(preferences));
         }
 

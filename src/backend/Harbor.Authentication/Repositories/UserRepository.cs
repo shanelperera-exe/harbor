@@ -241,9 +241,14 @@ namespace Harbor.Authentication.Repositories
             if (!await reader.ReadAsync()) return null;
             return new User
             {
-                Id = reader.GetInt32(0), Username = reader.GetString(1), Email = reader.GetString(2),
-                PasswordHash = reader.GetString(3), Role = reader.GetString(4), CreatedAt = reader.GetDateTime(5),
-                AvatarSvg = reader.IsDBNull(6) ? null : reader.GetString(6), HasPassword = reader.GetBoolean(7)
+                Id = reader.GetInt32(0),
+                Username = reader.GetString(1),
+                Email = reader.GetString(2),
+                PasswordHash = reader.GetString(3),
+                Role = reader.GetString(4),
+                CreatedAt = reader.GetDateTime(5),
+                AvatarSvg = reader.IsDBNull(6) ? null : reader.GetString(6),
+                HasPassword = reader.GetBoolean(7)
             };
         }
 
@@ -341,7 +346,7 @@ namespace Harbor.Authentication.Repositories
             command.CommandText = "SELECT \"AccessToken\" FROM \"ExternalIdentities\" WHERE \"UserId\" = @userId AND \"Provider\" = @provider LIMIT 1";
             command.Parameters.AddWithValue("userId", userId);
             command.Parameters.AddWithValue("provider", provider);
-            
+
             using var reader = await command.ExecuteReaderAsync();
             if (await reader.ReadAsync())
             {

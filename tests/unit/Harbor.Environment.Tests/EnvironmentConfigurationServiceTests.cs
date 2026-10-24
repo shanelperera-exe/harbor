@@ -33,8 +33,11 @@ public class EnvironmentConfigurationServiceTests
         _environmentRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>(), It.IsAny<int>()))
             .ReturnsAsync(new EnvironmentEntity
             {
-                Id = 42, ProjectId = 1, Name = "Development",
-                Type = "Development", IsActive = true
+                Id = 42,
+                ProjectId = 1,
+                Name = "Development",
+                Type = "Development",
+                IsActive = true
             });
 
         // Secret protector wraps values so we can assert encryption happened
@@ -52,8 +55,11 @@ public class EnvironmentConfigurationServiceTests
 
     private EnvironmentEntity ActiveEnvironment() => new()
     {
-        Id = 42, ProjectId = 1, Name = "Development",
-        Type = "Development", IsActive = true
+        Id = 42,
+        ProjectId = 1,
+        Name = "Development",
+        Type = "Development",
+        IsActive = true
     };
 
     // -------------------------------------------------------------------------------------
@@ -132,8 +138,11 @@ public class EnvironmentConfigurationServiceTests
         _environmentRepository.Setup(r => r.GetByIdAsync(42, 1))
             .ReturnsAsync(new EnvironmentEntity
             {
-                Id = 42, ProjectId = 1, Name = "Development",
-                Type = "Development", IsActive = false
+                Id = 42,
+                ProjectId = 1,
+                Name = "Development",
+                Type = "Development",
+                IsActive = false
             });
 
         var request = ValidRequest();
@@ -324,8 +333,11 @@ public class EnvironmentConfigurationServiceTests
     {
         var existingSecret = new EnvironmentConfigurationEntity
         {
-            Id = 1, EnvironmentId = 42, Key = "db.password",
-            Value = "ENCRYPTED(previous)", IsSecret = true
+            Id = 1,
+            EnvironmentId = 42,
+            Key = "db.password",
+            Value = "ENCRYPTED(previous)",
+            IsSecret = true
         };
         _configurationRepository.Setup(r => r.GetByEnvironmentIdAsync(42))
             .ReturnsAsync([existingSecret]);

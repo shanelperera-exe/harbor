@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Harbor.Reporting.Adapters
 {
-    public static class SharedVercelState 
+    public static class SharedVercelState
     {
         public static bool IsConnected { get; set; } = false;
     }
@@ -35,13 +35,13 @@ namespace Harbor.Reporting.Adapters
             {
                 var client = _httpClientFactory.CreateClient();
                 client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiToken);
-                
+
                 var response = await client.GetAsync("https://api.vercel.com/v6/deployments?limit=1", ct);
                 if (response.IsSuccessStatusCode)
                 {
                     var json = await response.Content.ReadAsStringAsync(ct);
                     var doc = JsonDocument.Parse(json);
-                    
+
                     var deployments = doc.RootElement.GetProperty("deployments");
                     if (deployments.GetArrayLength() > 0)
                     {
@@ -52,13 +52,13 @@ namespace Harbor.Reporting.Adapters
                         var id = latest.GetProperty("uid").GetString();
 
                         var target = latest.TryGetProperty("target", out var targetProp) && targetProp.ValueKind != JsonValueKind.Null ? targetProp.GetString() : "production";
-                        
+
                         var entries = new List<ProviderLogEntry>
                         {
-                            new ProviderLogEntry 
-                            { 
-                                Level = state == "READY" ? "[success]" : "[info]", 
-                                Message = $"[Vercel Sync] Active {target?.ToUpper() ?? "PRODUCTION"} deployment: {name} (State: {state})", 
+                            new ProviderLogEntry
+                            {
+                                Level = state == "READY" ? "[success]" : "[info]",
+                                Message = $"[Vercel Sync] Active {target?.ToUpper() ?? "PRODUCTION"} deployment: {name} (State: {state})",
                                 Timestamp = DateTime.UtcNow.ToString("HH:mm:ss.ff")
                             },
                             new ProviderLogEntry
@@ -74,10 +74,10 @@ namespace Harbor.Reporting.Adapters
                     {
                         return new List<ProviderLogEntry>
                         {
-                            new ProviderLogEntry 
-                            { 
-                                Level = "warn", 
-                                Message = $"[Vercel Integration] Connected, but no deployments found on Vercel.", 
+                            new ProviderLogEntry
+                            {
+                                Level = "warn",
+                                Message = $"[Vercel Integration] Connected, but no deployments found on Vercel.",
                                 Timestamp = DateTime.UtcNow.ToString("HH:mm:ss")
                             }
                         };
@@ -87,10 +87,10 @@ namespace Harbor.Reporting.Adapters
                 {
                     return new List<ProviderLogEntry>
                     {
-                        new ProviderLogEntry 
-                        { 
-                            Level = "error", 
-                            Message = $"[Vercel Integration] Error fetching from Vercel API: {response.StatusCode} - Please verify your integration token.", 
+                        new ProviderLogEntry
+                        {
+                            Level = "error",
+                            Message = $"[Vercel Integration] Error fetching from Vercel API: {response.StatusCode} - Please verify your integration token.",
                             Timestamp = DateTime.UtcNow.ToString("HH:mm:ss")
                         }
                     };
@@ -101,10 +101,10 @@ namespace Harbor.Reporting.Adapters
                 _logger.LogError(ex, "Failed to connect to Vercel API.");
                 return new List<ProviderLogEntry>
                 {
-                    new ProviderLogEntry 
-                    { 
-                        Level = "error", 
-                        Message = $"[Vercel Integration] Failed to execute API call: {ex.Message}", 
+                    new ProviderLogEntry
+                    {
+                        Level = "error",
+                        Message = $"[Vercel Integration] Failed to execute API call: {ex.Message}",
                         Timestamp = DateTime.UtcNow.ToString("HH:mm:ss")
                     }
                 };

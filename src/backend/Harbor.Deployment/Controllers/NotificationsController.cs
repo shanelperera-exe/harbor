@@ -32,14 +32,14 @@ public class NotificationsController(INotificationRepository notificationReposit
         limit = Math.Clamp(limit, 1, 50);
 
         var notifications = await notificationRepository.GetByUserIdAsync(userId.Value, limit);
-        var unreadCount   = await notificationRepository.GetUnreadCountAsync(userId.Value);
+        var unreadCount = await notificationRepository.GetUnreadCountAsync(userId.Value);
 
         var dtos = notifications.Select(MapToDto).ToList();
 
         return Ok(new NotificationListResponse
         {
             Notifications = dtos,
-            UnreadCount   = unreadCount,
+            UnreadCount = unreadCount,
         });
     }
 
@@ -88,16 +88,16 @@ public class NotificationsController(INotificationRepository notificationReposit
     private static NotificationDto MapToDto(NotificationEntity entity) =>
         new()
         {
-            Id           = entity.Id,
+            Id = entity.Id,
             DeploymentId = entity.DeploymentId,
-            Type         = entity.Type,
-            Title        = entity.Title,
-            Message      = entity.Message,
-            IsRead       = entity.IsRead,
-            CreatedAt    = entity.CreatedAt,
-            Environment  = entity.Environment,
-            ServiceName  = entity.ServiceName,
-            ProjectName  = entity.ProjectName,
-            Version      = entity.Version,
+            Type = entity.Type,
+            Title = entity.Title,
+            Message = entity.Message,
+            IsRead = entity.IsRead,
+            CreatedAt = entity.CreatedAt,
+            Environment = entity.Environment,
+            ServiceName = entity.ServiceName,
+            ProjectName = entity.ProjectName,
+            Version = entity.Version,
         };
 }

@@ -20,9 +20,13 @@ public class EnvironmentConfigurationRepository(DbConnectionFactory dbFactory) :
         {
             items.Add(new EnvironmentConfigurationEntity
             {
-                Id = reader.GetInt32(0), EnvironmentId = reader.GetInt32(1), Key = reader.GetString(2),
-                Value = reader.GetString(3), IsSecret = reader.GetBoolean(4),
-                CreatedAt = reader.GetDateTime(5), UpdatedAt = reader.GetDateTime(6)
+                Id = reader.GetInt32(0),
+                EnvironmentId = reader.GetInt32(1),
+                Key = reader.GetString(2),
+                Value = reader.GetString(3),
+                IsSecret = reader.GetBoolean(4),
+                CreatedAt = reader.GetDateTime(5),
+                UpdatedAt = reader.GetDateTime(6)
             });
         }
         return items;

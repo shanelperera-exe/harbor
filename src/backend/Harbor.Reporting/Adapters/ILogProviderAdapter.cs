@@ -14,7 +14,7 @@ namespace Harbor.Reporting.Adapters
     public interface ILogProviderAdapter
     {
         string ProviderName { get; }
-        
+
         /// <summary>
         /// Fetches the latest logs from the native provider's API (e.g. Vercel, AWS).
         /// </summary>

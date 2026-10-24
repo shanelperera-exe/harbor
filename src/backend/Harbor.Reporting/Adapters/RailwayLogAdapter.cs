@@ -48,7 +48,7 @@ namespace Harbor.Reporting.Adapters
                 {
                     var json = await response.Content.ReadAsStringAsync(ct);
                     using var doc = JsonDocument.Parse(json);
-                    
+
                     string userIdentifier = "Railway Account";
                     string? projectName = null;
 

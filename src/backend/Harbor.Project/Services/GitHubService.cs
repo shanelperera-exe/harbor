@@ -180,7 +180,7 @@ namespace Harbor.Project.Services
             using var request = new HttpRequestMessage(HttpMethod.Get, $"repos/{owner}/{repo}/commits?sha={branch}&per_page=100");
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-using var response = await _httpClient.SendAsync(request);
+            using var response = await _httpClient.SendAsync(request);
             if (!response.IsSuccessStatusCode)
                 throw new GitHubApiException(response.StatusCode, await response.Content.ReadAsStringAsync());
 

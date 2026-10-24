@@ -24,16 +24,16 @@ namespace Harbor.Deployment.IntegrationTests;
 public class DeploymentApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
     // Test-only signing values — mirrored in TestJwtFactory.
-    public const string JwtSecret  = "deployment-integration-test-key-at-least-32chars";
-    public const string JwtIssuer  = "harbor-auth-test";
+    public const string JwtSecret = "deployment-integration-test-key-at-least-32chars";
+    public const string JwtIssuer = "harbor-auth-test";
     public const string JwtAudience = "harbor-web-test";
 
     // Stable seed IDs used across all tests.
-    public const int SeedOwnerId      = 1001;
-    public const int OtherOwnerId     = 1002;
-    public const int SeedProjectId    = 10;
-    public const int SeedServiceId    = 20;
-    public const int OtherServiceId   = 21;
+    public const int SeedOwnerId = 1001;
+    public const int OtherOwnerId = 1002;
+    public const int SeedProjectId = 10;
+    public const int SeedServiceId = 20;
+    public const int OtherServiceId = 21;
     public const string SeedRepoFullName = "test-owner/test-repo";
 
     internal readonly PostgreSqlContainer _db = new PostgreSqlBuilder()
@@ -50,8 +50,8 @@ public class DeploymentApiFactory : WebApplicationFactory<Program>, IAsyncLifeti
         builder.ConfigureAppConfiguration((_, config) =>
             config.AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["JWT_SECRET"]  = JwtSecret,
-                ["JWT_ISSUER"]  = JwtIssuer,
+                ["JWT_SECRET"] = JwtSecret,
+                ["JWT_ISSUER"] = JwtIssuer,
                 ["JWT_AUDIENCE"] = JwtAudience,
                 // Point the real DbConnectionFactory at the Testcontainers instance.
                 ["ConnectionStrings:HarborDb"] = _db.GetConnectionString(),
@@ -66,13 +66,13 @@ public class DeploymentApiFactory : WebApplicationFactory<Program>, IAsyncLifeti
             services.PostConfigure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, options =>
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
-                    ValidateIssuer           = true,
-                    ValidateAudience         = true,
-                    ValidateLifetime         = true,
+                    ValidateIssuer = true,
+                    ValidateAudience = true,
+                    ValidateLifetime = true,
                     ValidateIssuerSigningKey = true,
-                    ValidIssuer              = JwtIssuer,
-                    ValidAudience            = JwtAudience,
-                    IssuerSigningKey         = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(JwtSecret))
+                    ValidIssuer = JwtIssuer,
+                    ValidAudience = JwtAudience,
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(JwtSecret))
                 });
 
             services.RemoveAll<IGitHubActionsClient>();

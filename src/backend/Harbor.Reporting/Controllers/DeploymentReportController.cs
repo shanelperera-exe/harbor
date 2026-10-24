@@ -49,16 +49,16 @@ public class DeploymentReportController(IReportService reportService) : Controll
         if (query.StartDate.HasValue && query.EndDate.HasValue && query.StartDate > query.EndDate)
             return BadRequest(new ProblemDetails
             {
-                Title  = "Invalid date range",
+                Title = "Invalid date range",
                 Detail = "StartDate must be on or before EndDate.",
                 Status = StatusCodes.Status400BadRequest,
             });
 
-        var userId  = GetUserId();
+        var userId = GetUserId();
         if (userId is null) return Unauthorized();
 
         var isAdmin = User.IsInRole("Admin");
-        var report  = await reportService.GetDeploymentReportAsync(userId.Value, isAdmin, query);
+        var report = await reportService.GetDeploymentReportAsync(userId.Value, isAdmin, query);
         return Ok(report);
     }
 

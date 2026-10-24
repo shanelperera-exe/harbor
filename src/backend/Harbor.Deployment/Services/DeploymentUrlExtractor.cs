@@ -54,12 +54,12 @@ public static class DeploymentUrlExtractor
             var match = pattern.Match(logText);
             if (match.Success)
             {
-                var url = match.Groups.Count > 1 && match.Groups[1].Success 
-                    ? match.Groups[1].Value 
+                var url = match.Groups.Count > 1 && match.Groups[1].Success
+                    ? match.Groups[1].Value
                     : match.Value;
 
                 url = url.Trim().TrimEnd('.', ',', ';', '"', '\'');
-                if (Uri.TryCreate(url, UriKind.Absolute, out var parsed) && 
+                if (Uri.TryCreate(url, UriKind.Absolute, out var parsed) &&
                     (parsed.Scheme == Uri.UriSchemeHttp || parsed.Scheme == Uri.UriSchemeHttps))
                 {
                     return parsed.ToString().TrimEnd('/');

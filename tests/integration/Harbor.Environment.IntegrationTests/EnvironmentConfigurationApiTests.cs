@@ -167,8 +167,10 @@ public class EnvironmentConfigurationApiTests(EnvironmentApiFactory factory) : I
 
         var request = new ConfigureEnvironmentRequest
         {
-            DeploymentUrl = url, Provider = provider,
-            Configuration = [], SecureValues = []
+            DeploymentUrl = url,
+            Provider = provider,
+            Configuration = [],
+            SecureValues = []
         };
 
         var response = await ConfigureAsync(projectId, environmentId, request, userId: 9004);
@@ -186,8 +188,10 @@ public class EnvironmentConfigurationApiTests(EnvironmentApiFactory factory) : I
 
         var request = new ConfigureEnvironmentRequest
         {
-            DeploymentUrl = url, Provider = "aws",
-            Configuration = [], SecureValues = []
+            DeploymentUrl = url,
+            Provider = "aws",
+            Configuration = [],
+            SecureValues = []
         };
 
         var response = await ConfigureAsync(projectId, environmentId, request, userId: 9005);
@@ -205,8 +209,10 @@ public class EnvironmentConfigurationApiTests(EnvironmentApiFactory factory) : I
 
         var request = new ConfigureEnvironmentRequest
         {
-            DeploymentUrl = "https://dev.example.com", Provider = provider,
-            Configuration = [], SecureValues = []
+            DeploymentUrl = "https://dev.example.com",
+            Provider = provider,
+            Configuration = [],
+            SecureValues = []
         };
 
         var response = await ConfigureAsync(projectId, environmentId, request, userId: 9006);
@@ -221,7 +227,8 @@ public class EnvironmentConfigurationApiTests(EnvironmentApiFactory factory) : I
 
         var request = new ConfigureEnvironmentRequest
         {
-            DeploymentUrl = "https://dev.example.com", Provider = "aws",
+            DeploymentUrl = "https://dev.example.com",
+            Provider = "aws",
             Configuration = [new ConfigurationItemRequest { Key = "", Value = "val" }],
             SecureValues = []
         };
@@ -238,7 +245,8 @@ public class EnvironmentConfigurationApiTests(EnvironmentApiFactory factory) : I
 
         var request = new ConfigureEnvironmentRequest
         {
-            DeploymentUrl = "https://dev.example.com", Provider = "aws",
+            DeploymentUrl = "https://dev.example.com",
+            Provider = "aws",
             Configuration = [new ConfigurationItemRequest { Key = "app.name", Value = "" }],
             SecureValues = []
         };
@@ -255,7 +263,8 @@ public class EnvironmentConfigurationApiTests(EnvironmentApiFactory factory) : I
 
         var request = new ConfigureEnvironmentRequest
         {
-            DeploymentUrl = "https://dev.example.com", Provider = "aws",
+            DeploymentUrl = "https://dev.example.com",
+            Provider = "aws",
             Configuration = [],
             SecureValues = [new ConfigurationItemRequest { Key = "db.password", Value = "" }]
         };
@@ -272,7 +281,8 @@ public class EnvironmentConfigurationApiTests(EnvironmentApiFactory factory) : I
 
         var request = new ConfigureEnvironmentRequest
         {
-            DeploymentUrl = "https://dev.example.com", Provider = "aws",
+            DeploymentUrl = "https://dev.example.com",
+            Provider = "aws",
             Configuration = [new ConfigurationItemRequest { Key = "shared", Value = "v1" }],
             SecureValues = [new ConfigurationItemRequest { Key = "shared", Value = "s3cret" }]
         };
@@ -289,8 +299,10 @@ public class EnvironmentConfigurationApiTests(EnvironmentApiFactory factory) : I
 
         var request = new ConfigureEnvironmentRequest
         {
-            DeploymentUrl = "https://dev.example.com", Provider = "aws",
-            Configuration = [], SecureValues = []
+            DeploymentUrl = "https://dev.example.com",
+            Provider = "aws",
+            Configuration = [],
+            SecureValues = []
         };
 
         var response = await ConfigureAsync(projectId, environmentId, request, userId: 9012);
@@ -304,8 +316,10 @@ public class EnvironmentConfigurationApiTests(EnvironmentApiFactory factory) : I
 
         var request = new ConfigureEnvironmentRequest
         {
-            DeploymentUrl = "https://dev.example.com", Provider = "aws",
-            Configuration = [], SecureValues = []
+            DeploymentUrl = "https://dev.example.com",
+            Provider = "aws",
+            Configuration = [],
+            SecureValues = []
         };
 
         var response = await ConfigureAsync(projectId, 999999, request, userId: 9013);
@@ -325,7 +339,8 @@ public class EnvironmentConfigurationApiTests(EnvironmentApiFactory factory) : I
         var plaintextSecret = "my-super-secret-value-12345";
         var request = new ConfigureEnvironmentRequest
         {
-            DeploymentUrl = "https://dev.example.com", Provider = "aws",
+            DeploymentUrl = "https://dev.example.com",
+            Provider = "aws",
             Configuration = [],
             SecureValues = [new ConfigurationItemRequest { Key = "db.password", Value = plaintextSecret }]
         };
@@ -350,7 +365,8 @@ public class EnvironmentConfigurationApiTests(EnvironmentApiFactory factory) : I
 
         var request = new ConfigureEnvironmentRequest
         {
-            DeploymentUrl = "https://dev.example.com", Provider = "aws",
+            DeploymentUrl = "https://dev.example.com",
+            Provider = "aws",
             Configuration = [new ConfigurationItemRequest { Key = "app.name", Value = "harbor-ui" }],
             SecureValues = []
         };
@@ -373,7 +389,8 @@ public class EnvironmentConfigurationApiTests(EnvironmentApiFactory factory) : I
 
         var firstRequest = new ConfigureEnvironmentRequest
         {
-            DeploymentUrl = "https://old.example.com", Provider = "aws",
+            DeploymentUrl = "https://old.example.com",
+            Provider = "aws",
             Configuration = [new ConfigurationItemRequest { Key = "app.name", Value = "old-app" }],
             SecureValues = [new ConfigurationItemRequest { Key = "token", Value = "old-token" }]
         };
@@ -382,7 +399,8 @@ public class EnvironmentConfigurationApiTests(EnvironmentApiFactory factory) : I
 
         var secondRequest = new ConfigureEnvironmentRequest
         {
-            DeploymentUrl = "https://new.example.com", Provider = "azure",
+            DeploymentUrl = "https://new.example.com",
+            Provider = "azure",
             Configuration = [new ConfigurationItemRequest { Key = "app.name", Value = "new-app" }],
             SecureValues = [new ConfigurationItemRequest { Key = "token", Value = "new-token" }]
         };

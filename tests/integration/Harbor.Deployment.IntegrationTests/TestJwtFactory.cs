@@ -21,14 +21,14 @@ public static class TestJwtFactory
             new Claim(ClaimTypes.Role, role)
         };
 
-        var key         = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(DeploymentApiFactory.JwtSecret));
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(DeploymentApiFactory.JwtSecret));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
         var token = new JwtSecurityToken(
-            issuer:             DeploymentApiFactory.JwtIssuer,
-            audience:           DeploymentApiFactory.JwtAudience,
-            claims:             claims,
-            expires:            DateTime.UtcNow.AddMinutes(30),
+            issuer: DeploymentApiFactory.JwtIssuer,
+            audience: DeploymentApiFactory.JwtAudience,
+            claims: claims,
+            expires: DateTime.UtcNow.AddMinutes(30),
             signingCredentials: credentials);
 
         return new JwtSecurityTokenHandler().WriteToken(token);

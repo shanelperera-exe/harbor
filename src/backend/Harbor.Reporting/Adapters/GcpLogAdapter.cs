@@ -31,16 +31,16 @@ namespace Harbor.Reporting.Adapters
                 var client = _httpClientFactory.CreateClient();
                 client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiToken);
                 client.DefaultRequestHeaders.Add("User-Agent", "Harbor-Agent/1.0");
-                
+
                 var response = await client.GetAsync("https://cloudresourcemanager.googleapis.com/v1/projects", ct);
                 if (response.IsSuccessStatusCode)
                 {
                     return new List<ProviderLogEntry>
                     {
-                        new ProviderLogEntry 
-                        { 
-                            Level = "info", 
-                            Message = $"[GCP Integration] Successfully connected. HTTP 200 OK. Dynamic log stream established.", 
+                        new ProviderLogEntry
+                        {
+                            Level = "info",
+                            Message = $"[GCP Integration] Successfully connected. HTTP 200 OK. Dynamic log stream established.",
                             Timestamp = DateTime.UtcNow.ToString("HH:mm:ss")
                         }
                     };
@@ -49,10 +49,10 @@ namespace Harbor.Reporting.Adapters
                 {
                     return new List<ProviderLogEntry>
                     {
-                        new ProviderLogEntry 
-                        { 
-                            Level = "error", 
-                            Message = $"[GCP Integration] Error fetching from API: {response.StatusCode} - Please verify your integration token.", 
+                        new ProviderLogEntry
+                        {
+                            Level = "error",
+                            Message = $"[GCP Integration] Error fetching from API: {response.StatusCode} - Please verify your integration token.",
                             Timestamp = DateTime.UtcNow.ToString("HH:mm:ss")
                         }
                     };
@@ -63,10 +63,10 @@ namespace Harbor.Reporting.Adapters
                 _logger.LogError(ex, "Failed to connect to GCP API.");
                 return new List<ProviderLogEntry>
                 {
-                    new ProviderLogEntry 
-                    { 
-                        Level = "error", 
-                        Message = $"[GCP Integration] Failed to execute API call: {ex.Message}", 
+                    new ProviderLogEntry
+                    {
+                        Level = "error",
+                        Message = $"[GCP Integration] Failed to execute API call: {ex.Message}",
                         Timestamp = DateTime.UtcNow.ToString("HH:mm:ss")
                     }
                 };

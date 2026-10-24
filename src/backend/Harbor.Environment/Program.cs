@@ -37,15 +37,19 @@ builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
     {
-        Title = "Harbor Environment API", Version = "v1",
+        Title = "Harbor Environment API",
+        Version = "v1",
         Description = "Endpoints for creating and viewing project deployment environments."
     });
     var xmlPath = Path.Combine(AppContext.BaseDirectory, $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml");
     if (File.Exists(xmlPath)) options.IncludeXmlComments(xmlPath);
     options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
     {
-        Name = "Authorization", Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
-        Scheme = "Bearer", BearerFormat = "JWT", In = Microsoft.OpenApi.Models.ParameterLocation.Header
+        Name = "Authorization",
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+        Scheme = "Bearer",
+        BearerFormat = "JWT",
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header
     });
     options.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
     {
@@ -60,8 +64,12 @@ var jwtAudience = builder.Configuration["JWT_AUDIENCE"] ?? "harbor-api";
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
     options.TokenValidationParameters = new TokenValidationParameters
     {
-        ValidateIssuer = true, ValidateAudience = true, ValidateLifetime = true, ValidateIssuerSigningKey = true,
-        ValidIssuer = jwtIssuer, ValidAudience = jwtAudience,
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = jwtIssuer,
+        ValidAudience = jwtAudience,
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret))
     });
 builder.Services.AddAuthorization();

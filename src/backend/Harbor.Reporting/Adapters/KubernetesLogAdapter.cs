@@ -37,13 +37,13 @@ namespace Harbor.Reporting.Adapters
 
                 // Assume in-cluster API by default or fallback to localhost kubectl proxy for PoC
                 var response = await client.GetAsync("https://kubernetes.default.svc/api/v1/pods", ct);
-                
+
                 return new List<ProviderLogEntry>
                 {
-                    new ProviderLogEntry 
-                    { 
-                        Level = "info", 
-                        Message = $"[Kubernetes Integration] Connected to K8s API server. HTTP Status: {response.StatusCode}.", 
+                    new ProviderLogEntry
+                    {
+                        Level = "info",
+                        Message = $"[Kubernetes Integration] Connected to K8s API server. HTTP Status: {response.StatusCode}.",
                         Timestamp = DateTime.UtcNow.ToString("HH:mm:ss")
                     }
                 };

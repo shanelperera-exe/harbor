@@ -5,6 +5,7 @@ using Xunit;
 
 namespace Harbor.Reporting.Tests;
 
+[Collection("ReportingEnvVars")]
 public class DeploymentReportRepositoryParameterTests
 {
     private readonly ReportingDbConnectionFactory _dbFactory;
@@ -27,15 +28,15 @@ public class DeploymentReportRepositoryParameterTests
         _dbFactory = new ReportingDbConnectionFactory(config);
     }
 
-        private bool CanConnect()
+    private bool CanConnect()
+    {
+        try
         {
-            try
-            {
-                using var conn = _dbFactory.CreateConnection();
-                conn.Open();
+            using var conn = _dbFactory.CreateConnection();
+            conn.Open();
 
-                using var cmd = conn.CreateCommand();
-                cmd.CommandText = """
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = """
                     CREATE TABLE IF NOT EXISTS "Users" (
                         "Id" SERIAL PRIMARY KEY,
                         "PublicId" VARCHAR(50) DEFAULT 'usr-test',
@@ -75,15 +76,15 @@ public class DeploymentReportRepositoryParameterTests
                         "FailureReason" TEXT
                     );
                 """;
-                cmd.ExecuteNonQuery();
+            cmd.ExecuteNonQuery();
 
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
+            return true;
         }
+        catch
+        {
+            return false;
+        }
+    }
 
     [Fact]
     public void Repository_InstantiatesSuccessfully_WithConnectionFactory()

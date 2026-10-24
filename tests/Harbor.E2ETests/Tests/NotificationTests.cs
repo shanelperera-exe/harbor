@@ -26,13 +26,13 @@ namespace Harbor.E2ETests.Tests
         {
             // Navigate to login page (uses MainLayout, no notification bell)
             _loginPage.NavigateTo();
-            
+
             // Wait for login page to load
             var wait = new WebDriverWait(Driver, TimeSpan.FromSeconds(10));
             wait.Until(d => d.FindElement(By.CssSelector("[data-testid='username-input']")).Displayed);
-            
+
             // Notification bell should NOT be present in DOM (MainLayout doesn't include it)
-            Assert.That(_notificationPage.IsNotificationBellPresent(), Is.False, 
+            Assert.That(_notificationPage.IsNotificationBellPresent(), Is.False,
                 "Notification bell should not exist in DOM on login page (MainLayout)");
         }
 
@@ -42,15 +42,15 @@ namespace Harbor.E2ETests.Tests
             // Login first
             _loginPage.NavigateTo();
             _loginPage.LoginExpectingSuccess("qa_tester2", "Test@1234");
-            
+
             // Should redirect to projects (DashboardLayout)
             var wait = new WebDriverWait(Driver, TimeSpan.FromSeconds(20));
             wait.Until(d => d.Url.Contains("/projects"));
-            
+
             // Notification bell should be present in DOM (DashboardLayout includes it)
-            Assert.That(_notificationPage.IsNotificationBellPresent(), Is.True, 
+            Assert.That(_notificationPage.IsNotificationBellPresent(), Is.True,
                 "Notification bell should exist in DOM on authenticated pages (DashboardLayout)");
-            
+
             // And should be visible
             Assert.That(_notificationPage.IsNotificationBellVisible(), Is.True,
                 "Notification bell should be visible on authenticated pages");
@@ -61,10 +61,10 @@ namespace Harbor.E2ETests.Tests
         {
             _loginPage.NavigateTo();
             _loginPage.LoginExpectingSuccess("qa_tester2", "Test@1234");
-            
+
             var wait = new WebDriverWait(Driver, TimeSpan.FromSeconds(20));
             wait.Until(d => d.Url.Contains("/projects"));
-            
+
             _notificationPage.OpenPanel();
             Assert.That(_notificationPage.IsNotificationPanelVisible(), Is.True);
         }
@@ -74,13 +74,13 @@ namespace Harbor.E2ETests.Tests
         {
             _loginPage.NavigateTo();
             _loginPage.LoginExpectingSuccess("qa_tester2", "Test@1234");
-            
+
             var wait = new WebDriverWait(Driver, TimeSpan.FromSeconds(20));
             wait.Until(d => d.Url.Contains("/projects"));
-            
+
             _notificationPage.OpenPanel();
             Assert.That(_notificationPage.IsNotificationPanelVisible(), Is.True);
-            
+
             var hasItems = _notificationPage.GetNotificationItems().Count > 0;
             if (!hasItems)
             {
@@ -173,10 +173,10 @@ namespace Harbor.E2ETests.Tests
         {
             _loginPage.NavigateTo();
             _loginPage.LoginExpectingSuccess("qa_tester2", "Test@1234");
-            
+
             var wait = new WebDriverWait(Driver, TimeSpan.FromSeconds(20));
             wait.Until(d => d.Url.Contains("/projects"));
-            
+
             // Badge may or may not exist depending on unread count
             // Just verify bell exists and badge handling works
             Assert.That(_notificationPage.IsNotificationBellVisible(), Is.True);
@@ -187,10 +187,10 @@ namespace Harbor.E2ETests.Tests
         {
             _loginPage.NavigateTo();
             _loginPage.LoginExpectingSuccess("qa_tester2", "Test@1234");
-            
+
             var wait = new WebDriverWait(Driver, TimeSpan.FromSeconds(20));
             wait.Until(d => d.Url.Contains("/projects"));
-            
+
             _notificationPage.OpenPanel();
             var items = _notificationPage.GetNotificationItems();
             if (items.Count > 0)
@@ -206,10 +206,10 @@ namespace Harbor.E2ETests.Tests
         {
             _loginPage.NavigateTo();
             _loginPage.LoginExpectingSuccess("qa_tester2", "Test@1234");
-            
+
             var wait = new WebDriverWait(Driver, TimeSpan.FromSeconds(20));
             wait.Until(d => d.Url.Contains("/projects"));
-            
+
             _notificationPage.OpenPanel();
             if (_notificationPage.IsMarkAllReadVisible())
             {
@@ -223,19 +223,19 @@ namespace Harbor.E2ETests.Tests
         {
             _loginPage.NavigateTo();
             _loginPage.LoginExpectingSuccess("qa_tester2", "Test@1234");
-            
+
             var wait = new WebDriverWait(Driver, TimeSpan.FromSeconds(20));
             wait.Until(d => d.Url.Contains("/projects"));
-            
+
             _notificationPage.OpenPanel();
             Assert.That(_notificationPage.IsNotificationPanelVisible(), Is.True);
-            
+
             _notificationPage.ClosePanelByClickingOutside();
             Assert.That(_notificationPage.IsNotificationPanelVisible(), Is.False);
-            
+
             _notificationPage.OpenPanel();
             Assert.That(_notificationPage.IsNotificationPanelVisible(), Is.True);
-            
+
             _notificationPage.ClosePanelByEscape();
             Assert.That(_notificationPage.IsNotificationPanelVisible(), Is.False);
         }
@@ -245,15 +245,15 @@ namespace Harbor.E2ETests.Tests
         {
             _loginPage.NavigateTo();
             _loginPage.LoginExpectingSuccess("qa_tester2", "Test@1234");
-            
+
             var wait = new WebDriverWait(Driver, TimeSpan.FromSeconds(20));
             wait.Until(d => d.Url.Contains("/projects"));
-            
+
             _notificationPage.OpenPanel();
-            
+
             // Wait a bit more for panel animation to settle
             System.Threading.Thread.Sleep(1000);
-            
+
             var viewAllLink = Driver.FindElements(By.XPath("//a[contains(text(), 'View all deployments')]"));
             if (viewAllLink.Count > 0 && viewAllLink[0].Displayed)
             {
@@ -269,10 +269,10 @@ namespace Harbor.E2ETests.Tests
         {
             _loginPage.NavigateTo();
             _loginPage.LoginExpectingSuccess("qa_tester2", "Test@1234");
-            
+
             var wait = new WebDriverWait(Driver, TimeSpan.FromSeconds(20));
             wait.Until(d => d.Url.Contains("/projects"));
-            
+
             _notificationPage.OpenPanel();
             Assert.That(_notificationPage.IsNotificationPanelVisible(), Is.True);
         }
@@ -304,7 +304,8 @@ namespace Harbor.E2ETests.Tests
 
             var items = _notificationPage.GetNotificationItems();
             // All items should appear read (no blue unread indicator)
-            var hasUnread = items.Any(item => {
+            var hasUnread = items.Any(item =>
+            {
                 var classes = item.GetAttribute("class");
                 return classes.Contains("bg-blue-50");
             });

@@ -41,13 +41,13 @@ namespace Harbor.Reporting.Adapters
 
                 // Simulate an HTTP ping to AWS endpoint (without SigV4 this returns 403, which proves we hit AWS)
                 var response = await client.GetAsync("https://logs.us-east-1.amazonaws.com/", ct);
-                
+
                 return new List<ProviderLogEntry>
                 {
-                    new ProviderLogEntry 
-                    { 
-                        Level = "info", 
-                        Message = $"[AWS Integration] Successfully contacted AWS CloudWatch endpoint. HTTP Status: {response.StatusCode}.", 
+                    new ProviderLogEntry
+                    {
+                        Level = "info",
+                        Message = $"[AWS Integration] Successfully contacted AWS CloudWatch endpoint. HTTP Status: {response.StatusCode}.",
                         Timestamp = DateTime.UtcNow.ToString("HH:mm:ss")
                     }
                 };

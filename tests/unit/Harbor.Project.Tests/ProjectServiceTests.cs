@@ -29,7 +29,8 @@ namespace Harbor.Project.Tests
             var request = new CreateProjectRequest
             {
                 Name = "harbor-api",
-                Description = "Backend API for Harbor",            };
+                Description = "Backend API for Harbor",
+            };
             const int ownerId = 1;
 
             _projectRepositoryMock
@@ -63,7 +64,8 @@ namespace Harbor.Project.Tests
             var request = new CreateProjectRequest
             {
                 Name = "  harbor-api  ",
-                Description = "  some description  ",            };
+                Description = "  some description  ",
+            };
 
             _projectRepositoryMock
                 .Setup(r => r.NameExistsForOwnerAsync("harbor-api", 1))
@@ -80,7 +82,7 @@ namespace Harbor.Project.Tests
             Assert.True(success);
             Assert.Equal("harbor-api", data!.Name);
             Assert.Equal("some description", data.Description);
-            
+
         }
 
         // ---------- CreateAsync: Scenario 3 - Invalid project data ----------

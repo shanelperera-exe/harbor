@@ -457,12 +457,12 @@ public class DeploymentServiceTests
         var result = await _service.UpdateStatusAsync(101, "Failed", "Some error");
 
         Assert.True(result);
-        _kafkaProducer.Verify(k => k.PublishDeploymentEventAsync(It.Is<DeploymentLifecycleEvent>(e => 
-            e.DeploymentId == 101 && 
-            e.ServiceId == "42" && 
-            e.Status == "Failed" && 
-            e.Environment == "Production" && 
-            e.Version == "1.0.0" && 
+        _kafkaProducer.Verify(k => k.PublishDeploymentEventAsync(It.Is<DeploymentLifecycleEvent>(e =>
+            e.DeploymentId == 101 &&
+            e.ServiceId == "42" &&
+            e.Status == "Failed" &&
+            e.Environment == "Production" &&
+            e.Version == "1.0.0" &&
             e.FailureReason == "Some error"
         )), Times.Once);
     }

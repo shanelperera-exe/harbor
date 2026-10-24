@@ -67,7 +67,7 @@ public class KafkaProducerService : IKafkaProducerService, IDisposable
             };
 
             var deliveryResult = await producer.ProduceAsync(options.DeploymentTopic, message);
-            logger.LogInformation("Published deployment event for ID {DeploymentId} to partition {Partition} at offset {Offset}", 
+            logger.LogInformation("Published deployment event for ID {DeploymentId} to partition {Partition} at offset {Offset}",
                 @event.DeploymentId, deliveryResult.Partition, deliveryResult.Offset);
         }
         catch (ProduceException<string, string> ex)

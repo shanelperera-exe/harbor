@@ -25,15 +25,23 @@ public class EnvironmentApiFactory : WebApplicationFactory<global::Program>, IAs
         builder.UseEnvironment("Testing");
         builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(new Dictionary<string, string?>
         {
-            ["JWT_SECRET"] = JwtSecret, ["JWT_ISSUER"] = JwtIssuer, ["JWT_AUDIENCE"] = JwtAudience,
+            ["JWT_SECRET"] = JwtSecret,
+            ["JWT_ISSUER"] = JwtIssuer,
+            ["JWT_AUDIENCE"] = JwtAudience,
             ["ENVIRONMENT_SECRETS_KEY"] = SecretsKey,
-            ["ConnectionStrings:HarborDb"] = _container.GetConnectionString(), ["Cors:AllowedOrigins:0"] = "http://localhost:5173"
+            ["ConnectionStrings:HarborDb"] = _container.GetConnectionString(),
+            ["Cors:AllowedOrigins:0"] = "http://localhost:5173"
         }));
         builder.ConfigureServices(services => services.PostConfigure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, options =>
             options.TokenValidationParameters = new TokenValidationParameters
             {
-                ValidateIssuer = true, ValidateAudience = true, ValidateLifetime = true, ValidateIssuerSigningKey = true,
-                ValidIssuer = JwtIssuer, ValidAudience = JwtAudience, IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(JwtSecret))
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                ValidIssuer = JwtIssuer,
+                ValidAudience = JwtAudience,
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(JwtSecret))
             }));
     }
 

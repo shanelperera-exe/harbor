@@ -237,7 +237,7 @@ public class DeploymentWebhookControllerTests
         _repoMock.Setup(r => r.UpdateTriggerResultAsync(deployment.Id, "Succeeded", null, null)).ReturnsAsync(true);
         _tokenResolverMock.Setup(t => t.GetInstallationTokenAsync(deployment.OwnerId)).ReturnsAsync("token-xyz");
         _repoMock.Setup(r => r.GetRepositoryNameAsync(deployment.ServiceId)).ReturnsAsync("owner/my-service");
-        
+
         var logText = "Deployment complete! Live at https://myservice.vercel.app ready!";
         _clientMock.Setup(c => c.FetchRunLogsAsync("owner", "my-service", runId, "token-xyz", It.IsAny<CancellationToken>()))
             .ReturnsAsync(logText);

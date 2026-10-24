@@ -21,10 +21,10 @@ public class ReportingDbConnectionFactory
 
         if (string.IsNullOrWhiteSpace(_connectionString))
         {
-            var host     = Environment.GetEnvironmentVariable("POSTGRES_SERVER")   ?? "localhost";
-            var port     = Environment.GetEnvironmentVariable("POSTGRES_PORT")     ?? "5433";
+            var host = Environment.GetEnvironmentVariable("POSTGRES_SERVER") ?? "localhost";
+            var port = Environment.GetEnvironmentVariable("POSTGRES_PORT") ?? "5433";
             var database = Environment.GetEnvironmentVariable("POSTGRES_DATABASE") ?? "harbor_db";
-            var username = Environment.GetEnvironmentVariable("POSTGRES_USER")     ?? "harboruser";
+            var username = Environment.GetEnvironmentVariable("POSTGRES_USER") ?? "harboruser";
             var password = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD") ?? "harbor@1234";
 
             _connectionString = $"Host={host};Port={port};Database={database};Username={username};Password={password};";

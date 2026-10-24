@@ -41,9 +41,9 @@ namespace Harbor.Reporting.Controllers
             // 2. Buffer the log in Redis so late-joiners can see recent history
             string cacheKey = $"logs:buffer:{serviceId}";
             var recentLogs = await _cacheService.GetAsync<List<object>>(cacheKey) ?? new List<object>();
-            
+
             recentLogs.Add(logEntry);
-            
+
             // Keep only the last 100 logs to prevent memory bloat
             if (recentLogs.Count > 100)
             {

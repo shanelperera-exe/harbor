@@ -95,12 +95,12 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 // Read through configuration rather than directly from the process environment.
-    // This lets WebApplicationFactory provide isolated test settings without changing
-    // JWT values for other tests running in the same process.
-    var jwtSecret = builder.Configuration["JWT_SECRET"]
-        ?? throw new InvalidOperationException("JWT_SECRET is not configured.");
-    var jwtIssuer = builder.Configuration["JWT_ISSUER"] ?? "harbor";
-    var jwtAudience = builder.Configuration["JWT_AUDIENCE"] ?? "harbor-api";
+// This lets WebApplicationFactory provide isolated test settings without changing
+// JWT values for other tests running in the same process.
+var jwtSecret = builder.Configuration["JWT_SECRET"]
+    ?? throw new InvalidOperationException("JWT_SECRET is not configured.");
+var jwtIssuer = builder.Configuration["JWT_ISSUER"] ?? "harbor";
+var jwtAudience = builder.Configuration["JWT_AUDIENCE"] ?? "harbor-api";
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>

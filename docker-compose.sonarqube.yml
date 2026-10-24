@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   sonarqube:
     image: sonarqube:latest
@@ -25,7 +23,7 @@ services:
     profiles: ["tunnel"]
     command: tunnel --no-autoupdate run
     environment:
-      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN:?Set CLOUDFLARE_TUNNEL_TOKEN in .env}
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN:-}
     depends_on:
       - sonarqube
     restart: unless-stopped

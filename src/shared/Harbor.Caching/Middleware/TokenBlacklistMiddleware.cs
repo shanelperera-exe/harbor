@@ -17,7 +17,7 @@ public class TokenBlacklistMiddleware
         if (context.User.Identity?.IsAuthenticated == true)
         {
             var jti = context.User.FindFirstValue("jti");
-            
+
             if (!string.IsNullOrEmpty(jti))
             {
                 // Check if the token has been revoked

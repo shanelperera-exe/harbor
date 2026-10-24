@@ -8,7 +8,7 @@ namespace Harbor.E2ETests
     {
         protected IWebDriver Driver { get; private set; }
 
-[SetUp]
+        [SetUp]
         public virtual void Setup()
         {
             var options = new ChromeOptions();

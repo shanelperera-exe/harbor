@@ -54,10 +54,10 @@ namespace Harbor.Project.Tests
         public async Task AddDomainAsync_RailwayProvider_CalculatesRailwayCnameTarget()
         {
             // Arrange
-            var service = new ServiceEntity 
-            { 
-                Id = 10, 
-                Name = "web-service", 
+            var service = new ServiceEntity
+            {
+                Id = 10,
+                Name = "web-service",
                 Provider = "Railway",
                 DeploymentUrl = "https://my-app.up.railway.app"
             };

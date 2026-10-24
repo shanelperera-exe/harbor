@@ -61,6 +61,7 @@ if [[ "$MODE" == "fast" ]]; then
         -p Harbor.Deployment.csproj \
         -m "**/DeploymentUrlExtractor.cs" \
         -m "**/DeploymentLogSanitizer.cs" \
+        --break-at 60 \
         -r ClearText -r Html -r Json -r Markdown
 else
     echo -e "${CYAN}▶ Mode: Full Domain Mutation Run${RESET}"
@@ -68,49 +69,92 @@ else
     dotnet stryker \
         -p Harbor.Deployment.csproj \
         -m "Services/*.cs" \
+        --break-at 60 \
         -r ClearText -r Html -r Json -r Markdown
 fi
 
 # Locate the latest generated reports
 LATEST_HTML=$(find "$TEST_DIR/StrykerOutput" -name "mutation-report.html" 2>/dev/null | sort -r | head -n 1 || true)
 LATEST_MD=$(find "$TEST_DIR/StrykerOutput" -name "mutation-report.md" 2>/dev/null | sort -r | head -n 1 || true)
+LATEST_JSON=$(find "$TEST_DIR/StrykerOutput" -name "mutation-report.json" 2>/dev/null | sort -r | head -n 1 || true)
 
-echo -e "\n${BOLD}${GREEN}==========================================================${RESET}"
-echo -e "${BOLD}${GREEN}  STAGE 2: MUTATION TESTING COMPLETED SUCCESSFULLY (83.33%)${RESET}"
-echo -e "${BOLD}${GREEN}==========================================================${RESET}"
+if [[ -f "$LATEST_JSON" ]]; then
+    PARSED_STATS=$(python3 -c "
+import json
+with open('$LATEST_JSON') as f:
+    d = json.load(f)
+killed = 0
+survived = 0
+timeout = 0
+total = 0
+for fd in d.get('files', {}).values():
+    for m in fd.get('mutants', []):
+        total += 1
+        st = m.get('status')
+        if st == 'Killed': killed += 1
+        elif st == 'Survived': survived += 1
+        elif st == 'Timeout': timeout += 1
+valid = killed + survived + timeout
+score = ((killed + timeout) / valid * 100) if valid > 0 else 0
+print(f'{score:.2f}|{total}|{killed}|{survived}|{timeout}')
+")
+    IFS='|' read -r MSI_SCORE TOTAL_MUTANTS KILLED_MUTANTS SURVIVED_MUTANTS TIMEOUT_MUTANTS <<< "$PARSED_STATS"
+    MSI_PASSED=$(python3 -c "print(1 if float('$MSI_SCORE') >= 60.0 else 0)")
+    if [[ "$MSI_PASSED" -eq 1 ]]; then
+        MSI_STATUS="PASSED"
+        MSI_COLOR="$GREEN"
+        MSI_BANNER="STAGE 2: MUTATION TESTING COMPLETED (${MSI_SCORE}% MSI - PASSED)"
+    else
+        MSI_STATUS="FAILED"
+        MSI_COLOR="$RED"
+        MSI_BANNER="STAGE 2: MUTATION TESTING FAILED (${MSI_SCORE}% MSI < 60% BREAK THRESHOLD)"
+    fi
+else
+    echo -e "${RED}Error: Stryker mutation-report.json not found at $TEST_DIR/StrykerOutput${RESET}"
+    exit 1
+fi
+
+echo -e "\n${BOLD}${MSI_COLOR}==========================================================${RESET}"
+echo -e "${BOLD}${MSI_COLOR}  ${MSI_BANNER}${RESET}"
+echo -e "${BOLD}${MSI_COLOR}==========================================================${RESET}"
 echo -e "  • ${BOLD}Target Microservice:${RESET} Harbor.Deployment (Service Layer)"
 echo -e "  • ${BOLD}Target Files:${RESET}       DeploymentUrlExtractor.cs, DeploymentLogSanitizer.cs"
 echo -e "  • ${BOLD}Mutators Evaluated:${RESET} Bitwise, Equality, Conditional, String, Regex"
-echo -e "  • ${BOLD}Mutation Score:${RESET}     ${BOLD}${GREEN}83.33% MSI${RESET} (Passed > 80% High Quality Threshold)"
+echo -e "  • ${BOLD}Mutation Score:${RESET}     ${BOLD}${MSI_COLOR}${MSI_SCORE}% MSI${RESET} (Gate: >= 60.0% Break Threshold - ${MSI_STATUS})"
+echo -e "  • ${BOLD}Mutant Statistics:${RESET}  ${TOTAL_MUTANTS} Total (${KILLED_MUTANTS} Killed, ${SURVIVED_MUTANTS} Survived, ${TIMEOUT_MUTANTS} Timed out)"
 echo -e "  • ${BOLD}Defects Fixed:${RESET}      Regex Double-Redaction in DeploymentLogSanitizer.cs"
 if [[ -n "$LATEST_HTML" && -f "$LATEST_HTML" ]]; then
     echo -e "  • ${BOLD}HTML Report:${RESET}        ${LATEST_HTML}"
 fi
-echo -e "${BOLD}${GREEN}==========================================================${RESET}"
+echo -e "${BOLD}${MSI_COLOR}==========================================================${RESET}"
 
 # If running in GitHub Actions CI/CD, append to Step Summary
 if [[ -n "$GITHUB_STEP_SUMMARY" && -f "$LATEST_MD" ]]; then
-    cat << 'EOF' >> "$GITHUB_STEP_SUMMARY"
+    cat << EOF >> "$GITHUB_STEP_SUMMARY"
 ## Stage 2: Mutation Testing Scorecard
 
 | Metric | Target / Invariant | Status |
 | :--- | :--- | :---: |
 | **Mutation Framework** | Stryker.NET 5.0 (Roslyn Syntax Mutator AST) | VERIFIED |
-| **Target Microservice** | `Harbor.Deployment` Service Core | TESTED |
-| **Domain Services Mutated** | `DeploymentUrlExtractor.cs`, `DeploymentLogSanitizer.cs` | TESTED |
-| **Mutators Evaluated** | Bitwise (`\|` to `&`), Equality, Conditional, String, Regex | EVALUATED |
-| **Mutation Score Indicator (MSI)** | **83.33%** (Quality Gate: High > 80%, Break: 0%) | PASSED |
-| **Real Defect Caught & Fixed** | Regex Double-Redaction bug in `DeploymentLogSanitizer.cs` | REMEDIATED |
+| **Target Microservice** | \`Harbor.Deployment\` Service Core | TESTED |
+| **Domain Services Mutated** | \`DeploymentUrlExtractor.cs\`, \`DeploymentLogSanitizer.cs\` | TESTED |
+| **Mutators Evaluated** | Bitwise (\`\\|\` to \`&\`), Equality, Conditional, String, Regex | EVALUATED |
+| **Mutation Score Indicator (MSI)** | **${MSI_SCORE}%** (Quality Gate: High > 80%, Break: 60%) | ${MSI_STATUS} |
+| **Real Defect Caught & Fixed** | Regex Double-Redaction bug in \`DeploymentLogSanitizer.cs\` | REMEDIATED |
 | **Surviving Mutants Remediated** | Case-Insensitive URL Invariants & Log Sanitizer Unit Tests | HARDENED |
 | **Execution Duration** | Optimized Fast Feedback (~45 seconds) | PASSED |
 
 ### Test Suite Hardening Case Study
-1. **Initial Assessment (MSI 45.24%):** `DeploymentLogSanitizer.cs` was mutated without isolated unit test assertions, allowing 90% of mutants to survive.
-2. **Defect Discovery:** Writing `DeploymentLogSanitizerTests.cs` exposed an over-eager regex in `SensitiveSetting` that double-redacted `Authorization: Bearer <token>` into `[REDACTED] [REDACTED]`. Removing `authorization` from line 16 fixed the defect.
-3. **Regex Case-Insensitivity Hardening:** Bitwise mutators changing `RegexOptions.Compiled \| RegexOptions.IgnoreCase` into `&` survived because tests only evaluated lowercase URLs. Adding uppercase/mixed-case scheme theories killed 16 surviving mutants.
-4. **Final Result:** Mutation score jumped from **45.24%** to **83.33%** (35 mutants killed out of 42).
+1. **Initial Assessment (MSI 45.24%):** \`DeploymentLogSanitizer.cs\` was mutated without isolated unit test assertions, allowing 90% of mutants to survive.
+2. **Defect Discovery:** Writing \`DeploymentLogSanitizerTests.cs\` exposed an over-eager regex in \`SensitiveSetting\` that double-redacted \`Authorization: Bearer <token>\` into \`[REDACTED] [REDACTED]\`. Removing \`authorization\` from line 16 fixed the defect.
+3. **Regex Case-Insensitivity Hardening:** Bitwise mutators changing \`RegexOptions.Compiled \\| RegexOptions.IgnoreCase\` into \`&\` survived because tests only evaluated lowercase URLs. Adding uppercase/mixed-case scheme theories killed 16 surviving mutants.
+4. **Final Result:** Mutation score jumped from **45.24%** to **${MSI_SCORE}%** (${KILLED_MUTANTS} mutants killed out of ${TOTAL_MUTANTS}).
 
 EOF
+fi
+
+if [[ "$MSI_PASSED" -eq 0 ]]; then
+    exit 1
 fi
 
 if [[ -n "$LATEST_HTML" && -f "$LATEST_HTML" ]]; then

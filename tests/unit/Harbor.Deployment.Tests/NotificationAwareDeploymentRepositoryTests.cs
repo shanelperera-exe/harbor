@@ -14,8 +14,8 @@ namespace Harbor.Deployment.Tests;
 /// </summary>
 public class NotificationAwareDeploymentRepositoryTests
 {
-    private readonly Mock<IDeploymentRepository>   _innerMock  = new();
-    private readonly Mock<INotificationRepository> _notifMock  = new();
+    private readonly Mock<IDeploymentRepository> _innerMock = new();
+    private readonly Mock<INotificationRepository> _notifMock = new();
     private readonly Mock<ILogger<NotificationAwareDeploymentRepository>> _loggerMock = new();
     private readonly NotificationAwareDeploymentRepository _decorator;
 
@@ -35,8 +35,13 @@ public class NotificationAwareDeploymentRepositoryTests
         // Arrange
         var deployment = new DeploymentEntity
         {
-            Id = 10, OwnerId = 42, ServiceId = 3,
-            ServiceName = "api-service", Environment = "production", Version = "1.0.0", Status = "Running"
+            Id = 10,
+            OwnerId = 42,
+            ServiceId = 3,
+            ServiceName = "api-service",
+            Environment = "production",
+            Version = "1.0.0",
+            Status = "Running"
         };
         _innerMock.Setup(r => r.UpdateStatusAsync(10, "Successful", null)).ReturnsAsync(true);
         _innerMock.Setup(r => r.GetEntityByIdAsync(10)).ReturnsAsync(deployment);
@@ -48,9 +53,9 @@ public class NotificationAwareDeploymentRepositoryTests
         // Assert
         Assert.True(result);
         _notifMock.Verify(r => r.CreateAsync(It.Is<NotificationEntity>(n =>
-            n.UserId       == 42            &&
-            n.DeploymentId == 10            &&
-            n.Type         == "success"     &&
+            n.UserId == 42 &&
+            n.DeploymentId == 10 &&
+            n.Type == "success" &&
             n.Title.Contains("api-service") &&
             n.Message.Contains("production"))), Times.Once);
     }
@@ -61,8 +66,13 @@ public class NotificationAwareDeploymentRepositoryTests
         // Arrange
         var deployment = new DeploymentEntity
         {
-            Id = 20, OwnerId = 7, ServiceId = 5,
-            ServiceName = "worker", Environment = "staging", Version = "2.3.1", Status = "Running"
+            Id = 20,
+            OwnerId = 7,
+            ServiceId = 5,
+            ServiceName = "worker",
+            Environment = "staging",
+            Version = "2.3.1",
+            Status = "Running"
         };
         _innerMock.Setup(r => r.UpdateStatusAsync(20, "Failed", "OOM")).ReturnsAsync(true);
         _innerMock.Setup(r => r.GetEntityByIdAsync(20)).ReturnsAsync(deployment);
@@ -74,9 +84,9 @@ public class NotificationAwareDeploymentRepositoryTests
         // Assert
         Assert.True(result);
         _notifMock.Verify(r => r.CreateAsync(It.Is<NotificationEntity>(n =>
-            n.UserId       == 7         &&
-            n.DeploymentId == 20        &&
-            n.Type         == "failure" &&
+            n.UserId == 7 &&
+            n.DeploymentId == 20 &&
+            n.Type == "failure" &&
             n.Message.Contains("OOM"))), Times.Once);
     }
 
@@ -86,8 +96,13 @@ public class NotificationAwareDeploymentRepositoryTests
         // Arrange
         var deployment = new DeploymentEntity
         {
-            Id = 30, OwnerId = 15, ServiceId = 4,
-            ServiceName = "frontend", Environment = "production", Version = "3.0.0", Status = "Running"
+            Id = 30,
+            OwnerId = 15,
+            ServiceId = 4,
+            ServiceName = "frontend",
+            Environment = "production",
+            Version = "3.0.0",
+            Status = "Running"
         };
         _innerMock.Setup(r => r.UpdateStatusAsync(30, "Succeeded", null)).ReturnsAsync(true);
         _innerMock.Setup(r => r.GetEntityByIdAsync(30)).ReturnsAsync(deployment);
@@ -99,10 +114,10 @@ public class NotificationAwareDeploymentRepositoryTests
         // Assert
         Assert.True(result);
         _notifMock.Verify(r => r.CreateAsync(It.Is<NotificationEntity>(n =>
-            n.UserId       == 15            &&
-            n.DeploymentId == 30            &&
-            n.Type         == "success"     &&
-            n.Title.Contains("frontend")    &&
+            n.UserId == 15 &&
+            n.DeploymentId == 30 &&
+            n.Type == "success" &&
+            n.Title.Contains("frontend") &&
             n.Message.Contains("3.0.0"))), Times.Once);
     }
 
@@ -112,8 +127,13 @@ public class NotificationAwareDeploymentRepositoryTests
         // Arrange
         var deployment = new DeploymentEntity
         {
-            Id = 40, OwnerId = 22, ServiceId = 6,
-            ServiceName = "auth-service", Environment = "staging", Version = "1.2.0", Status = "Running"
+            Id = 40,
+            OwnerId = 22,
+            ServiceId = 6,
+            ServiceName = "auth-service",
+            Environment = "staging",
+            Version = "1.2.0",
+            Status = "Running"
         };
         _innerMock.Setup(r => r.UpdateTriggerResultAsync(40, "Succeeded", null, null)).ReturnsAsync(true);
         _innerMock.Setup(r => r.GetEntityByIdAsync(40)).ReturnsAsync(deployment);
@@ -125,9 +145,9 @@ public class NotificationAwareDeploymentRepositoryTests
         // Assert
         Assert.True(result);
         _notifMock.Verify(r => r.CreateAsync(It.Is<NotificationEntity>(n =>
-            n.UserId       == 22            &&
-            n.DeploymentId == 40            &&
-            n.Type         == "success"     &&
+            n.UserId == 22 &&
+            n.DeploymentId == 40 &&
+            n.Type == "success" &&
             n.Title.Contains("auth-service"))), Times.Once);
     }
 
@@ -137,8 +157,13 @@ public class NotificationAwareDeploymentRepositoryTests
         // Arrange
         var deployment = new DeploymentEntity
         {
-            Id = 41, OwnerId = 22, ServiceId = 6,
-            ServiceName = "auth-service", Environment = "staging", Version = "1.2.0", Status = "Running"
+            Id = 41,
+            OwnerId = 22,
+            ServiceId = 6,
+            ServiceName = "auth-service",
+            Environment = "staging",
+            Version = "1.2.0",
+            Status = "Running"
         };
         _innerMock.Setup(r => r.UpdateTriggerResultAsync(41, "Failed", "Build error", null)).ReturnsAsync(true);
         _innerMock.Setup(r => r.GetEntityByIdAsync(41)).ReturnsAsync(deployment);
@@ -150,9 +175,9 @@ public class NotificationAwareDeploymentRepositoryTests
         // Assert
         Assert.True(result);
         _notifMock.Verify(r => r.CreateAsync(It.Is<NotificationEntity>(n =>
-            n.UserId       == 22            &&
-            n.DeploymentId == 41            &&
-            n.Type         == "failure"     &&
+            n.UserId == 22 &&
+            n.DeploymentId == 41 &&
+            n.Type == "failure" &&
             n.Message.Contains("Build error"))), Times.Once);
     }
 

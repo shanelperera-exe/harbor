@@ -61,8 +61,8 @@ builder.Services.AddCors(options =>
 });
 
 // JWT Authentication (mirrors the deployment service configuration)
-var jwtSecret   = builder.Configuration["JWT_SECRET"]   ?? throw new InvalidOperationException("JWT_SECRET is not configured.");
-var jwtIssuer   = builder.Configuration["JWT_ISSUER"]   ?? "harbor";
+var jwtSecret = builder.Configuration["JWT_SECRET"] ?? throw new InvalidOperationException("JWT_SECRET is not configured.");
+var jwtIssuer = builder.Configuration["JWT_ISSUER"] ?? "harbor";
 var jwtAudience = builder.Configuration["JWT_AUDIENCE"] ?? "harbor-api";
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -70,14 +70,14 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     {
         options.TokenValidationParameters = new TokenValidationParameters
         {
-            ValidateIssuer           = true,
-            ValidateAudience         = true,
-            ValidateLifetime         = true,
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
-            ValidIssuer              = jwtIssuer,
-            ValidAudience            = jwtAudience,
-            IssuerSigningKey         = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
-            ClockSkew                = TimeSpan.FromMinutes(5)
+            ValidIssuer = jwtIssuer,
+            ValidAudience = jwtAudience,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
+            ClockSkew = TimeSpan.FromMinutes(5)
         };
         options.Events = new JwtBearerEvents
         {
@@ -101,7 +101,7 @@ builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
     {
-        Title   = "Harbor Reporting API",
+        Title = "Harbor Reporting API",
         Version = "v1",
         Description = "Dynamic deployment reports (US-22). " +
                       "All queries use parameterized SQL — no user-supplied values are concatenated into SQL strings."
@@ -109,11 +109,11 @@ builder.Services.AddSwaggerGen(options =>
 
     options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
     {
-        Name        = "Authorization",
-        Type        = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
-        Scheme      = "Bearer",
+        Name = "Authorization",
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+        Scheme = "Bearer",
         BearerFormat = "JWT",
-        In          = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
         Description = "Enter your JWT token: Bearer {your token}"
     });
 

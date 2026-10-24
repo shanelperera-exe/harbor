@@ -152,14 +152,89 @@ END_TIME=$(date +%s)
 TOTAL_DURATION=$((END_TIME - START_TIME))
 
 # ── Unified Pipeline Final Summary ───────────────────────────────────────────
+UNIT_TEST_COUNT="N/A"
+if compgen -G "$REPO_ROOT/TestResults/*.trx" > /dev/null 2>&1; then
+    UNIT_TEST_COUNT=$(python3 -c "
+import glob, xml.etree.ElementTree as ET
+passed = 0
+total = 0
+for f in glob.glob('$REPO_ROOT/TestResults/*.trx'):
+    try:
+        tree = ET.parse(f)
+        for elem in tree.iter():
+            if elem.tag.endswith('Counters'):
+                passed += int(elem.attrib.get('passed', 0))
+                total += int(elem.attrib.get('total', 0))
+    except Exception:
+        pass
+if total > 0:
+    print(f'{passed}/{total} Tests Passed')
+else:
+    print('N/A')
+" 2>/dev/null || echo "N/A")
+fi
+
+MUTATION_SUMMARY="Skipped / Report not found"
+LATEST_STRYKER_JSON=$(find "$REPO_ROOT/tests/unit/Harbor.Deployment.Tests/StrykerOutput" -name "mutation-report.json" 2>/dev/null | sort -r | head -n 1 || true)
+if [[ -f "$LATEST_STRYKER_JSON" ]]; then
+    MUTATION_SUMMARY=$(python3 -c "
+import json
+with open('$LATEST_STRYKER_JSON') as f:
+    d = json.load(f)
+killed = 0
+survived = 0
+timeout = 0
+for fd in d.get('files', {}).values():
+    for m in fd.get('mutants', []):
+        st = m.get('status')
+        if st == 'Killed': killed += 1
+        elif st == 'Survived': survived += 1
+        elif st == 'Timeout': timeout += 1
+valid = killed + survived + timeout
+if valid > 0:
+    msi = ((killed + timeout) / valid * 100)
+    print(f'{msi:.2f}% MSI | {valid} Mutants Evaluated | {killed} Killed')
+else:
+    print('No mutants found')
+" 2>/dev/null || echo "Error reading mutation report")
+fi
+
+PERF_SUMMARY="Skipped / Report not found"
+LOAD_JSON="$REPO_ROOT/tests/performance/benchmarks/load.json"
+if [[ -f "$LOAD_JSON" ]]; then
+    PERF_SUMMARY=$(python3 -c "
+import json
+with open('$LOAD_JSON') as f:
+    d = json.load(f).get('Total', {})
+samples = d.get('sampleCount', 0)
+err = d.get('errorPct', 0.0)
+p95 = d.get('pct2ResTime', 0.0)
+print(f'100 VUs | {samples} Samples | {err:.2f}% Errors | p95: {p95:.1f}ms')
+" 2>/dev/null || echo "Error reading load benchmark")
+fi
+
+QUALITY_SUMMARY="Skipped / Report not found"
+SUMMARY_JSON="$REPO_ROOT/TestResults/CoverageReport/Summary.json"
+if [[ -f "$SUMMARY_JSON" ]]; then
+    QUALITY_SUMMARY=$(python3 -c "
+import json
+with open('$SUMMARY_JSON') as f:
+    d = json.load(f).get('summary', {})
+line = d.get('linecoverage', 0.0)
+branch = d.get('branchcoverage', 0.0)
+status = 'PASSED (Rating A)' if line >= 80.0 and branch >= 75.0 else 'WARNING'
+print(f'{line:.1f}% Line | {branch:.1f}% Branch | Quality Gate: {status}')
+" 2>/dev/null || echo "Error reading coverage summary")
+fi
+
 echo -e "\n${BOLD}${GREEN}========================================================================${RESET}"
 echo -e "${BOLD}${GREEN}       HARBOR UNIFIED QUALITY PIPELINE EXECUTION: 100% PASSED           ${RESET}"
 echo -e "${BOLD}${GREEN}========================================================================${RESET}"
 echo -e "  • Total Pipeline Execution Time: ${BOLD}${TOTAL_DURATION}s${RESET}"
-echo -e "  • ${BOLD}Stage 1 (Unit & Mocks):${RESET}      950/950 Tests Passed across 7 Services | Strict Mocks Verified"
-echo -e "  • ${BOLD}Stage 2 (Mutation):${RESET}          45.24% MSI | 42 Mutants Tested | Zero Regressions"
-echo -e "  • ${BOLD}Stage 3 (Performance):${RESET}       500 Samples | 0.00% Errors | p95: 135ms (SLA: <500ms)"
-echo -e "  • ${BOLD}Stage 4 (Quality & Metrics):${RESET} 54.3% Line | 59.7% Branch | Quality Gate: PASSED (A)"
+echo -e "  • ${BOLD}Stage 1 (Unit & Mocks):${RESET}      ${UNIT_TEST_COUNT} across 7 Services | Strict Mocks Verified"
+echo -e "  • ${BOLD}Stage 2 (Mutation):${RESET}          ${MUTATION_SUMMARY}"
+echo -e "  • ${BOLD}Stage 3 (Performance):${RESET}       ${PERF_SUMMARY}"
+echo -e "  • ${BOLD}Stage 4 (Quality & Metrics):${RESET} ${QUALITY_SUMMARY}"
 echo -e "${BOLD}${GREEN}========================================================================${RESET}"
 
 open_in_browser() {

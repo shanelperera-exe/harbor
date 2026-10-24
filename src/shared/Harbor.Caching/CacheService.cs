@@ -33,14 +33,14 @@ public class CacheService : ICacheService
                 _logger.LogDebug("Cache hit for key {Key}", key);
                 return JsonSerializer.Deserialize<T>(cached);
             }
-            
+
             _logger.LogDebug("Cache miss for key {Key}", key);
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to get value from cache for key {Key}", key);
         }
-        
+
         return default;
     }
 

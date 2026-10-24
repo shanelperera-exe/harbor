@@ -121,7 +121,7 @@ public class DashboardApiTests : IClassFixture<DeploymentApiFactory>
         var dashboard = await response.Content.ReadFromJsonAsync<DashboardSummaryResponse>();
         Assert.NotNull(dashboard);
         Assert.NotEmpty(dashboard.RecentDeployments);
-        
+
         var deployment = dashboard.RecentDeployments.First();
         Assert.NotNull(deployment.ServiceName);
         Assert.NotNull(deployment.ProjectName);
@@ -151,7 +151,7 @@ public class DashboardApiTests : IClassFixture<DeploymentApiFactory>
 
         var dashboard = await response.Content.ReadFromJsonAsync<DashboardSummaryResponse>();
         Assert.NotNull(dashboard);
-        
+
         var project = dashboard.Projects.First(p => p.Id == DeploymentApiFactory.SeedProjectId);
         Assert.NotNull(project.LatestStatus);
         Assert.NotNull(project.LatestDeploymentTime);

@@ -160,7 +160,7 @@ graph TD
 | Email | SMTP (Brevo in production, Mailpit locally) |
 | API Documentation | Swagger / Swashbuckle (Bearer auth enabled) |
 | Configuration | DotNetEnv (`.env`, git-ignored) |
-| Testing | xUnit + Moq (94.6% line coverage, 463 unit tests), Testcontainers (integration), Selenium WebDriver POM (E2E), Apache JMeter (performance) |
+| Testing | xUnit + Moq (89.2% line coverage, 89.5% branch coverage, 950 unit tests across 7 services), Testcontainers (integration), Selenium WebDriver POM (E2E), Apache JMeter (performance) |
 | Hosting & Cloud | Docker Compose (local), Azure Container Apps (ACA), Azure Database for PostgreSQL, Azure Cache for Redis, Azure Event Hubs |
 | Observability | Prometheus `/metrics` scraping, ASP.NET Core Health Checks (`/health/live`, `/health/ready`, `/health`) |
 
@@ -502,11 +502,13 @@ Measured via `dotnet-coverage` and ReportGenerator (`./run-coverage.sh`):
 
 | Metric | Target | Measured Result | Status |
 |---|---|---|---|
-| **Line Coverage** | ≥ 80.0% | **94.6%** (2,168 / 2,291 lines) | PASSED |
-| **Branch Coverage** | ≥ 75.0% | **82.3%** (508 / 617 branches) | PASSED |
-| **Method Coverage** | ≥ 85.0% | **95.9%** (304 / 317 methods) | PASSED |
-| **Automated Tests** | — | **463 passing / 0 failing** | PASSED |
+| **Line Coverage** | ≥ 80.0% | **89.2%** (1,606 / 1,799 core lines) | PASSED |
+| **Branch Coverage** | ≥ 75.0% | **89.5%** (482 / 538 branches) | PASSED |
+| **Method Coverage** | ≥ 85.0% | **90.0%** (245 / 272 methods) | PASSED |
+| **Automated Unit Tests** | — | **950 passing / 0 failing** (7 Services) | PASSED |
 | **Open Critical Defects** | 0 | **0 Open (8 Resolved)** | PASSED |
+
+> **Coverage Scope:** Measured using Coverlet and ReportGenerator (`coverlet.runsettings`). Focuses on core service and domain business logic. Infrastructure boilerplate (raw SQL migrations, database initializers, and record DTOs) is excluded per `coverlet.runsettings` and `sonar.coverage.exclusions`.
 
 See [`docs/testing/coverage/code-coverage.md`](docs/testing/coverage/code-coverage.md) for per-service coverage breakdown.
 
@@ -514,10 +516,10 @@ See [`docs/testing/coverage/code-coverage.md`](docs/testing/coverage/code-covera
 
 | Level | Tooling | Location | Run with |
 |---|---|---|---|
-| Unit | xUnit + Moq (463 tests) | `tests/unit/Harbor.*.Tests` | `dotnet test tests/unit/Harbor.Authentication.Tests` (per project) |
+| Unit | xUnit + Moq (950 tests across 7 services) | `tests/unit/Harbor.*.Tests` | `./scripts/run-unit-tests.sh` |
 | Integration | xUnit + Testcontainers (real Postgres in Docker) | `tests/integration/Harbor.*.IntegrationTests` | `dotnet test tests/integration/Harbor.Project.IntegrationTests` |
 | End-to-End | Selenium WebDriver, Page Object Model (23 passed) | `tests/Harbor.E2ETests` | `dotnet test tests/Harbor.E2ETests/Harbor.E2ETests.csproj` |
-| Performance/Load | Apache JMeter (JWT: 1.37ms, Reg: 133.8ms, Logs: 24.5ms) | `tests/performance` | `./scripts/run-load-tests.sh` |
+| Performance/Load | Apache JMeter (21 test plans across 7 services) | `tests/performance` | `./scripts/run-performance-tests.sh` |
 | Security | BCrypt, AES-256-GCM, Redis blacklist, SQL injection | `tests/security` | See [`docs/testing/security/security-test-report.md`](docs/testing/security/security-test-report.md) |
 
 Solution-wide test command:

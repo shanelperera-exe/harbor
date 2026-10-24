@@ -21,9 +21,9 @@ namespace Harbor.Reporting.Services
             _subscriptions.AddOrUpdate(
                 serviceId,
                 _ => new HashSet<string> { connectionId },
-                (_, set) => 
+                (_, set) =>
                 {
-                    lock(set) { set.Add(connectionId); }
+                    lock (set) { set.Add(connectionId); }
                     return set;
                 }
             );

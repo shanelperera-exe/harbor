@@ -193,7 +193,7 @@ namespace Harbor.Environment.Tests
         {
             SetKeyForTest();
             var encryptor = new HarborSecretProtector();
-            
+
             // Change key for decryptor
             var newKey = RandomNumberGenerator.GetBytes(32);
             System.Environment.SetEnvironmentVariable(ConfigKeyName, Convert.ToBase64String(newKey));

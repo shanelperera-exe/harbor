@@ -71,19 +71,19 @@ public class DeploymentReportRepository(ReportingDbConnectionFactory dbFactory) 
         {
             results.Add(new DeploymentReportEntity
             {
-                Id            = reader.GetInt32(0),
-                PublicId      = reader.IsDBNull(1)  ? string.Empty : reader.GetString(1),
-                Environment   = reader.IsDBNull(2)  ? string.Empty : reader.GetString(2),
-                Version       = reader.IsDBNull(3)  ? string.Empty : reader.GetString(3),
-                CommitSha     = reader.IsDBNull(4)  ? null : reader.GetString(4),
-                CommitMessage = reader.IsDBNull(5)  ? null : reader.GetString(5),
-                Status        = reader.IsDBNull(6)  ? string.Empty : reader.GetString(6),
-                StartedAt     = reader.GetDateTime(7),
-                CompletedAt   = reader.IsDBNull(8)  ? null : reader.GetDateTime(8),
-                FailureReason = reader.IsDBNull(9)  ? null : reader.GetString(9),
-                ProjectName   = reader.IsDBNull(10) ? null : reader.GetString(10),
-                ServiceName   = reader.IsDBNull(11) ? null : reader.GetString(11),
-                UserName      = reader.IsDBNull(12) ? null : reader.GetString(12),
+                Id = reader.GetInt32(0),
+                PublicId = reader.IsDBNull(1) ? string.Empty : reader.GetString(1),
+                Environment = reader.IsDBNull(2) ? string.Empty : reader.GetString(2),
+                Version = reader.IsDBNull(3) ? string.Empty : reader.GetString(3),
+                CommitSha = reader.IsDBNull(4) ? null : reader.GetString(4),
+                CommitMessage = reader.IsDBNull(5) ? null : reader.GetString(5),
+                Status = reader.IsDBNull(6) ? string.Empty : reader.GetString(6),
+                StartedAt = reader.GetDateTime(7),
+                CompletedAt = reader.IsDBNull(8) ? null : reader.GetDateTime(8),
+                FailureReason = reader.IsDBNull(9) ? null : reader.GetString(9),
+                ProjectName = reader.IsDBNull(10) ? null : reader.GetString(10),
+                ServiceName = reader.IsDBNull(11) ? null : reader.GetString(11),
+                UserName = reader.IsDBNull(12) ? null : reader.GetString(12),
             });
         }
 

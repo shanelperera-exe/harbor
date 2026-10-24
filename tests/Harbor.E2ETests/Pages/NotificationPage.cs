@@ -108,7 +108,7 @@ namespace Harbor.E2ETests.Pages
             if (!IsNotificationPanelVisible())
             {
                 ClickNotificationBell();
-                
+
                 // Wait for panel to appear with retries (React state update may be async)
                 for (int attempt = 0; attempt < 10; attempt++)
                 {
@@ -123,13 +123,14 @@ namespace Harbor.E2ETests.Pages
                         ClickNotificationBell();
                     }
                 }
-                
+
                 // Final wait with standard timeout
                 _wait.Until(d => IsNotificationPanelVisible());
             }
 
             // Wait for notification items to load (or empty state)
-            _wait.Until(d => {
+            _wait.Until(d =>
+            {
                 var items = d.FindElements(By.CssSelector("[data-testid^='notification-item-']"));
                 var empty = d.FindElements(By.CssSelector("[data-testid='notifications-empty']"));
                 return items.Count > 0 || empty.Count > 0;

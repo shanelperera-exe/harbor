@@ -56,10 +56,10 @@ public class DeploymentRepository(DbConnectionFactory dbFactory) : IDeploymentRe
         AddFilters(command, ownerId, isAdmin, projectId, environment, serviceId, status);
         command.Parameters.AddWithValue("skip", skip);
         command.Parameters.AddWithValue("take", take);
-        
+
         var result = new List<DeploymentEntity>();
         await using var reader = await command.ExecuteReaderAsync();
-        while (await reader.ReadAsync()) 
+        while (await reader.ReadAsync())
         {
             var entity = new DeploymentEntity
             {

@@ -11,12 +11,12 @@ namespace Harbor.Authentication.Data
         public DbConnectionFactory(IConfiguration configuration)
         {
             _connectionString = configuration.GetConnectionString("HarborDb") ?? string.Empty;
-            
+
             if (string.IsNullOrWhiteSpace(_connectionString))
             {
                 _connectionString = Environment.GetEnvironmentVariable("HarborDb") ?? string.Empty;
             }
-            
+
             if (string.IsNullOrWhiteSpace(_connectionString))
             {
                 var host = Environment.GetEnvironmentVariable("POSTGRES_SERVER") ?? "localhost";

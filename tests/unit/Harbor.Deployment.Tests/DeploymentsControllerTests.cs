@@ -113,8 +113,13 @@ public class DeploymentsControllerTests
         SetUser(userId: 7);
         var details = new DeploymentDetailsResponse
         {
-            Id = 8, ServiceId = 13, Environment = "staging", Version = "1.5.0",
-            Status = "Failed", StartedAt = DateTime.UtcNow, FailureReason = "OOM",
+            Id = 8,
+            ServiceId = 13,
+            Environment = "staging",
+            Version = "1.5.0",
+            Status = "Failed",
+            StartedAt = DateTime.UtcNow,
+            FailureReason = "OOM",
             Logs = new List<DeploymentLogResponse>
             {
                 new() { Level = "Error", Message = "Out of memory.", Timestamp = DateTime.UtcNow }

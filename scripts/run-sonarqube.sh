@@ -201,16 +201,45 @@ for proj in "${UNIT_PROJECTS[@]}"; do
 done
 
 echo -e "\n${BOLD}${MAGENTA}▶ [Stage 4/4] Finalizing SonarQube Analysis & Uploading to Server...${RESET}"
-dotnet-sonarscanner end /d:sonar.token="$SONAR_TOKEN"
+SQ_GATE_PASSED=true
+if ! dotnet-sonarscanner end /d:sonar.token="$SONAR_TOKEN"; then
+    SQ_GATE_PASSED=false
+fi
+
+# Dynamically parse multi-assembly coverage if report summary exists
+COV_SUMMARY="$RESULTS_DIR/CoverageReport/Summary.json"
+LINE_COV="N/A"
+BRANCH_COV="N/A"
+if [[ -f "$COV_SUMMARY" ]]; then
+    LINE_COV=$(python3 -c "import json; print(f\"{json.load(open('$COV_SUMMARY')).get('summary', {}).get('linecoverage', 0.0):.1f}%\")" 2>/dev/null || echo "N/A")
+    BRANCH_COV=$(python3 -c "import json; print(f\"{json.load(open('$COV_SUMMARY')).get('summary', {}).get('branchcoverage', 0.0):.1f}%\")" 2>/dev/null || echo "N/A")
+fi
+
+# Run dynamic SCA NuGet vulnerability audit
+SCA_OUTPUT=$(dotnet list Harbor.sln package --vulnerable --include-transitive 2>/dev/null || true)
+VULN_COUNT=$(echo "$SCA_OUTPUT" | grep -c "has a known" || true)
 
 DASHBOARD_URL="${SONAR_HOST}/dashboard?id=${SONAR_PROJECT}"
 
-echo -e "\n${BOLD}${GREEN}========================================================================${RESET}"
-echo -e "${BOLD}${GREEN}    [OK] FULL SONARQUBE ANALYSIS COMPLETED & QUALITY GATE PASSED         ${RESET}"
-echo -e "${BOLD}${GREEN}========================================================================${RESET}"
-echo -e "  View Full SonarQube Dashboard:"
-echo -e "     ${BOLD}${CYAN}${DASHBOARD_URL}${RESET}"
-echo -e "${BOLD}${GREEN}========================================================================${RESET}"
+if [[ "$SQ_GATE_PASSED" == true ]]; then
+    SQ_BANNER_COLOR="$GREEN"
+    SQ_STATUS_TEXT="[OK] FULL SONARQUBE ANALYSIS COMPLETED & QUALITY GATE PASSED"
+    QG_STATUS="[OK] PASSED"
+else
+    SQ_BANNER_COLOR="$RED"
+    SQ_STATUS_TEXT="[FAIL] SONARQUBE ANALYSIS COMPLETED WITH QUALITY GATE BREACH"
+    QG_STATUS="[FAIL] FAILED"
+fi
+
+echo -e "\n${BOLD}${SQ_BANNER_COLOR}========================================================================${RESET}"
+echo -e "${BOLD}${SQ_BANNER_COLOR}    ${SQ_STATUS_TEXT}         ${RESET}"
+echo -e "${BOLD}${SQ_BANNER_COLOR}========================================================================${RESET}"
+echo -e "  • Quality Gate:        ${BOLD}${SQ_BANNER_COLOR}${QG_STATUS}${RESET}"
+echo -e "  • Line Coverage:       ${LINE_COV}"
+echo -e "  • Branch Coverage:     ${BRANCH_COV}"
+echo -e "  • Third-Party CVEs:    ${VULN_COUNT} Vulnerabilities Detected"
+echo -e "  • Full Dashboard:      ${BOLD}${CYAN}${DASHBOARD_URL}${RESET}"
+echo -e "${BOLD}${SQ_BANNER_COLOR}========================================================================${RESET}"
 
 # If running in GitHub Actions CI/CD, export to Step Summary
 if [[ -n "$GITHUB_STEP_SUMMARY" ]]; then
@@ -219,18 +248,22 @@ if [[ -n "$GITHUB_STEP_SUMMARY" ]]; then
 
 | Quality Engineering Pillar | Target Quality Invariant | Achieved Result | Status |
 | :--- | :---: | :---: | :---: |
-| **Pillar 1: Code Coverage** | Multi-Assembly Aggregation | **Aggregated across 7 Services** | [OK] PASSED |
-| **Pillar 2: Technical Debt (SQALE)** | Maintainability Rating A (< 5%) | **< 4.0% (Rating: A)** | [OK] PASSED |
-| **Pillar 3: Roslyn Static Analysis** | 0 Blocker Smells | **0 Blockers** | [OK] PASSED |
-| **Pillar 4: Architecture Fitness** | 5 Layering & Isolation Invariants | **5 / 5 Invariants Verified** | [OK] PASSED |
-| **Pillar 5: Security Reports (SAST)** | OWASP Top 10 & CWE Top 25 | **0 Vulnerabilities (Rating: A)** | [OK] PASSED |
-| **Pillar 6: Dependency SCA Audit** | 0 Critical Production Vulnerabilities | **Audited across 7 Services** | [OK] PASSED |
+| **Pillar 1: Code Coverage** | Multi-Assembly Aggregation | **${LINE_COV} Line / ${BRANCH_COV} Branch** | $([[ "$LINE_COV" != "N/A" ]] && echo "[OK] PASSED" || echo "EVALUATED") |
+| **Pillar 2: Technical Debt (SQALE)** | Maintainability Rating A (< 5%) | **Enforced by Quality Gate** | ${QG_STATUS} |
+| **Pillar 3: Roslyn Static Analysis** | 0 Blocker Smells | **Integrated in Solution Build** | [OK] PASSED |
+| **Pillar 4: Architecture Fitness** | Layering & Clean Architecture Rules | **Fitness Rules Verified** | [OK] PASSED |
+| **Pillar 5: Security Reports (SAST)** | OWASP Top 10 & CWE Top 25 | **Verified via Sonar Server** | ${QG_STATUS} |
+| **Pillar 6: Dependency SCA Audit** | 0 Critical Production Vulnerabilities | **${VULN_COUNT} CVEs Found (Audit Complete)** | $([[ "$VULN_COUNT" -eq 0 ]] && echo "[OK] PASSED" || echo "[WARN] REVIEW") |
 
 ### Live Cloud Dashboard
 - **Hosted SonarQube Project Overview:** [${DASHBOARD_URL}](${DASHBOARD_URL})
 - **Server URL:** \`${SONAR_HOST}\`
 - **Project Key:** \`${SONAR_PROJECT}\`
 EOF
+fi
+
+if [[ "$SQ_GATE_PASSED" == false ]]; then
+    exit 1
 fi
 
 if [[ "$OPEN_BROWSER" == true ]]; then

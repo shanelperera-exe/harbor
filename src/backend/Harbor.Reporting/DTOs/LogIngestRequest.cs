@@ -9,7 +9,7 @@ namespace Harbor.Reporting.DTOs
 
         [Required]
         public string Message { get; set; } = string.Empty;
-        
+
         public string? Timestamp { get; set; }
     }
 }

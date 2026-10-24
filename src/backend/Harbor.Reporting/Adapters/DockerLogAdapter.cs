@@ -31,15 +31,15 @@ namespace Harbor.Reporting.Adapters
 
                 // If apiToken is provided, assume it's a Docker Daemon REST API URL (e.g. http://host.docker.internal:2375)
                 string dockerApiUrl = string.IsNullOrWhiteSpace(apiToken) ? "http://localhost:2375" : apiToken.TrimEnd('/');
-                
+
                 var response = await client.GetAsync($"{dockerApiUrl}/v1.41/containers/json", ct);
-                
+
                 return new List<ProviderLogEntry>
                 {
-                    new ProviderLogEntry 
-                    { 
-                        Level = "info", 
-                        Message = $"[Docker Integration] Connected to Docker daemon at {dockerApiUrl}. HTTP Status: {response.StatusCode}.", 
+                    new ProviderLogEntry
+                    {
+                        Level = "info",
+                        Message = $"[Docker Integration] Connected to Docker daemon at {dockerApiUrl}. HTTP Status: {response.StatusCode}.",
                         Timestamp = DateTime.UtcNow.ToString("HH:mm:ss")
                     }
                 };

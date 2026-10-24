@@ -20,7 +20,7 @@ public class ArchitectureInvariantsTests
     {
         // Invariant 1: Shared Common kernel must remain pure and free from heavy MVC controller presentation dependencies
         var referencedAssemblies = _commonAssembly.GetReferencedAssemblies();
-        var hasMvcControllers = referencedAssemblies.Any(a => 
+        var hasMvcControllers = referencedAssemblies.Any(a =>
             string.Equals(a.Name, "Microsoft.AspNetCore.Mvc.Core", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(a.Name, "Microsoft.AspNetCore.Mvc", StringComparison.OrdinalIgnoreCase));
 

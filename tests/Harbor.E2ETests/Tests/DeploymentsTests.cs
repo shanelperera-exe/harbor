@@ -65,7 +65,7 @@ namespace Harbor.E2ETests.Tests
             var deploymentsPage = new DeploymentsPage(Driver);
             deploymentsPage.NavigateTo();
             deploymentsPage.FilterByStatus(""); // All statuses - 7 rows, so Next is available (10/page)
-            
+
             // If Next button is available, click it
             if (!deploymentsPage.IsNextDisabled())
             {
@@ -137,11 +137,11 @@ namespace Harbor.E2ETests.Tests
             var deploymentsPage = new DeploymentsPage(Driver);
             deploymentsPage.NavigateTo();
             deploymentsPage.FilterByStatus("Failed");
-            
+
             // Click first failed deployment
             var firstRow = deploymentsPage.GetRows().First();
             firstRow.Click();
-            
+
             var wait = new WebDriverWait(Driver, TimeSpan.FromSeconds(20));
             wait.Until(d => d.Url.Contains("/deployments/"));
 
@@ -170,11 +170,11 @@ namespace Harbor.E2ETests.Tests
             var deploymentsPage = new DeploymentsPage(Driver);
             deploymentsPage.NavigateTo();
             deploymentsPage.FilterByStatus("Succeeded");
-            
+
             // Click first succeeded deployment
             var firstRow = deploymentsPage.GetRows().First();
             firstRow.Click();
-            
+
             var wait = new WebDriverWait(Driver, TimeSpan.FromSeconds(20));
             wait.Until(d => d.Url.Contains("/deployments/"));
 

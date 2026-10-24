@@ -5,7 +5,7 @@ namespace Harbor.ApiGateway.Responses
         public bool Success { get; set; } = true;
         public T? Data { get; set; }
     }
-    
+
     public class ApiResponse
     {
         public bool Success { get; set; } = true;

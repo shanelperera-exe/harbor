@@ -62,18 +62,18 @@ public class NotificationRepository(DbConnectionFactory dbFactory) : INotificati
         {
             list.Add(new NotificationEntity
             {
-                Id           = reader.GetInt32(0),
-                UserId       = reader.GetInt32(1),
+                Id = reader.GetInt32(0),
+                UserId = reader.GetInt32(1),
                 DeploymentId = reader.GetInt32(2),
-                Type         = reader.GetString(3),
-                Title        = reader.GetString(4),
-                Message      = reader.GetString(5),
-                IsRead       = reader.GetBoolean(6),
-                CreatedAt    = reader.GetDateTime(7),
-                Environment  = reader.IsDBNull(8)  ? null : reader.GetString(8),
-                Version      = reader.IsDBNull(9)  ? null : reader.GetString(9),
-                ServiceName  = reader.IsDBNull(10) ? null : reader.GetString(10),
-                ProjectName  = reader.IsDBNull(11) ? null : reader.GetString(11),
+                Type = reader.GetString(3),
+                Title = reader.GetString(4),
+                Message = reader.GetString(5),
+                IsRead = reader.GetBoolean(6),
+                CreatedAt = reader.GetDateTime(7),
+                Environment = reader.IsDBNull(8) ? null : reader.GetString(8),
+                Version = reader.IsDBNull(9) ? null : reader.GetString(9),
+                ServiceName = reader.IsDBNull(10) ? null : reader.GetString(10),
+                ProjectName = reader.IsDBNull(11) ? null : reader.GetString(11),
             });
         }
 

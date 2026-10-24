@@ -64,7 +64,7 @@ public class DeploymentService : IDeploymentService
         var deployment = await repository.GetEntityByIdentifierAsync(identifier, userId, isAdmin);
         if (deployment is null) return null;
         var logs = await repository.GetLogsAsync(deployment.Id);
-        
+
         string? deploymentUrl = deployment.DeploymentUrl;
         if (string.IsNullOrWhiteSpace(deploymentUrl))
         {
@@ -79,20 +79,21 @@ public class DeploymentService : IDeploymentService
             }
         }
 
-        return new DeploymentDetailsResponse { 
-            Id = deployment.Id, 
+        return new DeploymentDetailsResponse
+        {
+            Id = deployment.Id,
             PublicId = string.IsNullOrEmpty(deployment.PublicId) ? deployment.Id.ToString() : deployment.PublicId,
             Hash = !string.IsNullOrEmpty(deployment.PublicId) && deployment.PublicId.StartsWith("dep-") ? (deployment.PublicId.Length >= 13 ? deployment.PublicId.Substring(4, 9) : deployment.PublicId.Substring(4)) : deployment.Id.ToString(),
-            ServiceId = deployment.ServiceId, 
-            Environment = deployment.Environment, 
-            Version = deployment.Version, 
-            CommitSha = deployment.CommitSha, 
-            Status = deployment.Status, 
-            StartedAt = deployment.StartedAt, 
-            CompletedAt = deployment.CompletedAt, 
-            WorkflowFile = deployment.WorkflowFile, 
-            WorkflowRef = deployment.WorkflowRef, 
-            WorkflowRunUrl = deployment.WorkflowRunUrl, 
+            ServiceId = deployment.ServiceId,
+            Environment = deployment.Environment,
+            Version = deployment.Version,
+            CommitSha = deployment.CommitSha,
+            Status = deployment.Status,
+            StartedAt = deployment.StartedAt,
+            CompletedAt = deployment.CompletedAt,
+            WorkflowFile = deployment.WorkflowFile,
+            WorkflowRef = deployment.WorkflowRef,
+            WorkflowRunUrl = deployment.WorkflowRunUrl,
             DeploymentUrl = deploymentUrl,
             FailureReason = string.Equals(deployment.Status, "Failed", StringComparison.OrdinalIgnoreCase) ? DeploymentLogSanitizer.Sanitize(deployment.FailureReason) : null,
             TriggerError = DeploymentLogSanitizer.Sanitize(deployment.TriggerError),

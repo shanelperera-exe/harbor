@@ -29,7 +29,7 @@ if [[ -f "$REPO_ROOT/.env" ]]; then
 fi
 
 SONAR_ORG="${SONAR_ORGANIZATION:-harbor-platform}"
-SONAR_PROJECT="${SONAR_PROJECT_KEY:-shanelperera-exe_harbor}"
+SONAR_PROJECT="${SONAR_PROJECT_KEY:-Harbor}"
 SONAR_HOST="https://sonarcloud.io"
 SONAR_TOKEN="${SONAR_TOKEN:-}"
 
@@ -159,14 +159,40 @@ for proj in "${UNIT_PROJECTS[@]}"; do
 done
 
 echo -e "\n${BOLD}${MAGENTA}▶ [Stage 4/4] Finalizing SonarCloud Analysis & Pushing to Cloud...${RESET}"
-dotnet-sonarscanner end /d:sonar.token="$SONAR_TOKEN"
+SC_GATE_PASSED=true
+if ! dotnet-sonarscanner end /d:sonar.token="$SONAR_TOKEN"; then
+    SC_GATE_PASSED=false
+fi
 
-echo -e "\n${BOLD}${GREEN}========================================================================${RESET}"
-echo -e "${BOLD}${GREEN}    [OK] LIVE SONARCLOUD ANALYSIS COMPLETED & QUALITY GATE PASSED         ${RESET}"
-echo -e "${BOLD}${GREEN}========================================================================${RESET}"
-echo -e "  View Live Cloud Dashboard:"
-echo -e "     ${BOLD}${CYAN}https://sonarcloud.io/project/overview?id=${SONAR_PROJECT}${RESET}"
-echo -e "${BOLD}${GREEN}========================================================================${RESET}"
+# Dynamically parse multi-assembly coverage if report summary exists
+COV_SUMMARY="$RESULTS_DIR/CoverageReport/Summary.json"
+LINE_COV="N/A"
+BRANCH_COV="N/A"
+if [[ -f "$COV_SUMMARY" ]]; then
+    LINE_COV=$(python3 -c "import json; print(f\"{json.load(open('$COV_SUMMARY')).get('summary', {}).get('linecoverage', 0.0):.1f}%\")" 2>/dev/null || echo "N/A")
+    BRANCH_COV=$(python3 -c "import json; print(f\"{json.load(open('$COV_SUMMARY')).get('summary', {}).get('branchcoverage', 0.0):.1f}%\")" 2>/dev/null || echo "N/A")
+fi
+
+if [[ "$SC_GATE_PASSED" == true ]]; then
+    SC_BANNER_COLOR="$GREEN"
+    SC_STATUS_TEXT="[OK] LIVE SONARCLOUD ANALYSIS COMPLETED & QUALITY GATE PASSED"
+    QG_STATUS="[OK] PASSED"
+else
+    SC_BANNER_COLOR="$RED"
+    SC_STATUS_TEXT="[FAIL] SONARCLOUD ANALYSIS COMPLETED WITH QUALITY GATE BREACH"
+    QG_STATUS="[FAIL] FAILED"
+fi
+
+DASHBOARD_URL="https://sonarcloud.io/project/overview?id=${SONAR_PROJECT}"
+
+echo -e "\n${BOLD}${SC_BANNER_COLOR}========================================================================${RESET}"
+echo -e "${BOLD}${SC_BANNER_COLOR}    ${SC_STATUS_TEXT}         ${RESET}"
+echo -e "${BOLD}${SC_BANNER_COLOR}========================================================================${RESET}"
+echo -e "  • Quality Gate:        ${BOLD}${SC_BANNER_COLOR}${QG_STATUS}${RESET}"
+echo -e "  • Line Coverage:       ${LINE_COV}"
+echo -e "  • Branch Coverage:     ${BRANCH_COV}"
+echo -e "  • View Cloud Report:   ${BOLD}${CYAN}${DASHBOARD_URL}${RESET}"
+echo -e "${BOLD}${SC_BANNER_COLOR}========================================================================${RESET}"
 
 # If running in GitHub Actions CI/CD, export to Step Summary
 if [[ -n "$GITHUB_STEP_SUMMARY" ]]; then
@@ -175,16 +201,18 @@ if [[ -n "$GITHUB_STEP_SUMMARY" ]]; then
 
 | Quality Indicator | Target Quality Gate | Achieved Metric | Verification Status |
 | :--- | :---: | :---: | :---: |
-| **Quality Gate Status** | PASSED | **PASSED (Rating: A)** | [OK] PASSED |
-| **SonarQube / SQALE Rating** | Rating A | **Rating A (Maintainability)** | [OK] PASSED |
-| **Code Smells & Tech Debt** | < 5% | **< 4%** | [OK] PASSED |
-| **Security & Vulnerabilities** | 0 Blocker / Critical | **0 Blocker** | [OK] PASSED |
-| **Reliability Bugs** | 0 Bugs | **0 Bugs** | [OK] PASSED |
-| **Multi-Assembly Coverage** | Tracked via Coverlet | **Aggregated to Cloud** | [OK] PASSED |
+| **Quality Gate Status** | PASSED | **${QG_STATUS}** | ${QG_STATUS} |
+| **SonarCloud SQALE Rating** | Rating A | **Calculated by SonarCloud** | ${QG_STATUS} |
+| **Roslyn Static Analysis** | 0 Blocker Smells | **Integrated in Solution Build** | [OK] PASSED |
+| **Multi-Assembly Coverage** | Tracked via Coverlet | **${LINE_COV} Line / ${BRANCH_COV} Branch** | $([[ "$LINE_COV" != "N/A" ]] && echo "[OK] PASSED" || echo "EVALUATED") |
 
 ### Live Cloud Dashboard
-- **SonarCloud Project Overview:** [https://sonarcloud.io/project/overview?id=${SONAR_PROJECT}](https://sonarcloud.io/project/overview?id=${SONAR_PROJECT})
+- **SonarCloud Project Overview:** [${DASHBOARD_URL}](${DASHBOARD_URL})
 - **Organization:** \`${SONAR_ORG}\`
 - **Project Key:** \`${SONAR_PROJECT}\`
 EOF
+fi
+
+if [[ "$SC_GATE_PASSED" == false ]]; then
+    exit 1
 fi

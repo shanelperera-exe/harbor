@@ -26,10 +26,10 @@ public class DeploymentApiTests : IClassFixture<DeploymentApiFactory>
     }
 
     // Helpers for seeded IDs
-    private static int SeedOwner  => DeploymentApiFactory.SeedOwnerId;
+    private static int SeedOwner => DeploymentApiFactory.SeedOwnerId;
     private static int OtherOwner => DeploymentApiFactory.OtherOwnerId;
-    private static int SeedSvc    => DeploymentApiFactory.SeedServiceId;
-    private static int OtherSvc   => DeploymentApiFactory.OtherServiceId;
+    private static int SeedSvc => DeploymentApiFactory.SeedServiceId;
+    private static int OtherSvc => DeploymentApiFactory.OtherServiceId;
 
     // ─── Create helpers ──────────────────────────────────────────────────────
 
@@ -80,12 +80,12 @@ public class DeploymentApiTests : IClassFixture<DeploymentApiFactory>
 
         // Each owner creates one deployment against their own service
         var ownerDep = await CreateDeploymentAsync(ownerClient, new CreateDeploymentRequest
-            { ServiceId = SeedSvc.ToString(), Environment = "staging", Version = "owner-ver", CommitSha = "abc123" });
+        { ServiceId = SeedSvc.ToString(), Environment = "staging", Version = "owner-ver", CommitSha = "abc123" });
         var otherDep = await CreateDeploymentAsync(otherClient, new CreateDeploymentRequest
-            { ServiceId = OtherSvc.ToString(), Environment = "production", Version = "other-ver", CommitSha = "abc123" });
+        { ServiceId = OtherSvc.ToString(), Environment = "production", Version = "other-ver", CommitSha = "abc123" });
 
         var response = await ownerClient.GetAsync("/api/deployments");
-        var body     = await response.Content.ReadFromJsonAsync<DeploymentListResponse>();
+        var body = await response.Content.ReadFromJsonAsync<DeploymentListResponse>();
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains(body!.Items, d => d.Id == ownerDep.Id);
@@ -102,10 +102,10 @@ public class DeploymentApiTests : IClassFixture<DeploymentApiFactory>
 
         // Deployments move to "Running" once the workflow dispatch succeeds.
         await CreateDeploymentAsync(client, new CreateDeploymentRequest
-            { ServiceId = serviceId.ToString(), Environment = "production", Version = "filter-test", CommitSha = "abc123" });
+        { ServiceId = serviceId.ToString(), Environment = "production", Version = "filter-test", CommitSha = "abc123" });
 
         var response = await client.GetAsync("/api/deployments?status=Running");
-        var body     = await response.Content.ReadFromJsonAsync<DeploymentListResponse>();
+        var body = await response.Content.ReadFromJsonAsync<DeploymentListResponse>();
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.True(body!.TotalCount >= 1);
@@ -120,11 +120,11 @@ public class DeploymentApiTests : IClassFixture<DeploymentApiFactory>
         var serviceId = await _factory.ProvisionServiceForOwnerAsync(userId);
 
         await CreateDeploymentAsync(client, new CreateDeploymentRequest
-            { ServiceId = serviceId.ToString(), Environment = "staging", Version = "case-test", CommitSha = "abc123" });
+        { ServiceId = serviceId.ToString(), Environment = "staging", Version = "case-test", CommitSha = "abc123" });
 
         // Use lowercase status filter — service trims and the repo does LOWER() compare
         var response = await client.GetAsync("/api/deployments?status=running");
-        var body     = await response.Content.ReadFromJsonAsync<DeploymentListResponse>();
+        var body = await response.Content.ReadFromJsonAsync<DeploymentListResponse>();
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.True(body!.TotalCount >= 1);
@@ -140,11 +140,11 @@ public class DeploymentApiTests : IClassFixture<DeploymentApiFactory>
         // Create 3 deployments for the specific service under test.
         for (var i = 1; i <= 3; i++)
             await CreateDeploymentAsync(client, new CreateDeploymentRequest
-                { ServiceId = serviceId.ToString(), Environment = "dev", Version = $"page-test-{i}", CommitSha = "abc123" });
+            { ServiceId = serviceId.ToString(), Environment = "dev", Version = $"page-test-{i}", CommitSha = "abc123" });
 
         // Scope the history to this service so earlier cross-test records do not inflate the page count.
         var response = await client.GetAsync($"/api/deployments?page=1&pageSize=2&serviceId={serviceId}");
-        var body     = await response.Content.ReadFromJsonAsync<DeploymentListResponse>();
+        var body = await response.Content.ReadFromJsonAsync<DeploymentListResponse>();
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal(2, body!.Items.Count);
@@ -162,18 +162,18 @@ public class DeploymentApiTests : IClassFixture<DeploymentApiFactory>
         var secondServiceId = await _factory.ProvisionServiceForOwnerAsync(userId);
 
         var dep1 = await CreateDeploymentAsync(client, new CreateDeploymentRequest
-            { ServiceId = firstServiceId.ToString(), Environment = "production", Version = "svc-filter-1", CommitSha = "abc123" });
+        { ServiceId = firstServiceId.ToString(), Environment = "production", Version = "svc-filter-1", CommitSha = "abc123" });
         var dep2 = await CreateDeploymentAsync(client, new CreateDeploymentRequest
-            { ServiceId = secondServiceId.ToString(), Environment = "production", Version = "svc-filter-2", CommitSha = "abc123" });
+        { ServiceId = secondServiceId.ToString(), Environment = "production", Version = "svc-filter-2", CommitSha = "abc123" });
 
         // Both appear when not filtering
-        var all      = await client.GetAsync("/api/deployments");
-        var allBody  = await all.Content.ReadFromJsonAsync<DeploymentListResponse>();
+        var all = await client.GetAsync("/api/deployments");
+        var allBody = await all.Content.ReadFromJsonAsync<DeploymentListResponse>();
         Assert.Contains(allBody!.Items, d => d.Id == dep1.Id);
         Assert.Contains(allBody.Items, d => d.Id == dep2.Id);
 
         // When filtering by the first service, only dep1 appears
-        var filtered     = await client.GetAsync($"/api/deployments?serviceId={firstServiceId}");
+        var filtered = await client.GetAsync($"/api/deployments?serviceId={firstServiceId}");
         var filteredBody = await filtered.Content.ReadFromJsonAsync<DeploymentListResponse>();
         Assert.Contains(filteredBody!.Items, d => d.Id == dep1.Id);
         Assert.DoesNotContain(filteredBody.Items, d => d.Id == dep2.Id);
@@ -209,7 +209,7 @@ public class DeploymentApiTests : IClassFixture<DeploymentApiFactory>
         // Owner creates a deployment
         var ownerClient = CreateClient(SeedOwner);
         var dep = await CreateDeploymentAsync(ownerClient, new CreateDeploymentRequest
-            { ServiceId = SeedSvc.ToString(), Environment = "production", Version = "privacy-test", CommitSha = "abc123" });
+        { ServiceId = SeedSvc.ToString(), Environment = "production", Version = "privacy-test", CommitSha = "abc123" });
 
         // Intruder cannot see it — repository scope-filters by OwnerId
         var intruder = CreateClient(userId: 88001);
@@ -223,10 +223,10 @@ public class DeploymentApiTests : IClassFixture<DeploymentApiFactory>
     {
         var client = CreateClient(SeedOwner);
         var created = await CreateDeploymentAsync(client, new CreateDeploymentRequest
-            { ServiceId = SeedSvc.ToString(), Environment = "staging", Version = "detail-test", CommitSha = "cafebabe" });
+        { ServiceId = SeedSvc.ToString(), Environment = "staging", Version = "detail-test", CommitSha = "cafebabe" });
 
         var response = await client.GetAsync($"/api/deployments/{created.Id}");
-        var body     = await response.Content.ReadFromJsonAsync<DeploymentDetailsResponse>();
+        var body = await response.Content.ReadFromJsonAsync<DeploymentDetailsResponse>();
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.NotNull(body);
@@ -247,7 +247,7 @@ public class DeploymentApiTests : IClassFixture<DeploymentApiFactory>
         var created = await CreateDeploymentAsync(client);
 
         var response = await client.GetAsync($"/api/deployments/{created.Id}");
-        var body     = await response.Content.ReadFromJsonAsync<DeploymentDetailsResponse>();
+        var body = await response.Content.ReadFromJsonAsync<DeploymentDetailsResponse>();
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         // FailureReason should be null for non-Failed deployments
@@ -259,7 +259,7 @@ public class DeploymentApiTests : IClassFixture<DeploymentApiFactory>
     {
         var client = CreateClient(SeedOwner);
         var created = await CreateDeploymentAsync(client, new CreateDeploymentRequest
-            { ServiceId = SeedSvc.ToString(), Environment = "staging", Version = "redaction-test", CommitSha = "abc123" });
+        { ServiceId = SeedSvc.ToString(), Environment = "staging", Version = "redaction-test", CommitSha = "abc123" });
 
         await using (var connection = new Npgsql.NpgsqlConnection(_factory._db.GetConnectionString()))
         {
@@ -292,7 +292,7 @@ public class DeploymentApiTests : IClassFixture<DeploymentApiFactory>
         var adminClient = CreateClient(userId: 88011, role: "Admin");
         var ownerClient = CreateClient(SeedOwner);
         var created = await CreateDeploymentAsync(adminClient, new CreateDeploymentRequest
-            { ServiceId = SeedSvc.ToString(), Environment = "staging", Version = "admin-created", CommitSha = "abc123" });
+        { ServiceId = SeedSvc.ToString(), Environment = "staging", Version = "admin-created", CommitSha = "abc123" });
 
         var response = await ownerClient.GetAsync($"/api/deployments/{created.Id}");
 
@@ -305,7 +305,7 @@ public class DeploymentApiTests : IClassFixture<DeploymentApiFactory>
         var ownerClient = CreateClient(SeedOwner);
         var adminClient = CreateClient(userId: 88012, role: "Admin");
         var created = await CreateDeploymentAsync(ownerClient, new CreateDeploymentRequest
-            { ServiceId = SeedSvc.ToString(), Environment = "production", Version = "admin-visible", CommitSha = "abc123" });
+        { ServiceId = SeedSvc.ToString(), Environment = "production", Version = "admin-visible", CommitSha = "abc123" });
 
         var response = await adminClient.GetAsync($"/api/deployments/{created.Id}");
 
@@ -329,13 +329,13 @@ public class DeploymentApiTests : IClassFixture<DeploymentApiFactory>
     [Fact]
     public async Task Create_ValidRequest_Returns201AndPersistsDeployment()
     {
-        var client  = CreateClient(SeedOwner);
+        var client = CreateClient(SeedOwner);
         var request = new CreateDeploymentRequest
         {
             ServiceId = SeedSvc.ToString(),
             Environment = "production",
-            Version     = "v1.2.3",
-            CommitSha   = "deadbeef"
+            Version = "v1.2.3",
+            CommitSha = "deadbeef"
         };
 
         var response = await client.PostAsJsonAsync("/api/deployments", request);
@@ -475,11 +475,11 @@ public class DeploymentApiTests : IClassFixture<DeploymentApiFactory>
         var serviceId = await _factory.ProvisionServiceForOwnerAsync(userId);
 
         var dep = await CreateDeploymentAsync(client, new CreateDeploymentRequest
-            { ServiceId = serviceId.ToString(), Environment = "production", Version = "history-verify", CommitSha = "abc123" });
+        { ServiceId = serviceId.ToString(), Environment = "production", Version = "history-verify", CommitSha = "abc123" });
 
         // The created deployment should appear in the owner's history
         var history = await client.GetAsync("/api/deployments");
-        var body    = await history.Content.ReadFromJsonAsync<DeploymentListResponse>();
+        var body = await history.Content.ReadFromJsonAsync<DeploymentListResponse>();
 
         Assert.Contains(body!.Items, d => d.Id == dep.Id);
     }

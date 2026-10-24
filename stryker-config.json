@@ -8,16 +8,17 @@
       "Progress",
       "Html",
       "ClearText",
-      "Json"
+      "Json",
+      "Markdown"
     ],
     "thresholds": {
       "high": 80,
       "low": 60,
-      "break": 0
+      "break": 60
     },
     "mutate": [
-      "Services/DeploymentUrlExtractor.cs",
-      "Services/DeploymentLogSanitizer.cs"
+      "**/DeploymentUrlExtractor.cs",
+      "**/DeploymentLogSanitizer.cs"
     ],
     "concurrency": 4,
     "log-level": "info"

@@ -117,7 +117,7 @@ public class AuthenticationApiTests : IClassFixture<AuthenticationApiFactory>
             Email = "profiletest@example.com",
             Password = "Password123!"
         });
-        
+
         // Wait, registering doesn't return a token anymore based on our previous fix (the DTO changed).
         // Let's log in to get the token.
         var loginRes = await client.PostAsJsonAsync("/api/auth/login", new LoginRequest { Username = "profiletest", Password = "Password123!" });
@@ -157,10 +157,10 @@ public class AuthenticationApiTests : IClassFixture<AuthenticationApiFactory>
             Email = "update@example.com",
             Password = "Password123!"
         });
-        
+
         var loginResponse = await client.PostAsJsonAsync("/api/auth/login", new LoginRequest { Username = "updatetest", Password = "Password123!" });
         var loginBody = await loginResponse.Content.ReadFromJsonAsync<ApiResponse<LoginResponse>>();
-        
+
         var authClient = _factory.CreateClient();
         authClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", loginBody!.Data!.Token);
 

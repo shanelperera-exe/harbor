@@ -39,19 +39,19 @@ public class ReportService(IDeploymentReportRepository repository) : IReportServ
         // ── 2. Map to DTOs ─────────────────────────────────────────────────────
         var items = rows.Select(r => new DeploymentReportItem
         {
-            Id              = r.Id,
-            PublicId        = r.PublicId,
-            Environment     = r.Environment,
-            Version         = r.Version,
-            CommitSha       = r.CommitSha,
-            CommitMessage   = r.CommitMessage,
-            Status          = r.Status,
-            StartedAt       = r.StartedAt,
-            CompletedAt     = r.CompletedAt,
-            FailureReason   = r.FailureReason,
-            ProjectName     = r.ProjectName,
-            ServiceName     = r.ServiceName,
-            UserName        = r.UserName,
+            Id = r.Id,
+            PublicId = r.PublicId,
+            Environment = r.Environment,
+            Version = r.Version,
+            CommitSha = r.CommitSha,
+            CommitMessage = r.CommitMessage,
+            Status = r.Status,
+            StartedAt = r.StartedAt,
+            CompletedAt = r.CompletedAt,
+            FailureReason = r.FailureReason,
+            ProjectName = r.ProjectName,
+            ServiceName = r.ServiceName,
+            UserName = r.UserName,
             DurationSeconds = r.DurationSeconds,
         }).ToList();
 
@@ -61,8 +61,8 @@ public class ReportService(IDeploymentReportRepository repository) : IReportServ
         return new DeploymentReportResponse
         {
             AppliedFilters = query,
-            Statistics     = statistics,
-            Items          = items,
+            Statistics = statistics,
+            Items = items,
         };
     }
 
@@ -75,9 +75,9 @@ public class ReportService(IDeploymentReportRepository repository) : IReportServ
     /// </summary>
     public static DeploymentReportStatistics ComputeStatistics(IReadOnlyList<DeploymentReportItem> items)
     {
-        var total      = items.Count;
+        var total = items.Count;
         var successful = items.Count(i => SuccessStatuses.Contains(i.Status));
-        var failed     = items.Count(i => FailureStatuses.Contains(i.Status));
+        var failed = items.Count(i => FailureStatuses.Contains(i.Status));
 
         // AC6 – success rate: avoid division-by-zero when no deployments match (AC8).
         var successRate = total == 0
@@ -96,10 +96,10 @@ public class ReportService(IDeploymentReportRepository repository) : IReportServ
 
         return new DeploymentReportStatistics
         {
-            TotalDeployments       = total,
-            SuccessfulDeployments  = successful,
-            FailedDeployments      = failed,
-            SuccessRate            = successRate,
+            TotalDeployments = total,
+            SuccessfulDeployments = successful,
+            FailedDeployments = failed,
+            SuccessRate = successRate,
             AverageDurationSeconds = avgDuration,
         };
     }

@@ -93,11 +93,11 @@ namespace Harbor.Project.Services
             bool isApex = parts.Length == 2;
             string dnsType = isApex ? "A" : "CNAME";
             string dnsHost = isApex ? "@" : parts[0];
-            string dnsTarget = isApex 
-                ? DefaultApexDnsTarget 
-                : (service.Provider?.ToLower() == "vercel" 
-                    ? "cname.vercel-dns.com" 
-                    : (service.Provider?.ToLower() == "railway" 
+            string dnsTarget = isApex
+                ? DefaultApexDnsTarget
+                : (service.Provider?.ToLower() == "vercel"
+                    ? "cname.vercel-dns.com"
+                    : (service.Provider?.ToLower() == "railway"
                         ? (!string.IsNullOrWhiteSpace(service.DeploymentUrl) && CleanHost(service.DeploymentUrl).EndsWith(".up.railway.app", StringComparison.OrdinalIgnoreCase)
                             ? CleanHost(service.DeploymentUrl)
                             : "dns.railway.app")

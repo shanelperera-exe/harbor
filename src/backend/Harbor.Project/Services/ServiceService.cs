@@ -14,8 +14,8 @@ namespace Harbor.Project.Services
         private readonly Harbor.Common.Security.IHarborSecretProtector _secretProtector;
 
         public ServiceService(
-            IServiceRepository serviceRepository, 
-            IProjectRepository projectRepository, 
+            IServiceRepository serviceRepository,
+            IProjectRepository projectRepository,
             IProjectIntegrationRepository integrationRepository,
             ICacheService cache,
             Harbor.Common.Security.IHarborSecretProtector secretProtector)
@@ -63,7 +63,7 @@ namespace Harbor.Project.Services
 
             var id = await _serviceRepository.CreateAsync(serviceEntity);
             var service = await _serviceRepository.GetByIdAsync(id);
-            
+
             await _cache.RemoveAsync(CacheKeys.ServicesByProject(project.Id));
 
             return (true, null, ToResponse(service!));
@@ -149,28 +149,28 @@ namespace Harbor.Project.Services
             }
             else
             {
-if (request.Provider != null)
-            {
-                service.Provider = string.IsNullOrWhiteSpace(request.Provider) ? null : request.Provider.Trim();
+                if (request.Provider != null)
+                {
+                    service.Provider = string.IsNullOrWhiteSpace(request.Provider) ? null : request.Provider.Trim();
+                }
+
+                if (request.ProviderToken != null)
+                {
+                    service.ProviderToken = string.IsNullOrWhiteSpace(request.ProviderToken) ? null : _secretProtector.Protect(request.ProviderToken.Trim());
+                }
             }
 
-            if (request.ProviderToken != null)
+            if (request.BuildCommand != null)
             {
-                service.ProviderToken = string.IsNullOrWhiteSpace(request.ProviderToken) ? null : _secretProtector.Protect(request.ProviderToken.Trim());
+                service.BuildCommand = string.IsNullOrWhiteSpace(request.BuildCommand) ? null : request.BuildCommand.Trim();
             }
-        }
 
-        if (request.BuildCommand != null)
-        {
-            service.BuildCommand = string.IsNullOrWhiteSpace(request.BuildCommand) ? null : request.BuildCommand.Trim();
-        }
+            if (request.StartCommand != null)
+            {
+                service.StartCommand = string.IsNullOrWhiteSpace(request.StartCommand) ? null : request.StartCommand.Trim();
+            }
 
-        if (request.StartCommand != null)
-        {
-            service.StartCommand = string.IsNullOrWhiteSpace(request.StartCommand) ? null : request.StartCommand.Trim();
-        }
-
-        var updated = await _serviceRepository.UpdateAsync(service);
+            var updated = await _serviceRepository.UpdateAsync(service);
             if (!updated) return (false, "Failed to update service.", null);
 
             await _cache.RemoveAsync(CacheKeys.ServicesByProject(project.Id));
@@ -224,7 +224,7 @@ if (request.Provider != null)
                     if (s.DeploymentUrl.Trim().StartsWith("["))
                     {
                         var parsedUrls = System.Text.Json.JsonSerializer.Deserialize<System.Collections.Generic.List<ServiceDeploymentUrl>>(
-                            s.DeploymentUrl, 
+                            s.DeploymentUrl,
                             new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true }
                         );
                         if (parsedUrls != null)

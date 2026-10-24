@@ -20,7 +20,7 @@ namespace Harbor.E2ETests.Pages
         {
             _driver.Navigate().GoToUrl("http://localhost:5173/projects");
             _wait.Until(d => d.FindElement(By.CssSelector("[data-testid='projects-list']")));
-            
+
             // Wait for React to fully hydrate (dev server cold compile can delay this)
             System.Threading.Thread.Sleep(500);
         }

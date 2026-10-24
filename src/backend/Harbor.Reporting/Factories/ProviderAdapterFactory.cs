@@ -22,7 +22,7 @@ namespace Harbor.Reporting.Factories
         {
             if (string.IsNullOrWhiteSpace(providerName))
                 return null;
-                
+
             return _adapters.FirstOrDefault(a => a.ProviderName.Equals(providerName, System.StringComparison.OrdinalIgnoreCase));
         }
     }

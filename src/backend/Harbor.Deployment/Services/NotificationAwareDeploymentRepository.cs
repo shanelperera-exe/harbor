@@ -77,9 +77,9 @@ public class NotificationAwareDeploymentRepository(
             }
 
             var isSuccess = IsSuccess(status);
-            var type    = isSuccess ? "success" : "failure";
+            var type = isSuccess ? "success" : "failure";
             var service = deployment.ServiceName ?? $"Service #{deployment.ServiceId}";
-            var env     = deployment.Environment;
+            var env = deployment.Environment;
             var version = deployment.Version;
 
             string title;
@@ -87,23 +87,23 @@ public class NotificationAwareDeploymentRepository(
 
             if (isSuccess)
             {
-                title   = $"Deployment succeeded — {service}";
+                title = $"Deployment succeeded — {service}";
                 message = $"Version {version} deployed successfully to {env}.";
             }
             else
             {
-                title   = $"Deployment failed — {service}";
+                title = $"Deployment failed — {service}";
                 var reason = string.IsNullOrWhiteSpace(failureReason) ? "No failure reason provided." : failureReason;
                 message = $"Version {version} failed to deploy to {env}. Reason: {reason}";
             }
 
             var notification = new NotificationEntity
             {
-                UserId       = deployment.OwnerId,
+                UserId = deployment.OwnerId,
                 DeploymentId = deploymentId,
-                Type         = type,
-                Title        = title,
-                Message      = message,
+                Type = type,
+                Title = title,
+                Message = message,
             };
 
             var notificationId = await notificationRepository.CreateAsync(notification);

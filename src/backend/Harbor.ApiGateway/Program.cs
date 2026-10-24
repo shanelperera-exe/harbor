@@ -94,41 +94,41 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-    // Configure the HTTP request pipeline.
-    app.UseSwagger();
-    app.UseSwaggerUI(c =>
-    {
-        c.SwaggerEndpoint("/swagger-docs/auth/v1/swagger.json", "Harbor.Authentication API");
-        c.SwaggerEndpoint("/swagger-docs/project/v1/swagger.json", "Harbor.Project API");
-        c.SwaggerEndpoint("/swagger-docs/environment/v1/swagger.json", "Harbor.Environment API");
-        c.SwaggerEndpoint("/swagger-docs/deployment/v1/swagger.json", "Harbor.Deployment API");
-        c.SwaggerEndpoint("/swagger-docs/reporting/v1/swagger.json", "Harbor.Reporting API");
-        c.RoutePrefix = "swagger";
-        c.DocumentTitle = "Harbor Platform API Documentation";
-    });
+// Configure the HTTP request pipeline.
+app.UseSwagger();
+app.UseSwaggerUI(c =>
+{
+    c.SwaggerEndpoint("/swagger-docs/auth/v1/swagger.json", "Harbor.Authentication API");
+    c.SwaggerEndpoint("/swagger-docs/project/v1/swagger.json", "Harbor.Project API");
+    c.SwaggerEndpoint("/swagger-docs/environment/v1/swagger.json", "Harbor.Environment API");
+    c.SwaggerEndpoint("/swagger-docs/deployment/v1/swagger.json", "Harbor.Deployment API");
+    c.SwaggerEndpoint("/swagger-docs/reporting/v1/swagger.json", "Harbor.Reporting API");
+    c.RoutePrefix = "swagger";
+    c.DocumentTitle = "Harbor Platform API Documentation";
+});
 
-    app.MapGet("/", () => Results.Redirect("/swagger"));
+app.MapGet("/", () => Results.Redirect("/swagger"));
 
-    app.UseForwardedHeaders();
-    app.UseCors();
-    app.UseHarborObservability();
-    if (!builder.Configuration.GetValue("DisableHttpsRedirection", false))
-    {
-        app.UseHttpsRedirection();
-    }
+app.UseForwardedHeaders();
+app.UseCors();
+app.UseHarborObservability();
+if (!builder.Configuration.GetValue("DisableHttpsRedirection", false))
+{
+    app.UseHttpsRedirection();
+}
 
-    // Handle GitHub App installation callback - redirect to frontend
-    app.MapGet("/github/install/callback", (HttpContext ctx) =>
-    {
-        var frontendUrl = Environment.GetEnvironmentVariable("FRONTEND_URL") ?? "http://localhost:5173";
-        var queryString = ctx.Request.QueryString.HasValue ? ctx.Request.QueryString.Value : "";
-        return Results.Redirect($"{frontendUrl.TrimEnd('/')}/github/install/callback{queryString}");
-    });
+// Handle GitHub App installation callback - redirect to frontend
+app.MapGet("/github/install/callback", (HttpContext ctx) =>
+{
+    var frontendUrl = Environment.GetEnvironmentVariable("FRONTEND_URL") ?? "http://localhost:5173";
+    var queryString = ctx.Request.QueryString.HasValue ? ctx.Request.QueryString.Value : "";
+    return Results.Redirect($"{frontendUrl.TrimEnd('/')}/github/install/callback{queryString}");
+});
 
-    app.UseAuthorization();
+app.UseAuthorization();
 
-    app.MapControllers();
-    app.MapReverseProxy();
-    app.MapHarborObservability();
+app.MapControllers();
+app.MapReverseProxy();
+app.MapHarborObservability();
 
-    await app.RunAsync();
+await app.RunAsync();

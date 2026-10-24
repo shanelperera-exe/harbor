@@ -105,19 +105,19 @@ public class EnvironmentRepository(DbConnectionFactory dbFactory) : IEnvironment
         return await command.ExecuteNonQueryAsync() > 0;
     }
 
-public async Task<bool> DeleteAsync(int environmentId, int projectId)
+    public async Task<bool> DeleteAsync(int environmentId, int projectId)
+    {
+        await using var connection = dbFactory.CreateConnection();
+        await connection.OpenAsync();
+        await using var transaction = await connection.BeginTransactionAsync();
+
+        try
         {
-            await using var connection = dbFactory.CreateConnection();
-            await connection.OpenAsync();
-            await using var transaction = await connection.BeginTransactionAsync();
-            
-            try
+            // First delete services associated with this environment
+            await using (var deleteServicesCmd = connection.CreateCommand())
             {
-                // First delete services associated with this environment
-                await using (var deleteServicesCmd = connection.CreateCommand())
-                {
-                    deleteServicesCmd.Transaction = transaction;
-                    deleteServicesCmd.CommandText = """
+                deleteServicesCmd.Transaction = transaction;
+                deleteServicesCmd.CommandText = """
                         DELETE FROM "Services" 
                         WHERE "ProjectId" = @projectId 
                         AND "Id" IN (
@@ -129,19 +129,19 @@ public async Task<bool> DeleteAsync(int environmentId, int projectId)
                             )
                         );
                         """;
-                    deleteServicesCmd.Parameters.AddWithValue("projectId", projectId);
-                    deleteServicesCmd.Parameters.AddWithValue("environmentId", environmentId);
-                    await deleteServicesCmd.ExecuteNonQueryAsync();
-                }
+                deleteServicesCmd.Parameters.AddWithValue("projectId", projectId);
+                deleteServicesCmd.Parameters.AddWithValue("environmentId", environmentId);
+                await deleteServicesCmd.ExecuteNonQueryAsync();
+            }
 
-                // Then delete deployments associated with this environment.
-                // "Deployments" has no "ProjectId" column - a deployment belongs to a Service,
-                // and a Service to a Project - so ownership is resolved through that chain
-                // (the same shape the read path uses in GetByIdAsync).
-                await using (var deleteDeploymentsCmd = connection.CreateCommand())
-                {
-                    deleteDeploymentsCmd.Transaction = transaction;
-                    deleteDeploymentsCmd.CommandText = """
+            // Then delete deployments associated with this environment.
+            // "Deployments" has no "ProjectId" column - a deployment belongs to a Service,
+            // and a Service to a Project - so ownership is resolved through that chain
+            // (the same shape the read path uses in GetByIdAsync).
+            await using (var deleteDeploymentsCmd = connection.CreateCommand())
+            {
+                deleteDeploymentsCmd.Transaction = transaction;
+                deleteDeploymentsCmd.CommandText = """
                         DELETE FROM "Deployments" 
                         WHERE "ServiceId" IN (
                             SELECT s."Id" FROM "Services" s WHERE s."ProjectId" = @projectId
@@ -150,30 +150,30 @@ public async Task<bool> DeleteAsync(int environmentId, int projectId)
                             SELECT "Name" FROM "Environments" WHERE "Id" = @environmentId AND "ProjectId" = @projectId
                         );
                         """;
-                    deleteDeploymentsCmd.Parameters.AddWithValue("projectId", projectId);
-                    deleteDeploymentsCmd.Parameters.AddWithValue("environmentId", environmentId);
-                    await deleteDeploymentsCmd.ExecuteNonQueryAsync();
-                }
-
-                // Finally delete the environment itself
-                await using (var deleteEnvCmd = connection.CreateCommand())
-                {
-                    deleteEnvCmd.Transaction = transaction;
-                    deleteEnvCmd.CommandText = "DELETE FROM \"Environments\" WHERE \"Id\" = @environmentId AND \"ProjectId\" = @projectId AND \"IsActive\" = TRUE;";
-                    deleteEnvCmd.Parameters.AddWithValue("environmentId", environmentId);
-                    deleteEnvCmd.Parameters.AddWithValue("projectId", projectId);
-                    var rowsAffected = await deleteEnvCmd.ExecuteNonQueryAsync();
-                    
-                    await transaction.CommitAsync();
-                    return rowsAffected > 0;
-                }
+                deleteDeploymentsCmd.Parameters.AddWithValue("projectId", projectId);
+                deleteDeploymentsCmd.Parameters.AddWithValue("environmentId", environmentId);
+                await deleteDeploymentsCmd.ExecuteNonQueryAsync();
             }
-            catch
+
+            // Finally delete the environment itself
+            await using (var deleteEnvCmd = connection.CreateCommand())
             {
-                await transaction.RollbackAsync();
-                throw;
+                deleteEnvCmd.Transaction = transaction;
+                deleteEnvCmd.CommandText = "DELETE FROM \"Environments\" WHERE \"Id\" = @environmentId AND \"ProjectId\" = @projectId AND \"IsActive\" = TRUE;";
+                deleteEnvCmd.Parameters.AddWithValue("environmentId", environmentId);
+                deleteEnvCmd.Parameters.AddWithValue("projectId", projectId);
+                var rowsAffected = await deleteEnvCmd.ExecuteNonQueryAsync();
+
+                await transaction.CommitAsync();
+                return rowsAffected > 0;
             }
         }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+    }
 
     public async Task<bool> DeactivateAsync(int environmentId, int projectId, DateTime deactivatedAt)
     {
@@ -268,7 +268,7 @@ public async Task<bool> DeleteAsync(int environmentId, int projectId)
         {
             command.CommandText = "SELECT \"Id\", \"OwnerId\", \"IsArchived\" FROM \"Projects\" WHERE \"PublicId\" = @publicId;";
         }
-        
+
         command.Parameters.AddWithValue("publicId", projectId);
 
         await using var reader = await command.ExecuteReaderAsync();

@@ -42,7 +42,7 @@ public class EnvironmentConfigurationService(
         // Provider is REQUIRED - must be provided and non-empty
         if (string.IsNullOrWhiteSpace(request.Provider))
             return (false, "Provider is required.", false, null);
-        
+
         var provider = request.Provider.Trim();
         if (provider.Length > MaxProviderLength)
             return (false, $"Provider cannot exceed {MaxProviderLength} characters.", false, null);
@@ -77,8 +77,12 @@ public class EnvironmentConfigurationService(
         {
             itemsToSave.Add(new EnvironmentConfigurationEntity
             {
-                EnvironmentId = environmentId, Key = item.Key!.Trim(), Value = item.Value!.Trim(),
-                IsSecret = false, CreatedAt = now, UpdatedAt = now
+                EnvironmentId = environmentId,
+                Key = item.Key!.Trim(),
+                Value = item.Value!.Trim(),
+                IsSecret = false,
+                CreatedAt = now,
+                UpdatedAt = now
             });
         }
 
@@ -101,8 +105,12 @@ public class EnvironmentConfigurationService(
 
             itemsToSave.Add(new EnvironmentConfigurationEntity
             {
-                EnvironmentId = environmentId, Key = key, Value = cipherText,
-                IsSecret = true, CreatedAt = now, UpdatedAt = now
+                EnvironmentId = environmentId,
+                Key = key,
+                Value = cipherText,
+                IsSecret = true,
+                CreatedAt = now,
+                UpdatedAt = now
             });
         }
 

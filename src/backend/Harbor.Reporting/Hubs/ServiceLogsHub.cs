@@ -23,7 +23,7 @@ namespace Harbor.Reporting.Hubs
             // Add the connection to a group specific to this service
             await Groups.AddToGroupAsync(Context.ConnectionId, $"logs_{serviceId}");
             _tracker.AddSubscription(serviceId, Context.ConnectionId);
-            
+
             // Send buffered historical logs
             string cacheKey = $"logs:buffer:{serviceId}";
             var recentLogs = await _cacheService.GetAsync<List<object>>(cacheKey);
@@ -36,8 +36,8 @@ namespace Harbor.Reporting.Hubs
             }
 
             // Send a welcome message back to confirm subscription
-            await Clients.Caller.SendAsync("ReceiveLog", serviceId, new 
-            { 
+            await Clients.Caller.SendAsync("ReceiveLog", serviceId, new
+            {
                 timestamp = System.DateTime.UtcNow.ToString("HH:mm:ss"),
                 level = "[system]",
                 message = $"Connected to live log stream for {serviceId}..."

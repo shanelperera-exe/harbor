@@ -82,8 +82,15 @@ public class EnvironmentService(IEnvironmentRepository environmentRepository) : 
 
     private static EnvironmentResponse ToResponse(EnvironmentEntity environment) => new()
     {
-        Id = environment.Id, PublicId = string.IsNullOrEmpty(environment.PublicId) ? environment.Id.ToString() : environment.PublicId, ProjectId = environment.ProjectId, Name = environment.Name,
-        Type = environment.Type, CreatedAt = environment.CreatedAt, IsActive = environment.IsActive, DeactivatedAt = environment.DeactivatedAt,
-        DeploymentUrl = environment.DeploymentUrl, Provider = environment.Provider
+        Id = environment.Id,
+        PublicId = string.IsNullOrEmpty(environment.PublicId) ? environment.Id.ToString() : environment.PublicId,
+        ProjectId = environment.ProjectId,
+        Name = environment.Name,
+        Type = environment.Type,
+        CreatedAt = environment.CreatedAt,
+        IsActive = environment.IsActive,
+        DeactivatedAt = environment.DeactivatedAt,
+        DeploymentUrl = environment.DeploymentUrl,
+        Provider = environment.Provider
     };
 }

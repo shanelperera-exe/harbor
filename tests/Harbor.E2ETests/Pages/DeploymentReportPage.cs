@@ -30,12 +30,12 @@ namespace Harbor.E2ETests.Pages
         {
             _driver.Navigate().GoToUrl("http://localhost:5173/reports");
             _wait.Until(d => d.FindElement(By.CssSelector("[data-testid='generate-report-btn']")));
-            
+
             // Wait for React to fully hydrate (dev server cold compile can delay this)
             System.Threading.Thread.Sleep(500);
         }
 
-public void SelectFilterOption(string filterTestId, string optionLabel)
+        public void SelectFilterOption(string filterTestId, string optionLabel)
         {
             var trigger = _wait.Until(d => d.FindElement(By.CssSelector($"[data-testid='{filterTestId}']")));
             var optionsListTestId = $"{filterTestId}-options";
@@ -57,11 +57,15 @@ public void SelectFilterOption(string filterTestId, string optionLabel)
             }
 
             // Wait for dropdown animation to complete (option should be fully visible)
-            _wait.Until(d => {
-                try {
+            _wait.Until(d =>
+            {
+                try
+                {
                     var style = option.GetAttribute("style");
                     return style == null || !style.Contains("opacity: 0") && !style.Contains("translateY(-10px)");
-                } catch {
+                }
+                catch
+                {
                     return false;
                 }
             });
@@ -125,7 +129,7 @@ public void SelectFilterOption(string filterTestId, string optionLabel)
         private void SetDateInput(string testId, string date)
         {
             var input = _wait.Until(d => d.FindElement(By.CssSelector($"[data-testid='{testId}']")));
-            
+
             // Use native value setter to properly update React controlled component
             ((IJavaScriptExecutor)_driver).ExecuteScript(
                 "var input = arguments[0]; var date = arguments[1]; " +
@@ -163,7 +167,7 @@ public void SelectFilterOption(string filterTestId, string optionLabel)
                 }
                 catch (StaleElementReferenceException) { return false; }
             });
-            
+
             // Wait for results section to be fully rendered (empty state visible or table rows visible)
             // OR for validation error to appear
             _wait.Until(d =>
@@ -172,18 +176,18 @@ public void SelectFilterOption(string filterTestId, string optionLabel)
                 {
                     var empty = d.FindElements(By.CssSelector("[data-testid='report-empty']"));
                     if (empty.Count > 0 && empty[0].Displayed) return true;
-                    
+
                     var rows = d.FindElements(By.CssSelector("[data-testid='report-row']"));
                     if (rows.Count > 0 && rows[0].Displayed) return true;
-                    
+
                     var error = d.FindElements(By.CssSelector("[data-testid='report-error']"));
                     if (error.Count > 0 && error[0].Displayed) return true;
-                    
+
                     return false;
                 }
                 catch { return false; }
             });
-            
+
             // Small delay to ensure React rendering is complete
             System.Threading.Thread.Sleep(500);
         }

@@ -34,7 +34,7 @@ public class KafkaConsumerServiceTests
         _scopeFactoryMock.Setup(sf => sf.CreateScope()).Returns(_scopeMock.Object);
         _scopeMock.Setup(s => s.ServiceProvider).Returns(_serviceProviderMock.Object);
         _serviceProviderMock.Setup(sp => sp.GetService(typeof(IDeploymentRepository))).Returns(_deploymentRepositoryMock.Object);
-        
+
         _service = new KafkaConsumerService(_optionsMock.Object, _loggerMock.Object, _scopeFactoryMock.Object);
     }
 
@@ -150,9 +150,9 @@ public class KafkaConsumerServiceTests
     {
         _deploymentRepositoryMock.Setup(r => r.GetEntityByIdAsync(10)).ReturnsAsync((DeploymentEntity?)null);
         var json = JsonSerializer.Serialize(new DeploymentLifecycleEvent { DeploymentId = 10, Status = "DeploymentStarted" });
-        
+
         await _service.ProcessEventAsync(json, CancellationToken.None);
-        
+
         _deploymentRepositoryMock.Verify(r => r.GetEntityByIdAsync(10), Times.Once);
         _deploymentRepositoryMock.Verify(r => r.UpdateStatusAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string?>()), Times.Never);
     }
@@ -163,11 +163,11 @@ public class KafkaConsumerServiceTests
         var deployment = new DeploymentEntity { Id = 10, Status = "Pending" };
         _deploymentRepositoryMock.Setup(r => r.GetEntityByIdAsync(10)).ReturnsAsync(deployment);
         _deploymentRepositoryMock.Setup(r => r.UpdateStatusAsync(10, "Running", null)).ReturnsAsync(true);
-        
+
         var json = JsonSerializer.Serialize(new DeploymentLifecycleEvent { DeploymentId = 10, Status = "DeploymentStarted" });
-        
+
         await _service.ProcessEventAsync(json, CancellationToken.None);
-        
+
         _deploymentRepositoryMock.Verify(r => r.UpdateStatusAsync(10, "Running", null), Times.Once);
     }
 
@@ -177,11 +177,11 @@ public class KafkaConsumerServiceTests
         var deployment = new DeploymentEntity { Id = 10, Status = "Running" };
         _deploymentRepositoryMock.Setup(r => r.GetEntityByIdAsync(10)).ReturnsAsync(deployment);
         _deploymentRepositoryMock.Setup(r => r.UpdateStatusAsync(10, "Failed", "Out of memory")).ReturnsAsync(true);
-        
+
         var json = JsonSerializer.Serialize(new DeploymentLifecycleEvent { DeploymentId = 10, Status = "DeploymentFailed", FailureReason = "Out of memory" });
-        
+
         await _service.ProcessEventAsync(json, CancellationToken.None);
-        
+
         _deploymentRepositoryMock.Verify(r => r.UpdateStatusAsync(10, "Failed", "Out of memory"), Times.Once);
     }
 
@@ -190,11 +190,11 @@ public class KafkaConsumerServiceTests
     {
         var deployment = new DeploymentEntity { Id = 10, Status = "Successful" }; // Terminal state
         _deploymentRepositoryMock.Setup(r => r.GetEntityByIdAsync(10)).ReturnsAsync(deployment);
-        
+
         var json = JsonSerializer.Serialize(new DeploymentLifecycleEvent { DeploymentId = 10, Status = "DeploymentStarted" });
-        
+
         await _service.ProcessEventAsync(json, CancellationToken.None);
-        
+
         _deploymentRepositoryMock.Verify(r => r.GetEntityByIdAsync(10), Times.Once);
         _deploymentRepositoryMock.Verify(r => r.UpdateStatusAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string?>()), Times.Never);
     }
@@ -205,7 +205,7 @@ public class KafkaConsumerServiceTests
         // Empty JSON object deserializes to object with default values, not null
         // But we can test with "null" string
         await _service.ProcessEventAsync("null", CancellationToken.None);
-        
+
         _deploymentRepositoryMock.Verify(r => r.GetEntityByIdAsync(It.IsAny<int>()), Times.Never);
     }
 
@@ -216,7 +216,7 @@ public class KafkaConsumerServiceTests
         // DeploymentId will be 0, which is handled by the DeploymentId <= 0 check
         var json = JsonSerializer.Serialize(new DeploymentLifecycleEvent());
         await _service.ProcessEventAsync(json, CancellationToken.None);
-        
+
         _deploymentRepositoryMock.Verify(r => r.GetEntityByIdAsync(It.IsAny<int>()), Times.Never);
     }
 
@@ -225,9 +225,9 @@ public class KafkaConsumerServiceTests
     {
         _deploymentRepositoryMock.Setup(r => r.GetEntityByIdAsync(10)).ThrowsAsync(new Exception("DB connection failed"));
         var json = JsonSerializer.Serialize(new DeploymentLifecycleEvent { DeploymentId = 10, Status = "DeploymentStarted" });
-        
+
         await _service.ProcessEventAsync(json, CancellationToken.None);
-        
+
         _deploymentRepositoryMock.Verify(r => r.GetEntityByIdAsync(10), Times.Once);
         _deploymentRepositoryMock.Verify(r => r.UpdateStatusAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string?>()), Times.Never);
     }
@@ -238,11 +238,11 @@ public class KafkaConsumerServiceTests
         var deployment = new DeploymentEntity { Id = 10, Status = "Pending" };
         _deploymentRepositoryMock.Setup(r => r.GetEntityByIdAsync(10)).ReturnsAsync(deployment);
         _deploymentRepositoryMock.Setup(r => r.UpdateStatusAsync(10, "Running", null)).ReturnsAsync(false);
-        
+
         var json = JsonSerializer.Serialize(new DeploymentLifecycleEvent { DeploymentId = 10, Status = "DeploymentStarted" });
-        
+
         await _service.ProcessEventAsync(json, CancellationToken.None);
-        
+
         _deploymentRepositoryMock.Verify(r => r.UpdateStatusAsync(10, "Running", null), Times.Once);
     }
 
@@ -252,11 +252,11 @@ public class KafkaConsumerServiceTests
         var deployment = new DeploymentEntity { Id = 10, Status = "Running" };
         _deploymentRepositoryMock.Setup(r => r.GetEntityByIdAsync(10)).ReturnsAsync(deployment);
         _deploymentRepositoryMock.Setup(r => r.UpdateStatusAsync(10, "Successful", null)).ReturnsAsync(true);
-        
+
         var json = JsonSerializer.Serialize(new DeploymentLifecycleEvent { DeploymentId = 10, Status = "DeploymentSucceeded" });
-        
+
         await _service.ProcessEventAsync(json, CancellationToken.None);
-        
+
         _deploymentRepositoryMock.Verify(r => r.UpdateStatusAsync(10, "Successful", null), Times.Once);
     }
 
@@ -266,15 +266,15 @@ public class KafkaConsumerServiceTests
         var deployment = new DeploymentEntity { Id = 10, Status = "Pending" };
         _deploymentRepositoryMock.Setup(r => r.GetEntityByIdAsync(10)).ReturnsAsync(deployment);
         _deploymentRepositoryMock.Setup(r => r.UpdateStatusAsync(10, "Running", null)).ReturnsAsync(true);
-        
+
         var json = JsonSerializer.Serialize(new DeploymentLifecycleEvent { DeploymentId = 10, Status = "DeploymentStarted" });
-        
+
         var cts = new CancellationTokenSource();
         cts.Cancel();
-        
+
         // Should not throw even with cancelled token
         await _service.ProcessEventAsync(json, cts.Token);
-        
+
         // The operation may or may not complete depending on timing, but should not throw
     }
 }

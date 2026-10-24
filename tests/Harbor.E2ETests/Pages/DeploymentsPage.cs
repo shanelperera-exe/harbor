@@ -47,7 +47,7 @@ namespace Harbor.E2ETests.Pages
         {
             _driver.Navigate().GoToUrl("http://localhost:5173/deployments");
             _wait.Until(d => d.FindElement(By.CssSelector("[data-testid='status-filter']")));
-            
+
             // Wait for React to fully hydrate (dev server cold compile can delay this)
             System.Threading.Thread.Sleep(500);
         }
@@ -154,7 +154,7 @@ namespace Harbor.E2ETests.Pages
                     return false; // Pagination element not yet rendered
                 }
             });
-            
+
             // Additional small wait to ensure React rendering is complete
             System.Threading.Thread.Sleep(200);
         }
@@ -276,12 +276,12 @@ namespace Harbor.E2ETests.Pages
         private void ClickPageButton(By locator)
         {
             var before = _wait.Until(d => ReadPageLabel());
-            
+
             // Re-find button each time to avoid stale element after page reload
             var button = _wait.Until(d => d.FindElement(locator));
             ((IJavaScriptExecutor)_driver).ExecuteScript("arguments[0].scrollIntoView({block:'center'});", button);
             _wait.Until(d => button.Displayed && button.Enabled);
-            
+
             // Use JavaScript click to avoid interception/stale issues
             ((IJavaScriptExecutor)_driver).ExecuteScript("arguments[0].click();", button);
 
@@ -307,23 +307,23 @@ namespace Harbor.E2ETests.Pages
             {
                 // Fallback: find first row with the expected status badge
                 var expectedBadge = ExpectedBadgeLabel("");
-                row = GetRows().FirstOrDefault(r => 
+                row = GetRows().FirstOrDefault(r =>
                 {
                     try
                     {
-                        return r.Text.Contains(version) || 
+                        return r.Text.Contains(version) ||
                                r.FindElement(By.CssSelector("[data-testid='status-badge-label']")).Text.Contains(version);
                     }
                     catch { return false; }
                 });
             }
-            
+
             if (row == null)
             {
                 // Last resort: click first row
                 row = GetRows().First();
             }
-            
+
             ((IJavaScriptExecutor)_driver).ExecuteScript("arguments[0].scrollIntoView({block:'center'});", row);
             _wait.Until(d => row.Displayed && row.Enabled);
             row.Click();

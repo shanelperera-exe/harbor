@@ -79,8 +79,8 @@ namespace Harbor.Project.Services
 
         public async Task<ProjectResponse?> GetByIdAsync(string projectId)
         {
-            var cacheKey = int.TryParse(projectId, out var id) 
-                ? CacheKeys.ProjectById(id) 
+            var cacheKey = int.TryParse(projectId, out var id)
+                ? CacheKeys.ProjectById(id)
                 : CacheKeys.ProjectByPublicId(projectId);
 
             var project = await _cache.GetOrSetAsync(
@@ -88,7 +88,7 @@ namespace Harbor.Project.Services
                 () => _projectRepository.GetByIdOrPublicIdAsync(projectId),
                 CacheTtl.Project
             );
-            
+
             return project == null ? null : ToResponse(project);
         }
 
@@ -144,7 +144,7 @@ namespace Harbor.Project.Services
             }
 
             var refreshed = await _projectRepository.GetByIdAsync(project.Id);
-            
+
             await _cache.RemoveAsync(CacheKeys.AllProjects());
             await _cache.RemoveAsync(CacheKeys.ProjectsByOwner(project.OwnerId));
             await _cache.RemoveAsync(CacheKeys.ProjectById(project.Id));

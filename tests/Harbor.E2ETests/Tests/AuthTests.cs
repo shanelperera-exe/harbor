@@ -64,11 +64,14 @@ namespace Harbor.E2ETests.Tests
 
             // Wait for redirection to dashboard
             var wait = new WebDriverWait(Driver, TimeSpan.FromSeconds(20));
-            try {
+            try
+            {
                 wait.Until(d => d.Url.Contains("/projects"));
-            } catch (WebDriverTimeoutException) {
+            }
+            catch (WebDriverTimeoutException)
+            {
                 var error = "";
-                try { error = createAccountPage.GetErrorMessage(); } catch {}
+                try { error = createAccountPage.GetErrorMessage(); } catch { }
                 Assert.Fail($"Failed to redirect to dashboard. Error on page: {error}");
             }
 
@@ -89,11 +92,14 @@ namespace Harbor.E2ETests.Tests
             createAccountPage.CreateAccount(username, email, password);
 
             var wait = new WebDriverWait(Driver, TimeSpan.FromSeconds(20));
-            try {
+            try
+            {
                 wait.Until(d => d.Url.Contains("/projects"));
-            } catch (WebDriverTimeoutException) {
+            }
+            catch (WebDriverTimeoutException)
+            {
                 var error = "";
-                try { error = createAccountPage.GetErrorMessage(); } catch {}
+                try { error = createAccountPage.GetErrorMessage(); } catch { }
                 Assert.Fail($"Setup: Failed to redirect to dashboard during account creation. Error: {error}");
             }
 

@@ -126,7 +126,7 @@ public class KafkaConsumerService : BackgroundService
             {
                 _logger.LogInformation("Transitioning Deployment {DeploymentId} from {OldStatus} to {NewStatus}",
                     deploymentEvent.DeploymentId, deployment.Status, newState);
-                
+
                 await deploymentRepository.UpdateStatusAsync(deploymentEvent.DeploymentId, newState, deploymentEvent.FailureReason);
             }
             else

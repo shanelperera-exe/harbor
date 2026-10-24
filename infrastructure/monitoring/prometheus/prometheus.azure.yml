@@ -10,7 +10,8 @@
 
 global:
   # NOTE: scraping counts as HTTP traffic, so backend apps configured with
-  # min-replicas 0 will stay warm while Prometheus is running.
+  # min-replicas 0 will stay warm while Prometheus is running. Prometheus
+  # itself runs with min-replicas 0, so scraping stops when it scales down.
   scrape_interval: 30s
   scrape_timeout: 10s
   evaluation_interval: 30s

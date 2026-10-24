@@ -134,8 +134,8 @@ jobs:
                 "METRICS_SCRAPE_TOKEN=$METRICS_SCRAPE_TOKEN" \
               --min-replicas 0 \
               --max-replicas 1 \
-              --cpu 0.5 \
-              --memory 1Gi; then
+              --cpu 0.25 \
+              --memory 0.5Gi; then
               exit 0
             fi
             echo "Update failed (attempt $attempt/3); retrying in 15s..."
@@ -212,8 +212,8 @@ jobs:
                 "METRICS_SCRAPE_TOKEN=$METRICS_SCRAPE_TOKEN" \
               --min-replicas 0 \
               --max-replicas 1 \
-              --cpu 0.5 \
-              --memory 1Gi; then
+              --cpu 0.25 \
+              --memory 0.5Gi; then
               exit 0
             fi
             echo "Update failed (attempt $attempt/3); retrying in 15s..."
@@ -325,8 +325,8 @@ jobs:
               --resource-group "$RESOURCE_GROUP" \
               --min-replicas 0 \
               --max-replicas 1 \
-              --cpu 0.5 \
-              --memory 1Gi; then
+              --cpu 0.25 \
+              --memory 0.5Gi; then
               exit 0
             fi
             echo "Update failed (attempt $attempt/3); retrying in 15s..."
@@ -396,10 +396,10 @@ jobs:
                 "METRICS_SCRAPE_TOKEN=$METRICS_SCRAPE_TOKEN" \
                 "PROMETHEUS_BASIC_AUTH_USER=${{ vars.PROMETHEUS_BASIC_AUTH_USER || 'admin' }}" \
                 "PROMETHEUS_BASIC_AUTH_BCRYPT=$PROMETHEUS_BASIC_AUTH_BCRYPT" \
-              --min-replicas 1 \
+              --min-replicas 0 \
               --max-replicas 1 \
-              --cpu 0.5 \
-              --memory 1Gi; then
+              --cpu 0.25 \
+              --memory 0.5Gi; then
               exit 0
             fi
             echo "Update failed (attempt $attempt/3); retrying in 15s..."
@@ -449,8 +449,8 @@ jobs:
                 "PROMETHEUS_BASIC_AUTH_PASSWORD=$PROMETHEUS_BASIC_AUTH_PASSWORD" \
               --min-replicas 0 \
               --max-replicas 1 \
-              --cpu 0.5 \
-              --memory 1Gi; then
+              --cpu 0.25 \
+              --memory 0.5Gi; then
               exit 0
             fi
             echo "Update failed (attempt $attempt/3); retrying in 15s..."

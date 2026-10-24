@@ -51,20 +51,21 @@ jmeter -n -t tests/performance/DeploymentDetailsLoadTest.jmx \
 | 4 | `AuthLoadTest.jmx` | Authentication | `POST /api/auth/login` | 50 threads x 10 loops (500 samples) |
 | 5 | `AuthSpikeTest.jmx` | Authentication | `POST /api/auth/login` | 100 threads surge within 3s (500 samples) |
 | 6 | `AuthStressTest.jmx` | Authentication | `POST /api/auth/login` | 200 threads x 5 loops (1,000 samples) |
-| 7 | `ProjectCatalogLoadTest.jmx` | Project | `GET /api/projects`, `.../services` | 25 threads x 10 loops (500 samples) |
-| 8 | `EnvironmentConfigLoadTest.jmx` | Environment | `GET /api/projects/.../environments` | 20 threads x 10 loops (200 samples) |
+| 7 | `ProjectCatalogLoadTest.jmx` | Project | `GET /api/projects`, `.../services` | 50 threads x 10 loops (1,000 samples) |
+| 8 | `EnvironmentConfigLoadTest.jmx` | Environment | `GET /api/projects/.../environments` | 50 threads x 10 loops (500 samples) |
 | 9 | `DashboardBaseline.jmx` | Deployment | `GET /api/deployments/dashboard` | 1 thread x 10 loops (10 samples) |
-| 10 | `DashboardLoadTest.jmx` | Deployment | `GET /api/deployments/dashboard` | 10 & 50 users (700 samples) |
-| 11 | `DeploymentHistoryLoadTest.jmx` | Deployment | `GET /api/deployments` (filtered) | 20 threads x 10 loops (600 samples) |
+| 10 | `DashboardLoadTest.jmx` | Deployment | `GET /api/deployments/dashboard` | 50 & 50 users (1,500 samples) |
+| 11 | `DeploymentHistoryLoadTest.jmx` | Deployment | `GET /api/deployments` (filtered) | 50 threads x 10 loops (1,500 samples) |
 | 12 | `DeploymentDetailsBaseline.jmx` | Deployment | `GET /api/deployments/qa_seed_dep_failed` | Single user baseline |
 | 13 | `DeploymentDetailsLargePayload.jmx` | Deployment | `GET /api/deployments/qa_seed_dep_perf_large` | 2,000 log lines payload baseline |
 | 14 | `DeploymentDetailsConcurrentLoad.jmx` | Deployment | `GET /api/deployments/qa_seed_dep_perf_large` | 50 concurrent users x 10 loops (500 samples) |
 | 15 | `DeploymentDetailsLoadTest.jmx` | Deployment | `GET /api/deployments/...` (US-19) | Multi-scenario suite (502 samples) |
-| 16 | `NotificationLoadTest.jmx` | Deployment | `GET /api/notifications` | 20 threads x 10 loops (400 samples) |
+| 16 | `NotificationLoadTest.jmx` | Deployment | `GET /api/notifications` | 50 threads x 10 loops (1,000 samples) |
 | 17 | `DeploymentReportBaseline.jmx` | Reporting | `GET /api/reports/deployments` | Single user baseline (10 samples) |
-| 18 | `DeploymentReportLoadTest.jmx` | Reporting | `GET /api/reports/deployments` | 25 users x 5 loops (500 samples) |
-| 19 | `AuditLogsLoadTest.jmx` | Reporting | `GET /api/reports/audit` | 20 users x 5 loops (100 samples) |
-| 20 | `HarborEndToEndUserJourneyLoadTest.jmx` | All Services | 10-step full developer workflow | 15 users x 5 loops (750 samples) |
+| 18 | `DeploymentReportLoadTest.jmx` | Reporting | `GET /api/reports/deployments` | 50 users x 5 loops (1,000 samples) |
+| 19 | `AuditLogsLoadTest.jmx` | Reporting | `GET /api/reports/audit` | 50 users x 5 loops (250 samples) |
+| 20 | `HarborEndToEndUserJourneyLoadTest.jmx` | All Services | 10-step full developer workflow | 50 users x 5 loops (2,500 samples) |
+| 21 | `HarborEnduranceSoakTest.jmx` | Deployment / DB | Extended endurance & soak check | 50 users x 100 loops (5,000 samples) |
 
 ---
 

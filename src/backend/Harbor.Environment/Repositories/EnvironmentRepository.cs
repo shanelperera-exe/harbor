@@ -1,9 +1,13 @@
 using Harbor.Environment.Data;
 using Harbor.Environment.Models;
+using Harbor.Environment.Services;
 
 namespace Harbor.Environment.Repositories;
 
-public class EnvironmentRepository(DbConnectionFactory dbFactory) : IEnvironmentRepository
+public class EnvironmentRepository(
+    DbConnectionFactory dbFactory,
+    IProjectServiceClient? projectServiceClient = null,
+    IDeploymentServiceClient? deploymentServiceClient = null) : IEnvironmentRepository
 {
     public async Task<int> CreateAsync(EnvironmentEntity environment)
     {
@@ -109,70 +113,21 @@ public class EnvironmentRepository(DbConnectionFactory dbFactory) : IEnvironment
     {
         await using var connection = dbFactory.CreateConnection();
         await connection.OpenAsync();
-        await using var transaction = await connection.BeginTransactionAsync();
+        await using var deleteEnvCmd = connection.CreateCommand();
+        deleteEnvCmd.CommandText = "DELETE FROM \"Environments\" WHERE \"Id\" = @environmentId AND \"ProjectId\" = @projectId AND \"IsActive\" = TRUE;";
+        deleteEnvCmd.Parameters.AddWithValue("environmentId", environmentId);
+        deleteEnvCmd.Parameters.AddWithValue("projectId", projectId);
+        return await deleteEnvCmd.ExecuteNonQueryAsync() > 0;
+    }
 
-        try
-        {
-            // First delete services associated with this environment
-            await using (var deleteServicesCmd = connection.CreateCommand())
-            {
-                deleteServicesCmd.Transaction = transaction;
-                deleteServicesCmd.CommandText = """
-                        DELETE FROM "Services" 
-                        WHERE "ProjectId" = @projectId 
-                        AND "Id" IN (
-                            SELECT s."Id" FROM "Services" s
-                            JOIN "Deployments" d ON d."ServiceId" = s."Id"
-                            WHERE s."ProjectId" = @projectId
-                            AND d."Environment" IN (
-                                SELECT "Name" FROM "Environments" WHERE "Id" = @environmentId AND "ProjectId" = @projectId
-                            )
-                        );
-                        """;
-                deleteServicesCmd.Parameters.AddWithValue("projectId", projectId);
-                deleteServicesCmd.Parameters.AddWithValue("environmentId", environmentId);
-                await deleteServicesCmd.ExecuteNonQueryAsync();
-            }
-
-            // Then delete deployments associated with this environment.
-            // "Deployments" has no "ProjectId" column - a deployment belongs to a Service,
-            // and a Service to a Project - so ownership is resolved through that chain
-            // (the same shape the read path uses in GetByIdAsync).
-            await using (var deleteDeploymentsCmd = connection.CreateCommand())
-            {
-                deleteDeploymentsCmd.Transaction = transaction;
-                deleteDeploymentsCmd.CommandText = """
-                        DELETE FROM "Deployments" 
-                        WHERE "ServiceId" IN (
-                            SELECT s."Id" FROM "Services" s WHERE s."ProjectId" = @projectId
-                        )
-                        AND "Environment" IN (
-                            SELECT "Name" FROM "Environments" WHERE "Id" = @environmentId AND "ProjectId" = @projectId
-                        );
-                        """;
-                deleteDeploymentsCmd.Parameters.AddWithValue("projectId", projectId);
-                deleteDeploymentsCmd.Parameters.AddWithValue("environmentId", environmentId);
-                await deleteDeploymentsCmd.ExecuteNonQueryAsync();
-            }
-
-            // Finally delete the environment itself
-            await using (var deleteEnvCmd = connection.CreateCommand())
-            {
-                deleteEnvCmd.Transaction = transaction;
-                deleteEnvCmd.CommandText = "DELETE FROM \"Environments\" WHERE \"Id\" = @environmentId AND \"ProjectId\" = @projectId AND \"IsActive\" = TRUE;";
-                deleteEnvCmd.Parameters.AddWithValue("environmentId", environmentId);
-                deleteEnvCmd.Parameters.AddWithValue("projectId", projectId);
-                var rowsAffected = await deleteEnvCmd.ExecuteNonQueryAsync();
-
-                await transaction.CommitAsync();
-                return rowsAffected > 0;
-            }
-        }
-        catch
-        {
-            await transaction.RollbackAsync();
-            throw;
-        }
+    public async Task<int> DeleteByProjectIdAsync(int projectId)
+    {
+        await using var connection = dbFactory.CreateConnection();
+        await connection.OpenAsync();
+        await using var cmd = connection.CreateCommand();
+        cmd.CommandText = "DELETE FROM \"Environments\" WHERE \"ProjectId\" = @projectId;";
+        cmd.Parameters.AddWithValue("projectId", projectId);
+        return await cmd.ExecuteNonQueryAsync();
     }
 
     public async Task<bool> DeactivateAsync(int environmentId, int projectId, DateTime deactivatedAt)
@@ -190,93 +145,15 @@ public class EnvironmentRepository(DbConnectionFactory dbFactory) : IEnvironment
         return await command.ExecuteNonQueryAsync() > 0;
     }
 
-    public async Task<bool> HasDeploymentHistoryAsync(int projectId, string environmentName)
-    {
-        await using var connection = dbFactory.CreateConnection();
-        await connection.OpenAsync();
-        await using var command = connection.CreateCommand();
+    public Task<bool> HasDeploymentHistoryAsync(int projectId, string environmentName) =>
+        deploymentServiceClient is null
+            ? Task.FromResult(false)
+            : deploymentServiceClient.HasDeploymentHistoryAsync(projectId, environmentName);
 
-        command.CommandText = """
-            SELECT
-                to_regclass('"Deployments"') IS NOT NULL
-                AND EXISTS (
-                    SELECT 1
-                    FROM information_schema.columns
-                    WHERE table_name = 'Deployments'
-                      AND column_name = 'ProjectId'
-                ),
-                to_regclass('"Deployments"') IS NOT NULL
-                AND to_regclass('"Services"') IS NOT NULL
-                AND EXISTS (
-                    SELECT 1
-                    FROM information_schema.columns
-                    WHERE table_name = 'Deployments'
-                      AND column_name = 'ServiceId'
-                );
-            """;
-
-        await using var schemaReader = await command.ExecuteReaderAsync();
-        if (!await schemaReader.ReadAsync())
-            return false;
-
-        var hasLegacyProjectId = schemaReader.GetBoolean(0);
-        var hasServiceId = schemaReader.GetBoolean(1);
-        await schemaReader.CloseAsync();
-
-        command.Parameters.AddWithValue("projectId", projectId);
-        command.Parameters.AddWithValue("environmentName", environmentName);
-
-        command.CommandText = hasServiceId
-            ? """
-              SELECT EXISTS (
-                  SELECT 1
-                  FROM "Deployments" d
-                  JOIN "Services" s ON s."Id" = d."ServiceId"
-                  WHERE s."ProjectId" = @projectId
-                    AND d."Environment" = @environmentName
-              );
-              """
-            : hasLegacyProjectId
-                ? """
-                  SELECT EXISTS (
-                      SELECT 1
-                      FROM "Deployments"
-                      WHERE "ProjectId" = @projectId
-                        AND "Environment" = @environmentName
-                  );
-                  """
-                : null;
-
-        if (command.CommandText is null)
-            return false;
-
-        return Convert.ToBoolean(await command.ExecuteScalarAsync());
-    }
-
-    public async Task<(bool Exists, int Id, int OwnerId, bool IsArchived)> GetProjectAccessAsync(string projectId)
-    {
-        await using var connection = dbFactory.CreateConnection();
-        await connection.OpenAsync();
-        await using var command = connection.CreateCommand();
-
-        if (int.TryParse(projectId, out var parsedId))
-        {
-            command.CommandText = "SELECT \"Id\", \"OwnerId\", \"IsArchived\" FROM \"Projects\" WHERE \"Id\" = @id OR \"PublicId\" = @publicId;";
-            command.Parameters.AddWithValue("id", parsedId);
-        }
-        else
-        {
-            command.CommandText = "SELECT \"Id\", \"OwnerId\", \"IsArchived\" FROM \"Projects\" WHERE \"PublicId\" = @publicId;";
-        }
-
-        command.Parameters.AddWithValue("publicId", projectId);
-
-        await using var reader = await command.ExecuteReaderAsync();
-
-        return await reader.ReadAsync()
-            ? (true, reader.GetInt32(0), reader.GetInt32(1), reader.GetBoolean(2))
-            : (false, 0, 0, false);
-    }
+    public Task<(bool Exists, int Id, int OwnerId, bool IsArchived)> GetProjectAccessAsync(string projectId) =>
+        projectServiceClient is null
+            ? Task.FromResult((false, 0, 0, false))
+            : projectServiceClient.GetProjectAccessAsync(projectId);
 
     public async Task<bool> TypeExistsForProjectAsync(int projectId, string type, int? excludeEnvironmentId = null)
     {

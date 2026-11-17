@@ -1,11 +1,16 @@
+using Harbor.Common.Messaging;
+using Harbor.Contracts.Kafka;
 using Harbor.Environment.DTOs;
 using Harbor.Environment.Models;
 using Harbor.Environment.Repositories;
 
 namespace Harbor.Environment.Services;
 
-public class EnvironmentService(IEnvironmentRepository environmentRepository) : IEnvironmentService
+public class EnvironmentService(
+    IEnvironmentRepository environmentRepository,
+    IHarborEventPublisher? eventPublisher = null) : IEnvironmentService
 {
+    private readonly IHarborEventPublisher _eventPublisher = eventPublisher ?? new NoOpHarborEventPublisher();
     private static readonly string[] SupportedTypes = ["Development", "Staging", "Production"];
 
     public async Task<(bool Success, string? Error, bool Forbidden, EnvironmentResponse? Data)> CreateAsync(string projectId, CreateEnvironmentRequest request, int userId, bool isAdmin)
@@ -69,6 +74,18 @@ public class EnvironmentService(IEnvironmentRepository environmentRepository) : 
         }
 
         if (!await environmentRepository.DeleteAsync(environmentId, access.ProjectId)) return (false, "Environment could not be removed.", false, null);
+
+        await _eventPublisher.PublishDomainEventAsync(
+            DomainEventTypes.EnvironmentDeleted,
+            access.ProjectId.ToString(),
+            new EnvironmentDeletedEvent
+            {
+                EnvironmentId = environmentId,
+                ProjectId = access.ProjectId,
+                EnvironmentName = environment.Name,
+                DeletedAt = DateTime.UtcNow
+            });
+
         return (true, null, false, new EnvironmentRemovalResponse { Deactivated = false, Message = "Environment was removed." });
     }
 

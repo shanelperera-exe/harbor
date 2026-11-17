@@ -14,8 +14,7 @@ CREATE TABLE IF NOT EXISTS "CiRuns" (
     "GitHubRunId"   BIGINT                  NOT NULL,
     "GitHubRunUrl"  VARCHAR(500),
     "StartedAt"     TIMESTAMPTZ             NOT NULL,
-    "CompletedAt"   TIMESTAMPTZ,
-    CONSTRAINT "FK_CiRuns_Services" FOREIGN KEY ("ServiceId") REFERENCES "Services" ("Id") ON DELETE CASCADE
+    "CompletedAt"   TIMESTAMPTZ
 );
 
 CREATE INDEX IF NOT EXISTS "IX_CiRuns_ServiceId_StartedAt"

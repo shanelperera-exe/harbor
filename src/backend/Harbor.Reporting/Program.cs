@@ -41,6 +41,9 @@ builder.Services.AddHostedService<Harbor.Reporting.Workers.NativeLogPollerWorker
 
 // Database
 builder.Services.AddSingleton<ReportingDbConnectionFactory>();
+Harbor.Common.Messaging.MessagingServiceCollectionExtensions.AddHarborKafkaMessaging(builder.Services, "harbor-reporting-group");
+builder.Services.AddHostedService<Harbor.Reporting.Messaging.ReportingDeploymentEventConsumer>();
+builder.Services.AddHostedService<Harbor.Reporting.Messaging.ReportingDomainEventConsumer>();
 
 // Reporting feature (US-22)
 builder.Services.AddScoped<IDeploymentReportRepository, DeploymentReportRepository>();
@@ -136,6 +139,10 @@ builder.Services.AddSwaggerGen(options =>
 // ── Application pipeline ───────────────────────────────────────────────────────
 
 var app = builder.Build();
+if (!builder.Configuration.GetValue("DisableMigrations", false))
+{
+    Harbor.Reporting.Data.DatabaseInitializer.Initialize(app.Configuration);
+}
 
 app.UseSwagger();
 app.UseSwaggerUI();

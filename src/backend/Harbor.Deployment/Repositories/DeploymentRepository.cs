@@ -1,11 +1,14 @@
 using Harbor.Deployment.Data;
 using Harbor.Deployment.Models;
+using Harbor.Deployment.Services;
 using Npgsql;
 using NpgsqlTypes;
 
 namespace Harbor.Deployment.Repositories;
 
-public class DeploymentRepository(DbConnectionFactory dbFactory) : IDeploymentRepository
+public class DeploymentRepository(
+    DbConnectionFactory dbFactory,
+    IProjectServiceClient? projectServiceClient = null) : IDeploymentRepository
 {
     public Task<(IReadOnlyList<DeploymentEntity> Items, int TotalCount)> GetHistoryAsync(int ownerId, int serviceId, string? status, int skip, int take) =>
         GetHistoryAsync(ownerId, null, null, serviceId.ToString(), status, skip, take);
@@ -18,17 +21,11 @@ public class DeploymentRepository(DbConnectionFactory dbFactory) : IDeploymentRe
         await using var count = connection.CreateCommand();
         count.CommandText = @"
             SELECT COUNT(1) FROM ""Deployments"" d
-            JOIN ""Services"" s ON d.""ServiceId"" = s.""Id""
-            JOIN ""Projects"" p ON s.""ProjectId"" = p.""Id""
-            WHERE (@isAdmin = TRUE OR d.""ServiceId"" IN (SELECT s2.""Id"" FROM ""Services"" s2 JOIN ""Projects"" p2 ON s2.""ProjectId"" = p2.""Id"" WHERE p2.""OwnerId"" = @ownerId))
-              AND (CAST(@projectId AS text) IS NULL OR p.""Id""::text = @projectId)
+            LEFT JOIN ""ServiceCatalogCache"" sc ON d.""ServiceId"" = sc.""ServiceId""
+            WHERE (@isAdmin = TRUE OR COALESCE(sc.""OwnerId"", d.""OwnerId"") = @ownerId)
+              AND (CAST(@projectId AS text) IS NULL OR COALESCE(d.""ProjectId"", sc.""ProjectId"")::text = @projectId)
               AND (CAST(@environment AS text) IS NULL OR LOWER(d.""Environment"") = LOWER(@environment))
-              AND (CAST(@serviceId AS text) IS NULL OR EXISTS (
-                    SELECT 1
-                    FROM ""Services"" s3
-                    WHERE s3.""Id"" = d.""ServiceId""
-                      AND (s3.""PublicId"" = @serviceId OR s3.""Id""::text = @serviceId)
-              ))
+              AND (CAST(@serviceId AS text) IS NULL OR d.""ServiceId""::text = @serviceId OR sc.""ServicePublicId"" = @serviceId)
               AND (CAST(@status AS text) IS NULL OR LOWER(d.""Status"") = LOWER(@status))";
         AddFilters(count, ownerId, isAdmin, projectId, environment, serviceId, status);
         var total = Convert.ToInt32(await count.ExecuteScalarAsync());
@@ -36,20 +33,13 @@ public class DeploymentRepository(DbConnectionFactory dbFactory) : IDeploymentRe
         await using var command = connection.CreateCommand();
         command.CommandText = @"
             SELECT d.""Id"", d.""PublicId"", d.""ServiceId"", d.""OwnerId"", d.""Environment"", d.""Version"", d.""CommitSha"", d.""Status"", d.""StartedAt"", d.""CompletedAt"", d.""FailureReason"", d.""WorkflowFile"", d.""WorkflowRef"", d.""TriggerError"", d.""WorkflowRunId"", d.""WorkflowRunUrl"",
-                   p.""Name"" AS ""ProjectName"", s.""Name"" AS ""ServiceName"", s.""Type"" AS ""ServiceType"", u.""Username"" AS ""UserName"", d.""CommitMessage"", d.""DeploymentUrl""
+                   COALESCE(d.""ProjectName"", sc.""ProjectName"") AS ""ProjectName"", COALESCE(d.""ServiceName"", sc.""ServiceName"") AS ""ServiceName"", sc.""ServiceType"" AS ""ServiceType"", COALESCE(d.""OwnerName"", sc.""OwnerName"") AS ""UserName"", d.""CommitMessage"", d.""DeploymentUrl""
             FROM ""Deployments"" d
-            JOIN ""Services"" s ON d.""ServiceId"" = s.""Id""
-            JOIN ""Projects"" p ON s.""ProjectId"" = p.""Id""
-            LEFT JOIN ""Users"" u ON d.""OwnerId"" = u.""Id""
-            WHERE (@isAdmin = TRUE OR d.""ServiceId"" IN (SELECT s2.""Id"" FROM ""Services"" s2 JOIN ""Projects"" p2 ON s2.""ProjectId"" = p2.""Id"" WHERE p2.""OwnerId"" = @ownerId))
-              AND (CAST(@projectId AS text) IS NULL OR p.""Id""::text = @projectId)
+            LEFT JOIN ""ServiceCatalogCache"" sc ON d.""ServiceId"" = sc.""ServiceId""
+            WHERE (@isAdmin = TRUE OR COALESCE(sc.""OwnerId"", d.""OwnerId"") = @ownerId)
+              AND (CAST(@projectId AS text) IS NULL OR COALESCE(d.""ProjectId"", sc.""ProjectId"")::text = @projectId)
               AND (CAST(@environment AS text) IS NULL OR LOWER(d.""Environment"") = LOWER(@environment))
-              AND (CAST(@serviceId AS text) IS NULL OR EXISTS (
-                    SELECT 1
-                    FROM ""Services"" s3
-                    WHERE s3.""Id"" = d.""ServiceId""
-                      AND (s3.""PublicId"" = @serviceId OR s3.""Id""::text = @serviceId)
-              ))
+              AND (CAST(@serviceId AS text) IS NULL OR d.""ServiceId""::text = @serviceId OR sc.""ServicePublicId"" = @serviceId)
               AND (CAST(@status AS text) IS NULL OR LOWER(d.""Status"") = LOWER(@status))
             ORDER BY d.""StartedAt"" DESC, d.""Id"" DESC
             OFFSET @skip LIMIT @take";
@@ -108,12 +98,10 @@ public class DeploymentRepository(DbConnectionFactory dbFactory) : IDeploymentRe
         await using var connection = dbFactory.CreateConnection();
         await connection.OpenAsync();
         await using var command = connection.CreateCommand();
-        command.CommandText = @"SELECT d.""Id"", d.""PublicId"", d.""ServiceId"", d.""OwnerId"", d.""Environment"", d.""Version"", d.""CommitSha"", d.""Status"", d.""StartedAt"", d.""CompletedAt"", d.""FailureReason"", d.""WorkflowFile"", d.""WorkflowRef"", d.""TriggerError"", d.""WorkflowRunId"", d.""WorkflowRunUrl"", p.""Name"" AS ""ProjectName"", s.""Name"" AS ""ServiceName"", s.""Type"" AS ""ServiceType"", u.""Username"" AS ""UserName"", d.""CommitMessage"", d.""DeploymentUrl"" 
+        command.CommandText = @"SELECT d.""Id"", d.""PublicId"", d.""ServiceId"", d.""OwnerId"", d.""Environment"", d.""Version"", d.""CommitSha"", d.""Status"", d.""StartedAt"", d.""CompletedAt"", d.""FailureReason"", d.""WorkflowFile"", d.""WorkflowRef"", d.""TriggerError"", d.""WorkflowRunId"", d.""WorkflowRunUrl"", COALESCE(d.""ProjectName"", sc.""ProjectName"") AS ""ProjectName"", COALESCE(d.""ServiceName"", sc.""ServiceName"") AS ""ServiceName"", sc.""ServiceType"" AS ""ServiceType"", COALESCE(d.""OwnerName"", sc.""OwnerName"") AS ""UserName"", d.""CommitMessage"", d.""DeploymentUrl"" 
                                 FROM ""Deployments"" d 
-                                JOIN ""Services"" s ON d.""ServiceId"" = s.""Id"" 
-                                JOIN ""Projects"" p ON s.""ProjectId"" = p.""Id"" 
-                                LEFT JOIN ""Users"" u ON d.""OwnerId"" = u.""Id"" 
-                                WHERE (d.""Id""::text = @identifier OR d.""PublicId"" = @identifier) AND (@isAdmin OR p.""OwnerId"" = @userId)";
+                                LEFT JOIN ""ServiceCatalogCache"" sc ON d.""ServiceId"" = sc.""ServiceId"" 
+                                WHERE (d.""Id""::text = @identifier OR d.""PublicId"" = @identifier) AND (@isAdmin OR COALESCE(sc.""OwnerId"", d.""OwnerId"") = @userId)";
         command.Parameters.AddWithValue("identifier", identifier);
         command.Parameters.AddWithValue("userId", userId);
         command.Parameters.AddWithValue("isAdmin", isAdmin);
@@ -155,11 +143,9 @@ public class DeploymentRepository(DbConnectionFactory dbFactory) : IDeploymentRe
         await using var connection = dbFactory.CreateConnection();
         await connection.OpenAsync();
         await using var command = connection.CreateCommand();
-        command.CommandText = @"SELECT d.""Id"", d.""PublicId"", d.""ServiceId"", d.""OwnerId"", d.""Environment"", d.""Version"", d.""CommitSha"", d.""Status"", d.""StartedAt"", d.""CompletedAt"", d.""FailureReason"", d.""WorkflowFile"", d.""WorkflowRef"", d.""TriggerError"", d.""WorkflowRunId"", d.""WorkflowRunUrl"", p.""Name"" AS ""ProjectName"", s.""Name"" AS ""ServiceName"", s.""Type"" AS ""ServiceType"", u.""Username"" AS ""UserName"", d.""CommitMessage"", d.""DeploymentUrl"" 
+        command.CommandText = @"SELECT d.""Id"", d.""PublicId"", d.""ServiceId"", d.""OwnerId"", d.""Environment"", d.""Version"", d.""CommitSha"", d.""Status"", d.""StartedAt"", d.""CompletedAt"", d.""FailureReason"", d.""WorkflowFile"", d.""WorkflowRef"", d.""TriggerError"", d.""WorkflowRunId"", d.""WorkflowRunUrl"", COALESCE(d.""ProjectName"", sc.""ProjectName"") AS ""ProjectName"", COALESCE(d.""ServiceName"", sc.""ServiceName"") AS ""ServiceName"", sc.""ServiceType"" AS ""ServiceType"", COALESCE(d.""OwnerName"", sc.""OwnerName"") AS ""UserName"", d.""CommitMessage"", d.""DeploymentUrl"" 
                                 FROM ""Deployments"" d 
-                                LEFT JOIN ""Services"" s ON d.""ServiceId"" = s.""Id"" 
-                                LEFT JOIN ""Projects"" p ON s.""ProjectId"" = p.""Id"" 
-                                LEFT JOIN ""Users"" u ON d.""OwnerId"" = u.""Id"" 
+                                LEFT JOIN ""ServiceCatalogCache"" sc ON d.""ServiceId"" = sc.""ServiceId"" 
                                 WHERE d.""Id"" = @id";
         command.Parameters.AddWithValue("id", id);
         var result = new List<DeploymentEntity>();
@@ -267,44 +253,33 @@ public class DeploymentRepository(DbConnectionFactory dbFactory) : IDeploymentRe
 
     public async Task<(string? Provider, string? EncryptedToken)?> GetServiceProviderAndTokenAsync(int serviceId)
     {
-        await using var connection = dbFactory.CreateConnection();
-        await connection.OpenAsync();
-        await using var command = connection.CreateCommand();
-        command.CommandText = @"
-            SELECT s.""Provider"", COALESCE(s.""ProviderToken"", pi.provider_token) AS ""Token""
-            FROM ""Services"" s
-            LEFT JOIN project_integrations pi ON s.""IntegrationId"" = pi.id
-            WHERE s.""Id"" = @serviceId";
-        command.Parameters.AddWithValue("serviceId", serviceId);
-        await using var reader = await command.ExecuteReaderAsync();
-        if (await reader.ReadAsync())
+        if (projectServiceClient is null)
         {
-            var provider = reader.IsDBNull(0) ? null : reader.GetString(0);
-            var token = reader.IsDBNull(1) ? null : reader.GetString(1);
-            return (provider, token);
+            return null;
         }
-        return null;
+
+        var details = await projectServiceClient.GetServiceDetailsAsync(serviceId.ToString());
+        return details is null ? null : (details.Provider, details.ProviderToken);
     }
 
-    public async Task<bool> UpdateServiceDeploymentUrlAsync(int serviceId, string deploymentUrl)
-    {
-        await using var connection = dbFactory.CreateConnection();
-        await connection.OpenAsync();
-        await using var command = connection.CreateCommand();
-        command.CommandText = "UPDATE \"Services\" SET \"DeploymentUrl\" = @deploymentUrl WHERE \"Id\" = @serviceId";
-        command.Parameters.AddWithValue("serviceId", serviceId);
-        command.Parameters.AddWithValue("deploymentUrl", deploymentUrl);
-        return await command.ExecuteNonQueryAsync() == 1;
-    }
+    public Task<bool> UpdateServiceDeploymentUrlAsync(int serviceId, string deploymentUrl) =>
+        Task.FromResult(true);
 
     public async Task<string?> GetRepositoryNameAsync(int serviceId)
     {
         await using var connection = dbFactory.CreateConnection();
         await connection.OpenAsync();
         await using var command = connection.CreateCommand();
-        command.CommandText = "SELECT \"RepositoryName\" FROM \"Services\" WHERE \"Id\" = @serviceId";
+        command.CommandText = "SELECT \"RepositoryName\" FROM \"ServiceCatalogCache\" WHERE \"ServiceId\" = @serviceId";
         command.Parameters.AddWithValue("serviceId", serviceId);
-        return await command.ExecuteScalarAsync() as string;
+        var cached = await command.ExecuteScalarAsync() as string;
+        if (!string.IsNullOrWhiteSpace(cached) || projectServiceClient is null)
+        {
+            return cached;
+        }
+
+        var details = await projectServiceClient.GetServiceDetailsAsync(serviceId.ToString());
+        return details?.RepositoryName;
     }
 
     public async Task<string?> GetWorkflowFileAsync(int serviceId)
@@ -445,7 +420,7 @@ public class DeploymentRepository(DbConnectionFactory dbFactory) : IDeploymentRe
         await using var connection = dbFactory.CreateConnection();
         await connection.OpenAsync();
         await using var command = connection.CreateCommand();
-        command.CommandText = @"SELECT s.""Id"", p.""OwnerId"" FROM ""Services"" s JOIN ""Projects"" p ON s.""ProjectId"" = p.""Id"" WHERE s.""RepositoryName"" = @repositoryName";
+        command.CommandText = @"SELECT ""ServiceId"", ""OwnerId"" FROM ""ServiceCatalogCache"" WHERE ""RepositoryName"" = @repositoryName LIMIT 1";
         command.Parameters.AddWithValue("repositoryName", repositoryName);
         await using var reader = await command.ExecuteReaderAsync();
         return await reader.ReadAsync()
@@ -630,31 +605,30 @@ public class DeploymentRepository(DbConnectionFactory dbFactory) : IDeploymentRe
         await connection.OpenAsync();
         await using var command = connection.CreateCommand();
         command.CommandText = @"
-            SELECT p.""Id"", p.""PublicId"", p.""Name"", p.""OwnerId"", p.""CreatedAt"",
+            SELECT sc.""ProjectId"", COALESCE(sc.""ProjectPublicId"", sc.""ProjectId""::text), sc.""ProjectName"", sc.""OwnerId"", MAX(sc.""UpdatedAt"") AS ""CreatedAt"",
                    COUNT(d.""Id"") AS ""TotalDeployments"",
                    (
                        SELECT d2.""Status""
                        FROM ""Deployments"" d2
-                       JOIN ""Services"" s2 ON d2.""ServiceId"" = s2.""Id""
-                       WHERE s2.""ProjectId"" = p.""Id""
+                       LEFT JOIN ""ServiceCatalogCache"" sc2 ON d2.""ServiceId"" = sc2.""ServiceId""
+                       WHERE COALESCE(d2.""ProjectId"", sc2.""ProjectId"") = sc.""ProjectId""
                        ORDER BY d2.""StartedAt"" DESC, d2.""Id"" DESC
                        LIMIT 1
                    ) AS ""LatestStatus"",
                    (
                        SELECT d2.""StartedAt""
                        FROM ""Deployments"" d2
-                       JOIN ""Services"" s2 ON d2.""ServiceId"" = s2.""Id""
-                       WHERE s2.""ProjectId"" = p.""Id""
+                       LEFT JOIN ""ServiceCatalogCache"" sc2 ON d2.""ServiceId"" = sc2.""ServiceId""
+                       WHERE COALESCE(d2.""ProjectId"", sc2.""ProjectId"") = sc.""ProjectId""
                        ORDER BY d2.""StartedAt"" DESC, d2.""Id"" DESC
                        LIMIT 1
                    ) AS ""LatestDeploymentTime""
-            FROM ""Projects"" p
-            LEFT JOIN ""Services"" s ON p.""Id"" = s.""ProjectId""
-            LEFT JOIN ""Deployments"" d ON s.""Id"" = d.""ServiceId""
-            WHERE p.""IsArchived"" = FALSE
-              AND (@isAdmin OR p.""OwnerId"" = @userId)
-            GROUP BY p.""Id"", p.""PublicId"", p.""Name"", p.""OwnerId"", p.""CreatedAt""
-            ORDER BY p.""CreatedAt"" DESC, p.""Id"" DESC;";
+            FROM ""ServiceCatalogCache"" sc
+            LEFT JOIN ""Deployments"" d ON sc.""ServiceId"" = d.""ServiceId""
+            WHERE sc.""IsArchived"" = FALSE
+              AND (@isAdmin OR sc.""OwnerId"" = @userId)
+            GROUP BY sc.""ProjectId"", sc.""ProjectPublicId"", sc.""ProjectName"", sc.""OwnerId""
+            ORDER BY MAX(sc.""UpdatedAt"") DESC, sc.""ProjectId"" DESC;";
         command.Parameters.AddWithValue("userId", userId);
         command.Parameters.AddWithValue("isAdmin", isAdmin);
 
@@ -686,14 +660,12 @@ public class DeploymentRepository(DbConnectionFactory dbFactory) : IDeploymentRe
             SELECT d.""Id"", d.""PublicId"", d.""ServiceId"", d.""OwnerId"", d.""Environment"", d.""Version"",
                    d.""CommitSha"", d.""Status"", d.""StartedAt"", d.""CompletedAt"", d.""FailureReason"",
                    d.""WorkflowFile"", d.""WorkflowRef"", d.""TriggerError"", d.""WorkflowRunId"", d.""WorkflowRunUrl"",
-                   p.""Name"" AS ""ProjectName"", s.""Name"" AS ""ServiceName"", s.""Type"" AS ""ServiceType"",
-                   u.""Username"" AS ""UserName"", d.""CommitMessage"", p.""Id"" AS ""ProjectId""
+                   COALESCE(d.""ProjectName"", sc.""ProjectName"") AS ""ProjectName"", COALESCE(d.""ServiceName"", sc.""ServiceName"") AS ""ServiceName"", sc.""ServiceType"" AS ""ServiceType"",
+                   COALESCE(d.""OwnerName"", sc.""OwnerName"") AS ""UserName"", d.""CommitMessage"", COALESCE(d.""ProjectId"", sc.""ProjectId"", 0) AS ""ProjectId""
             FROM ""Deployments"" d
-            JOIN ""Services"" s ON d.""ServiceId"" = s.""Id""
-            JOIN ""Projects"" p ON s.""ProjectId"" = p.""Id""
-            LEFT JOIN ""Users"" u ON d.""OwnerId"" = u.""Id""
-            WHERE p.""IsArchived"" = FALSE
-              AND (@isAdmin OR p.""OwnerId"" = @userId)
+            LEFT JOIN ""ServiceCatalogCache"" sc ON d.""ServiceId"" = sc.""ServiceId""
+            WHERE COALESCE(sc.""IsArchived"", FALSE) = FALSE
+              AND (@isAdmin OR COALESCE(sc.""OwnerId"", d.""OwnerId"") = @userId)
             ORDER BY d.""StartedAt"" DESC, d.""Id"" DESC
             LIMIT @limit;";
         command.Parameters.AddWithValue("userId", userId);
@@ -740,8 +712,8 @@ public class DeploymentRepository(DbConnectionFactory dbFactory) : IDeploymentRe
 
         await using var projectCmd = connection.CreateCommand();
         projectCmd.CommandText = @"
-            SELECT COUNT(1)
-            FROM ""Projects""
+            SELECT COUNT(DISTINCT ""ProjectId"")
+            FROM ""ServiceCatalogCache""
             WHERE ""IsArchived"" = FALSE
               AND (@isAdmin OR ""OwnerId"" = @userId);";
         projectCmd.Parameters.AddWithValue("userId", userId);
@@ -756,10 +728,9 @@ public class DeploymentRepository(DbConnectionFactory dbFactory) : IDeploymentRe
                 COUNT(1) FILTER (WHERE LOWER(d.""Status"") IN ('running', 'pending', 'queued')) AS ""RunningDeployments"",
                 COUNT(1) FILTER (WHERE LOWER(d.""Status"") IN ('failed', 'error')) AS ""FailedDeployments""
             FROM ""Deployments"" d
-            JOIN ""Services"" s ON d.""ServiceId"" = s.""Id""
-            JOIN ""Projects"" p ON s.""ProjectId"" = p.""Id""
-            WHERE p.""IsArchived"" = FALSE
-              AND (@isAdmin OR p.""OwnerId"" = @userId);";
+            LEFT JOIN ""ServiceCatalogCache"" sc ON d.""ServiceId"" = sc.""ServiceId""
+            WHERE COALESCE(sc.""IsArchived"", FALSE) = FALSE
+              AND (@isAdmin OR COALESCE(sc.""OwnerId"", d.""OwnerId"") = @userId);";
         deployCmd.Parameters.AddWithValue("userId", userId);
         deployCmd.Parameters.AddWithValue("isAdmin", isAdmin);
 

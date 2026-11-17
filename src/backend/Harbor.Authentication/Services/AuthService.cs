@@ -2,9 +2,10 @@ using Harbor.Authentication.DTOs;
 using Harbor.Authentication.Models;
 using Harbor.Authentication.Repositories;
 using System.Text.Json.Nodes;
-using System.Text.Json.Nodes;
 using DiceBear;
 using Harbor.Caching;
+using Harbor.Common.Messaging;
+using Harbor.Contracts.Kafka;
 
 namespace Harbor.Authentication.Services
 {
@@ -29,13 +30,20 @@ namespace Harbor.Authentication.Services
         private readonly IJwtService _jwtService;
         private readonly IEmailService _emailService;
         private readonly ICacheService _cache;
+        private readonly IHarborEventPublisher _eventPublisher;
 
-        public AuthService(IUserRepository userRepository, IJwtService jwtService, IEmailService emailService, ICacheService cache)
+        public AuthService(
+            IUserRepository userRepository,
+            IJwtService jwtService,
+            IEmailService emailService,
+            ICacheService cache,
+            IHarborEventPublisher? eventPublisher = null)
         {
             _userRepository = userRepository;
             _jwtService = jwtService;
             _emailService = emailService;
             _cache = cache;
+            _eventPublisher = eventPublisher ?? new NoOpHarborEventPublisher();
         }
 
         private static string GenerateAvatar(string seed)
@@ -378,7 +386,22 @@ namespace Harbor.Authentication.Services
             }
 
             var deleted = await _userRepository.DeleteAccountAsync(userId);
-            return deleted ? (true, null) : (false, "User not found.");
+            if (!deleted)
+            {
+                return (false, "User not found.");
+            }
+
+            await _eventPublisher.PublishDomainEventAsync(
+                DomainEventTypes.UserDeleted,
+                userId.ToString(),
+                new UserDeletedEvent
+                {
+                    UserId = userId,
+                    PublicId = user.PublicId,
+                    DeletedAt = DateTime.UtcNow
+                });
+
+            return (true, null);
         }
 
         private static ProfileResponse ToProfileResponse(User user) => new()

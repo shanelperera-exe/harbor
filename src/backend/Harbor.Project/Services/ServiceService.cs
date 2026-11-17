@@ -2,6 +2,8 @@ using Harbor.Project.DTOs;
 using Harbor.Project.Models;
 using Harbor.Project.Repositories;
 using Harbor.Caching;
+using Harbor.Common.Messaging;
+using Harbor.Contracts.Kafka;
 
 namespace Harbor.Project.Services
 {
@@ -12,19 +14,22 @@ namespace Harbor.Project.Services
         private readonly IProjectIntegrationRepository _integrationRepository;
         private readonly ICacheService _cache;
         private readonly Harbor.Common.Security.IHarborSecretProtector _secretProtector;
+        private readonly IHarborEventPublisher _eventPublisher;
 
         public ServiceService(
             IServiceRepository serviceRepository,
             IProjectRepository projectRepository,
             IProjectIntegrationRepository integrationRepository,
             ICacheService cache,
-            Harbor.Common.Security.IHarborSecretProtector secretProtector)
+            Harbor.Common.Security.IHarborSecretProtector secretProtector,
+            IHarborEventPublisher? eventPublisher = null)
         {
             _serviceRepository = serviceRepository;
             _projectRepository = projectRepository;
             _integrationRepository = integrationRepository;
             _cache = cache;
             _secretProtector = secretProtector;
+            _eventPublisher = eventPublisher ?? new NoOpHarborEventPublisher();
         }
 
         public async Task<(bool Success, string? Error, ServiceResponse? Data)> CreateAsync(string projectId, CreateServiceRequest request, int userId, bool isAdmin)
@@ -66,6 +71,20 @@ namespace Harbor.Project.Services
 
             await _cache.RemoveAsync(CacheKeys.ServicesByProject(project.Id));
 
+            await _eventPublisher.PublishDomainEventAsync(
+                DomainEventTypes.ServiceUpdated,
+                id.ToString(),
+                new ServiceUpdatedEvent
+                {
+                    ServiceId = id,
+                    ProjectId = project.Id,
+                    ProjectName = project.Name,
+                    ServiceName = service!.Name,
+                    Provider = service.Provider,
+                    OwnerId = project.OwnerId,
+                    UpdatedAt = DateTime.UtcNow
+                });
+
             return (true, null, ToResponse(service!));
         }
 
@@ -97,6 +116,16 @@ namespace Harbor.Project.Services
 
             await _cache.RemoveAsync(CacheKeys.ServicesByProject(project.Id));
 
+            await _eventPublisher.PublishDomainEventAsync(
+                DomainEventTypes.ServiceDeleted,
+                service.Id.ToString(),
+                new ServiceDeletedEvent
+                {
+                    ServiceId = service.Id,
+                    ProjectId = project.Id,
+                    DeletedAt = DateTime.UtcNow
+                });
+
             return (true, null);
         }
 
@@ -109,7 +138,10 @@ namespace Harbor.Project.Services
             if (project == null) return (false, "Project not found.", null);
             if (!isAdmin && project.OwnerId != userId) return (false, "You do not have permission to view this service.", null);
 
-            return (true, null, ToResponse(service));
+            var response = ToResponse(service);
+            response.ProjectName = project.Name;
+            response.OwnerId = project.OwnerId;
+            return (true, null, response);
         }
 
         public async Task<(bool Success, string? Error, ServiceResponse? Data)> UpdateAsync(string serviceId, UpdateServiceRequest request, int userId, bool isAdmin)

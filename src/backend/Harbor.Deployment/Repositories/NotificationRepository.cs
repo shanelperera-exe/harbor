@@ -44,12 +44,11 @@ public class NotificationRepository(DbConnectionFactory dbFactory) : INotificati
                 n.""CreatedAt"",
                 d.""Environment"",
                 d.""Version"",
-                s.""Name""  AS ""ServiceName"",
-                p.""Name""  AS ""ProjectName""
+                COALESCE(d.""ServiceName"", sc.""ServiceName"") AS ""ServiceName"",
+                COALESCE(d.""ProjectName"", sc.""ProjectName"") AS ""ProjectName""
             FROM ""Notifications"" n
-            JOIN ""Deployments"" d  ON n.""DeploymentId"" = d.""Id""
-            LEFT JOIN ""Services""   s  ON d.""ServiceId""    = s.""Id""
-            LEFT JOIN ""Projects""   p  ON s.""ProjectId""    = p.""Id""
+            JOIN ""Deployments"" d ON n.""DeploymentId"" = d.""Id""
+            LEFT JOIN ""ServiceCatalogCache"" sc ON d.""ServiceId"" = sc.""ServiceId""
             WHERE n.""UserId"" = @userId
             ORDER BY n.""CreatedAt"" DESC
             LIMIT @limit;";

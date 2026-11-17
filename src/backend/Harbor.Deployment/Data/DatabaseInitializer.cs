@@ -7,6 +7,7 @@ public static class DatabaseInitializer
     public static void Initialize(IConfiguration configuration)
     {
         var connectionString = ResolveConnectionString(configuration);
+        Harbor.Common.Data.PostgresDatabaseHelper.EnsureDatabaseExists(connectionString);
         MigrationRunner.Run(connectionString);
     }
 
@@ -20,7 +21,7 @@ public static class DatabaseInitializer
 
         var host = Environment.GetEnvironmentVariable("POSTGRES_SERVER") ?? "localhost";
         var port = Environment.GetEnvironmentVariable("POSTGRES_PORT") ?? "5432";
-        var database = Environment.GetEnvironmentVariable("POSTGRES_DATABASE") ?? "harbor_db";
+        var database = Environment.GetEnvironmentVariable("POSTGRES_DATABASE") ?? "harbor_deploy";
         var username = Environment.GetEnvironmentVariable("POSTGRES_USER") ?? "harboruser";
         var password = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD") ?? "harbor@1234";
         var sslMode = Environment.GetEnvironmentVariable("POSTGRES_SSL_MODE") ?? "Require";

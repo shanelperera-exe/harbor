@@ -470,41 +470,9 @@ namespace Harbor.Authentication.Repositories
             await connection.OpenAsync();
             await using var transaction = await connection.BeginTransactionAsync();
 
-            var hasProjects = await TableExistsAsync(connection, transaction, "Projects");
-            var hasEnvironments = await TableExistsAsync(connection, transaction, "Environments");
-            var hasDeployments = await TableExistsAsync(connection, transaction, "Deployments");
-
-            if (hasDeployments)
-            {
-                await ExecuteNonQueryAsync(connection, transaction, "DELETE FROM \"Deployments\" WHERE \"OwnerId\" = @userId", userId);
-            }
-
-            if (hasProjects && hasEnvironments)
-            {
-                await ExecuteNonQueryAsync(
-                    connection,
-                    transaction,
-                    "DELETE FROM \"Environments\" e USING \"Projects\" p WHERE e.\"ProjectId\" = p.\"Id\" AND p.\"OwnerId\" = @userId",
-                    userId);
-            }
-
-            if (hasProjects)
-            {
-                await ExecuteNonQueryAsync(connection, transaction, "DELETE FROM \"Projects\" WHERE \"OwnerId\" = @userId", userId);
-            }
-
             var deletedUsers = await ExecuteNonQueryAsync(connection, transaction, "DELETE FROM \"Users\" WHERE \"Id\" = @userId", userId);
             await transaction.CommitAsync();
             return deletedUsers > 0;
-        }
-
-        private static async Task<bool> TableExistsAsync(NpgsqlConnection connection, NpgsqlTransaction? transaction, string tableName)
-        {
-            using var command = connection.CreateCommand();
-            if (transaction != null) command.Transaction = transaction;
-            command.CommandText = "SELECT to_regclass(@tableName) IS NOT NULL";
-            command.Parameters.AddWithValue("tableName", $"public.\"{tableName}\"");
-            return (bool?)await command.ExecuteScalarAsync() ?? false;
         }
 
         private static async Task<bool> ColumnExistsAsync(NpgsqlConnection connection, string tableName, string columnName)
@@ -539,10 +507,9 @@ namespace Harbor.Authentication.Repositories
             await connection.OpenAsync();
 
             var hasStatus = await ColumnExistsAsync(connection, "Users", "Status");
-            var hasProjects = await TableExistsAsync(connection, null, "Projects");
 
             using var command = connection.CreateCommand();
-            command.CommandText = BuildGetAllUsersQuery(hasProjects, hasStatus);
+            command.CommandText = BuildGetAllUsersQuery(hasStatus);
 
             using var reader = await command.ExecuteReaderAsync();
             while (await reader.ReadAsync())
@@ -598,37 +565,21 @@ namespace Harbor.Authentication.Repositories
             return await command.ExecuteNonQueryAsync() > 0;
         }
 
-        private static string BuildGetAllUsersQuery(bool hasProjects, bool hasStatus) =>
-            (hasProjects, hasStatus) switch
-            {
-                (true, true) => @"
+        private static string BuildGetAllUsersQuery(bool hasStatus) =>
+            hasStatus
+                ? @"
                     SELECT u.""Id"", u.""PublicId"", u.""Username"", u.""Email"", u.""Role"", 
                            COALESCE(u.""Status"", 'active') AS ""Status"", 
-                           u.""CreatedAt"", u.""AvatarSvg"",
-                           COALESCE((SELECT COUNT(1) FROM ""Projects"" p WHERE p.""OwnerId"" = u.""Id""), 0) AS ""ProjectCount""
-                    FROM ""Users"" u
-                    ORDER BY u.""Id"" ASC",
-                (true, false) => @"
-                    SELECT u.""Id"", u.""PublicId"", u.""Username"", u.""Email"", u.""Role"", 
-                           'active' AS ""Status"", 
-                           u.""CreatedAt"", u.""AvatarSvg"",
-                           COALESCE((SELECT COUNT(1) FROM ""Projects"" p WHERE p.""OwnerId"" = u.""Id""), 0) AS ""ProjectCount""
-                    FROM ""Users"" u
-                    ORDER BY u.""Id"" ASC",
-                (false, true) => @"
-                    SELECT u.""Id"", u.""PublicId"", u.""Username"", u.""Email"", u.""Role"", 
-                           COALESCE(u.""Status"", 'active') AS ""Status"", 
-                           u.""CreatedAt"", u.""AvatarSvg"",
-                           0::bigint AS ""ProjectCount""
-                    FROM ""Users"" u
-                    ORDER BY u.""Id"" ASC",
-                _ => @"
-                    SELECT u.""Id"", u.""PublicId"", u.""Username"", u.""Email"", u.""Role"", 
-                           'active' AS ""Status"", 
                            u.""CreatedAt"", u.""AvatarSvg"",
                            0::bigint AS ""ProjectCount""
                     FROM ""Users"" u
                     ORDER BY u.""Id"" ASC"
-            };
+                : @"
+                    SELECT u.""Id"", u.""PublicId"", u.""Username"", u.""Email"", u.""Role"", 
+                           'active' AS ""Status"", 
+                           u.""CreatedAt"", u.""AvatarSvg"",
+                           0::bigint AS ""ProjectCount""
+                    FROM ""Users"" u
+                    ORDER BY u.""Id"" ASC";
     }
 }

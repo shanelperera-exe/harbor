@@ -12,7 +12,7 @@ public class DbConnectionFactory
             ?? System.Environment.GetEnvironmentVariable("HarborDb")
             ?? $"Host={System.Environment.GetEnvironmentVariable("POSTGRES_SERVER") ?? "localhost"};" +
                $"Port={System.Environment.GetEnvironmentVariable("POSTGRES_PORT") ?? "5433"};" +
-               $"Database={System.Environment.GetEnvironmentVariable("POSTGRES_DATABASE") ?? "harbor_db"};" +
+               $"Database={System.Environment.GetEnvironmentVariable("POSTGRES_DATABASE") ?? "harbor_env"};" +
                $"Username={System.Environment.GetEnvironmentVariable("POSTGRES_USER") ?? "harboruser"};" +
                $"Password={System.Environment.GetEnvironmentVariable("POSTGRES_PASSWORD") ?? "harbor@1234"};";
     }

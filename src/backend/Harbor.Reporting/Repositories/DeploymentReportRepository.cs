@@ -40,15 +40,12 @@ public class DeploymentReportRepository(ReportingDbConnectionFactory dbFactory) 
                 d.""StartedAt"",
                 d.""CompletedAt"",
                 d.""FailureReason"",
-                p.""Name""   AS ""ProjectName"",
-                s.""Name""   AS ""ServiceName"",
-                u.""Username"" AS ""UserName""
-            FROM ""Deployments"" d
-            JOIN ""Services""  s ON d.""ServiceId""  = s.""Id""
-            JOIN ""Projects""  p ON s.""ProjectId""  = p.""Id""
-            LEFT JOIN ""Users"" u ON d.""OwnerId""    = u.""Id""
-            WHERE (@isAdmin = TRUE OR p.""OwnerId"" = @userId)
-              AND (CAST(@projectId AS text) IS NULL OR p.""Id""::text = @projectId)
+                d.""ProjectName"",
+                d.""ServiceName"",
+                d.""UserName""
+            FROM ""DeploymentReadModels"" d
+            WHERE (@isAdmin = TRUE OR d.""OwnerId"" = @userId)
+              AND (CAST(@projectId AS text) IS NULL OR d.""ProjectId""::text = @projectId)
               AND (CAST(@environment AS text) IS NULL OR LOWER(d.""Environment"") = LOWER(@environment))
               AND (CAST(@status AS text) IS NULL OR LOWER(d.""Status"") = LOWER(@status))
               AND (CAST(@startDate AS timestamp with time zone) IS NULL OR d.""StartedAt"" >= @startDate)

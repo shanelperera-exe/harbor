@@ -1,6 +1,5 @@
 using DotNetEnv;
 using Microsoft.AspNetCore.HttpOverrides;
-using Npgsql;
 using Yarp.ReverseProxy.Transforms;
 using Harbor.Caching.Extensions;
 using Harbor.Common.Observability;
@@ -20,27 +19,7 @@ builder.Services.AddSwaggerGen();
 
 builder.Services.AddHealthChecks()
     .AddHarborLiveness("Harbor.ApiGateway")
-    .AddHarborDataSourceCheck()
     .AddHarborCacheCheck();
-
-// Configure ADO.NET PostgreSQL Connection dynamically from environment variables
-var connectionStringBuilder = new NpgsqlConnectionStringBuilder
-{
-    Host = Environment.GetEnvironmentVariable("POSTGRES_SERVER"),
-    Port = int.TryParse(Environment.GetEnvironmentVariable("POSTGRES_PORT"), out var port) ? port : 5432,
-    Database = Environment.GetEnvironmentVariable("POSTGRES_DATABASE"),
-    Username = Environment.GetEnvironmentVariable("POSTGRES_USER"),
-    Password = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD"),
-    SslMode = Enum.TryParse<SslMode>(Environment.GetEnvironmentVariable("POSTGRES_SSL_MODE"), true, out var sslMode)
-        ? sslMode
-        : SslMode.Require,
-    TrustServerCertificate = true
-};
-
-if (!string.IsNullOrEmpty(connectionStringBuilder.Host))
-{
-    builder.Services.AddSingleton(NpgsqlDataSource.Create(connectionStringBuilder.ConnectionString));
-}
 
 var allOrigins = (Environment.GetEnvironmentVariable("ALLOWED_ORIGINS") ?? "")
     .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);

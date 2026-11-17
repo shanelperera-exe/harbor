@@ -120,6 +120,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorization();
 
 builder.Services.AddSingleton<Harbor.Project.Data.DbConnectionFactory>();
+Harbor.Common.Messaging.MessagingServiceCollectionExtensions.AddHarborKafkaMessaging(builder.Services, "harbor-project-group");
+builder.Services.AddHostedService<Harbor.Project.Messaging.ProjectDomainEventConsumer>();
 builder.Services.AddScoped<Harbor.Project.Repositories.IProjectRepository, Harbor.Project.Repositories.ProjectRepository>();
 builder.Services.AddScoped<Harbor.Project.Services.IProjectService, Harbor.Project.Services.ProjectService>();
 builder.Services.AddScoped<Harbor.Project.Repositories.IServiceRepository, Harbor.Project.Repositories.ServiceRepository>();

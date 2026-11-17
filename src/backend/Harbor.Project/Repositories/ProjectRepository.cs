@@ -160,6 +160,23 @@ namespace Harbor.Project.Repositories
             return rowsAffected > 0;
         }
 
+        public async Task<List<int>> DeleteByOwnerIdAsync(int ownerId)
+        {
+            var deletedIds = new List<int>();
+            using var connection = _dbFactory.CreateConnection();
+            await connection.OpenAsync();
+            using var command = connection.CreateCommand();
+            command.CommandText = "DELETE FROM \"Projects\" WHERE \"OwnerId\" = @ownerId RETURNING \"Id\";";
+            command.Parameters.AddWithValue("ownerId", ownerId);
+
+            using var reader = await command.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                deletedIds.Add(reader.GetInt32(0));
+            }
+            return deletedIds;
+        }
+
         private static async Task<List<ProjectEntity>> ReadProjectsAsync(System.Data.Common.DbCommand command)
         {
             var projects = new List<ProjectEntity>();

@@ -74,6 +74,16 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
     });
 builder.Services.AddAuthorization();
 builder.Services.AddSingleton<DbConnectionFactory>();
+builder.Services.AddHttpClient<IProjectServiceClient, ProjectServiceClient>(client =>
+{
+    client.BaseAddress = new Uri(Environment.GetEnvironmentVariable("PROJECT_SERVICE_URL") ?? "http://project-service:8080");
+});
+builder.Services.AddHttpClient<IDeploymentServiceClient, DeploymentServiceClient>(client =>
+{
+    client.BaseAddress = new Uri(Environment.GetEnvironmentVariable("DEPLOYMENT_SERVICE_URL") ?? "http://deployment-service:8080");
+});
+Harbor.Common.Messaging.MessagingServiceCollectionExtensions.AddHarborKafkaMessaging(builder.Services, "harbor-environment-group");
+builder.Services.AddHostedService<Harbor.Environment.Messaging.EnvironmentDomainEventConsumer>();
 builder.Services.AddScoped<IEnvironmentRepository, EnvironmentRepository>();
 builder.Services.AddScoped<IEnvironmentService, EnvironmentService>();
 builder.Services.AddScoped<IEnvironmentConfigurationRepository, EnvironmentConfigurationRepository>();

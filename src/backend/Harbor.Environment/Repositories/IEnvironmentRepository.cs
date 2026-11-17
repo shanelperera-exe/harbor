@@ -9,6 +9,7 @@ public interface IEnvironmentRepository
     Task<EnvironmentEntity?> GetByIdAsync(int environmentId, int projectId);
     Task<bool> UpdateAsync(EnvironmentEntity environment);
     Task<bool> DeleteAsync(int environmentId, int projectId);
+    Task<int> DeleteByProjectIdAsync(int projectId);
     Task<bool> DeactivateAsync(int environmentId, int projectId, DateTime deactivatedAt);
     Task<bool> HasDeploymentHistoryAsync(int projectId, string environmentName);
     Task<(bool Exists, int Id, int OwnerId, bool IsArchived)> GetProjectAccessAsync(string projectId);

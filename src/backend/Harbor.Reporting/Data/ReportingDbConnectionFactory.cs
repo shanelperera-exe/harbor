@@ -23,7 +23,7 @@ public class ReportingDbConnectionFactory
         {
             var host = Environment.GetEnvironmentVariable("POSTGRES_SERVER") ?? "localhost";
             var port = Environment.GetEnvironmentVariable("POSTGRES_PORT") ?? "5433";
-            var database = Environment.GetEnvironmentVariable("POSTGRES_DATABASE") ?? "harbor_db";
+            var database = Environment.GetEnvironmentVariable("POSTGRES_DATABASE") ?? "harbor_reporting";
             var username = Environment.GetEnvironmentVariable("POSTGRES_USER") ?? "harboruser";
             var password = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD") ?? "harbor@1234";
 

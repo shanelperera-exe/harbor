@@ -12,5 +12,6 @@ namespace Harbor.Project.Repositories
         Task<ProjectEntity?> GetByIdOrPublicIdAsync(string identifier);
         Task<bool> UpdateAsync(ProjectEntity project);
         Task<bool> ArchiveAsync(int id, DateTime archivedAt);
+        Task<List<int>> DeleteByOwnerIdAsync(int ownerId);
     }
 }

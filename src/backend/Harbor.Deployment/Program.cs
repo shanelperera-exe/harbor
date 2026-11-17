@@ -89,6 +89,12 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorization();
 builder.Services.AddSingleton<DbConnectionFactory>();
 // Register the real repository under its concrete type so the decorator can resolve it.
+builder.Services.AddHttpClient<Harbor.Deployment.Services.IProjectServiceClient, Harbor.Deployment.Services.ProjectServiceClient>(client =>
+{
+    client.BaseAddress = new Uri(Environment.GetEnvironmentVariable("PROJECT_SERVICE_URL") ?? "http://project-service:8080");
+});
+Harbor.Common.Messaging.MessagingServiceCollectionExtensions.AddHarborKafkaMessaging(builder.Services, "harbor-deployment-domain-group");
+builder.Services.AddHostedService<Harbor.Deployment.Messaging.DeploymentDomainEventConsumer>();
 builder.Services.AddScoped<DeploymentRepository>();
 // Decorate IDeploymentRepository: the notification-aware wrapper calls the real repo
 // and creates in-app notifications on terminal status transitions (US-21).

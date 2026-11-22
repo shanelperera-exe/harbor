@@ -37,12 +37,12 @@ public sealed class ReportingDomainEventConsumer : KafkaConsumerBackgroundServic
         switch (envelope.EventType)
         {
             case DomainEventTypes.ServiceUpdated:
-            {
-                var evt = JsonSerializer.Deserialize<ServiceUpdatedEvent>(envelope.PayloadJson);
-                if (evt is null) return;
+                {
+                    var evt = JsonSerializer.Deserialize<ServiceUpdatedEvent>(envelope.PayloadJson);
+                    if (evt is null) return;
 
-                await using var cmd = connection.CreateCommand();
-                cmd.CommandText = """
+                    await using var cmd = connection.CreateCommand();
+                    cmd.CommandText = """
                     UPDATE "DeploymentReadModels"
                     SET "ProjectId" = @projectId,
                         "ProjectName" = @projectName,
@@ -50,47 +50,47 @@ public sealed class ReportingDomainEventConsumer : KafkaConsumerBackgroundServic
                         "OwnerId" = @ownerId
                     WHERE "ServiceId" = @serviceId;
                     """;
-                cmd.Parameters.AddWithValue("serviceId", evt.ServiceId);
-                cmd.Parameters.AddWithValue("projectId", evt.ProjectId);
-                cmd.Parameters.AddWithValue("projectName", evt.ProjectName);
-                cmd.Parameters.AddWithValue("serviceName", evt.ServiceName);
-                cmd.Parameters.AddWithValue("ownerId", evt.OwnerId);
-                await cmd.ExecuteNonQueryAsync(cancellationToken);
-                break;
-            }
+                    cmd.Parameters.AddWithValue("serviceId", evt.ServiceId);
+                    cmd.Parameters.AddWithValue("projectId", evt.ProjectId);
+                    cmd.Parameters.AddWithValue("projectName", evt.ProjectName);
+                    cmd.Parameters.AddWithValue("serviceName", evt.ServiceName);
+                    cmd.Parameters.AddWithValue("ownerId", evt.OwnerId);
+                    await cmd.ExecuteNonQueryAsync(cancellationToken);
+                    break;
+                }
             case DomainEventTypes.ServiceDeleted:
-            {
-                var evt = JsonSerializer.Deserialize<ServiceDeletedEvent>(envelope.PayloadJson);
-                if (evt is null) return;
+                {
+                    var evt = JsonSerializer.Deserialize<ServiceDeletedEvent>(envelope.PayloadJson);
+                    if (evt is null) return;
 
-                await using var cmd = connection.CreateCommand();
-                cmd.CommandText = "DELETE FROM \"DeploymentReadModels\" WHERE \"ServiceId\" = @serviceId;";
-                cmd.Parameters.AddWithValue("serviceId", evt.ServiceId);
-                await cmd.ExecuteNonQueryAsync(cancellationToken);
-                break;
-            }
+                    await using var cmd = connection.CreateCommand();
+                    cmd.CommandText = "DELETE FROM \"DeploymentReadModels\" WHERE \"ServiceId\" = @serviceId;";
+                    cmd.Parameters.AddWithValue("serviceId", evt.ServiceId);
+                    await cmd.ExecuteNonQueryAsync(cancellationToken);
+                    break;
+                }
             case DomainEventTypes.ProjectDeleted:
-            {
-                var evt = JsonSerializer.Deserialize<ProjectDeletedEvent>(envelope.PayloadJson);
-                if (evt is null) return;
+                {
+                    var evt = JsonSerializer.Deserialize<ProjectDeletedEvent>(envelope.PayloadJson);
+                    if (evt is null) return;
 
-                await using var cmd = connection.CreateCommand();
-                cmd.CommandText = "DELETE FROM \"DeploymentReadModels\" WHERE \"ProjectId\" = @projectId;";
-                cmd.Parameters.AddWithValue("projectId", evt.ProjectId);
-                await cmd.ExecuteNonQueryAsync(cancellationToken);
-                break;
-            }
+                    await using var cmd = connection.CreateCommand();
+                    cmd.CommandText = "DELETE FROM \"DeploymentReadModels\" WHERE \"ProjectId\" = @projectId;";
+                    cmd.Parameters.AddWithValue("projectId", evt.ProjectId);
+                    await cmd.ExecuteNonQueryAsync(cancellationToken);
+                    break;
+                }
             case DomainEventTypes.UserDeleted:
-            {
-                var evt = JsonSerializer.Deserialize<UserDeletedEvent>(envelope.PayloadJson);
-                if (evt is null) return;
+                {
+                    var evt = JsonSerializer.Deserialize<UserDeletedEvent>(envelope.PayloadJson);
+                    if (evt is null) return;
 
-                await using var cmd = connection.CreateCommand();
-                cmd.CommandText = "DELETE FROM \"DeploymentReadModels\" WHERE \"OwnerId\" = @userId;";
-                cmd.Parameters.AddWithValue("userId", evt.UserId);
-                await cmd.ExecuteNonQueryAsync(cancellationToken);
-                break;
-            }
+                    await using var cmd = connection.CreateCommand();
+                    cmd.CommandText = "DELETE FROM \"DeploymentReadModels\" WHERE \"OwnerId\" = @userId;";
+                    cmd.Parameters.AddWithValue("userId", evt.UserId);
+                    await cmd.ExecuteNonQueryAsync(cancellationToken);
+                    break;
+                }
         }
     }
 }

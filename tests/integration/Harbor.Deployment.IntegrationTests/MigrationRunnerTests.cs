@@ -70,12 +70,11 @@ public class MigrationRunnerTests : IAsyncLifetime
     }
 
     [Fact]
-    public void Run_MissingForeignTables_RetriesThenFails()
+    public void Run_WithoutLegacyForeignTables_Succeeds()
     {
-        // Without the Projects/Services tables owned by other services, the script fails with 42P01,
-        // which MigrationRunner treats as transient: it retries and finally throws.
-        var ex = Assert.Throws<Exception>(() => MigrationRunner.Run(_db.GetConnectionString()));
-        Assert.Contains("Database migration failed", ex.Message);
+        var exception = Record.Exception(() => MigrationRunner.Run(_db.GetConnectionString()));
+        Assert.Null(exception);
+        Assert.True(ScalarAsync("SELECT COUNT(*) FROM schema_checksums").GetAwaiter().GetResult() > 0);
     }
 
     [Fact]

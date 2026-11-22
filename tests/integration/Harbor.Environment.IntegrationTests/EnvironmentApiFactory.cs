@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
+using Harbor.Environment.Services;
+using Harbor.Common.Messaging;
 using System.Text;
 using Testcontainers.PostgreSql;
 using Npgsql;
@@ -32,17 +34,23 @@ public class EnvironmentApiFactory : WebApplicationFactory<global::Program>, IAs
             ["ConnectionStrings:HarborDb"] = _container.GetConnectionString(),
             ["Cors:AllowedOrigins:0"] = "http://localhost:5173"
         }));
-        builder.ConfigureServices(services => services.PostConfigure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, options =>
-            options.TokenValidationParameters = new TokenValidationParameters
-            {
-                ValidateIssuer = true,
-                ValidateAudience = true,
-                ValidateLifetime = true,
-                ValidateIssuerSigningKey = true,
-                ValidIssuer = JwtIssuer,
-                ValidAudience = JwtAudience,
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(JwtSecret))
-            }));
+        builder.ConfigureServices(services =>
+        {
+            services.PostConfigure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, options =>
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuer = true,
+                    ValidateAudience = true,
+                    ValidateLifetime = true,
+                    ValidateIssuerSigningKey = true,
+                    ValidIssuer = JwtIssuer,
+                    ValidAudience = JwtAudience,
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(JwtSecret))
+                });
+            services.AddSingleton<IProjectServiceClient>(new TestProjectServiceClient(_container));
+            services.AddSingleton<IDeploymentServiceClient>(new TestDeploymentServiceClient(_container));
+            services.AddSingleton<IHarborEventPublisher>(new NoOpHarborEventPublisher());
+        });
     }
 
     public async Task InitializeAsync()
@@ -86,4 +94,35 @@ public class EnvironmentApiFactory : WebApplicationFactory<global::Program>, IAs
     }
 
     public new async Task DisposeAsync() => await _container.DisposeAsync();
+}
+
+internal sealed class TestProjectServiceClient(PostgreSqlContainer container) : IProjectServiceClient
+{
+    public async Task<(bool Exists, int Id, int OwnerId, bool IsArchived)> GetProjectAccessAsync(string projectId)
+    {
+        await using var connection = new NpgsqlConnection(container.GetConnectionString());
+        await connection.OpenAsync();
+        await using var command = connection.CreateCommand();
+        command.CommandText = int.TryParse(projectId, out _)
+            ? """SELECT "Id", "OwnerId", "IsArchived" FROM "Projects" WHERE "Id"::text = @projectId OR "PublicId" = @projectId"""
+            : """SELECT "Id", "OwnerId", "IsArchived" FROM "Projects" WHERE "PublicId" = @projectId""";
+        command.Parameters.AddWithValue("projectId", projectId);
+        await using var reader = await command.ExecuteReaderAsync();
+        if (!await reader.ReadAsync()) return (false, 0, 0, false);
+        return (true, reader.GetInt32(0), reader.GetInt32(1), reader.GetBoolean(2));
+    }
+}
+
+internal sealed class TestDeploymentServiceClient(PostgreSqlContainer container) : IDeploymentServiceClient
+{
+    public async Task<bool> HasDeploymentHistoryAsync(int projectId, string environmentName)
+    {
+        await using var connection = new NpgsqlConnection(container.GetConnectionString());
+        await connection.OpenAsync();
+        await using var command = connection.CreateCommand();
+        command.CommandText = """SELECT EXISTS(SELECT 1 FROM "Deployments" WHERE "ProjectId" = @projectId AND "Environment" = @environmentName)""";
+        command.Parameters.AddWithValue("projectId", projectId);
+        command.Parameters.AddWithValue("environmentName", environmentName);
+        return Convert.ToBoolean(await command.ExecuteScalarAsync());
+    }
 }

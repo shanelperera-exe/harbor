@@ -75,6 +75,24 @@ public class DeploymentReportRepositoryParameterTests
                         "CompletedAt" TIMESTAMPTZ,
                         "FailureReason" TEXT
                     );
+
+                    CREATE TABLE IF NOT EXISTS "DeploymentReadModels" (
+                        "Id" SERIAL PRIMARY KEY,
+                        "PublicId" VARCHAR(50),
+                        "OwnerId" INTEGER,
+                        "ProjectId" INTEGER,
+                        "ProjectName" VARCHAR(100),
+                        "ServiceName" VARCHAR(100),
+                        "UserName" VARCHAR(100),
+                        "Environment" VARCHAR(50),
+                        "Version" VARCHAR(50),
+                        "CommitSha" VARCHAR(100),
+                        "CommitMessage" TEXT,
+                        "Status" VARCHAR(50),
+                        "StartedAt" TIMESTAMPTZ NOT NULL DEFAULT now(),
+                        "CompletedAt" TIMESTAMPTZ,
+                        "FailureReason" TEXT
+                    );
                 """;
             cmd.ExecuteNonQuery();
 

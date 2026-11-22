@@ -22,7 +22,7 @@ public class ReportingApiFactory : WebApplicationFactory<Program>, IAsyncLifetim
         Environment.GetEnvironmentVariable("HarborDb") ??
         $"Host={Environment.GetEnvironmentVariable("POSTGRES_SERVER") ?? "localhost"};" +
         $"Port={Environment.GetEnvironmentVariable("POSTGRES_PORT") ?? "5433"};" +
-        $"Database={Environment.GetEnvironmentVariable("POSTGRES_DATABASE") ?? "harbor_db"};" +
+        $"Database={Environment.GetEnvironmentVariable("POSTGRES_DATABASE") ?? "harbor_reporting"};" +
         $"Username={Environment.GetEnvironmentVariable("POSTGRES_USER") ?? "harboruser"};" +
         $"Password={Environment.GetEnvironmentVariable("POSTGRES_PASSWORD") ?? "harbor@1234"};" +
         $"Trust Server Certificate=true;";

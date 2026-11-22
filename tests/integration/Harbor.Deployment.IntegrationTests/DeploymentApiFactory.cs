@@ -80,6 +80,9 @@ public class DeploymentApiFactory : WebApplicationFactory<Program>, IAsyncLifeti
             services.RemoveAll<IInstallationTokenResolver>();
             services.AddSingleton<IInstallationTokenResolver, TestInstallationTokenResolver>();
 
+            services.RemoveAll<IProjectServiceClient>();
+            services.AddSingleton<IProjectServiceClient>(new TestProjectServiceClient(_db));
+
             // Replace the real Kafka producer. It would otherwise read bootstrap servers
             // from the developer's .env and block on connection timeouts.
             services.RemoveAll<IKafkaProducerService>();
@@ -161,6 +164,24 @@ public class DeploymentApiFactory : WebApplicationFactory<Program>, IAsyncLifeti
                 "FailureReason" TEXT
             );
 
+            CREATE TABLE IF NOT EXISTS "ServiceCatalogCache" (
+                "ServiceId" INTEGER PRIMARY KEY,
+                "ServicePublicId" VARCHAR(100),
+                "ProjectId" INTEGER NOT NULL,
+                "ProjectPublicId" VARCHAR(100),
+                "ServiceName" VARCHAR(200) NOT NULL,
+                "ServiceType" VARCHAR(100) NOT NULL DEFAULT 'Backend',
+                "ProjectName" VARCHAR(200) NOT NULL,
+                "OwnerId" INTEGER NOT NULL,
+                "OwnerName" VARCHAR(200),
+                "IsArchived" BOOLEAN NOT NULL DEFAULT FALSE,
+                "RepositoryUrl" VARCHAR(500),
+                "RepositoryName" VARCHAR(300),
+                "RepositoryBranch" VARCHAR(200),
+                "WorkflowFile" VARCHAR(200),
+                "UpdatedAt" TIMESTAMPTZ NOT NULL DEFAULT now()
+            );
+
             CREATE INDEX IF NOT EXISTS "IX_Deployments_Owner_Project_StartedAt"
                 ON "Deployments" ("OwnerId", "ProjectId", "StartedAt" DESC);
             """, connection);
@@ -190,6 +211,15 @@ public class DeploymentApiFactory : WebApplicationFactory<Program>, IAsyncLifeti
                 ({SeedProjectId},     'inactive',   'Production', FALSE),
                 ({SeedProjectId + 1}, 'production', 'Production', TRUE)
             ON CONFLICT DO NOTHING;
+
+            INSERT INTO "ServiceCatalogCache"
+                ("ServiceId", "ServicePublicId", "ProjectId", "ProjectPublicId", "ServiceName", "ServiceType", "ProjectName", "OwnerId", "OwnerName", "RepositoryName", "WorkflowFile")
+            VALUES
+                ({SeedServiceId}, 'service-{SeedServiceId}', {SeedProjectId}, 'project-{SeedProjectId}', 'test-service', 'Backend', 'test-project', {SeedOwnerId}, 'test-owner', '{SeedRepoFullName}', 'ci.yml'),
+                ({OtherServiceId}, 'service-{OtherServiceId}', {SeedProjectId + 1}, 'project-{SeedProjectId + 1}', 'other-service', 'Backend', 'other-project', {OtherOwnerId}, 'other-owner', 'other-owner/other-repo', 'ci.yml')
+            ON CONFLICT ("ServiceId") DO UPDATE SET
+                "RepositoryName" = EXCLUDED."RepositoryName",
+                "WorkflowFile" = EXCLUDED."WorkflowFile";
             """, connection);
         await seed.ExecuteNonQueryAsync();
     }
@@ -243,8 +273,59 @@ public class DeploymentApiFactory : WebApplicationFactory<Program>, IAsyncLifeti
             await environmentCommand.ExecuteNonQueryAsync();
         }
 
+        await using (var cacheCommand = new NpgsqlCommand($"""
+            INSERT INTO "ServiceCatalogCache"
+                ("ServiceId", "ServicePublicId", "ProjectId", "ProjectPublicId", "ServiceName", "ServiceType", "ProjectName", "OwnerId", "RepositoryName", "WorkflowFile")
+            VALUES
+                (@serviceId, 'srv-{suffix}', @projectId, 'prj-{suffix}', 'owned-service-{suffix}', 'Backend', 'owned-project-{suffix}', @ownerId, 'owner-{suffix}/repo', 'ci.yml')
+            ON CONFLICT ("ServiceId") DO UPDATE SET
+                "ProjectId" = EXCLUDED."ProjectId",
+                "OwnerId" = EXCLUDED."OwnerId",
+                "RepositoryName" = EXCLUDED."RepositoryName";
+            """, connection))
+        {
+            cacheCommand.Parameters.AddWithValue("serviceId", serviceId);
+            cacheCommand.Parameters.AddWithValue("projectId", projectId);
+            cacheCommand.Parameters.AddWithValue("ownerId", ownerId);
+            await cacheCommand.ExecuteNonQueryAsync();
+        }
+
         return serviceId;
     }
 
     public new async Task DisposeAsync() => await _db.DisposeAsync();
+}
+
+internal sealed class TestProjectServiceClient(PostgreSqlContainer db) : IProjectServiceClient
+{
+    public async Task<ProjectServiceDetails?> GetServiceDetailsAsync(string serviceId)
+    {
+        await using var connection = new NpgsqlConnection(db.GetConnectionString());
+        await connection.OpenAsync();
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT s."Id", s."PublicId", s."ProjectId", s."Name", s."Type",
+                   s."RepositoryName", s."RepositoryBranch", s."WorkflowFile",
+                   p."OwnerId", p."Name"
+            FROM "Services" s
+            JOIN "Projects" p ON p."Id" = s."ProjectId"
+            WHERE s."Id"::text = @serviceId OR s."PublicId" = @serviceId
+            """;
+        command.Parameters.AddWithValue("serviceId", serviceId);
+        await using var reader = await command.ExecuteReaderAsync();
+        if (!await reader.ReadAsync()) return null;
+        return new ProjectServiceDetails
+        {
+            Id = reader.GetInt32(0),
+            PublicId = reader.IsDBNull(1) ? string.Empty : reader.GetString(1),
+            ProjectId = reader.GetInt32(2),
+            Name = reader.GetString(3),
+            Type = reader.GetString(4),
+            RepositoryName = reader.IsDBNull(5) ? null : reader.GetString(5),
+            RepositoryBranch = reader.IsDBNull(6) ? null : reader.GetString(6),
+            WorkflowFile = reader.IsDBNull(7) ? null : reader.GetString(7),
+            OwnerId = reader.GetInt32(8),
+            ProjectName = reader.IsDBNull(9) ? null : reader.GetString(9)
+        };
+    }
 }

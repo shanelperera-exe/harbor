@@ -10,6 +10,12 @@ services:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./infrastructure/postgres/init-databases.sql:/docker-entrypoint-initdb.d/init-databases.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-postgres} -d $${POSTGRES_DB:-postgres}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     restart: unless-stopped
 
   mailpit:
@@ -36,6 +42,7 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
     restart: unless-stopped
 
   redis:
@@ -74,6 +81,8 @@ services:
     environment:
       POSTGRES_SERVER: postgres
       POSTGRES_PORT: 5432
+      POSTGRES_DATABASE: ${AUTH_POSTGRES_DATABASE:-harbor_auth}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       SMTP_HOST: mailpit
       SMTP_PORT: 1025
       REDIS_CONNECTION_STRING: redis:6379
@@ -96,7 +105,9 @@ services:
     environment:
       POSTGRES_SERVER: postgres
       POSTGRES_PORT: 5432
+      POSTGRES_DATABASE: ${PROJECT_POSTGRES_DATABASE:-harbor_project}
       AUTH_SERVICE_URL: ${AUTH_SERVICE_URL:-http://authentication-service:8080}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       REDIS_CONNECTION_STRING: redis:6379
       METRICS_ALLOW_ANONYMOUS: "true"
     ports:
@@ -123,6 +134,10 @@ services:
     environment:
       POSTGRES_SERVER: postgres
       POSTGRES_PORT: 5432
+      POSTGRES_DATABASE: ${ENV_POSTGRES_DATABASE:-harbor_env}
+      PROJECT_SERVICE_URL: ${PROJECT_SERVICE_URL:-http://project-service:8080}
+      DEPLOYMENT_SERVICE_URL: ${DEPLOYMENT_SERVICE_URL:-http://deployment-service:8080}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       REDIS_CONNECTION_STRING: redis:6379
       METRICS_ALLOW_ANONYMOUS: "true"
     ports:
@@ -143,7 +158,9 @@ services:
     environment:
       POSTGRES_SERVER: postgres
       POSTGRES_PORT: 5432
+      POSTGRES_DATABASE: ${DEPLOY_POSTGRES_DATABASE:-harbor_deploy}
       AUTH_SERVICE_URL: ${AUTH_SERVICE_URL:-http://authentication-service:8080}
+      PROJECT_SERVICE_URL: ${PROJECT_SERVICE_URL:-http://project-service:8080}
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       KAFKA_DEPLOYMENT_TOPIC: ${KAFKA_DEPLOYMENT_TOPIC:-deployment-events}
       REDIS_CONNECTION_STRING: redis:6379
@@ -154,13 +171,11 @@ services:
       - dp_keys:/root/.aspnet/DataProtection-Keys
     depends_on:
       postgres:
-        condition: service_started
+        condition: service_healthy
       kafka:
         condition: service_started
       redis:
         condition: service_started
-      project-service:
-        condition: service_healthy
     restart: unless-stopped
 
   reporting-service:
@@ -172,6 +187,9 @@ services:
     environment:
       POSTGRES_SERVER: postgres
       POSTGRES_PORT: 5432
+      POSTGRES_DATABASE: ${REPORTING_POSTGRES_DATABASE:-harbor_reporting}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_DEPLOYMENT_TOPIC: ${KAFKA_DEPLOYMENT_TOPIC:-deployment-events}
       REDIS_CONNECTION_STRING: redis:6379
       METRICS_ALLOW_ANONYMOUS: "true"
     ports:

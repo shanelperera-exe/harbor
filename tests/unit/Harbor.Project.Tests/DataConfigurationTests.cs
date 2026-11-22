@@ -80,7 +80,7 @@ public class DataConfigurationTests
 
         var factory = new DbConnectionFactory(config);
         using var conn = factory.CreateConnection();
-        Assert.Equal("Host=localhost;Port=5433;Database=harbor_db;Username=harboruser;Password=harbor@1234;", conn.ConnectionString);
+        Assert.Equal("Host=localhost;Port=5433;Database=harbor_project;Username=harboruser;Password=harbor@1234;", conn.ConnectionString);
     }
 
     [Fact]
@@ -161,7 +161,7 @@ public class DataConfigurationTests
         var cs = DatabaseInitializer.ResolveConnectionString(config);
         Assert.Contains("Host=localhost", cs);
         Assert.Contains("Port=5432", cs);
-        Assert.Contains("Database=harbor_db", cs);
+        Assert.Contains("Database=harbor_project", cs);
         Assert.Contains("Username=harboruser", cs);
         Assert.Contains("Password=harbor@1234", cs);
         Assert.Contains("Ssl Mode=Require", cs);

@@ -15,14 +15,17 @@
 #   POSTGRES_PORT       (default 5432)        used only when POSTGRES_CONTAINER is empty
 #   POSTGRES_USER       (default harboruser)
 #   POSTGRES_PASSWORD   (default harborpass)  used only when POSTGRES_CONTAINER is empty
-#   POSTGRES_DATABASE   (default harbor_db)
+#   POSTGRES_DATABASE   (default harbor_deploy)
 
 set -euo pipefail
 
 AUTH_URL="${AUTH_URL:-http://localhost:5196}"
 POSTGRES_CONTAINER="${POSTGRES_CONTAINER-harbor-postgres}"
 POSTGRES_USER="${POSTGRES_USER:-harboruser}"
-POSTGRES_DATABASE="${POSTGRES_DATABASE:-harbor_db}"
+POSTGRES_DATABASE="${POSTGRES_DATABASE:-${DEPLOY_POSTGRES_DATABASE:-harbor_deploy}}"
+AUTH_POSTGRES_DATABASE="${AUTH_POSTGRES_DATABASE:-harbor_auth}"
+PROJECT_POSTGRES_DATABASE="${PROJECT_POSTGRES_DATABASE:-harbor_project}"
+DEPLOY_POSTGRES_DATABASE="${DEPLOY_POSTGRES_DATABASE:-harbor_deploy}"
 POSTGRES_HOST="${POSTGRES_HOST:-localhost}"
 POSTGRES_PORT="${POSTGRES_PORT:-5432}"
 POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-harborpass}"
@@ -37,6 +40,18 @@ run_psql() {
     PGPASSWORD="$POSTGRES_PASSWORD" psql \
       -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" \
       -U "$POSTGRES_USER" -d "$POSTGRES_DATABASE" "$@"
+  fi
+}
+
+run_psql_db() {
+  local database="$1"
+  shift
+  if [ -n "$POSTGRES_CONTAINER" ]; then
+    docker exec -i "$POSTGRES_CONTAINER" psql -U "$POSTGRES_USER" -d "$database" "$@"
+  else
+    PGPASSWORD="$POSTGRES_PASSWORD" psql \
+      -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" \
+      -U "$POSTGRES_USER" -d "$database" "$@"
   fi
 }
 
@@ -56,7 +71,7 @@ BODY=$(echo "$REGISTER_RESPONSE" | sed '$d')
 
 if [ "$HTTP_STATUS" != "201" ]; then
   echo "Register call returned $HTTP_STATUS - assuming user already exists, looking it up instead."
-  OWNER_ID=$(run_psql -t -A \
+  OWNER_ID=$(run_psql_db "$AUTH_POSTGRES_DATABASE" -t -A \
     -c "SELECT \"Id\" FROM \"Users\" WHERE \"Username\" = '${SEED_USERNAME}';")
 else
   OWNER_ID=$(echo "$BODY" | jq -r '.data.id')
@@ -73,7 +88,52 @@ echo "Seeding deployment data for ${SEED_USERNAME} (OwnerId=${OWNER_ID}) ..."
 # ON_ERROR_STOP is required: without it psql prints errors but still exits 0, so a
 # broken INSERT (e.g. a column that no longer exists) silently seeds nothing and the
 # Deployments E2E tests fail later with confusing "no rows" assertions.
-run_psql -v ON_ERROR_STOP=1 <<SQL
+run_psql_db "$PROJECT_POSTGRES_DATABASE" -v ON_ERROR_STOP=1 <<SQL
+INSERT INTO "Projects" ("Name","Description","OwnerId","PublicId")
+VALUES ('qa_seeded_project','Seeded project for deployment history E2E tests',${OWNER_ID},'qa_seed_proj_001')
+ON CONFLICT ("PublicId") DO UPDATE SET "OwnerId"=EXCLUDED."OwnerId";
+
+INSERT INTO "Projects" ("Name","Description","OwnerId","PublicId")
+VALUES ('Project Alpha','Alpha project for deployment report tests',${OWNER_ID},'qa_seed_proj_alpha')
+ON CONFLICT ("PublicId") DO UPDATE SET "OwnerId"=EXCLUDED."OwnerId";
+
+INSERT INTO "Services" ("ProjectId","Name","Type","RepositoryName","RepositoryBranch","PublicId","WorkflowFile")
+SELECT p."Id",'qa_seeded_service','api','qa-seeded-service','main','qa_seed_svc_001','deploy.yml'
+FROM "Projects" p WHERE p."PublicId"='qa_seed_proj_001'
+ON CONFLICT ("PublicId") DO UPDATE SET "ProjectId"=EXCLUDED."ProjectId";
+
+INSERT INTO "Services" ("ProjectId","Name","Type","RepositoryName","RepositoryBranch","PublicId","WorkflowFile")
+SELECT p."Id",'Alpha Service','api','alpha-service','main','qa_seed_svc_alpha','deploy.yml'
+FROM "Projects" p WHERE p."PublicId"='qa_seed_proj_alpha'
+ON CONFLICT ("PublicId") DO UPDATE SET "ProjectId"=EXCLUDED."ProjectId";
+SQL
+
+run_psql_db "$DEPLOY_POSTGRES_DATABASE" -v ON_ERROR_STOP=1 <<SQL
+CREATE TABLE IF NOT EXISTS "Projects" (
+    "Id" SERIAL PRIMARY KEY,
+    "Name" VARCHAR(100) NOT NULL,
+    "Description" TEXT,
+    "OwnerId" INTEGER NOT NULL,
+    "PublicId" VARCHAR(50) UNIQUE
+);
+CREATE TABLE IF NOT EXISTS "Services" (
+    "Id" SERIAL PRIMARY KEY,
+    "ProjectId" INTEGER,
+    "Name" VARCHAR(100) NOT NULL,
+    "Type" VARCHAR(50),
+    "RepositoryName" VARCHAR(200),
+    "RepositoryBranch" VARCHAR(200),
+    "PublicId" VARCHAR(50) UNIQUE,
+    "WorkflowFile" VARCHAR(200)
+);
+CREATE TABLE IF NOT EXISTS "Users" (
+    "Id" SERIAL PRIMARY KEY,
+    "Username" VARCHAR(100) UNIQUE,
+    "Email" VARCHAR(200),
+    "PasswordHash" VARCHAR(255),
+    "Role" VARCHAR(50),
+    "PublicId" VARCHAR(50)
+);
 -- Deployment history is queried through
 --   d."ServiceId" IN (SELECT s."Id" FROM "Services" s JOIN "Projects" p ON s."ProjectId" = p."Id" WHERE p."OwnerId" = ...)
 -- so every seeded Deployment must hang off a Service that belongs to a Project owned

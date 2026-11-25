@@ -6,12 +6,12 @@ This document details the database architecture, schema definitions, migration p
 
 ## 1. Architectural Strategy
 
-Harbor employs a **Shared PostgreSQL Instance with Isolated Service Domains** pattern:
+Harbor employs a **Database-per-Service** pattern on PostgreSQL:
 
 - **Database Engine**: PostgreSQL 15+.
-- **Logical Schema Isolation**: All services connect to the same PostgreSQL server (`harbor_db`), but each microservice strictly owns its own set of tables and migrations.
-- **Autonomous Data Boundaries**: No service ever performs cross-database joins or queries against another service's private tables. Data access is segregated by bounded context.
-- **Cross-Domain Read Models**: The `Harbor.Reporting` service holds read-only querying capability against deployment and project tables to generate consolidated audit reports without duplicating high-volume operational records.
+- **Isolated Databases**: Each microservice connects to its own dedicated PostgreSQL database (`harbor_auth`, `harbor_project`, `harbor_env`, `harbor_deploy`, `harbor_reporting`) initialized via `infrastructure/postgres/init-databases.sql`.
+- **Autonomous Data Boundaries**: No service ever performs cross-database joins, cross-database foreign keys, or writes against another service's tables. Cross-service state synchronization and cascading deletes are handled asynchronously via Kafka (`harbor-domain-events`), with internal HTTP APIs for synchronous lookups.
+- **CQRS Read Models in `Harbor.Reporting`**: `Harbor.Reporting` owns `harbor_reporting` and maintains a denormalized `DeploymentReadModels` table populated via Kafka consumers (`deployment-events` and `harbor-domain-events`).
 - **Data Access Engine**: Raw SQL via `Npgsql` and ADO.NET behind Repository interfaces. Harbor intentionally avoids Object-Relational Mappers (ORMs) to maintain strict control over SQL generation, avoid unintended N+1 queries, minimize runtime allocations, and guarantee predictable execution plans.
 
 ---

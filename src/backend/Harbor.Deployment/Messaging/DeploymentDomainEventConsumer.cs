@@ -39,12 +39,12 @@ public sealed class DeploymentDomainEventConsumer : KafkaConsumerBackgroundServi
         switch (envelope.EventType)
         {
             case DomainEventTypes.ServiceUpdated:
-            {
-                var evt = JsonSerializer.Deserialize<ServiceUpdatedEvent>(envelope.PayloadJson);
-                if (evt is null) return;
+                {
+                    var evt = JsonSerializer.Deserialize<ServiceUpdatedEvent>(envelope.PayloadJson);
+                    if (evt is null) return;
 
-                await using var cmd = connection.CreateCommand();
-                cmd.CommandText = """
+                    await using var cmd = connection.CreateCommand();
+                    cmd.CommandText = """
                     INSERT INTO "ServiceCatalogCache" ("ServiceId", "ProjectId", "ServiceName", "ProjectName", "OwnerId", "UpdatedAt")
                     VALUES (@serviceId, @projectId, @serviceName, @projectName, @ownerId, @updatedAt)
                     ON CONFLICT ("ServiceId") DO UPDATE SET
@@ -54,81 +54,81 @@ public sealed class DeploymentDomainEventConsumer : KafkaConsumerBackgroundServi
                         "OwnerId" = EXCLUDED."OwnerId",
                         "UpdatedAt" = EXCLUDED."UpdatedAt";
                     """;
-                cmd.Parameters.AddWithValue("serviceId", evt.ServiceId);
-                cmd.Parameters.AddWithValue("projectId", evt.ProjectId);
-                cmd.Parameters.AddWithValue("serviceName", evt.ServiceName);
-                cmd.Parameters.AddWithValue("projectName", evt.ProjectName);
-                cmd.Parameters.AddWithValue("ownerId", evt.OwnerId);
-                cmd.Parameters.AddWithValue("updatedAt", evt.UpdatedAt);
-                await cmd.ExecuteNonQueryAsync(cancellationToken);
-                break;
-            }
+                    cmd.Parameters.AddWithValue("serviceId", evt.ServiceId);
+                    cmd.Parameters.AddWithValue("projectId", evt.ProjectId);
+                    cmd.Parameters.AddWithValue("serviceName", evt.ServiceName);
+                    cmd.Parameters.AddWithValue("projectName", evt.ProjectName);
+                    cmd.Parameters.AddWithValue("ownerId", evt.OwnerId);
+                    cmd.Parameters.AddWithValue("updatedAt", evt.UpdatedAt);
+                    await cmd.ExecuteNonQueryAsync(cancellationToken);
+                    break;
+                }
             case DomainEventTypes.ServiceDeleted:
-            {
-                var evt = JsonSerializer.Deserialize<ServiceDeletedEvent>(envelope.PayloadJson);
-                if (evt is null) return;
+                {
+                    var evt = JsonSerializer.Deserialize<ServiceDeletedEvent>(envelope.PayloadJson);
+                    if (evt is null) return;
 
-                await using var cmd = connection.CreateCommand();
-                cmd.CommandText = """
+                    await using var cmd = connection.CreateCommand();
+                    cmd.CommandText = """
                     DELETE FROM "CiRuns" WHERE "ServiceId" = @serviceId;
                     DELETE FROM "Deployments" WHERE "ServiceId" = @serviceId;
                     DELETE FROM "ServiceCatalogCache" WHERE "ServiceId" = @serviceId;
                     """;
-                cmd.Parameters.AddWithValue("serviceId", evt.ServiceId);
-                await cmd.ExecuteNonQueryAsync(cancellationToken);
-                _logger.LogInformation("Cleaned up deployments/CI runs for deleted service {ServiceId}", evt.ServiceId);
-                break;
-            }
+                    cmd.Parameters.AddWithValue("serviceId", evt.ServiceId);
+                    await cmd.ExecuteNonQueryAsync(cancellationToken);
+                    _logger.LogInformation("Cleaned up deployments/CI runs for deleted service {ServiceId}", evt.ServiceId);
+                    break;
+                }
             case DomainEventTypes.EnvironmentDeleted:
-            {
-                var evt = JsonSerializer.Deserialize<EnvironmentDeletedEvent>(envelope.PayloadJson);
-                if (evt is null) return;
+                {
+                    var evt = JsonSerializer.Deserialize<EnvironmentDeletedEvent>(envelope.PayloadJson);
+                    if (evt is null) return;
 
-                await using var cmd = connection.CreateCommand();
-                cmd.CommandText = """
+                    await using var cmd = connection.CreateCommand();
+                    cmd.CommandText = """
                     DELETE FROM "Deployments" d
                     USING "ServiceCatalogCache" sc
                     WHERE d."ServiceId" = sc."ServiceId"
                       AND sc."ProjectId" = @projectId
                       AND d."Environment" = @envName;
                     """;
-                cmd.Parameters.AddWithValue("projectId", evt.ProjectId);
-                cmd.Parameters.AddWithValue("envName", evt.EnvironmentName);
-                await cmd.ExecuteNonQueryAsync(cancellationToken);
-                break;
-            }
+                    cmd.Parameters.AddWithValue("projectId", evt.ProjectId);
+                    cmd.Parameters.AddWithValue("envName", evt.EnvironmentName);
+                    await cmd.ExecuteNonQueryAsync(cancellationToken);
+                    break;
+                }
             case DomainEventTypes.ProjectDeleted:
-            {
-                var evt = JsonSerializer.Deserialize<ProjectDeletedEvent>(envelope.PayloadJson);
-                if (evt is null) return;
+                {
+                    var evt = JsonSerializer.Deserialize<ProjectDeletedEvent>(envelope.PayloadJson);
+                    if (evt is null) return;
 
-                await using var cmd = connection.CreateCommand();
-                cmd.CommandText = """
+                    await using var cmd = connection.CreateCommand();
+                    cmd.CommandText = """
                     DELETE FROM "Deployments" d
                     USING "ServiceCatalogCache" sc
                     WHERE d."ServiceId" = sc."ServiceId"
                       AND sc."ProjectId" = @projectId;
                     DELETE FROM "ServiceCatalogCache" WHERE "ProjectId" = @projectId;
                     """;
-                cmd.Parameters.AddWithValue("projectId", evt.ProjectId);
-                await cmd.ExecuteNonQueryAsync(cancellationToken);
-                break;
-            }
+                    cmd.Parameters.AddWithValue("projectId", evt.ProjectId);
+                    await cmd.ExecuteNonQueryAsync(cancellationToken);
+                    break;
+                }
             case DomainEventTypes.UserDeleted:
-            {
-                var evt = JsonSerializer.Deserialize<UserDeletedEvent>(envelope.PayloadJson);
-                if (evt is null) return;
+                {
+                    var evt = JsonSerializer.Deserialize<UserDeletedEvent>(envelope.PayloadJson);
+                    if (evt is null) return;
 
-                await using var cmd = connection.CreateCommand();
-                cmd.CommandText = """
+                    await using var cmd = connection.CreateCommand();
+                    cmd.CommandText = """
                     DELETE FROM "CiRuns" WHERE "OwnerId" = @userId;
                     DELETE FROM "Deployments" WHERE "OwnerId" = @userId;
                     DELETE FROM "ServiceCatalogCache" WHERE "OwnerId" = @userId;
                     """;
-                cmd.Parameters.AddWithValue("userId", evt.UserId);
-                await cmd.ExecuteNonQueryAsync(cancellationToken);
-                break;
-            }
+                    cmd.Parameters.AddWithValue("userId", evt.UserId);
+                    await cmd.ExecuteNonQueryAsync(cancellationToken);
+                    break;
+                }
         }
     }
 }

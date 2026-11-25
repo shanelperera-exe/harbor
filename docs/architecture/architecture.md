@@ -10,8 +10,8 @@ Harbor follows the **Deployment Management and Visibility Platform** paradigm: G
 
 Harbor's architecture is guided by six primary engineering principles:
 
-1. **Domain-Driven Microservices with Autonomous Data Ownership**:
-   Each business domain (Identity, Projects, Environments, Deployments, Reporting) is encapsulated in an independent ASP.NET Core service. Each service strictly owns its database schema and tables. No service ever queries or writes to another service's tables directly. Cross-service data exchanges are executed via authenticated HTTP APIs or asynchronous Kafka events.
+1. **Domain-Driven Microservices with Database-per-Service Ownership**:
+   Each business domain (`Authentication` → `harbor_auth`, `Project` → `harbor_project`, `Environment` → `harbor_env`, `Deployment` → `harbor_deploy`, `Reporting` → `harbor_reporting`) runs as an independent ASP.NET Core service with its own dedicated PostgreSQL database. No service ever queries, joins, or writes to another service's database. Cross-service synchronization and cascading deletes are executed via Kafka domain events (`harbor-domain-events`, `deployment-events`) and internal HTTP APIs.
 
 2. **Decentralized Authentication & Stateless Authorization**:
    Harbor uses HMAC-SHA256 JSON Web Tokens (JWT). The `Harbor.Authentication` service acts as the Identity Provider (IdP) and token issuer. Downstream services (`Project`, `Environment`, `Deployment`, `Reporting`, `ApiGateway`) independently validate tokens using shared JWT signature parameters (`JWT_SECRET`, `JWT_ISSUER`, `JWT_AUDIENCE`), eliminating high-latency inter-service auth roundtrips on every request.

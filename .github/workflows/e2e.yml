@@ -95,7 +95,6 @@ jobs:
       # Database
       POSTGRES_SERVER: localhost
       POSTGRES_PORT: "5432"
-      POSTGRES_DATABASE: harbor_db
       POSTGRES_USER: harboruser
       POSTGRES_PASSWORD: harborpass
       POSTGRES_SSL_MODE: Prefer
@@ -145,6 +144,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install postgresql-client
+        run: sudo apt-get update -y && sudo apt-get install -y --no-install-recommends postgresql-client
+
+      - name: Create Harbor service databases
+        run: |
+          export PGPASSWORD=$POSTGRES_PASSWORD
+          for database in harbor_auth harbor_project harbor_env harbor_deploy harbor_reporting; do
+            psql -h localhost -p 5432 -U "$POSTGRES_USER" -d harbor_db \
+              -tc "SELECT 1 FROM pg_database WHERE datname = '$database'" |
+              grep -q 1 || psql -h localhost -p 5432 -U "$POSTGRES_USER" -d harbor_db \
+              -c "CREATE DATABASE $database"
+          done
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
@@ -164,7 +176,6 @@ jobs:
           {
             echo "POSTGRES_SERVER=$POSTGRES_SERVER"
             echo "POSTGRES_PORT=$POSTGRES_PORT"
-            echo "POSTGRES_DATABASE=$POSTGRES_DATABASE"
             echo "POSTGRES_USER=$POSTGRES_USER"
             echo "POSTGRES_PASSWORD=$POSTGRES_PASSWORD"
             echo "POSTGRES_SSL_MODE=$POSTGRES_SSL_MODE"
@@ -203,6 +214,7 @@ jobs:
       - name: Start backend services
         run: |
           mkdir -p /tmp/harbor-logs
+          POSTGRES_DATABASE=harbor_auth \
           dotnet run --project src/backend/Harbor.Authentication --no-build > /tmp/harbor-logs/auth.log 2>&1 &
 
           ReverseProxy__Clusters__authCluster__Destinations__destination1__Address=http://localhost:5196 \
@@ -212,9 +224,13 @@ jobs:
           ReverseProxy__Clusters__reportingCluster__Destinations__destination1__Address=http://localhost:5243 \
           dotnet run --project src/backend/Harbor.ApiGateway --no-build > /tmp/harbor-logs/gateway.log 2>&1 &
 
+          POSTGRES_DATABASE=harbor_project \
           dotnet run --project src/backend/Harbor.Project --no-build > /tmp/harbor-logs/project.log 2>&1 &
+          POSTGRES_DATABASE=harbor_deploy \
           dotnet run --project src/backend/Harbor.Deployment --no-build > /tmp/harbor-logs/deployment.log 2>&1 &
+          POSTGRES_DATABASE=harbor_env \
           dotnet run --project src/backend/Harbor.Environment --no-build > /tmp/harbor-logs/environment.log 2>&1 &
+          POSTGRES_DATABASE=harbor_reporting \
           dotnet run --project src/backend/Harbor.Reporting --no-build > /tmp/harbor-logs/reporting.log 2>&1 &
 
           wait_for_http() {
@@ -297,7 +313,9 @@ jobs:
           POSTGRES_PORT: "5432"
           POSTGRES_USER: harboruser
           POSTGRES_PASSWORD: harborpass
-          POSTGRES_DATABASE: harbor_db
+          AUTH_POSTGRES_DATABASE: harbor_auth
+          PROJECT_POSTGRES_DATABASE: harbor_project
+          DEPLOY_POSTGRES_DATABASE: harbor_deploy
 
       - name: Run E2E tests
         run: |

@@ -51,6 +51,6 @@ public class ReportingDbConnectionFactoryTests : IDisposable
     public void NothingConfigured_UsesDefaults()
     {
         using var conn = new ReportingDbConnectionFactory(new ConfigurationBuilder().Build()).CreateConnection();
-        Assert.Equal("Host=localhost;Port=5433;Database=harbor_db;Username=harboruser;Password=harbor@1234;", conn.ConnectionString);
+        Assert.Equal("Host=localhost;Port=5433;Database=harbor_reporting;Username=harboruser;Password=harbor@1234;", conn.ConnectionString);
     }
 }

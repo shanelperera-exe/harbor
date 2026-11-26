@@ -34,14 +34,19 @@ jobs:
         include:
           - service: harbor-auth-api
             dockerfile: src/backend/Harbor.Authentication/Dockerfile
+            database: harbor_auth
           - service: harbor-project-api
             dockerfile: src/backend/Harbor.Project/Dockerfile
+            database: harbor_project
           - service: harbor-env-api
             dockerfile: src/backend/Harbor.Environment/Dockerfile
+            database: harbor_env
           - service: harbor-deploy-api
             dockerfile: src/backend/Harbor.Deployment/Dockerfile
+            database: harbor_deploy
           - service: harbor-report-api
             dockerfile: src/backend/Harbor.Reporting/Dockerfile
+            database: harbor_reporting
 
     steps:
       - name: Checkout
@@ -53,15 +58,6 @@ jobs:
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      # Backend APIs use internal ingress in the same ACA environment.
-      # Service-to-service communication uses the application names directly.
-      - name: Configure backend URLs
-        run: |
-          # AUTH_SERVICE_URL is consumed by Harbor.Deployment for service-to-service
-          # calls to the Auth API (JWT validation). Use the internal service name so that
-          # this call stays within the ACA environment.
-          echo "AUTH_SERVICE_URL=http://harbor-auth-api" >> $GITHUB_ENV
 
       - name: Build and deploy to Azure Container Apps
         uses: azure/container-apps-deploy-action@v1
@@ -99,7 +95,7 @@ jobs:
               --set-env-vars \
                 "POSTGRES_SERVER=${{ vars.POSTGRES_SERVER }}" \
                 "POSTGRES_PORT=${{ vars.POSTGRES_PORT }}" \
-                "POSTGRES_DATABASE=${{ vars.POSTGRES_DATABASE }}" \
+                "POSTGRES_DATABASE=${{ matrix.database }}" \
                 "POSTGRES_USER=${{ vars.POSTGRES_USER }}" \
                 "POSTGRES_PASSWORD=$POSTGRES_PASSWORD" \
                 "POSTGRES_SSL_MODE=Require" \
@@ -125,7 +121,9 @@ jobs:
                 "GH_API_BASE_URL=${{ vars.GH_API_BASE_URL }}" \
                 "GOOGLE_CLIENT_ID=${{ vars.GOOGLE_CLIENT_ID }}" \
                 "GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET" \
-                "AUTH_SERVICE_URL=$AUTH_SERVICE_URL" \
+                "AUTH_SERVICE_URL=http://harbor-auth-api" \
+                "PROJECT_SERVICE_URL=http://harbor-project-api" \
+                "DEPLOYMENT_SERVICE_URL=http://harbor-deploy-api" \
                 "FRONTEND_URL=https://harborapp.tech" \
                 "API_GATEWAY_URL=https://api.harborapp.tech" \
                 "ALLOWED_ORIGINS=https://harborapp.tech,https://admin.harborapp.tech" \
@@ -148,10 +146,6 @@ jobs:
 # ─────────────────────────────────────────────────────────────────────────────
   deploy-api-gateway:
     name: Deploy API Gateway
-    if: >
-      github.event_name == 'workflow_dispatch' ||
-      (github.event.workflow_run.conclusion == 'success' &&
-       github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
     needs: deploy-backend-apis
     environment: Production
@@ -166,17 +160,6 @@ jobs:
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      # Backend APIs run with internal ingress in the same ACA environment.
-      # The gateway must reach them via their internal ACA service names.
-      # Do NOT use the public FQDN or .internal. FQDNs for these calls.
-      - name: Resolve backend internal URLs
-        run: |
-          echo "AUTH_FQDN=http://harbor-auth-api" >> $GITHUB_ENV
-          echo "PROJECT_FQDN=http://harbor-project-api" >> $GITHUB_ENV
-          echo "ENV_FQDN=http://harbor-env-api" >> $GITHUB_ENV
-          echo "DEPLOY_FQDN=http://harbor-deploy-api" >> $GITHUB_ENV
-          echo "REPORTING_FQDN=http://harbor-report-api" >> $GITHUB_ENV
 
       - name: Build and deploy API Gateway to ACA
         uses: azure/container-apps-deploy-action@v1
@@ -202,11 +185,11 @@ jobs:
               --name harbor-api-gateway \
               --resource-group "$RESOURCE_GROUP" \
               --set-env-vars \
-                "ReverseProxy__Clusters__authCluster__Destinations__destination1__Address=$AUTH_FQDN" \
-                "ReverseProxy__Clusters__projectCluster__Destinations__destination1__Address=$PROJECT_FQDN" \
-                "ReverseProxy__Clusters__environmentCluster__Destinations__destination1__Address=$ENV_FQDN" \
-                "ReverseProxy__Clusters__deploymentCluster__Destinations__destination1__Address=$DEPLOY_FQDN" \
-                "ReverseProxy__Clusters__reportingCluster__Destinations__destination1__Address=$REPORTING_FQDN" \
+                "ReverseProxy__Clusters__authCluster__Destinations__destination1__Address=http://harbor-auth-api" \
+                "ReverseProxy__Clusters__projectCluster__Destinations__destination1__Address=http://harbor-project-api" \
+                "ReverseProxy__Clusters__environmentCluster__Destinations__destination1__Address=http://harbor-env-api" \
+                "ReverseProxy__Clusters__deploymentCluster__Destinations__destination1__Address=http://harbor-deploy-api" \
+                "ReverseProxy__Clusters__reportingCluster__Destinations__destination1__Address=http://harbor-report-api" \
                 "ALLOWED_ORIGINS=https://harborapp.tech,https://admin.harborapp.tech" \
                 "FRONTEND_URL=https://harborapp.tech" \
                 "METRICS_SCRAPE_TOKEN=$METRICS_SCRAPE_TOKEN" \
@@ -251,13 +234,7 @@ jobs:
 # ─────────────────────────────────────────────────────────────────────────────
   deploy-frontends:
     name: Deploy Frontend UIs
-    if: >
-      github.event_name == 'workflow_dispatch' ||
-      (github.event.workflow_run.conclusion == 'success' &&
-       github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
-    # Frontends bake the gateway origin into the bundle at build time, so they
-    # must be built after the gateway app exists and its FQDN can be read back.
     needs: deploy-api-gateway
     environment: Production
     strategy:
@@ -281,10 +258,6 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Resolve API Gateway URL
-        run: |
-          echo "GATEWAY_URL=https://api.harborapp.tech" >> $GITHUB_ENV
-
       - name: Log in to ACR
         run: docker login "$ACR_LOGIN_SERVER" -u "${{ secrets.ACR_USERNAME }}" -p "${{ secrets.ACR_PASSWORD }}"
 
@@ -295,7 +268,7 @@ jobs:
           # up the repo-level package-lock.json (no root package.json exists) and left
           # nginx.conf unreachable at the context root.
           docker build \
-            --build-arg VITE_API_BASE_URL="$GATEWAY_URL/api" \
+            --build-arg VITE_API_BASE_URL="https://api.harborapp.tech/api" \
             --build-arg VITE_GITHUB_APP_SLUG="${{ vars.GH_APP_SLUG }}" \
             --build-arg VITE_GRAFANA_URL="${{ vars.GRAFANA_URL }}" \
             --build-arg VITE_PROMETHEUS_URL="${{ vars.PROMETHEUS_URL }}" \
@@ -339,10 +312,6 @@ jobs:
 # ─────────────────────────────────────────────────────────────────────────────
   deploy-monitoring:
     name: Deploy Observability (Prometheus & Grafana)
-    if: >
-      github.event_name == 'workflow_dispatch' ||
-      (github.event.workflow_run.conclusion == 'success' &&
-       github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
     needs: deploy-backend-apis
     environment: Production

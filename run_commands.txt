@@ -1,7 +1,6 @@
-# Full stack with ngrok tunnel (local dev only)
-# Note: ensure no stale NGROK_AUTHTOKEN in your shell env, or prefix with the correct one:
-#   NGROK_AUTHTOKEN=<your_token> docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build ...
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build postgres redis mailpit api-gateway authentication-service project-service environment-service deployment-service reporting-service ngrok
+# Full stack with Cloudflare Tunnel (local dev only)
+# Requires CLOUDFLARE_DEV_TUNNEL_TOKEN in your .env file
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build postgres redis kafka mailpit api-gateway authentication-service project-service environment-service deployment-service reporting-service cloudflared
 
-# Ngrok-only (if the API gateway is already running)
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up ngrok
+# Cloudflare Tunnel only (if the API gateway is already running)
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up cloudflared

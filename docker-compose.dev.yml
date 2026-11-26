@@ -1,8 +1,10 @@
 services:
-  ngrok:
-    image: ngrok/ngrok:latest
-    container_name: harbor-ngrok
-    env_file: .env
-    command: http api-gateway:8080 --url=${NGROK_DOMAIN}
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: harbor-dev-tunnel
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_DEV_TUNNEL_TOKEN:-}
     depends_on:
       - api-gateway
+    restart: unless-stopped

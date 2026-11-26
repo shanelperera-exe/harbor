@@ -70,6 +70,7 @@ The Harbor project enforces the following traceability model to ensure all requi
 - [Code Coverage](coverage/code-coverage.md)
 
 ### Specialized Testing
+- [Code Quality & Metrics Viva Guide](CODE_QUALITY_METRICS_VIVA_GUIDE.md)
 - [Selenium E2E Strategy](e2e/selenium-strategy.md)
 - [Selenium Results](e2e/selenium-results.md)
 - [JMeter Test Plan](performance/jmeter-test-plan.md)

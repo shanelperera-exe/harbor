@@ -161,6 +161,7 @@ services:
       POSTGRES_DATABASE: ${DEPLOY_POSTGRES_DATABASE:-harbor_deploy}
       AUTH_SERVICE_URL: ${AUTH_SERVICE_URL:-http://authentication-service:8080}
       PROJECT_SERVICE_URL: ${PROJECT_SERVICE_URL:-http://project-service:8080}
+      ENVIRONMENT_SERVICE_URL: ${ENVIRONMENT_SERVICE_URL:-http://environment-service:8080}
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       KAFKA_DEPLOYMENT_TOPIC: ${KAFKA_DEPLOYMENT_TOPIC:-deployment-events}
       REDIS_CONNECTION_STRING: redis:6379
@@ -188,6 +189,7 @@ services:
       POSTGRES_SERVER: postgres
       POSTGRES_PORT: 5432
       POSTGRES_DATABASE: ${REPORTING_POSTGRES_DATABASE:-harbor_reporting}
+      DEPLOYMENT_SERVICE_URL: ${DEPLOYMENT_SERVICE_URL:-http://deployment-service:8080}
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       KAFKA_DEPLOYMENT_TOPIC: ${KAFKA_DEPLOYMENT_TOPIC:-deployment-events}
       REDIS_CONNECTION_STRING: redis:6379

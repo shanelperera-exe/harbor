@@ -123,6 +123,7 @@ jobs:
                 "GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET" \
                 "AUTH_SERVICE_URL=http://harbor-auth-api" \
                 "PROJECT_SERVICE_URL=http://harbor-project-api" \
+                "ENVIRONMENT_SERVICE_URL=http://harbor-env-api" \
                 "DEPLOYMENT_SERVICE_URL=http://harbor-deploy-api" \
                 "FRONTEND_URL=https://harborapp.tech" \
                 "API_GATEWAY_URL=https://api.harborapp.tech" \

@@ -688,8 +688,7 @@ const NewServiceConfigure: React.FC = () => {
                           <h4 className="text-gray-900 dark:text-white text-[18px] font-semibold font-['Roobert',sans-serif]">Environment Variables</h4>
                         </div>
                         <div className="text-[16px] leading-[24px] text-gray-600 dark:text-[#c7c7c7] mt-1 max-w-xl font-['Neue_Montreal',sans-serif]">
-                          Set environment-specific config and secrets (such as API keys), then read those values from your code. 
-                          <a rel="noopener noreferrer" target="_blank" className="font-inherit text-[#2563eb] hover:text-[#1d4ed8] active:text-[#1e3a8a] hover:underline relative no-underline outline-none ml-1" href="https://render.com/docs/configure-environment-variables">Learn more.</a>
+                          Set environment-specific config and secrets (such as API keys), then read those values from your code.
                         </div>
                       </div>
                     </div>
@@ -907,11 +906,9 @@ const NewServiceConfigure: React.FC = () => {
                       <div className="w-full">
                         <h1 className="text-[18px] font-semibold text-[#f0f0f0]">{envFileModalTarget === 'vars' ? 'Add environment variables from .env' : 'Add secrets from .env'}</h1>
                         <div className="text-[14px] text-[#c7c7c7] mt-1 max-w-xl">
-                          {envFileModalTarget === 'vars' ? 'Paste your .env contents to add multiple environment variables at once. Read the' : 'Paste your .env contents to add multiple secrets at once. Sensitive values are encrypted and stored securely. Read the'}{' '}
-                          <a rel="noopener noreferrer" target="_blank" className="font-inherit text-[#2563eb] hover:text-[#1d4ed8] hover:underline" href="https://render.com/docs/configure-environment-variables#adding-in-bulk-from-a-env-file">
-                            docs
-                          </a>{' '}
-                          for correct syntax.
+                          {envFileModalTarget === 'vars'
+                            ? 'Paste your .env contents (KEY=VALUE, one per line) to add multiple environment variables at once.'
+                            : 'Paste your .env contents (KEY=VALUE, one per line) to add multiple secrets at once. Sensitive values are encrypted and stored securely.'}
                         </div>
                       </div>
                       <button type="button" aria-label="Close modal" onClick={closeEnvFileModal} className="flex p-0 w-4 h-4 before:absolute before:content-[''] before:-inset-2 absolute right-3 top-3 text-[#e3e3e3] hover:text-[#f0f0f0]">

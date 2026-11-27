@@ -39,9 +39,11 @@ public sealed class ProjectDeletedEvent
 public sealed class ServiceUpdatedEvent
 {
     public int ServiceId { get; set; }
+    public string? ServicePublicId { get; set; }
     public int ProjectId { get; set; }
     public string ProjectName { get; set; } = string.Empty;
     public string ServiceName { get; set; } = string.Empty;
+    public string? ServiceType { get; set; }
     public string? Provider { get; set; }
     public int OwnerId { get; set; }
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;

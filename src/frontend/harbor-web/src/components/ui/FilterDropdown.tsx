@@ -54,10 +54,13 @@ const FilterDropdown = ({
   const selectedOption = options.find((opt) => opt.value === value);
   const displayLabel = selectedOption ? selectedOption.label : placeholder;
 
+  const isFullWidth = className?.includes("w-full");
+
   return (
-    <div ref={containerRef} className="relative inline-block text-left z-[100]">
-      <motion.div animate={open ? "open" : "closed"} className="relative">
+    <div ref={containerRef} className={`relative text-left ${open ? "z-[120]" : "z-[40]"} ${isFullWidth ? "block w-full" : "inline-block"}`}>
+      <motion.div animate={open ? "open" : "closed"} className="relative w-full">
         <button
+          type="button"
           onClick={() => setOpen((pv) => !pv)}
           data-testid={testId}
           className={className || "flex items-center justify-between gap-2 h-8 px-3 text-sm border border-gray-300 dark:border-[#525252] bg-white dark:bg-[#0b1221] text-gray-700 dark:text-[#c9c9c9] rounded-md hover:bg-gray-50 dark:hover:bg-[#111c33] transition-colors min-w-[140px]"}
@@ -79,7 +82,7 @@ const FilterDropdown = ({
             originY: "top", 
             ...(align === "left" ? { left: 0 } : { right: 0 }) 
           }}
-          className="flex flex-col gap-1 p-1.5 rounded-sm bg-white dark:bg-[#0b1221] border border-gray-300 dark:border-[#525252] absolute top-[120%] w-full overflow-hidden z-[100] shadow-lg shadow-black/5 dark:shadow-black/20"
+          className={`flex flex-col gap-1 p-1.5 rounded-sm bg-white dark:bg-[#0b1221] border border-gray-300 dark:border-[#525252] absolute top-[115%] w-full min-w-[180px] overflow-hidden z-[120] shadow-lg shadow-black/5 dark:shadow-black/20 ${open ? "pointer-events-auto" : "pointer-events-none"}`}
         >
           {options.map((option) => (
             <Option

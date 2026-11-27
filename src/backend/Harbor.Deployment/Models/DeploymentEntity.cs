@@ -22,8 +22,8 @@ public class DeploymentEntity
     public string? DeploymentUrl { get; init; }
 
     // Joined properties for history view
-    public string? ProjectName { get; init; }
-    public string? ServiceName { get; init; }
-    public string? ServiceType { get; init; }
-    public string? UserName { get; init; }
+    public string? ProjectName { get; set; }
+    public string? ServiceName { get; set; }
+    public string? ServiceType { get; set; }
+    public string? UserName { get; set; }
 }

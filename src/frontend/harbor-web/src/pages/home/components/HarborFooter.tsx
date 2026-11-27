@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { ArrowUpRight, Mail, Globe } from 'lucide-react';
@@ -21,6 +22,34 @@ const EYEBROW_CLASS =
   'font-mono text-[11.5px] uppercase tracking-[0.16em] text-white/60 mb-5 pb-2.5 border-b border-white/15 font-medium';
 
 export default function HarborFooter({ isLoggedIn }: HarborFooterProps) {
+  const wordmarkGroupRef = useRef<SVGGElement>(null);
+  const [wordmarkViewBox, setWordmarkViewBox] = useState('0 0 1254 290');
+
+  useLayoutEffect(() => {
+    let cancelled = false;
+
+    const syncWordmarkBounds = () => {
+      if (cancelled || !wordmarkGroupRef.current) return;
+      const bbox = wordmarkGroupRef.current.getBBox();
+      if (bbox.width <= 0 || bbox.height <= 0) return;
+
+      const padX = 14;
+      const padY = 10;
+      setWordmarkViewBox(
+        `${(bbox.x - padX).toFixed(1)} ${(bbox.y - padY).toFixed(1)} ${(bbox.width + padX * 2).toFixed(1)} ${(bbox.height + padY * 2).toFixed(1)}`
+      );
+    };
+
+    syncWordmarkBounds();
+    if (typeof document !== 'undefined' && 'fonts' in document) {
+      document.fonts.ready.then(syncWordmarkBounds).catch(() => {});
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <footer
       className="w-full text-white relative overflow-hidden pt-20 lg:pt-28 pb-10"
@@ -230,30 +259,32 @@ export default function HarborFooter({ isLoggedIn }: HarborFooterProps) {
         className="group relative z-10 block w-full px-4 sm:px-8 lg:px-14 mt-4 mb-8 select-none"
       >
         <svg
-          viewBox="0 0 1190 290"
+          viewBox={wordmarkViewBox}
           preserveAspectRatio="xMidYMid meet"
-          className="w-full h-auto block overflow-visible"
+          className="w-full h-auto block"
           role="img"
           aria-label="harbor"
         >
-          {/* Inverted Harbor Shield Mark — centered vertically at y=145, symmetric 14px left margin */}
-          <g transform="translate(14, 10) scale(0.18)">
-            <path fill="#ffffff" d={SHIELD_OUTER_PATH} />
-            <path fill="#1e40af" d={SHIELD_ANCHOR_PATH} />
-          </g>
+          <g ref={wordmarkGroupRef}>
+            {/* Inverted Harbor Shield Mark */}
+            <g transform="translate(14, 10) scale(0.18)">
+              <path fill="#ffffff" d={SHIELD_OUTER_PATH} />
+              <path fill="#1e40af" d={SHIELD_ANCHOR_PATH} />
+            </g>
 
-          {/* Edge-to-edge Harbor Wordmark — optically centered at y=145, ends ~1176 (14px right margin) */}
-          <text
-            x="324"
-            y="258"
-            fill="#ffffff"
-            fontFamily="'Roobert', sans-serif"
-            fontSize="310"
-            fontWeight="500"
-            letterSpacing="-11"
-          >
-            harbor
-          </text>
+            {/* Full-width Harbor Wordmark */}
+            <text
+              x="324"
+              y="258"
+              fill="#ffffff"
+              fontFamily="'Roobert', sans-serif"
+              fontSize="310"
+              fontWeight="500"
+              letterSpacing="-11"
+            >
+              harbor
+            </text>
+          </g>
         </svg>
       </motion.a>
 

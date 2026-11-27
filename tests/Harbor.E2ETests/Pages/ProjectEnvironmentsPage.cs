@@ -100,6 +100,20 @@ namespace Harbor.E2ETests.Pages
             _wait.Until(d => d.Url.Contains("/settings"));
         }
 
+        /// <summary>Opens the environment's Configure deployment page.</summary>
+        public void OpenConfigure(string name)
+        {
+            var section = GetSection(name);
+            ScrollToAndClick(section.FindElement(By.CssSelector("[data-testid='environment-configure-button']")));
+            _wait.Until(d => d.Url.Contains("/configure"));
+        }
+
+        /// <summary>Returns the visible text of the named environment's section.</summary>
+        public string GetSectionText(string name)
+        {
+            return GetSection(name).Text;
+        }
+
         /// <summary>Returns to the environments list after the settings screen has navigated back.</summary>
         public void NavigateBackToEnvironments()
         {

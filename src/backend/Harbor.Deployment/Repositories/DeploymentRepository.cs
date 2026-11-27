@@ -8,13 +8,24 @@ namespace Harbor.Deployment.Repositories;
 
 public class DeploymentRepository(
     DbConnectionFactory dbFactory,
-    IProjectServiceClient? projectServiceClient = null) : IDeploymentRepository
+    IProjectServiceClient? projectServiceClient = null,
+    IEnvironmentServiceClient? environmentServiceClient = null) : IDeploymentRepository
 {
     public Task<(IReadOnlyList<DeploymentEntity> Items, int TotalCount)> GetHistoryAsync(int ownerId, int serviceId, string? status, int skip, int take) =>
         GetHistoryAsync(ownerId, null, null, serviceId.ToString(), status, skip, take);
 
     public async Task<(IReadOnlyList<DeploymentEntity> Items, int TotalCount)> GetHistoryAsync(int ownerId, string? projectId, string? environment, string? serviceId, string? status, int skip, int take, bool isAdmin = false)
     {
+        var resolvedServiceId = serviceId;
+        if (!string.IsNullOrWhiteSpace(serviceId) && !int.TryParse(serviceId, out _) && projectServiceClient is not null)
+        {
+            var details = await projectServiceClient.GetServiceDetailsAsync(serviceId);
+            if (details is not null)
+            {
+                resolvedServiceId = details.Id.ToString();
+            }
+        }
+
         await using var connection = dbFactory.CreateConnection();
         await connection.OpenAsync();
 
@@ -27,7 +38,7 @@ public class DeploymentRepository(
               AND (CAST(@environment AS text) IS NULL OR LOWER(d.""Environment"") = LOWER(@environment))
               AND (CAST(@serviceId AS text) IS NULL OR d.""ServiceId""::text = @serviceId OR sc.""ServicePublicId"" = @serviceId)
               AND (CAST(@status AS text) IS NULL OR LOWER(d.""Status"") = LOWER(@status))";
-        AddFilters(count, ownerId, isAdmin, projectId, environment, serviceId, status);
+        AddFilters(count, ownerId, isAdmin, projectId, environment, resolvedServiceId, status);
         var total = Convert.ToInt32(await count.ExecuteScalarAsync());
 
         await using var command = connection.CreateCommand();
@@ -43,7 +54,7 @@ public class DeploymentRepository(
               AND (CAST(@status AS text) IS NULL OR LOWER(d.""Status"") = LOWER(@status))
             ORDER BY d.""StartedAt"" DESC, d.""Id"" DESC
             OFFSET @skip LIMIT @take";
-        AddFilters(command, ownerId, isAdmin, projectId, environment, serviceId, status);
+        AddFilters(command, ownerId, isAdmin, projectId, environment, resolvedServiceId, status);
         command.Parameters.AddWithValue("skip", skip);
         command.Parameters.AddWithValue("take", take);
 
@@ -77,6 +88,27 @@ public class DeploymentRepository(
                 DeploymentUrl = reader.IsDBNull(21) ? null : reader.GetString(21)
             };
             result.Add(entity);
+        }
+
+        if (projectServiceClient is not null && result.Any(e => string.IsNullOrWhiteSpace(e.ProjectName) || string.IsNullOrWhiteSpace(e.ServiceName)))
+        {
+            var cache = new Dictionary<int, ProjectServiceDetails?>();
+            foreach (var entity in result)
+            {
+                if (!string.IsNullOrWhiteSpace(entity.ProjectName) && !string.IsNullOrWhiteSpace(entity.ServiceName))
+                    continue;
+                if (!cache.TryGetValue(entity.ServiceId, out var details))
+                {
+                    details = await projectServiceClient.GetServiceDetailsAsync(entity.ServiceId.ToString());
+                    cache[entity.ServiceId] = details;
+                }
+                if (details is not null)
+                {
+                    if (string.IsNullOrWhiteSpace(entity.ProjectName)) entity.ProjectName = details.ProjectName;
+                    if (string.IsNullOrWhiteSpace(entity.ServiceName)) entity.ServiceName = details.Name;
+                    if (string.IsNullOrWhiteSpace(entity.ServiceType)) entity.ServiceType = details.Type;
+                }
+            }
         }
 
         return (result, total);
@@ -135,7 +167,19 @@ public class DeploymentRepository(
                 DeploymentUrl = reader.IsDBNull(21) ? null : reader.GetString(21)
             });
         }
-        return result.SingleOrDefault();
+        var entity = result.SingleOrDefault();
+        if (entity is not null && projectServiceClient is not null &&
+            (string.IsNullOrWhiteSpace(entity.ProjectName) || string.IsNullOrWhiteSpace(entity.ServiceName)))
+        {
+            var details = await projectServiceClient.GetServiceDetailsAsync(entity.ServiceId.ToString());
+            if (details is not null)
+            {
+                if (string.IsNullOrWhiteSpace(entity.ProjectName)) entity.ProjectName = details.ProjectName;
+                if (string.IsNullOrWhiteSpace(entity.ServiceName)) entity.ServiceName = details.Name;
+                if (string.IsNullOrWhiteSpace(entity.ServiceType)) entity.ServiceType = details.Type;
+            }
+        }
+        return entity;
     }
 
     public async Task<DeploymentEntity?> GetEntityByIdAsync(int id)
@@ -178,7 +222,19 @@ public class DeploymentRepository(
                 DeploymentUrl = reader.IsDBNull(21) ? null : reader.GetString(21)
             });
         }
-        return result.SingleOrDefault();
+        var entity = result.SingleOrDefault();
+        if (entity is not null && projectServiceClient is not null &&
+            (string.IsNullOrWhiteSpace(entity.ProjectName) || string.IsNullOrWhiteSpace(entity.ServiceName)))
+        {
+            var details = await projectServiceClient.GetServiceDetailsAsync(entity.ServiceId.ToString());
+            if (details is not null)
+            {
+                if (string.IsNullOrWhiteSpace(entity.ProjectName)) entity.ProjectName = details.ProjectName;
+                if (string.IsNullOrWhiteSpace(entity.ServiceName)) entity.ServiceName = details.Name;
+                if (string.IsNullOrWhiteSpace(entity.ServiceType)) entity.ServiceType = details.Type;
+            }
+        }
+        return entity;
     }
 
     public async Task<IReadOnlyList<DeploymentLogEntity>> GetLogsAsync(int deploymentId)
@@ -284,6 +340,12 @@ public class DeploymentRepository(
 
     public async Task<string?> GetWorkflowFileAsync(int serviceId)
     {
+        if (projectServiceClient is not null)
+        {
+            var details = await projectServiceClient.GetServiceDetailsAsync(serviceId.ToString());
+            return details?.WorkflowFile;
+        }
+
         await using var connection = dbFactory.CreateConnection();
         await connection.OpenAsync();
         await using var command = connection.CreateCommand();
@@ -294,6 +356,14 @@ public class DeploymentRepository(
 
     public async Task<(bool Exists, int OwnerId, bool IsArchived, int ProjectId, int RealServiceId)> GetServiceAccessAsync(string serviceIdOrPublicId)
     {
+        if (projectServiceClient is not null)
+        {
+            var details = await projectServiceClient.GetServiceDetailsAsync(serviceIdOrPublicId);
+            return details is not null
+                ? (true, details.OwnerId ?? 0, details.IsArchived, details.ProjectId, details.Id)
+                : (false, 0, false, 0, 0);
+        }
+
         await using var connection = dbFactory.CreateConnection();
         await connection.OpenAsync();
         await using var command = connection.CreateCommand();
@@ -317,6 +387,14 @@ public class DeploymentRepository(
 
     public async Task<(bool Exists, bool IsActive, string Type, string? DeploymentUrl)?> GetEnvironmentByNameAsync(int projectId, string environmentName)
     {
+        if (environmentServiceClient is not null)
+        {
+            var env = await environmentServiceClient.GetEnvironmentByNameAsync(projectId, environmentName);
+            return env is not null
+                ? (true, env.IsActive, env.Type, env.DeploymentUrl)
+                : null;
+        }
+
         await using var connection = dbFactory.CreateConnection();
         await connection.OpenAsync();
         await using var command = connection.CreateCommand();
@@ -702,6 +780,30 @@ public class DeploymentRepository(
                 ProjectId = reader.GetInt32(21)
             });
         }
+        if (projectServiceClient is not null &&
+            list.Any(e => string.IsNullOrWhiteSpace(e.ProjectName) || string.IsNullOrWhiteSpace(e.ServiceName) || e.ProjectId == 0))
+        {
+            var cache = new Dictionary<int, ProjectServiceDetails?>();
+            foreach (var entity in list)
+            {
+                if (!string.IsNullOrWhiteSpace(entity.ProjectName) && !string.IsNullOrWhiteSpace(entity.ServiceName) && entity.ProjectId > 0)
+                    continue;
+                if (!cache.TryGetValue(entity.ServiceId, out var details))
+                {
+                    details = await projectServiceClient.GetServiceDetailsAsync(entity.ServiceId.ToString());
+                    cache[entity.ServiceId] = details;
+                }
+                if (details is not null)
+                {
+                    if (string.IsNullOrWhiteSpace(entity.ProjectName)) entity.ProjectName = details.ProjectName;
+                    if (string.IsNullOrWhiteSpace(entity.ServiceName)) entity.ServiceName = details.Name;
+                    if (string.IsNullOrWhiteSpace(entity.ServiceType)) entity.ServiceType = details.Type;
+                    if (entity.ProjectId == 0 && details.ProjectId > 0)
+                        entity.ProjectId = details.ProjectId;
+                }
+            }
+        }
+
         return list;
     }
 

@@ -1,5 +1,6 @@
 using Harbor.Reporting.Data;
 using Harbor.Reporting.Models;
+using Harbor.Reporting.Services;
 using Npgsql;
 
 namespace Harbor.Reporting.Repositories;
@@ -12,7 +13,9 @@ namespace Harbor.Reporting.Repositories;
 /// interpolation of user-supplied data. This satisfies the "parameterized SQL" requirement
 /// in the US-22 acceptance criteria and prevents SQL-injection.
 /// </summary>
-public class DeploymentReportRepository(ReportingDbConnectionFactory dbFactory) : IDeploymentReportRepository
+public class DeploymentReportRepository(
+    ReportingDbConnectionFactory dbFactory,
+    IDeploymentReportFallbackClient? fallbackClient = null) : IDeploymentReportRepository
 {
     public async Task<IReadOnlyList<DeploymentReportEntity>> GetReportRowsAsync(
         int userId,
@@ -82,6 +85,14 @@ public class DeploymentReportRepository(ReportingDbConnectionFactory dbFactory) 
                 ServiceName = reader.IsDBNull(11) ? null : reader.GetString(11),
                 UserName = reader.IsDBNull(12) ? null : reader.GetString(12),
             });
+        }
+
+        if (results.Count == 0 && fallbackClient is not null)
+        {
+            var fallbackRows = await fallbackClient.GetReportRowsAsync(
+                userId, isAdmin, projectId, environment, status, startDate, endDate);
+            if (fallbackRows.Count > 0)
+                return fallbackRows;
         }
 
         return results;

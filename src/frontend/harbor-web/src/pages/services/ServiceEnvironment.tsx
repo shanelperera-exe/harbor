@@ -21,8 +21,6 @@ const titleClass =
   "text-gray-900 dark:text-white text-[18px] font-semibold font-['Roobert',sans-serif]";
 const descriptionClass =
   "text-[16px] leading-[24px] text-gray-600 dark:text-[#c7c7c7] mt-1 max-w-xl font-['Neue_Montreal',sans-serif]";
-const linkClass =
-  'font-inherit text-[#2563eb] hover:text-[#1d4ed8] active:text-[#1e3a8a] hover:underline relative no-underline outline-none ml-1';
 const bodyClass =
   "text-[16px] leading-[24px] text-gray-900 dark:text-[#f0f0f0] font-['Neue_Montreal',sans-serif]";
 const tableWrapperClass =
@@ -126,8 +124,12 @@ export default function ServiceEnvironment() {
      return;
     }
     try {
-      const deploymentUrl = envConfig?.deploymentUrl || service?.deploymentUrl || '';
-      const provider = envConfig?.provider || service?.provider || '';
+      const fallbackUrl =
+        service?.repositoryUrl && /^https?:\/\//i.test(service.repositoryUrl)
+          ? service.repositoryUrl
+          : 'https://harborapp.tech';
+      const deploymentUrl = (envConfig?.deploymentUrl || service?.deploymentUrl || fallbackUrl).trim();
+      const provider = (envConfig?.provider || service?.provider || 'Harbor').trim();
       await saveEnvironmentConfiguration(projectId, environmentId, {
         deploymentUrl,
         provider,
@@ -172,8 +174,12 @@ export default function ServiceEnvironment() {
      return;
     }
     try {
-      const deploymentUrl = envConfig?.deploymentUrl || service?.deploymentUrl || '';
-      const provider = envConfig?.provider || service?.provider || '';
+      const fallbackUrl =
+        service?.repositoryUrl && /^https?:\/\//i.test(service.repositoryUrl)
+          ? service.repositoryUrl
+          : 'https://harborapp.tech';
+      const deploymentUrl = (envConfig?.deploymentUrl || service?.deploymentUrl || fallbackUrl).trim();
+      const provider = (envConfig?.provider || service?.provider || 'Harbor').trim();
       await saveEnvironmentConfiguration(projectId, environmentId, {
         deploymentUrl,
         provider,
@@ -241,9 +247,6 @@ export default function ServiceEnvironment() {
         <h4 className={titleClass}>Environment Variables</h4>
         <div className={descriptionClass}>
          Set environment-specific config and secrets (such as API keys), then read those values from your code.
-         <a rel="noopener noreferrer" target="_blank" className={linkClass} href="https://render.com/docs/configure-environment-variables">
-          Learn more.
-         </a>
         </div>
        </div>
         <div>
@@ -397,9 +400,6 @@ export default function ServiceEnvironment() {
         <h4 className={titleClass}>Environment Secrets</h4>
         <div className={descriptionClass}>
          These secrets are encrypted at rest and injected securely at runtime.
-         <a rel="noopener noreferrer" target="_blank" className={linkClass} href="https://render.com/docs/configure-environment-variables">
-          Learn more.
-         </a>
         </div>
        </div>
         <div>

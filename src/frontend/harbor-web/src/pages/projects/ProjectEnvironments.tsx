@@ -166,9 +166,20 @@ export default function ProjectEnvironments() {
         {environments.map(env => (
           <section key={env.id} data-testid="environment-section" data-env-name={env.name} className="transition duration-500">
             <div className="scroll-mt-20">
-              <h2 data-testid="environment-name" className="flex items-center gap-2 text-[20px] font-medium text-gray-900 dark:text-[#f0f0f0] mb-4">
+              <h2 data-testid="environment-name" className="flex items-center gap-2 text-[20px] font-medium text-gray-900 dark:text-[#f0f0f0] mb-1">
                 {env.name}
               </h2>
+              <div data-testid="environment-deployment-summary" className="text-[13px] text-gray-500 dark:text-[#a1a1aa] mb-4">
+                {env.deploymentUrl || env.provider ? (
+                  <span className="inline-flex flex-wrap items-center gap-2">
+                    {env.provider && <span className="font-medium text-gray-700 dark:text-[#e3e3e3]">{env.provider}</span>}
+                    {env.provider && env.deploymentUrl && <span>·</span>}
+                    {env.deploymentUrl && <span className="font-mono">{env.deploymentUrl}</span>}
+                  </span>
+                ) : (
+                  <span>Not configured yet</span>
+                )}
+              </div>
             </div>
             
             <div className="mb-6 space-y-4">
@@ -187,7 +198,17 @@ export default function ProjectEnvironments() {
                   </ul>
                 </div>
                 
-                <div className="flex">
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    data-testid="environment-configure-button"
+                    className="flex items-center justify-center h-8 px-3 text-gray-700 dark:text-[#e3e3e3] hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-[#ffffff1a] transition-colors rounded-sm border border-gray-300 dark:border-[#525252] text-[13px] font-medium gap-2"
+                    title="Configure deployment"
+                    onClick={() => navigate(`/projects/${projectId}/environments/${env.id}/configure`)}
+                  >
+                    <Icon name="sliders" className="w-4 h-4" />
+                    Configure
+                  </button>
                   <button
                     data-testid="environment-settings-button"
                     className="flex items-center justify-center h-8 px-3 text-gray-700 dark:text-[#e3e3e3] hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-[#ffffff1a] transition-colors rounded-sm border border-gray-300 dark:border-[#525252] text-[13px] font-medium gap-2"
@@ -388,7 +409,7 @@ export default function ProjectEnvironments() {
                 <div className="w-full pr-8">
                   <h1 className="text-[24px] font-medium text-white mb-1">Add a new environment</h1>
                   <div className="text-[16px] text-[#c7c7c7]">
-                    <a rel="noopener noreferrer" target="_blank" className="text-[#3b82f6] hover:text-[#60a5fa] hover:underline underline-offset-2 transition-colors" href="https://render.com/docs/projects">Environments</a> help you organize the deployments of your application.
+                    Environments help you organize the deployments of your application.
                   </div>
                 </div>
                 <button 

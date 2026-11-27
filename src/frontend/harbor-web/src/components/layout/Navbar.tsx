@@ -33,6 +33,12 @@ export default function Navbar() {
 
         {/* Desktop Section Links */}
         <div className="hidden lg:flex items-center gap-1 pl-4">
+          <a href="#architecture" className="group relative z-[1] inline-flex cursor-pointer transition-colors font-normal text-gray-900 dark:text-white hover:text-white dark:hover:text-white px-[14px] py-[23px]">
+            <span className="relative">
+              <span className="absolute z-[0] origin-right scale-x-0 bg-[#2563eb] transition-transform duration-300 ease-out group-hover:origin-left group-hover:scale-x-100 -top-[4px] -left-[6px] h-[calc(100%+8px)] w-[calc(100%+12px)]"></span>
+              <span className="relative z-[1]">Architecture</span>
+            </span>
+          </a>
           <a href="#how-it-works" className="group relative z-[1] inline-flex cursor-pointer transition-colors font-normal text-gray-900 dark:text-white hover:text-white dark:hover:text-white px-[14px] py-[23px]">
             <span className="relative">
               <span className="absolute z-[0] origin-right scale-x-0 bg-[#2563eb] transition-transform duration-300 ease-out group-hover:origin-left group-hover:scale-x-100 -top-[4px] -left-[6px] h-[calc(100%+8px)] w-[calc(100%+12px)]"></span>

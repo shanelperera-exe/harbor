@@ -20,7 +20,17 @@ public class DeploymentsController(IDeploymentService deploymentService) : Contr
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
-        return Ok(await deploymentService.GetHistoryAsync(userId.Value, query, User.IsInRole("Admin")));
+        var response = await deploymentService.GetHistoryAsync(userId.Value, query, User.IsInRole("Admin"));
+        var username = GetUsername();
+        if (!string.IsNullOrWhiteSpace(username) && !User.IsInRole("Admin"))
+        {
+            foreach (var item in response.Items)
+            {
+                if (string.IsNullOrWhiteSpace(item.UserName))
+                    item.UserName = username;
+            }
+        }
+        return Ok(response);
     }
 
     /// <summary>Returns CI run history for a service, newest first.</summary>
@@ -42,7 +52,10 @@ public class DeploymentsController(IDeploymentService deploymentService) : Contr
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
         var deployment = await deploymentService.GetDetailsAsync(id, userId.Value, User.IsInRole("Admin"));
-        return deployment is null ? NotFound() : Ok(deployment);
+        if (deployment is null) return NotFound();
+        if (string.IsNullOrWhiteSpace(deployment.UserName))
+            deployment.UserName = GetUsername();
+        return Ok(deployment);
     }
 
     /// <summary>Creates a deployment request for a project and environment the authenticated user has access to.</summary>
@@ -172,6 +185,10 @@ public class DeploymentsController(IDeploymentService deploymentService) : Contr
     }
 
     private int? GetUserId() => int.TryParse(User.FindFirst("userId")?.Value, out var id) ? id : null;
+    private string? GetUsername() =>
+        User.Identity?.Name
+        ?? User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value
+        ?? User.FindFirst("sub")?.Value;
 
     [NonAction]
 #pragma warning disable S6932

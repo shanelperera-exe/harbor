@@ -100,7 +100,7 @@ jobs:
   load-and-performance-testing:
     name: "Stage 3: Load & Performance Testing"
     runs-on: ubuntu-latest
-    needs: [mutation-testing]
+    needs: [unit-testing-and-mocking]
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -132,7 +132,7 @@ jobs:
   code-quality-and-metrics:
     name: "Stage 4: Code Quality & Metrics"
     runs-on: ubuntu-latest
-    needs: [load-and-performance-testing]
+    needs: [unit-testing-and-mocking]
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4

@@ -188,12 +188,34 @@ public class DeploymentService : IDeploymentService
         if (!result.Succeeded)
         {
             await repository.UpdateTriggerResultAsync(deploymentId, "Failed", result.Error, result.Error);
-            await PublishEventAsync(deploymentId, serviceAccess.RealServiceId.ToString(), "Failed", deployment.Environment, deployment.Version, result.Error);
+            await PublishEventAsync(
+                deploymentId,
+                serviceAccess.RealServiceId.ToString(),
+                "Failed",
+                deployment.Environment,
+                deployment.Version,
+                result.Error,
+                publicId: deployment.PublicId,
+                projectId: serviceAccess.ProjectId,
+                ownerId: ownerId,
+                commitSha: deployment.CommitSha,
+                commitMessage: deployment.CommitMessage);
             return (true, result.Error, deploymentId, "Failed", null);
         }
 
         await repository.UpdateTriggerResultAsync(deploymentId, "Running", null, null);
-        await PublishEventAsync(deploymentId, serviceAccess.RealServiceId.ToString(), "Running", deployment.Environment, deployment.Version, null);
+        await PublishEventAsync(
+            deploymentId,
+            serviceAccess.RealServiceId.ToString(),
+            "Running",
+            deployment.Environment,
+            deployment.Version,
+            null,
+            publicId: deployment.PublicId,
+            projectId: serviceAccess.ProjectId,
+            ownerId: ownerId,
+            commitSha: deployment.CommitSha,
+            commitMessage: deployment.CommitMessage);
 
         // ── Background: capture GitHub Actions run ID + URL for webhook correlation ──────────────
         if (!string.IsNullOrWhiteSpace(installationToken))
@@ -233,7 +255,20 @@ public class DeploymentService : IDeploymentService
                 var deployment = await repository.GetEntityByIdAsync(deploymentId);
                 if (deployment != null)
                 {
-                    await PublishEventAsync(deploymentId, deployment.ServiceId.ToString(), status, deployment.Environment, deployment.Version, failureReason);
+                    await PublishEventAsync(
+                        deploymentId,
+                        deployment.ServiceId.ToString(),
+                        status,
+                        deployment.Environment,
+                        deployment.Version,
+                        failureReason,
+                        publicId: deployment.PublicId,
+                        ownerId: deployment.OwnerId,
+                        commitSha: deployment.CommitSha,
+                        commitMessage: deployment.CommitMessage,
+                        projectName: deployment.ProjectName,
+                        serviceName: deployment.ServiceName,
+                        ownerName: deployment.UserName);
                 }
             }
             catch (Exception ex)
@@ -318,7 +353,21 @@ public class DeploymentService : IDeploymentService
         return await CreateAsync(request, ownerId, isAdmin: true);
     }
 
-    private async Task PublishEventAsync(int deploymentId, string serviceId, string status, string environment, string version, string? failureReason)
+    private async Task PublishEventAsync(
+        int deploymentId,
+        string serviceId,
+        string status,
+        string environment,
+        string version,
+        string? failureReason,
+        string? publicId = null,
+        int? projectId = null,
+        int? ownerId = null,
+        string? commitSha = null,
+        string? commitMessage = null,
+        string? projectName = null,
+        string? serviceName = null,
+        string? ownerName = null)
     {
         try
         {
@@ -326,7 +375,15 @@ public class DeploymentService : IDeploymentService
             var @event = new DeploymentLifecycleEvent
             {
                 DeploymentId = deploymentId,
+                PublicId = publicId,
                 ServiceId = serviceId,
+                ProjectId = projectId,
+                OwnerId = ownerId,
+                ProjectName = projectName,
+                ServiceName = serviceName,
+                OwnerName = ownerName,
+                CommitSha = commitSha,
+                CommitMessage = commitMessage,
                 Status = status,
                 Environment = environment,
                 Version = version,

@@ -45,18 +45,22 @@ public sealed class DeploymentDomainEventConsumer : KafkaConsumerBackgroundServi
 
                     await using var cmd = connection.CreateCommand();
                     cmd.CommandText = """
-                    INSERT INTO "ServiceCatalogCache" ("ServiceId", "ProjectId", "ServiceName", "ProjectName", "OwnerId", "UpdatedAt")
-                    VALUES (@serviceId, @projectId, @serviceName, @projectName, @ownerId, @updatedAt)
+                    INSERT INTO "ServiceCatalogCache" ("ServiceId", "ServicePublicId", "ProjectId", "ServiceName", "ServiceType", "ProjectName", "OwnerId", "UpdatedAt")
+                    VALUES (@serviceId, @servicePublicId, @projectId, @serviceName, @serviceType, @projectName, @ownerId, @updatedAt)
                     ON CONFLICT ("ServiceId") DO UPDATE SET
+                        "ServicePublicId" = COALESCE(EXCLUDED."ServicePublicId", "ServiceCatalogCache"."ServicePublicId"),
                         "ProjectId" = EXCLUDED."ProjectId",
                         "ServiceName" = EXCLUDED."ServiceName",
+                        "ServiceType" = COALESCE(EXCLUDED."ServiceType", "ServiceCatalogCache"."ServiceType"),
                         "ProjectName" = EXCLUDED."ProjectName",
                         "OwnerId" = EXCLUDED."OwnerId",
                         "UpdatedAt" = EXCLUDED."UpdatedAt";
                     """;
                     cmd.Parameters.AddWithValue("serviceId", evt.ServiceId);
+                    cmd.Parameters.AddWithValue("servicePublicId", (object?)evt.ServicePublicId ?? DBNull.Value);
                     cmd.Parameters.AddWithValue("projectId", evt.ProjectId);
                     cmd.Parameters.AddWithValue("serviceName", evt.ServiceName);
+                    cmd.Parameters.AddWithValue("serviceType", (object?)evt.ServiceType ?? DBNull.Value);
                     cmd.Parameters.AddWithValue("projectName", evt.ProjectName);
                     cmd.Parameters.AddWithValue("ownerId", evt.OwnerId);
                     cmd.Parameters.AddWithValue("updatedAt", evt.UpdatedAt);

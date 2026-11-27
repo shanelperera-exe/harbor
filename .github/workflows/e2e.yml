@@ -85,6 +85,7 @@ jobs:
           KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
           KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
           KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+          KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
         options: >-
           --health-cmd "nc -zv localhost 9092"
           --health-interval 5s
@@ -109,8 +110,13 @@ jobs:
       # URLs
       API_GATEWAY_URL: http://localhost:5053
       AUTH_SERVICE_URL: http://localhost:5196
+      PROJECT_SERVICE_URL: http://localhost:5079
+      DEPLOYMENT_SERVICE_URL: http://localhost:5288
+      ENVIRONMENT_SERVICE_URL: http://localhost:5292
+      REPORTING_SERVICE_URL: http://localhost:5243
       FRONTEND_URL: http://localhost:5173
       ALLOWED_ORIGINS: "http://localhost:5173,http://localhost:5174,http://localhost:8080,http://localhost:8081"
+      REDIS_CONNECTION_STRING: localhost:6379
 
       # SMTP
       SMTP_HOST: localhost
@@ -186,8 +192,13 @@ jobs:
             echo "ADMIN_PASSWORD=$ADMIN_PASSWORD"
             echo "API_GATEWAY_URL=$API_GATEWAY_URL"
             echo "AUTH_SERVICE_URL=$AUTH_SERVICE_URL"
+            echo "PROJECT_SERVICE_URL=$PROJECT_SERVICE_URL"
+            echo "DEPLOYMENT_SERVICE_URL=$DEPLOYMENT_SERVICE_URL"
+            echo "ENVIRONMENT_SERVICE_URL=$ENVIRONMENT_SERVICE_URL"
+            echo "REPORTING_SERVICE_URL=$REPORTING_SERVICE_URL"
             echo "FRONTEND_URL=$FRONTEND_URL"
             echo "ALLOWED_ORIGINS=$ALLOWED_ORIGINS"
+            echo "REDIS_CONNECTION_STRING=$REDIS_CONNECTION_STRING"
             echo "SMTP_HOST=$SMTP_HOST"
             echo "SMTP_PORT=$SMTP_PORT"
             echo "SMTP_USERNAME=$SMTP_USERNAME"
@@ -282,8 +293,12 @@ jobs:
               curl -sf "http://localhost:5173/src/pages/auth/CreateAccount.tsx" > /dev/null || true
               curl -sf "http://localhost:5173/src/pages/deployments/Deployments.tsx" > /dev/null || true
               curl -sf "http://localhost:5173/src/components/ui/FilterDropdown.tsx" > /dev/null || true
-              # Pre-warm the Reports route for DeploymentReportTests
+              # Pre-warm the Reports and Project Environment routes for E2E tests
               curl -sf "http://localhost:5173/src/pages/reports/DeploymentReport.tsx" > /dev/null || true
+              curl -sf "http://localhost:5173/src/pages/projects/ProjectEnvironments.tsx" > /dev/null || true
+              curl -sf "http://localhost:5173/src/pages/projects/ProjectSettings.tsx" > /dev/null || true
+              curl -sf "http://localhost:5173/src/pages/projects/EnvironmentSettings.tsx" > /dev/null || true
+              curl -sf "http://localhost:5173/src/pages/projects/EnvironmentConfiguration.tsx" > /dev/null || true
               sleep 3
               break
             fi
@@ -316,6 +331,7 @@ jobs:
           AUTH_POSTGRES_DATABASE: harbor_auth
           PROJECT_POSTGRES_DATABASE: harbor_project
           DEPLOY_POSTGRES_DATABASE: harbor_deploy
+          REPORTING_POSTGRES_DATABASE: harbor_reporting
 
       - name: Run E2E tests
         run: |

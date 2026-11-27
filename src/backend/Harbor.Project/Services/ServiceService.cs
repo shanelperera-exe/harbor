@@ -77,9 +77,11 @@ namespace Harbor.Project.Services
                 new ServiceUpdatedEvent
                 {
                     ServiceId = id,
+                    ServicePublicId = service!.PublicId,
                     ProjectId = project.Id,
                     ProjectName = project.Name,
-                    ServiceName = service!.Name,
+                    ServiceName = service.Name,
+                    ServiceType = service.Type,
                     Provider = service.Provider,
                     OwnerId = project.OwnerId,
                     UpdatedAt = DateTime.UtcNow
@@ -141,6 +143,7 @@ namespace Harbor.Project.Services
             var response = ToResponse(service);
             response.ProjectName = project.Name;
             response.OwnerId = project.OwnerId;
+            response.IsArchived = project.IsArchived;
             return (true, null, response);
         }
 

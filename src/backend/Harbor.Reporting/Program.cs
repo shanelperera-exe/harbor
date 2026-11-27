@@ -46,6 +46,10 @@ builder.Services.AddHostedService<Harbor.Reporting.Messaging.ReportingDeployment
 builder.Services.AddHostedService<Harbor.Reporting.Messaging.ReportingDomainEventConsumer>();
 
 // Reporting feature (US-22)
+builder.Services.AddHttpClient<IDeploymentReportFallbackClient, DeploymentReportFallbackClient>(client =>
+{
+    client.BaseAddress = new Uri(Environment.GetEnvironmentVariable("DEPLOYMENT_SERVICE_URL") ?? "http://deployment-service:8080");
+});
 builder.Services.AddScoped<IDeploymentReportRepository, DeploymentReportRepository>();
 builder.Services.AddScoped<IReportService, ReportService>();
 

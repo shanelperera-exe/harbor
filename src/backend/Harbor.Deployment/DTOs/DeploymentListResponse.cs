@@ -26,6 +26,6 @@ public class DeploymentResponse
     public string? ProjectName { get; init; }
     public string? ServiceName { get; init; }
     public string? ServiceType { get; init; }
-    public string? UserName { get; init; }
+    public string? UserName { get; set; }
     public string? DeploymentUrl { get; init; }
 }

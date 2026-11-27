@@ -7,6 +7,7 @@ namespace Harbor.Project.DTOs
         public int ProjectId { get; set; }
         public string? ProjectName { get; set; }
         public int? OwnerId { get; set; }
+        public bool IsArchived { get; set; }
         public string Name { get; set; } = string.Empty;
         public string Type { get; set; } = string.Empty;
         public string? RepositoryUrl { get; set; }

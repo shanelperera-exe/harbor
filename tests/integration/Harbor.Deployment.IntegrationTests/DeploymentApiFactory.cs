@@ -82,6 +82,8 @@ public class DeploymentApiFactory : WebApplicationFactory<Program>, IAsyncLifeti
 
             services.RemoveAll<IProjectServiceClient>();
             services.AddSingleton<IProjectServiceClient>(new TestProjectServiceClient(_db));
+            services.RemoveAll<IEnvironmentServiceClient>();
+            services.AddSingleton<IEnvironmentServiceClient>(new TestEnvironmentServiceClient(_db));
 
             // Replace the real Kafka producer. It would otherwise read bootstrap servers
             // from the developer's .env and block on connection timeouts.
@@ -306,7 +308,7 @@ internal sealed class TestProjectServiceClient(PostgreSqlContainer db) : IProjec
         command.CommandText = """
             SELECT s."Id", s."PublicId", s."ProjectId", s."Name", s."Type",
                    s."RepositoryName", s."RepositoryBranch", s."WorkflowFile",
-                   p."OwnerId", p."Name"
+                   p."OwnerId", p."Name", p."IsArchived"
             FROM "Services" s
             JOIN "Projects" p ON p."Id" = s."ProjectId"
             WHERE s."Id"::text = @serviceId OR s."PublicId" = @serviceId
@@ -325,7 +327,36 @@ internal sealed class TestProjectServiceClient(PostgreSqlContainer db) : IProjec
             RepositoryBranch = reader.IsDBNull(6) ? null : reader.GetString(6),
             WorkflowFile = reader.IsDBNull(7) ? null : reader.GetString(7),
             OwnerId = reader.GetInt32(8),
-            ProjectName = reader.IsDBNull(9) ? null : reader.GetString(9)
+            ProjectName = reader.IsDBNull(9) ? null : reader.GetString(9),
+            IsArchived = reader.GetBoolean(10)
+        };
+    }
+}
+
+internal sealed class TestEnvironmentServiceClient(PostgreSqlContainer db) : IEnvironmentServiceClient
+{
+    public async Task<EnvironmentSummary?> GetEnvironmentByNameAsync(int projectId, string environmentName)
+    {
+        await using var connection = new NpgsqlConnection(db.GetConnectionString());
+        await connection.OpenAsync();
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT "Id", "ProjectId", "Name", "Type", "IsActive", "DeploymentUrl"
+            FROM "Environments"
+            WHERE "ProjectId" = @projectId AND LOWER("Name") = LOWER(@environmentName)
+            """;
+        command.Parameters.AddWithValue("projectId", projectId);
+        command.Parameters.AddWithValue("environmentName", environmentName.Trim());
+        await using var reader = await command.ExecuteReaderAsync();
+        if (!await reader.ReadAsync()) return null;
+        return new EnvironmentSummary
+        {
+            Id = reader.GetInt32(0),
+            ProjectId = reader.GetInt32(1),
+            Name = reader.GetString(2),
+            Type = reader.GetString(3),
+            IsActive = reader.GetBoolean(4),
+            DeploymentUrl = reader.IsDBNull(5) ? null : reader.GetString(5)
         };
     }
 }

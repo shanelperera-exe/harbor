@@ -14,6 +14,7 @@ import ProjectIntegrations from './pages/projects/ProjectIntegrations';
 import Deployments from './pages/deployments/Deployments';
 import ProjectEnvironments from './pages/projects/ProjectEnvironments';
 import EnvironmentSettings from './pages/projects/EnvironmentSettings';
+import EnvironmentConfiguration from './pages/projects/EnvironmentConfiguration';
 import Environments from './pages/environments/Environments';
 import AccountSettings from './pages/settings/AccountSettings';
 import ExternalAuthCallback from './pages/auth/ExternalAuthCallback';
@@ -47,6 +48,7 @@ function App() {
         <Route path=":projectId/services/new/:serviceType" element={<NewServiceRepoSelection />} />
         <Route path=":projectId/services/new/:serviceType/configure" element={<NewServiceConfigure />} />
         <Route path=":id/environments" element={<ProjectEnvironments />} />
+        <Route path=":id/environments/:environmentId/configure" element={<EnvironmentConfiguration />} />
         <Route path=":projectId/environments/:envId/settings" element={<EnvironmentSettings />} />
         <Route path=":projectId/services/:serviceId/*" element={<ServiceDetails />} />
 

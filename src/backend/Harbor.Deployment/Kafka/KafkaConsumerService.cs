@@ -76,6 +76,11 @@ public class KafkaConsumerService : BackgroundService
                         consumer.Commit(consumeResult);
                     }
                 }
+                catch (ConsumeException ex) when (ex.Error.Code == ErrorCode.UnknownTopicOrPart)
+                {
+                    // Topic may not exist yet until first publish; wait briefly before retrying.
+                    await Task.Delay(TimeSpan.FromSeconds(3), stoppingToken);
+                }
                 catch (ConsumeException ex)
                 {
                     _logger.LogError(ex, "Error consuming Kafka message");

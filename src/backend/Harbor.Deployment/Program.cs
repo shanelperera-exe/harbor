@@ -93,6 +93,10 @@ builder.Services.AddHttpClient<Harbor.Deployment.Services.IProjectServiceClient,
 {
     client.BaseAddress = new Uri(Environment.GetEnvironmentVariable("PROJECT_SERVICE_URL") ?? "http://project-service:8080");
 });
+builder.Services.AddHttpClient<Harbor.Deployment.Services.IEnvironmentServiceClient, Harbor.Deployment.Services.EnvironmentServiceClient>(client =>
+{
+    client.BaseAddress = new Uri(Environment.GetEnvironmentVariable("ENVIRONMENT_SERVICE_URL") ?? "http://environment-service:8080");
+});
 Harbor.Common.Messaging.MessagingServiceCollectionExtensions.AddHarborKafkaMessaging(builder.Services, "harbor-deployment-domain-group");
 builder.Services.AddHostedService<Harbor.Deployment.Messaging.DeploymentDomainEventConsumer>();
 builder.Services.AddScoped<DeploymentRepository>();

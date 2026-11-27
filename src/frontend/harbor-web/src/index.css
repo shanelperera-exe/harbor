@@ -85,6 +85,10 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   margin: 0;
   min-width: 320px;
@@ -93,7 +97,11 @@ body {
   color: oklch(0.21 0.03 263.45);
 }
 
-html.dark body {
+html.dark html {
+  scroll-behavior: smooth;
+}
+
+body {
   background-color: oklch(0.21 0.03 263.45);
   color: white;
 }
@@ -127,6 +135,61 @@ b, strong {
 
 .animate-blink {
   animation: blink 0.8s step-end infinite;
+}
+
+@keyframes harbor-marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes harbor-dash-flow {
+  0% { stroke-dashoffset: 24; }
+  100% { stroke-dashoffset: 0; }
+}
+
+@keyframes harbor-scanline {
+  0% { transform: translateY(-100%); opacity: 0; }
+  20% { opacity: 0.6; }
+  80% { opacity: 0.6; }
+  100% { transform: translateY(400%); opacity: 0; }
+}
+
+.animate-harbor-marquee {
+  animation: harbor-marquee 32s linear infinite;
+}
+
+.animate-harbor-marquee:hover {
+  animation-play-state: paused;
+}
+
+.animate-harbor-dash {
+  animation: harbor-dash-flow 1.1s linear infinite;
+}
+
+.animate-harbor-scanline {
+  animation: harbor-scanline 4.5s ease-in-out infinite;
+}
+
+/* Architectural 1px background grid matching Harbor's flat DevOps aesthetic */
+.harbor-grid-bg {
+  background-size: 48px 48px;
+  background-image:
+    linear-gradient(to right, rgba(17, 24, 39, 0.055) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(17, 24, 39, 0.055) 1px, transparent 1px);
+}
+
+html.dark .harbor-grid-bg {
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-harbor-marquee,
+  .animate-harbor-dash,
+  .animate-harbor-scanline {
+    animation: none;
+  }
 }
 
 .font-roobert span {
